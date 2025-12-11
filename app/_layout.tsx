@@ -1,24 +1,49 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { Redirect, Slot, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, View } from "react-native";
+import { AuthProvider, useAuth } from "../context";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+function RootLayoutNav() {
+  const { token, loading } = useAuth();
+  const segments = useSegments();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+  // Mientras se carga el token → pantalla estable
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "white",
+        }}
+      >
+        <StatusBar style="auto" />
+        <ActivityIndicator size="large" color="#6A4DFD" />
+      </View>
+    );
+  }
+
+  const inAuthGroup = segments[0] === '(auth)';
+
+  // Si no hay token y NO estamos ya en el grupo de autenticación → redirige al login
+  if (!token && !inAuthGroup) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  // Si hay token → entra a la app
+  return (
+    <>
+      <StatusBar style="auto" />
+      <Slot />
+    </>
+  );
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

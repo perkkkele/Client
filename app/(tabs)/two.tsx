@@ -3,6 +3,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -10,23 +11,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { chatApi } from "../../api";
-import type { Chat } from "../../api/chat";
+import { chatApi, userApi } from "../../api";
+import type { User } from "../../api/user";
 import { useAuth } from "../../context";
 
-export default function ChatsScreen() {
+export default function ExploreScreen() {
   const { token, user } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creatingChat, setCreatingChat] = useState<string | null>(null);
 
-  const loadChats = useCallback(async () => {
+  const loadUsers = useCallback(async () => {
     if (!token) return;
     try {
-      const data = await chatApi.getChats(token);
-      setChats(data);
+      const data = await userApi.getUsers(token);
+      setUsers(data);
     } catch (error) {
-      console.log("Error loading chats:", error);
+      console.log("Error loading users:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -35,50 +37,53 @@ export default function ChatsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadChats();
-    }, [loadChats])
+      loadUsers();
+    }, [loadUsers])
   );
 
   function handleRefresh() {
     setRefreshing(true);
-    loadChats();
+    loadUsers();
   }
 
-  function getChatPartner(chat: Chat) {
-    // Server uses participant_one and participant_two (populated with user data)
-    const p1 = chat.participant_one;
-    const p2 = chat.participant_two;
-
-    // Check if participant is a User object (populated) or just an ID string
-    const p1Id = typeof p1 === 'string' ? p1 : p1?._id;
-    const p2Id = typeof p2 === 'string' ? p2 : p2?._id;
-
-    if (p1Id !== user?._id && typeof p1 !== 'string') {
-      return p1;
+  async function handleStartChat(userId: string) {
+    if (!token || !user) return;
+    setCreatingChat(userId);
+    try {
+      // Pass current user ID as participant_id_two
+      const chat = await chatApi.createChat(token, userId, user._id);
+      router.push(`/chat/${chat._id}`);
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "No se pudo crear el chat");
+    } finally {
+      setCreatingChat(null);
     }
-    if (p2Id !== user?._id && typeof p2 !== 'string') {
-      return p2;
-    }
-    return null;
   }
 
-  function renderChat({ item }: { item: Chat }) {
-    const partner = getChatPartner(item);
+  function renderUser({ item }: { item: User }) {
+    const isCreating = creatingChat === item._id;
     return (
       <TouchableOpacity
-        style={styles.chatItem}
-        onPress={() => router.push(`/chat/${item._id}`)}
+        style={styles.userItem}
+        onPress={() => handleStartChat(item._id)}
+        disabled={isCreating}
       >
         <View style={styles.avatar}>
           <MaterialIcons name="person" size={24} color="#666" />
         </View>
-        <View style={styles.chatInfo}>
-          <Text style={styles.chatName}>
-            {partner?.email || "Usuario desconocido"}
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>
+            {item.firstname && item.lastname
+              ? `${item.firstname} ${item.lastname}`
+              : item.email}
           </Text>
-          <Text style={styles.chatPreview}>Toca para ver mensajes</Text>
+          <Text style={styles.userEmail}>{item.email}</Text>
         </View>
-        <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+        {isCreating ? (
+          <ActivityIndicator size="small" color="#4F46E5" />
+        ) : (
+          <MaterialIcons name="chat" size={24} color="#4F46E5" />
+        )}
       </TouchableOpacity>
     );
   }
@@ -94,22 +99,20 @@ export default function ChatsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chats</Text>
+        <Text style={styles.headerTitle}>Explorar</Text>
+        <Text style={styles.headerSubtitle}>Encuentra usuarios para chatear</Text>
       </View>
       <FlatList
-        data={chats}
+        data={users}
         keyExtractor={(item) => item._id}
-        renderItem={renderChat}
+        renderItem={renderUser}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <MaterialIcons name="chat-bubble-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tienes chats aún</Text>
-            <Text style={styles.emptySubtext}>
-              Ve a "Explorar" para iniciar una conversación
-            </Text>
+            <MaterialIcons name="people-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>No hay usuarios disponibles</Text>
           </View>
         }
       />
@@ -133,12 +136,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "white",
   },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 4,
+  },
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  chatItem: {
+  userItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "white",
@@ -155,15 +163,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  chatInfo: {
+  userInfo: {
     flex: 1,
   },
-  chatName: {
+  userName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
   },
-  chatPreview: {
+  userEmail: {
     fontSize: 14,
     color: "#666",
     marginTop: 2,
@@ -179,11 +187,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#666",
     marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#999",
-    marginTop: 8,
-    textAlign: "center",
   },
 });
