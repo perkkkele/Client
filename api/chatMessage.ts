@@ -42,6 +42,44 @@ export async function sendTextMessage(
     return data.chat_message;
 }
 
+export async function sendImage(
+    token: string,
+    chatId: string,
+    imageUri: string
+): Promise<ChatMessage> {
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+
+    // Get the file name and type from the URI
+    const uriParts = imageUri.split("/");
+    const fileName = uriParts[uriParts.length - 1];
+    const fileType = fileName.split(".").pop() || "jpg";
+
+    // Append the image file
+    formData.append("image", {
+        uri: imageUri,
+        name: fileName,
+        type: `image/${fileType}`,
+    } as any);
+
+    const response = await fetch(`${API_URL}/chat/message/image`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            // Don't set Content-Type - fetch will set it automatically with boundary
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al enviar imagen");
+    }
+
+    const data: SendMessageResponse = await response.json();
+    return data.chat_message;
+}
+
 export async function getMessages(
     token: string,
     chatId: string

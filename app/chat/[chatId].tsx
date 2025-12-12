@@ -1,9 +1,12 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -13,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { io, Socket } from "socket.io-client";
-import { chatApi, chatMessageApi, SOCKET_URL } from "../../api";
+import { API_HOST, API_PORT, chatApi, chatMessageApi, SOCKET_URL } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { ChatMessage } from "../../api/chatMessage";
 import { useAuth } from "../../context";
@@ -94,6 +97,40 @@ export default function ChatScreen() {
     }
   }
 
+  async function pickImage() {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para enviar imágenes.");
+      return;
+    }
+
+    // Pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      handleSendImage(result.assets[0].uri);
+    }
+  }
+
+  async function handleSendImage(imageUri: string) {
+    if (!token || !chatId) return;
+
+    setSending(true);
+    try {
+      await chatMessageApi.sendImage(token, chatId, imageUri);
+    } catch (error: any) {
+      console.log("Error sending image:", error);
+      Alert.alert("Error", error.message || "No se pudo enviar la imagen");
+    } finally {
+      setSending(false);
+    }
+  }
+
   function getChatPartner() {
     if (!chat || !user) return null;
 
@@ -118,16 +155,30 @@ export default function ChatScreen() {
     // User can be an object or string depending on whether it was populated
     const messageUserId = typeof item.user === 'string' ? item.user : item.user?._id;
     const isOwn = messageUserId === user?._id;
+    const isImage = item.type === "IMAGE";
+
+    // Build image URL from server path
+    const imageUrl = isImage ? `http://${API_HOST}:${API_PORT}/${item.message}` : null;
+
     return (
       <View
         style={[
           styles.messageContainer,
           isOwn ? styles.ownMessage : styles.otherMessage,
+          isImage && styles.imageMessage,
         ]}
       >
-        <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
-          {item.message}
-        </Text>
+        {isImage && imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.messageImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={[styles.messageText, isOwn && styles.ownMessageText]}>
+            {item.message}
+          </Text>
+        )}
         <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
           {new Date(item.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
@@ -179,6 +230,13 @@ export default function ChatScreen() {
       />
 
       <View style={styles.inputContainer}>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={pickImage}
+          disabled={sending}
+        >
+          <MaterialIcons name="image" size={24} color="#4F46E5" />
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Escribe un mensaje..."
@@ -298,5 +356,23 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#ccc",
+  },
+  attachButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f0f0f0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  imageMessage: {
+    padding: 4,
+    backgroundColor: "transparent",
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
   },
 });
