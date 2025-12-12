@@ -3,20 +3,20 @@ import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { io, Socket } from "socket.io-client";
-import { API_HOST, API_PORT, chatApi, chatMessageApi, SOCKET_URL } from "../../api";
+import { API_HOST, API_PORT, chatApi, chatMessageApi, liveAvatarApi, SOCKET_URL } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { ChatMessage } from "../../api/chatMessage";
 import { useAuth } from "../../context";
@@ -29,8 +29,26 @@ export default function ChatScreen() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [redirectingToAvatar, setRedirectingToAvatar] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  // Get chat partner email to check if it's a LiveAvatar user
+  function getPartnerEmail(chatData: Chat): string | null {
+    const p1 = chatData.participant_one;
+    const p2 = chatData.participant_two;
+    const p1Email = typeof p1 === 'string' ? null : p1?.email;
+    const p2Email = typeof p2 === 'string' ? null : p2?.email;
+    const p1Id = typeof p1 === 'string' ? p1 : p1?._id;
+
+    if (p1Id !== user?._id && p1Email) {
+      return p1Email;
+    }
+    if (p2Email) {
+      return p2Email;
+    }
+    return null;
+  }
 
   const loadChat = useCallback(async () => {
     if (!token || !chatId) return;
@@ -39,6 +57,19 @@ export default function ChatScreen() {
         chatApi.getChat(token, chatId),
         chatMessageApi.getMessages(token, chatId),
       ]);
+
+      // Check if partner is a LiveAvatar user (Santa or future professionals)
+      const partnerEmail = getPartnerEmail(chatData);
+      if (partnerEmail && liveAvatarApi.isLiveAvatarUser(partnerEmail)) {
+        setRedirectingToAvatar(true);
+        // Redirect to avatar chat screen
+        router.replace({
+          pathname: "/chat/avatarChat",
+          params: { chatId, partnerEmail },
+        });
+        return;
+      }
+
       setChat(chatData);
       setMessages(messagesData);
     } catch (error) {
@@ -46,7 +77,7 @@ export default function ChatScreen() {
     } finally {
       setLoading(false);
     }
-  }, [token, chatId]);
+  }, [token, chatId, user]);
 
   useEffect(() => {
     loadChat();

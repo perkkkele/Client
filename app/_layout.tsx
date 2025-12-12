@@ -1,8 +1,11 @@
+import { registerGlobals } from "@livekit/react-native";
 import { Redirect, Slot, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context";
 
+// Initialize LiveKit WebRTC globals
+registerGlobals();
 function RootLayoutNav() {
   const { token, loading } = useAuth();
   const segments = useSegments();
