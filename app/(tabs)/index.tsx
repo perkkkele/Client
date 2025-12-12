@@ -4,15 +4,23 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { chatApi } from "../../api";
+import { API_HOST, API_PORT, chatApi } from "../../api";
 import type { Chat } from "../../api/chat";
 import { useAuth } from "../../context";
+
+// Helper to build avatar URL from server path
+function getAvatarUrl(avatarPath: string | undefined): string | null {
+  if (!avatarPath) return null;
+  if (avatarPath.startsWith("http")) return avatarPath;
+  return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+}
 
 export default function ChatsScreen() {
   const { token, user } = useAuth();
@@ -64,13 +72,19 @@ export default function ChatsScreen() {
 
   function renderChat({ item }: { item: Chat }) {
     const partner = getChatPartner(item);
+    const avatarUrl = getAvatarUrl(partner?.avatar);
+
     return (
       <TouchableOpacity
         style={styles.chatItem}
         onPress={() => router.push(`/chat/${item._id}`)}
       >
         <View style={styles.avatar}>
-          <MaterialIcons name="person" size={24} color="#666" />
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <MaterialIcons name="person" size={24} color="#666" />
+          )}
         </View>
         <View style={styles.chatInfo}>
           <Text style={styles.chatName}>
@@ -154,6 +168,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 25,
   },
   chatInfo: {
     flex: 1,

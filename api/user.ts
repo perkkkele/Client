@@ -76,3 +76,62 @@ export async function updateUser(
 
     return response.json();
 }
+
+export async function updateAvatar(
+    token: string,
+    imageUri: string
+): Promise<User> {
+    return new Promise((resolve, reject) => {
+        // Get the file name and type from the URI
+        const uriParts = imageUri.split("/");
+        const fileName = uriParts[uriParts.length - 1];
+        const fileType = fileName.split(".").pop() || "jpg";
+
+        console.log("Uploading avatar:", { imageUri, fileName, fileType });
+
+        const formData = new FormData();
+        formData.append("avatar", {
+            uri: imageUri,
+            name: fileName,
+            type: `image/${fileType}`,
+        } as any);
+
+        // Use XMLHttpRequest instead of fetch for more reliable file uploads in React Native
+        const xhr = new XMLHttpRequest();
+        xhr.open("PATCH", `${API_URL}/user/me`);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+        xhr.onload = () => {
+            console.log("Avatar upload response status:", xhr.status);
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    resolve(response);
+                } catch (e) {
+                    reject(new Error("Error al procesar respuesta del servidor"));
+                }
+            } else {
+                try {
+                    const error = JSON.parse(xhr.responseText);
+                    reject(new Error(error.msg || error.message || `Error ${xhr.status}`));
+                } catch (e) {
+                    reject(new Error(`Error del servidor (${xhr.status})`));
+                }
+            }
+        };
+
+        xhr.onerror = () => {
+            console.error("XHR error:", xhr.status, xhr.statusText);
+            reject(new Error("Error de red al subir la imagen. Verifica tu conexión."));
+        };
+
+        xhr.ontimeout = () => {
+            reject(new Error("Tiempo de espera agotado al subir la imagen"));
+        };
+
+        xhr.timeout = 30000; // 30 second timeout
+        xhr.send(formData);
+    });
+}
+

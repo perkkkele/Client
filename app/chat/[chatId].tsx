@@ -1,19 +1,19 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { io, Socket } from "socket.io-client";
 import { API_HOST, API_PORT, chatApi, chatMessageApi, SOCKET_URL } from "../../api";
@@ -40,7 +40,7 @@ export default function ChatScreen() {
         chatMessageApi.getMessages(token, chatId),
       ]);
       setChat(chatData);
-      setMessages(messagesData.reverse());
+      setMessages(messagesData);
     } catch (error) {
       console.log("Error loading chat:", error);
     } finally {
