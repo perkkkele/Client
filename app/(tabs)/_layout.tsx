@@ -6,7 +6,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4F46E5",
+        tabBarStyle: { display: "none" }, // Ocultamos la barra de tabs por defecto
+        tabBarActiveTintColor: "#f9f506",
       }}
     >
       <Tabs.Screen
@@ -22,7 +23,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="two"
         options={{
-          title: "Explorar",
+          title: "Directorio",
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="explore" size={size} color={color} />
           ),
@@ -32,9 +33,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Perfil",
+          title: "Ajustes",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
+            <MaterialIcons name="settings" size={size} color={color} />
           ),
         }}
       />

@@ -1,11 +1,25 @@
 import { API_URL } from "./config";
 
+export type UserType = 'user' | 'userpro';
+export type CategoryType = 'legal' | 'salud' | 'hogar' | 'educacion' | 'fitness' | 'otros';
+
 export interface User {
     _id: string;
     email: string;
     firstname?: string;
     lastname?: string;
     avatar?: string;
+    userType: UserType;
+    // Campos específicos para userpro (profesionales)
+    profession?: string;
+    category?: CategoryType;
+    description?: string;
+    rating?: number;
+    ratingCount?: number;
+    isOnline?: boolean;
+    isFeatured?: boolean;
+    createdAt?: string;
+    lastActive?: string;
 }
 
 export async function getMe(token: string): Promise<User> {
