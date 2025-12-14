@@ -60,6 +60,31 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
   return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
 }
 
+// Helper to format relative time
+function formatRelativeTime(dateString: string | undefined): string {
+  if (!dateString) return "";
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Ahora";
+  if (diffMins < 60) return `${diffMins} min`;
+  if (diffHours < 24) {
+    // Mostrar hora del día
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diffDays === 1) return "Ayer";
+  if (diffDays < 7) {
+    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    return days[date.getDay()];
+  }
+  return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+}
+
 export default function TwinProHomeScreen() {
   const { token, user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -183,7 +208,7 @@ export default function TwinProHomeScreen() {
                 ? `${partner.firstname}${partner.lastname ? ` ${partner.lastname.charAt(0)}.` : ""}`
                 : partner?.email || "Usuario"}
             </Text>
-            <Text style={styles.chatTime}>10:30 AM</Text>
+            <Text style={styles.chatTime}>{formatRelativeTime(item.last_message_date)}</Text>
           </View>
 
           <View style={styles.chatMeta}>
@@ -203,7 +228,7 @@ export default function TwinProHomeScreen() {
           </View>
 
           <Text style={styles.chatPreview} numberOfLines={1}>
-            Toca para ver mensajes...
+            {item.last_message || "Toca para ver mensajes..."}
           </Text>
         </View>
 
@@ -358,15 +383,23 @@ export default function TwinProHomeScreen() {
               <Text style={styles.sectionLink}>Marcar leídos</Text>
             </TouchableOpacity>
           </View>
-          {chats.length > 0 ? (
-            chats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.grayLight} />
-              <Text style={styles.emptyText}>No tienes chats aún</Text>
-              <Text style={styles.emptySubtext}>Explora profesionales para iniciar una conversación</Text>
-            </View>
-          )}
+          {(() => {
+            // Filtrar chats donde el partner sea un profesional (userpro)
+            const professionalChats = chats.filter((chat) => {
+              const partner = getChatPartner(chat);
+              return partner?.userType === 'userpro';
+            });
+
+            return professionalChats.length > 0 ? (
+              professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.grayLight} />
+                <Text style={styles.emptyText}>No tienes chats con profesionales</Text>
+                <Text style={styles.emptySubtext}>Explora profesionales para iniciar una conversación</Text>
+              </View>
+            );
+          })()}
         </View>
       </ScrollView>
 

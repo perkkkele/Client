@@ -8,6 +8,7 @@ export interface Chat {
     participantOne?: User;
     participantTwo?: User;
     last_message_date?: string;
+    last_message?: string;
     createdAt: string;
     updatedAt: string;
 }
