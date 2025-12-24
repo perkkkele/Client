@@ -28,9 +28,10 @@ function RootLayoutNav() {
   }
 
   const inAuthGroup = segments[0] === '(auth)';
+  const inOnboardingGroup = segments[0] === 'onboarding';
 
-  // Si no hay token y NO estamos ya en el grupo de autenticación → redirige al login
-  if (!token && !inAuthGroup) {
+  // Si no hay token y NO estamos ya en el grupo de autenticación o onboarding → redirige al login
+  if (!token && !inAuthGroup && !inOnboardingGroup) {
     return <Redirect href="/(auth)/login" />;
   }
 

@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -12,6 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#FFE600",
@@ -44,13 +48,15 @@ const INTERESTS: Interest[] = [
     { id: "estetica", name: "Estética", icon: "face" },
     { id: "empleo", name: "Empleo", icon: "work" },
     { id: "energia", name: "Energía", icon: "bolt" },
-    { id: "otra", name: "Otra", icon: "add" },
+    { id: "otros", name: "Otra", icon: "add" },
 ];
 
 export default function CompleteProfileScreen() {
+    const { token, refreshUser } = useAuth();
     const [displayName, setDisplayName] = useState("");
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
-    const [selectedInterests, setSelectedInterests] = useState<string[]>(["legal", "fitness"]);
+    const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const isNameValid = displayName.length >= 3;
 
@@ -83,9 +89,42 @@ export default function CompleteProfileScreen() {
         );
     }
 
-    function handleContinue() {
-        // TODO: Guardar perfil
-        router.push("/onboarding/success");
+    async function handleContinue() {
+        if (!token) return;
+
+        setIsLoading(true);
+        try {
+            // Parsear nombre en firstname y lastname
+            const nameParts = displayName.trim().split(" ");
+            const firstname = nameParts[0] || "";
+            const lastname = nameParts.slice(1).join(" ") || "";
+
+            // Guardar nombre e intereses
+            await userApi.updateUser(token, {
+                firstname,
+                lastname,
+                interests: selectedInterests,
+            });
+
+            // Actualizar el usuario en el contexto
+            if (refreshUser) {
+                await refreshUser();
+            }
+
+            // Subir avatar si se seleccionó uno
+            if (avatarUri) {
+                await userApi.updateAvatar(token, avatarUri);
+                if (refreshUser) {
+                    await refreshUser();
+                }
+            }
+
+            router.push("/onboarding/success");
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Error al guardar el perfil");
+        } finally {
+            setIsLoading(false);
+        }
     }
 
     return (

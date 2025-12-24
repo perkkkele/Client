@@ -10,6 +10,8 @@ export interface User {
     lastname?: string;
     avatar?: string;
     userType: UserType;
+    // Intereses profesionales (para usuarios normales)
+    interests?: string[];
     // Campos específicos para userpro (profesionales)
     profession?: string;
     category?: CategoryType;
@@ -72,7 +74,7 @@ export async function getUser(token: string, userId: string): Promise<User> {
 
 export async function updateUser(
     token: string,
-    data: { firstname?: string; lastname?: string }
+    data: { firstname?: string; lastname?: string; interests?: string[] }
 ): Promise<User> {
     const response = await fetch(`${API_URL}/user/me`, {
         method: "PATCH",

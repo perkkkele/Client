@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
+import { useAuth } from "../../context";
 
 const COLORS = {
     primary: "#FFED00",
@@ -34,6 +35,7 @@ const COLORS = {
 };
 
 export default function RegisterUserScreen() {
+    const { login } = useAuth();
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -57,8 +59,13 @@ export default function RegisterUserScreen() {
 
         setIsLoading(true);
         try {
+            // Primero registrar la cuenta
             await authApi.register(email, password);
-            // Registro exitoso, continuar al siguiente paso
+
+            // Luego iniciar sesión automáticamente para obtener el token
+            await login(email, password);
+
+            // Registro e inicio de sesión exitoso, continuar al siguiente paso
             router.push("/onboarding/notifications");
         } catch (error: any) {
             Alert.alert("Error", error.message || "Error al crear la cuenta");

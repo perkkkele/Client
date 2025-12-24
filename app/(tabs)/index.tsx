@@ -35,14 +35,23 @@ const COLORS = {
   slate800: "#1e293b",
 };
 
-// Categorías disponibles
-const CATEGORIES = [
-  { id: "todos", label: "Todos", emoji: "" },
+// Todas las categorías profesionales disponibles
+const ALL_CATEGORIES = [
+  { id: "todos", label: "Todos", emoji: "✨" },
   { id: "legal", label: "Legal", emoji: "⚖️" },
   { id: "salud", label: "Salud", emoji: "🩺" },
   { id: "hogar", label: "Hogar", emoji: "🔧" },
   { id: "educacion", label: "Educación", emoji: "🎓" },
   { id: "fitness", label: "Fitness", emoji: "💪" },
+  { id: "tecnologia", label: "Tecnología", emoji: "💻" },
+  { id: "diseno", label: "Diseño", emoji: "🎨" },
+  { id: "bienestar", label: "Bienestar", emoji: "🧘" },
+  { id: "inmobiliario", label: "Inmobiliario", emoji: "🏠" },
+  { id: "estetica", label: "Estética", emoji: "💅" },
+  { id: "empleo", label: "Empleo", emoji: "💼" },
+  { id: "finanzas", label: "Finanzas", emoji: "💰" },
+  { id: "energia", label: "Energía", emoji: "⚡" },
+  { id: "otros", label: "Otros", emoji: "📦" },
 ];
 
 // Colores por categoría para los badges
@@ -318,14 +327,25 @@ export default function TwinProHomeScreen() {
           style={styles.categoriesScroll}
           contentContainerStyle={styles.categoriesContent}
         >
-          {CATEGORIES.map((cat) => (
+          {/* Filtrar categorías basándose en los intereses del usuario */}
+          {ALL_CATEGORIES.filter(cat =>
+            cat.id === "todos" ||
+            !user?.interests?.length ||
+            user.interests.includes(cat.id)
+          ).map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.categoryButton,
                 selectedCategory === cat.id && styles.categoryButtonActive,
               ]}
-              onPress={() => setSelectedCategory(cat.id)}
+              onPress={() => {
+                if (cat.id === "todos") {
+                  router.push("/(tabs)/all-categories");
+                } else {
+                  setSelectedCategory(cat.id);
+                }
+              }}
             >
               <Text
                 style={[
