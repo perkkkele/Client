@@ -1,0 +1,412 @@
+import { router } from "expo-router";
+import { useState } from "react";
+import {
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+
+const COLORS = {
+    primary: "#FFE600",
+    backgroundLight: "#FAFAFA",
+    surfaceLight: "#FFFFFF",
+    textMain: "#0F172A",
+    textMuted: "#64748B",
+    gray200: "#E2E8F0",
+    gray700: "#334155",
+    success: "#10B981",
+};
+
+interface Interest {
+    id: string;
+    name: string;
+    icon: string;
+}
+
+const INTERESTS: Interest[] = [
+    { id: "legal", name: "Legal", icon: "gavel" },
+    { id: "salud", name: "Salud", icon: "medical-services" },
+    { id: "fitness", name: "Fitness", icon: "fitness-center" },
+    { id: "hogar", name: "Hogar", icon: "home-repair-service" },
+    { id: "finanzas", name: "Finanzas", icon: "attach-money" },
+    { id: "educacion", name: "Educación", icon: "school" },
+    { id: "tecnologia", name: "Tecnología", icon: "computer" },
+    { id: "diseno", name: "Diseño", icon: "palette" },
+    { id: "bienestar", name: "Bienestar emocional", icon: "self-improvement" },
+    { id: "inmobiliario", name: "Inmobiliario", icon: "real-estate-agent" },
+    { id: "estetica", name: "Estética", icon: "face" },
+    { id: "empleo", name: "Empleo", icon: "work" },
+    { id: "energia", name: "Energía", icon: "bolt" },
+    { id: "otra", name: "Otra", icon: "add" },
+];
+
+export default function CompleteProfileScreen() {
+    const [displayName, setDisplayName] = useState("");
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [selectedInterests, setSelectedInterests] = useState<string[]>(["legal", "fitness"]);
+
+    const isNameValid = displayName.length >= 3;
+
+    function handleBack() {
+        router.back();
+    }
+
+    function handleSkip() {
+        router.push("/onboarding/success");
+    }
+
+    async function handlePickImage() {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setAvatarUri(result.assets[0].uri);
+        }
+    }
+
+    function toggleInterest(interestId: string) {
+        setSelectedInterests((prev) =>
+            prev.includes(interestId)
+                ? prev.filter((id) => id !== interestId)
+                : [...prev, interestId]
+        );
+    }
+
+    function handleContinue() {
+        // TODO: Guardar perfil
+        router.push("/onboarding/success");
+    }
+
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                    <Ionicons name="arrow-back" size={24} color={COLORS.gray700} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSkip}>
+                    <Text style={styles.skipText}>Saltar</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Main content */}
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Title */}
+                <View style={styles.titleSection}>
+                    <Text style={styles.title}>Crea tu perfil</Text>
+                    <Text style={styles.subtitle}>
+                        Sube una foto y cuéntanos qué buscas para obtener mejores coincidencias.
+                    </Text>
+                </View>
+
+                {/* Avatar picker */}
+                <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+                    <View style={styles.avatarWrapper}>
+                        {avatarUri ? (
+                            <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                        ) : (
+                            <View style={styles.avatarPlaceholder}>
+                                <MaterialIcons name="person" size={48} color={COLORS.textMuted} />
+                            </View>
+                        )}
+                        <View style={styles.cameraButton}>
+                            <MaterialIcons name="photo-camera" size={20} color="#000000" />
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Name input */}
+                <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>¿Cómo quieres que te llamemos?</Text>
+                    <View style={styles.inputContainer}>
+                        <MaterialIcons name="person" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="ej. Javier Gómez"
+                            placeholderTextColor={COLORS.textMuted}
+                            value={displayName}
+                            onChangeText={setDisplayName}
+                        />
+                        {displayName.length > 0 && (
+                            <MaterialIcons
+                                name={isNameValid ? "check-circle" : "cancel"}
+                                size={20}
+                                color={isNameValid ? COLORS.success : "#EF4444"}
+                            />
+                        )}
+                    </View>
+                    {displayName.length > 0 && (
+                        <View style={styles.validationHint}>
+                            <MaterialIcons
+                                name={isNameValid ? "check" : "close"}
+                                size={14}
+                                color={isNameValid ? COLORS.success : "#EF4444"}
+                            />
+                            <Text style={[styles.hintText, { color: isNameValid ? COLORS.success : "#EF4444" }]}>
+                                Mín. 3 caracteres
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Interests selection */}
+                <View style={styles.interestsSection}>
+                    <Text style={styles.inputLabel}>¿Qué profesionales necesitas?</Text>
+                    <View style={styles.interestsGrid}>
+                        {INTERESTS.map((interest) => {
+                            const isSelected = selectedInterests.includes(interest.id);
+                            return (
+                                <TouchableOpacity
+                                    key={interest.id}
+                                    style={[styles.interestChip, isSelected && styles.interestChipSelected]}
+                                    onPress={() => toggleInterest(interest.id)}
+                                    activeOpacity={0.7}
+                                >
+                                    <MaterialIcons
+                                        name={interest.icon as any}
+                                        size={16}
+                                        color={isSelected ? "#000000" : COLORS.gray700}
+                                    />
+                                    <Text style={[styles.interestText, isSelected && styles.interestTextSelected]}>
+                                        {interest.name}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </View>
+            </ScrollView>
+
+            {/* Footer button */}
+            <View style={styles.footer}>
+                <TouchableOpacity
+                    style={styles.continueButton}
+                    onPress={handleContinue}
+                    activeOpacity={0.9}
+                >
+                    <Text style={styles.continueButtonText}>Continuar</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#000000" />
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.backgroundLight,
+    },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.surfaceLight,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    skipText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMuted,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingHorizontal: 24,
+        paddingBottom: 120,
+    },
+    titleSection: {
+        alignItems: "center",
+        marginTop: 8,
+        marginBottom: 24,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+        marginBottom: 8,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    avatarContainer: {
+        alignItems: "center",
+        marginBottom: 32,
+    },
+    avatarWrapper: {
+        position: "relative",
+    },
+    avatar: {
+        width: 112,
+        height: 112,
+        borderRadius: 56,
+        borderWidth: 4,
+        borderColor: COLORS.surfaceLight,
+    },
+    avatarPlaceholder: {
+        width: 112,
+        height: 112,
+        borderRadius: 56,
+        backgroundColor: "#E2E8F0",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 4,
+        borderColor: COLORS.surfaceLight,
+    },
+    cameraButton: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: COLORS.backgroundLight,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    inputSection: {
+        marginBottom: 32,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray700,
+        marginBottom: 12,
+        paddingLeft: 4,
+    },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    inputIcon: {
+        marginRight: 12,
+    },
+    input: {
+        flex: 1,
+        height: 52,
+        fontSize: 15,
+        fontWeight: "500",
+        color: COLORS.textMain,
+    },
+    validationHint: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 8,
+        paddingLeft: 4,
+        gap: 4,
+    },
+    hintText: {
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    interestsSection: {
+        marginBottom: 24,
+    },
+    interestsGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    interestChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 20,
+        backgroundColor: COLORS.surfaceLight,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        gap: 6,
+    },
+    interestChipSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    interestText: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.gray700,
+    },
+    interestTextSelected: {
+        color: "#000000",
+        fontWeight: "600",
+    },
+    footer: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingHorizontal: 24,
+        paddingBottom: 32,
+        paddingTop: 16,
+        backgroundColor: COLORS.backgroundLight,
+    },
+    continueButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primary,
+        paddingVertical: 16,
+        borderRadius: 24,
+        gap: 8,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    continueButtonText: {
+        color: "#000000",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+});

@@ -1,9 +1,8 @@
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   RefreshControl,
   ScrollView,
@@ -14,6 +13,7 @@ import {
   View,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { API_HOST, API_PORT, chatApi, professionalApi } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
@@ -31,6 +31,8 @@ const COLORS = {
   white: "#ffffff",
   gray: "#64748b",
   grayLight: "#94a3b8",
+  slate400: "#94a3b8",
+  slate800: "#1e293b",
 };
 
 // Categorías disponibles
@@ -74,7 +76,6 @@ function formatRelativeTime(dateString: string | undefined): string {
   if (diffMins < 1) return "Ahora";
   if (diffMins < 60) return `${diffMins} min`;
   if (diffHours < 24) {
-    // Mostrar hora del día
     return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
   if (diffDays === 1) return "Ayer";
@@ -143,7 +144,11 @@ export default function TwinProHomeScreen() {
     return "Usuario";
   }
 
-  // Renderizar profesional destacado (carrusel horizontal)
+  function getUserAvatar() {
+    return getAvatarUrl(user?.avatar);
+  }
+
+  // Renderizar profesional destacado
   function renderFeaturedProfessional({ item }: { item: Professional }) {
     const avatarUrl = getAvatarUrl(item.avatar);
     const isOnline = item.isOnline;
@@ -166,7 +171,10 @@ export default function TwinProHomeScreen() {
             )}
           </View>
           {isOnline !== undefined && (
-            <View style={[styles.onlineIndicator, { backgroundColor: isOnline ? "#22c55e" : "#f59e0b" }]} />
+            <View style={[
+              styles.onlineIndicator,
+              { backgroundColor: isOnline ? "#22c55e" : item.isOnline === false ? "#9ca3af" : "#f59e0b" }
+            ]} />
           )}
         </View>
         <Text style={styles.featuredName} numberOfLines={1}>
@@ -247,33 +255,43 @@ export default function TwinProHomeScreen() {
     );
   }
 
+  const userAvatarUrl = getUserAvatar();
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header negro con bordes redondeados */}
       <View style={styles.headerContainer}>
         {/* Top bar */}
         <View style={styles.topBar}>
           <View style={styles.logoContainer}>
             <View style={styles.logoIcon}>
-              <MaterialIcons name="group" size={24} color={COLORS.black} />
+              <MaterialIcons name="group" size={22} color={COLORS.primary} />
             </View>
             <View>
               <Text style={styles.logoTitle}>TwinPro</Text>
               <Text style={styles.logoSubtitle}>Professional Chat</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <MaterialIcons name="account-circle" size={28} color={COLORS.grayLight} />
-            <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
-            </View>
+          <TouchableOpacity style={styles.qrButton}>
+            <Ionicons name="qr-code-outline" size={24} color={COLORS.slate400} />
           </TouchableOpacity>
         </View>
 
-        {/* Saludo */}
+        {/* Saludo con avatar */}
         <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>Hola, {getUserDisplayName()}</Text>
-          <Text style={styles.greetingSubtext}>¿Qué profesional necesitas hoy?</Text>
+          <TouchableOpacity style={styles.userAvatarButton} onPress={() => router.push("/(tabs)/settings")}>
+            {userAvatarUrl ? (
+              <Image source={{ uri: userAvatarUrl }} style={styles.userAvatar} />
+            ) : (
+              <View style={styles.userAvatarPlaceholder}>
+                <MaterialIcons name="person" size={28} color={COLORS.slate400} />
+              </View>
+            )}
+          </TouchableOpacity>
+          <View style={styles.greetingTextContainer}>
+            <Text style={styles.greetingText}>Hola, {getUserDisplayName()}</Text>
+            <Text style={styles.greetingSubtext}>¿Qué profesional necesitas hoy?</Text>
+          </View>
         </View>
 
         {/* Barra de búsqueda */}
@@ -335,9 +353,6 @@ export default function TwinProHomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>PROFESIONALES DESTACADOS</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>Ver todos</Text>
-            </TouchableOpacity>
           </View>
           <ScrollView
             horizontal
@@ -362,15 +377,15 @@ export default function TwinProHomeScreen() {
                 </TouchableOpacity>
               </>
             )}
-            {/* Always show explore button */}
-            <TouchableOpacity style={styles.featuredItem}>
+            {/* Always show explore button at the end */}
+            <TouchableOpacity style={[styles.featuredItem, { opacity: 0.5 }]}>
               <View style={styles.featuredAvatarContainer}>
                 <View style={styles.explorePlaceholder}>
-                  <MaterialIcons name="add" size={24} color={COLORS.gray} />
+                  <MaterialIcons name="person" size={24} color={COLORS.gray} />
                 </View>
               </View>
-              <Text style={styles.featuredName}>Explorar</Text>
-              <Text style={styles.featuredProfession}>Más</Text>
+              <Text style={styles.featuredName}>Más</Text>
+              <Text style={styles.featuredProfession}>Pronto</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -420,11 +435,11 @@ export default function TwinProHomeScreen() {
           <Text style={styles.navLabel}>Favoritos</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/profile")}>
-          <MaterialIcons name="settings" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>Ajustes</Text>
+          <MaterialIcons name="badge" size={24} color={COLORS.gray} />
+          <Text style={styles.navLabel}>Perfil Pro</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -445,7 +460,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.black,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
-    paddingTop: 50,
+    paddingTop: 8,
     paddingBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -459,7 +474,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   logoContainer: {
     flexDirection: "row",
@@ -469,8 +484,13 @@ const styles = StyleSheet.create({
   logoIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 4,
+    backgroundColor: COLORS.black,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -481,32 +501,47 @@ const styles = StyleSheet.create({
   },
   logoSubtitle: {
     fontSize: 11,
-    color: COLORS.grayLight,
+    color: COLORS.slate400,
+    fontWeight: "500",
   },
-  profileButton: {
-    position: "relative",
-  },
-  proBadge: {
-    position: "absolute",
-    bottom: -4,
-    right: -8,
-    backgroundColor: "#22c55e",
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 2,
-    borderColor: COLORS.black,
-  },
-  proBadgeText: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: COLORS.black,
+  qrButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#1e293b",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // Greeting
+  // Greeting with avatar
   greetingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 16,
+    gap: 16,
+  },
+  userAvatarButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    overflow: "hidden",
+    backgroundColor: "#1e293b",
+  },
+  userAvatar: {
+    width: "100%",
+    height: "100%",
+  },
+  userAvatarPlaceholder: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  greetingTextContainer: {
+    flex: 1,
   },
   greetingText: {
     fontSize: 28,
@@ -515,7 +550,7 @@ const styles = StyleSheet.create({
   },
   greetingSubtext: {
     fontSize: 14,
-    color: COLORS.grayLight,
+    color: COLORS.slate400,
     marginTop: 4,
   },
 
@@ -527,10 +562,15 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     height: 48,
     paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: 8,
@@ -538,7 +578,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.white,
+    color: COLORS.slate800,
   },
   filterButton: {
     width: 40,
@@ -554,6 +594,7 @@ const styles = StyleSheet.create({
   categoriesContent: {
     gap: 8,
     paddingRight: 20,
+    paddingBottom: 8,
   },
   categoryButton: {
     height: 32,
@@ -607,8 +648,8 @@ const styles = StyleSheet.create({
   },
   sectionLink: {
     fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.primary,
+    fontWeight: "bold",
+    color: "#a16207",
   },
 
   // Featured professionals
