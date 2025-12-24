@@ -41,7 +41,6 @@ const COLORS = {
 };
 
 const CATEGORIES = [
-    { id: "todos", label: "Todos", emoji: "" },
     { id: "legal", label: "Legal", emoji: "⚖️" },
     { id: "salud", label: "Salud", emoji: "🩺" },
     { id: "hogar", label: "Hogar", emoji: "🔧" },
@@ -63,8 +62,9 @@ export default function CategoryResultsScreen() {
     const { category } = useLocalSearchParams<{ category: string }>();
     const { token, user } = useAuth();
     const [professionals, setProfessionals] = useState<Professional[]>([]);
+    const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedCategory, setSelectedCategory] = useState(category || "legal");
+    const [selectedCategory, setSelectedCategory] = useState(category || "todos");
     const [sortBy, setSortBy] = useState<SortOption>("relevance");
     const [searchText, setSearchText] = useState("");
 
@@ -77,18 +77,24 @@ export default function CategoryResultsScreen() {
     // Favorites state
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-    const categoryLabel = CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory;
+    const categoryLabel = selectedCategory === "todos" ? "Todos" : (CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory);
 
     const loadProfessionals = useCallback(async () => {
         if (!token) return;
 
         setIsLoading(true);
         try {
-            const data = await professionalApi.getProfessionalsByCategory(
-                token,
-                selectedCategory,
-                { sortBy }
-            );
+            let data;
+            if (selectedCategory === "todos") {
+                // Para "todos", usar getProfessionals sin filtro de categoría
+                data = await professionalApi.getProfessionals(token);
+            } else {
+                data = await professionalApi.getProfessionalsByCategory(
+                    token,
+                    selectedCategory,
+                    { sortBy }
+                );
+            }
             setProfessionals(data);
         } catch (error) {
             console.error("Error loading professionals:", error);
@@ -104,6 +110,16 @@ export default function CategoryResultsScreen() {
             setFavoriteIds(new Set(favorites.map(f => f._id)));
         } catch (error) {
             console.error("Error loading favorites:", error);
+        }
+    }, [token]);
+
+    const loadFeatured = useCallback(async () => {
+        if (!token) return;
+        try {
+            const featured = await professionalApi.getFeaturedProfessionals(token);
+            setFeaturedProfessionals(featured);
+        } catch (error) {
+            console.error("Error loading featured professionals:", error);
         }
     }, [token]);
 
@@ -152,6 +168,10 @@ export default function CategoryResultsScreen() {
         loadFavorites();
     }, [loadFavorites]);
 
+    useEffect(() => {
+        loadFeatured();
+    }, [loadFeatured]);
+
     function handleBack() {
         router.back();
     }
@@ -173,6 +193,43 @@ export default function CategoryResultsScreen() {
         if (!avatar) return null;
         if (avatar.startsWith("http")) return avatar;
         return `http://${API_HOST}:${API_PORT}/${avatar}`;
+    }
+
+    function renderFeaturedProfessional(item: Professional) {
+        const avatarUrl = getAvatarUrl(item.avatar);
+        const isOnline = item.isOnline;
+
+        return (
+            <TouchableOpacity
+                key={item._id}
+                style={styles.featuredItem}
+                onPress={() => handleContactProfessional(item)}
+            >
+                <View style={styles.featuredAvatarContainer}>
+                    <View style={[styles.featuredAvatarBorder, isOnline && styles.featuredAvatarBorderActive]}>
+                        {avatarUrl ? (
+                            <Image source={{ uri: avatarUrl }} style={styles.featuredAvatar} />
+                        ) : (
+                            <View style={styles.featuredAvatarPlaceholder}>
+                                <MaterialIcons name="person" size={28} color={COLORS.gray400} />
+                            </View>
+                        )}
+                    </View>
+                    {isOnline !== undefined && (
+                        <View style={[
+                            styles.onlineIndicator,
+                            { backgroundColor: isOnline ? "#22c55e" : "#9ca3af" }
+                        ]} />
+                    )}
+                </View>
+                <Text style={styles.featuredName} numberOfLines={1}>
+                    {item.firstname || item.email?.split("@")[0]}
+                </Text>
+                <Text style={styles.featuredProfession} numberOfLines={1}>
+                    {item.profession || "Profesional"}
+                </Text>
+            </TouchableOpacity>
+        );
     }
 
     function handleProfilePress() {
@@ -349,6 +406,20 @@ export default function CategoryResultsScreen() {
                     </ScrollView>
                 </SafeAreaView>
             </View>
+
+            {/* Featured Professionals Carousel */}
+            {featuredProfessionals.length > 0 && (
+                <View style={styles.featuredSection}>
+                    <Text style={styles.featuredTitle}>PROFESIONALES DESTACADOS</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.featuredList}
+                    >
+                        {featuredProfessionals.map((prof) => renderFeaturedProfessional(prof))}
+                    </ScrollView>
+                </View>
+            )}
 
             {/* Main content */}
             <View style={styles.main}>
@@ -570,6 +641,28 @@ export default function CategoryResultsScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Bottom Navigation */}
+            <View style={styles.bottomNav}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
+                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
+                    <Text style={styles.navLabel}>Chats</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem}>
+                    <View style={selectedCategory === "todos" ? styles.navItemActive : undefined}>
+                        <MaterialIcons name="diversity-2" size={24} color={selectedCategory === "todos" ? COLORS.textMain : COLORS.gray500} />
+                    </View>
+                    <Text style={selectedCategory === "todos" ? styles.navLabelActive : styles.navLabel}>Directorio</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
+                    <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
+                    <Text style={styles.navLabel}>Favoritos</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/profile")}>
+                    <MaterialIcons name="badge" size={24} color={COLORS.gray500} />
+                    <Text style={styles.navLabel}>Perfil Pro</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
@@ -1103,5 +1196,114 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: "#FFFFFF",
+    },
+    // Bottom Navigation
+    bottomNav: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: "row",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderTopWidth: 1,
+        borderTopColor: "#e2e8f0",
+        paddingTop: 12,
+        paddingBottom: 32,
+        paddingHorizontal: 24,
+    },
+    navItem: {
+        flex: 1,
+        alignItems: "center",
+        gap: 4,
+    },
+    navItemActive: {
+        width: 48,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "rgba(249, 245, 6, 0.2)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    navLabel: {
+        fontSize: 11,
+        color: COLORS.gray500,
+        fontWeight: "500",
+    },
+    navLabelActive: {
+        fontSize: 11,
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
+    // Featured Professionals Carousel
+    featuredSection: {
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: COLORS.backgroundLight,
+    },
+    featuredTitle: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: COLORS.gray500,
+        letterSpacing: 1,
+        marginBottom: 12,
+    },
+    featuredList: {
+        paddingRight: 16,
+        gap: 16,
+    },
+    featuredItem: {
+        alignItems: "center",
+        width: 72,
+    },
+    featuredAvatarContainer: {
+        position: "relative",
+        marginBottom: 6,
+    },
+    featuredAvatarBorder: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        borderWidth: 2,
+        borderColor: COLORS.gray200,
+        padding: 2,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    featuredAvatarBorderActive: {
+        borderColor: COLORS.primary,
+    },
+    featuredAvatar: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+    },
+    featuredAvatarPlaceholder: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    onlineIndicator: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        borderWidth: 2,
+        borderColor: COLORS.backgroundLight,
+    },
+    featuredName: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        textAlign: "center",
+    },
+    featuredProfession: {
+        fontSize: 10,
+        color: COLORS.gray500,
+        textAlign: "center",
     },
 });

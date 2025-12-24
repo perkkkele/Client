@@ -369,47 +369,6 @@ export default function TwinProHomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
         }
       >
-        {/* Profesionales Destacados */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>PROFESIONALES DESTACADOS</Text>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.featuredList}
-          >
-            {featuredProfessionals.length > 0 ? (
-              featuredProfessionals.map((prof) => (
-                <View key={prof._id}>{renderFeaturedProfessional({ item: prof })}</View>
-              ))
-            ) : (
-              <>
-                {/* Placeholder explore button */}
-                <TouchableOpacity style={styles.featuredItem}>
-                  <View style={styles.featuredAvatarContainer}>
-                    <View style={styles.explorePlaceholder}>
-                      <MaterialIcons name="add" size={24} color={COLORS.gray} />
-                    </View>
-                  </View>
-                  <Text style={styles.featuredName}>Explorar</Text>
-                  <Text style={styles.featuredProfession}>Más</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            {/* Always show explore button at the end */}
-            <TouchableOpacity style={[styles.featuredItem, { opacity: 0.5 }]}>
-              <View style={styles.featuredAvatarContainer}>
-                <View style={styles.explorePlaceholder}>
-                  <MaterialIcons name="person" size={24} color={COLORS.gray} />
-                </View>
-              </View>
-              <Text style={styles.featuredName}>Más</Text>
-              <Text style={styles.featuredProfession}>Pronto</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
         {/* Recientes */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -446,7 +405,7 @@ export default function TwinProHomeScreen() {
           </View>
           <Text style={styles.navLabelActive}>Chats</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/two")}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
           <MaterialIcons name="diversity-2" size={24} color={COLORS.gray} />
           <Text style={styles.navLabel}>Directorio</Text>
         </TouchableOpacity>

@@ -270,7 +270,7 @@ export default function FavoritesScreen() {
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate500} />
                     <Text style={styles.navLabel}>Chats</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/two")}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.slate500} />
                     <Text style={styles.navLabel}>Directorio</Text>
                 </TouchableOpacity>
