@@ -7,10 +7,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -32,8 +34,9 @@ const COLORS = {
 };
 
 export default function DeleteAccountScreen() {
-    const { logout } = useAuth();
+    const { token, logout } = useAuth();
     const [confirmText, setConfirmText] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
     const canDelete = confirmText.toUpperCase() === "ELIMINAR";
 
@@ -51,14 +54,25 @@ export default function DeleteAccountScreen() {
             return;
         }
 
-        try {
-            // TODO: Llamar a la API para eliminar la cuenta
-            // await userApi.deleteAccount(token);
+        if (!token) {
+            Alert.alert("Error", "No se encontró el token de autenticación");
+            return;
+        }
 
+        setIsLoading(true);
+        try {
+            // Llamar a la API para eliminar la cuenta
+            await userApi.deleteAccount(token);
+
+            // Cerrar sesión
             await logout();
+
+            // Navegar a la pantalla de éxito
             router.replace("/delete-account-success");
         } catch (error: any) {
             Alert.alert("Error", error.message || "No se pudo eliminar la cuenta");
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -125,15 +139,21 @@ export default function DeleteAccountScreen() {
                 {/* Buttons */}
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity
-                        style={[styles.deleteButton, !canDelete && styles.deleteButtonDisabled]}
+                        style={[styles.deleteButton, (!canDelete || isLoading) && styles.deleteButtonDisabled]}
                         onPress={handleDeleteAccount}
-                        disabled={!canDelete}
+                        disabled={!canDelete || isLoading}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.deleteButtonText}>
-                            Eliminar Cuenta Definitivamente
-                        </Text>
-                        <MaterialIcons name="delete-forever" size={20} color="#FFFFFF" />
+                        {isLoading ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <>
+                                <Text style={styles.deleteButtonText}>
+                                    Eliminar Cuenta Definitivamente
+                                </Text>
+                                <MaterialIcons name="delete-forever" size={20} color="#FFFFFF" />
+                            </>
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity

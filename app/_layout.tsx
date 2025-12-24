@@ -29,9 +29,10 @@ function RootLayoutNav() {
 
   const inAuthGroup = segments[0] === '(auth)';
   const inOnboardingGroup = segments[0] === 'onboarding';
+  const isDeleteAccountSuccess = segments[0] === 'delete-account-success';
 
-  // Si no hay token y NO estamos ya en el grupo de autenticación o onboarding → redirige al login
-  if (!token && !inAuthGroup && !inOnboardingGroup) {
+  // Si no hay token y NO estamos ya en el grupo de autenticación, onboarding, o pantalla de éxito de eliminación → redirige al login
+  if (!token && !inAuthGroup && !inOnboardingGroup && !isDeleteAccountSuccess) {
     return <Redirect href="/(auth)/login" />;
   }
 

@@ -32,8 +32,7 @@ export default function ProfileTypeScreen() {
     }
 
     function handleProfessionalProfile() {
-        // TODO: Navegar a registro de profesional
-        router.push("/onboarding/register-user"); // Por ahora mismo flujo
+        router.push("/onboarding/register-pro");
     }
 
     return (

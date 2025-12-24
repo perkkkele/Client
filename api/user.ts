@@ -151,3 +151,18 @@ export async function updateAvatar(
     });
 }
 
+export async function deleteAccount(token: string): Promise<{ msg: string }> {
+    const response = await fetch(`${API_URL}/user/me`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al eliminar la cuenta");
+    }
+
+    return response.json();
+}
