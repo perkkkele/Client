@@ -293,3 +293,53 @@ export async function deleteAccount(token: string): Promise<{ msg: string }> {
 
     return response.json();
 }
+
+// === Funciones de Favoritos ===
+
+export async function getFavorites(token: string): Promise<User[]> {
+    const response = await fetch(`${API_URL}/user/favorites`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al obtener favoritos");
+    }
+
+    return response.json();
+}
+
+export async function addFavorite(token: string, professionalId: string): Promise<{ msg: string; favorites: User[] }> {
+    const response = await fetch(`${API_URL}/user/favorites/${professionalId}`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al añadir a favoritos");
+    }
+
+    return response.json();
+}
+
+export async function removeFavorite(token: string, professionalId: string): Promise<{ msg: string; favorites: User[] }> {
+    const response = await fetch(`${API_URL}/user/favorites/${professionalId}`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al eliminar de favoritos");
+    }
+
+    return response.json();
+}

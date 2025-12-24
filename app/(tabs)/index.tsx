@@ -450,7 +450,7 @@ export default function TwinProHomeScreen() {
           <MaterialIcons name="diversity-2" size={24} color={COLORS.gray} />
           <Text style={styles.navLabel}>Directorio</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
           <MaterialIcons name="favorite" size={24} color={COLORS.gray} />
           <Text style={styles.navLabel}>Favoritos</Text>
         </TouchableOpacity>

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { professionalApi, API_HOST, API_PORT } from "../../api";
+import { professionalApi, userApi, API_HOST, API_PORT } from "../../api";
 import { Professional } from "../../api/professional";
 
 const COLORS = {
@@ -74,6 +74,9 @@ export default function CategoryResultsScreen() {
     const [filterMaxPrice, setFilterMaxPrice] = useState(80);
     const [filterMinRating, setFilterMinRating] = useState(4);
 
+    // Favorites state
+    const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
     const categoryLabel = CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory;
 
     const loadProfessionals = useCallback(async () => {
@@ -94,9 +97,60 @@ export default function CategoryResultsScreen() {
         }
     }, [token, selectedCategory, sortBy]);
 
+    const loadFavorites = useCallback(async () => {
+        if (!token) return;
+        try {
+            const favorites = await userApi.getFavorites(token);
+            setFavoriteIds(new Set(favorites.map(f => f._id)));
+        } catch (error) {
+            console.error("Error loading favorites:", error);
+        }
+    }, [token]);
+
+    const toggleFavorite = async (professionalId: string) => {
+        if (!token) return;
+
+        const isFavorite = favoriteIds.has(professionalId);
+
+        // Optimistic update
+        setFavoriteIds(prev => {
+            const newSet = new Set(prev);
+            if (isFavorite) {
+                newSet.delete(professionalId);
+            } else {
+                newSet.add(professionalId);
+            }
+            return newSet;
+        });
+
+        try {
+            if (isFavorite) {
+                await userApi.removeFavorite(token, professionalId);
+            } else {
+                await userApi.addFavorite(token, professionalId);
+            }
+        } catch (error) {
+            // Revert on error
+            setFavoriteIds(prev => {
+                const newSet = new Set(prev);
+                if (isFavorite) {
+                    newSet.add(professionalId);
+                } else {
+                    newSet.delete(professionalId);
+                }
+                return newSet;
+            });
+            console.error("Error toggling favorite:", error);
+        }
+    };
+
     useEffect(() => {
         loadProfessionals();
     }, [loadProfessionals]);
+
+    useEffect(() => {
+        loadFavorites();
+    }, [loadFavorites]);
 
     function handleBack() {
         router.back();
@@ -130,6 +184,7 @@ export default function CategoryResultsScreen() {
         const fullName = `${item.firstname || ""} ${item.lastname || ""}`.trim();
         const isOnline = item.isOnline;
         const isVerified = item.ratingCount > 10;
+        const isFavorite = favoriteIds.has(item._id);
 
         return (
             <TouchableOpacity
@@ -138,8 +193,18 @@ export default function CategoryResultsScreen() {
                 onPress={() => handleContactProfessional(item)}
             >
                 {/* Favorite button */}
-                <TouchableOpacity style={styles.favoriteButton}>
-                    <MaterialIcons name="favorite-border" size={18} color={COLORS.gray400} />
+                <TouchableOpacity
+                    style={styles.favoriteButton}
+                    onPress={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(item._id);
+                    }}
+                >
+                    <MaterialIcons
+                        name={isFavorite ? "favorite" : "favorite-border"}
+                        size={18}
+                        color={isFavorite ? "#ef4444" : COLORS.gray400}
+                    />
                 </TouchableOpacity>
 
                 {/* Avatar */}
