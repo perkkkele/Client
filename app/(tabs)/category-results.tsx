@@ -185,8 +185,7 @@ export default function CategoryResultsScreen() {
     }
 
     function handleContactProfessional(professional: Professional) {
-        // TODO: Navigate to chat with professional
-        console.log("Contact:", professional.firstname);
+        router.push(`/professional/${professional._id}`);
     }
 
     function getAvatarUrl(avatar: string | null | undefined) {
@@ -295,12 +294,18 @@ export default function CategoryResultsScreen() {
                     </Text>
 
                     {/* Rating */}
-                    <View style={styles.ratingContainer}>
+                    <TouchableOpacity
+                        style={styles.ratingContainer}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            router.push(`/reviews/${item._id}`);
+                        }}
+                    >
                         <MaterialIcons name="star" size={12} color={COLORS.amber500} />
                         <Text style={styles.ratingText}>
                             {(item.rating || 0).toFixed(1)}
                         </Text>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Tags */}
                     {item.tags && item.tags.length > 0 && (

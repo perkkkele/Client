@@ -113,7 +113,11 @@ export default function FavoritesScreen() {
     });
 
     const renderFavoriteCard = ({ item }: { item: Favorite }) => (
-        <TouchableOpacity style={styles.card} activeOpacity={0.95}>
+        <TouchableOpacity
+            style={styles.card}
+            activeOpacity={0.95}
+            onPress={() => router.push(`/professional/${item._id}`)}
+        >
             {/* Favorite button */}
             <TouchableOpacity
                 style={styles.favoriteButton}
