@@ -1,27 +1,155 @@
 import { API_URL } from "./config";
 
 export type UserType = 'user' | 'userpro';
-export type CategoryType = 'legal' | 'salud' | 'hogar' | 'educacion' | 'fitness' | 'otros';
+export type CategoryType = 'legal' | 'salud' | 'hogar' | 'educacion' | 'fitness' | 'tecnologia' | 'diseno' | 'bienestar' | 'inmobiliario' | 'estetica' | 'empleo' | 'finanzas' | 'energia' | 'otros';
+
+// Interfaces auxiliares
+export interface ScheduleDay {
+    from?: string;
+    to?: string;
+    enabled: boolean;
+}
+
+export interface Schedule {
+    monday: ScheduleDay;
+    tuesday: ScheduleDay;
+    wednesday: ScheduleDay;
+    thursday: ScheduleDay;
+    friday: ScheduleDay;
+    saturday: ScheduleDay;
+    sunday: ScheduleDay;
+}
+
+export interface SocialLinks {
+    linkedin?: string | null;
+    instagram?: string | null;
+    twitter?: string | null;
+    facebook?: string | null;
+}
+
+export interface Location {
+    address?: string | null;
+    city?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+}
+
+export interface DigitalTwinPersonality {
+    traits?: string[];
+    greeting?: string | null;
+    description?: string | null;
+}
+
+export interface DigitalTwinBehavior {
+    formality?: number; // 0-2
+    depth?: number;     // 0-2
+    tone?: number;      // 0-2
+}
+
+export interface DigitalTwinGuardrails {
+    allowed?: string[];
+    restricted?: string[];
+}
+
+export interface DigitalTwinKnowledge {
+    documents?: Array<{
+        name: string;
+        type: 'servicios' | 'precios' | 'faqs' | 'otro';
+        url: string;
+        uploadedAt?: string;
+    }>;
+    trainingProgress?: number;
+    trainingStatus?: 'pending' | 'training' | 'ready' | null;
+}
+
+export interface DigitalTwin {
+    personality?: DigitalTwinPersonality;
+    behavior?: DigitalTwinBehavior;
+    guardrails?: DigitalTwinGuardrails;
+    knowledge?: DigitalTwinKnowledge;
+    isActive?: boolean;
+    activatedAt?: string | null;
+}
 
 export interface User {
     _id: string;
     email: string;
+
+    // === Campos comunes ===
     firstname?: string;
     lastname?: string;
     avatar?: string;
     userType: UserType;
-    // Intereses profesionales (para usuarios normales)
     interests?: string[];
-    // Campos específicos para userpro (profesionales)
-    profession?: string;
-    category?: CategoryType;
-    description?: string;
+    createdAt?: string;
+    lastActive?: string;
+
+    // === Campos profesionales ===
+    publicName?: string | null;
+    profession?: string | null;
+    category?: CategoryType | null;
+    specialties?: string[];
+    bio?: string | null;
+
+    // Contacto profesional
+    professionalEmail?: string | null;
+    phone?: string | null;
+    website?: string | null;
+    location?: Location;
+    schedule?: Schedule;
+    socialLinks?: SocialLinks;
+    connectedCalendar?: {
+        provider?: 'google' | 'outlook' | 'apple' | null;
+        connected?: boolean;
+    };
+
+    // Estadísticas
     rating?: number;
     ratingCount?: number;
     isOnline?: boolean;
     isFeatured?: boolean;
-    createdAt?: string;
-    lastActive?: string;
+    priceRange?: 1 | 2 | 3 | null;
+    tags?: string[];
+
+    // === Gemelo Digital ===
+    digitalTwin?: DigitalTwin;
+}
+
+// Tipo para actualizaciones parciales del usuario
+export interface UserUpdateData {
+    // Campos comunes
+    firstname?: string;
+    lastname?: string;
+    interests?: string[];
+
+    // Cambio a profesional
+    userType?: UserType;
+
+    // Campos profesionales
+    publicName?: string;
+    profession?: string;
+    category?: CategoryType;
+    specialties?: string[];
+    bio?: string;
+
+    // Contacto
+    professionalEmail?: string;
+    phone?: string;
+    website?: string;
+    location?: Location;
+    schedule?: Schedule;
+    socialLinks?: SocialLinks;
+    connectedCalendar?: {
+        provider?: 'google' | 'outlook' | 'apple' | null;
+        connected?: boolean;
+    };
+
+    // Precios/tags
+    priceRange?: 1 | 2 | 3;
+    tags?: string[];
+
+    // Gemelo Digital
+    digitalTwin?: DigitalTwin;
 }
 
 export async function getMe(token: string): Promise<User> {
@@ -74,7 +202,7 @@ export async function getUser(token: string, userId: string): Promise<User> {
 
 export async function updateUser(
     token: string,
-    data: { firstname?: string; lastname?: string; interests?: string[] }
+    data: UserUpdateData
 ): Promise<User> {
     const response = await fetch(`${API_URL}/user/me`, {
         method: "PATCH",
@@ -98,34 +226,33 @@ export async function updateAvatar(
     imageUri: string
 ): Promise<User> {
     return new Promise((resolve, reject) => {
-        // Get the file name and type from the URI
-        const uriParts = imageUri.split("/");
-        const fileName = uriParts[uriParts.length - 1];
-        const fileType = fileName.split(".").pop() || "jpg";
-
-        console.log("Uploading avatar:", { imageUri, fileName, fileType });
-
         const formData = new FormData();
+
+        // Get the file extension and create proper file info
+        const uriParts = imageUri.split(".");
+        const fileType = uriParts[uriParts.length - 1];
+
         formData.append("avatar", {
             uri: imageUri,
-            name: fileName,
+            name: `avatar.${fileType}`,
             type: `image/${fileType}`,
         } as any);
 
-        // Use XMLHttpRequest instead of fetch for more reliable file uploads in React Native
+        console.log("Uploading avatar:", { uri: imageUri, type: `image/${fileType}` });
+
         const xhr = new XMLHttpRequest();
         xhr.open("PATCH", `${API_URL}/user/me`);
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        // Don't set Content-Type - let XHR handle multipart boundary
 
         xhr.onload = () => {
-            console.log("Avatar upload response status:", xhr.status);
-
+            console.log("Avatar upload response:", xhr.status, xhr.responseText);
             if (xhr.status >= 200 && xhr.status < 300) {
                 try {
                     const response = JSON.parse(xhr.responseText);
                     resolve(response);
                 } catch (e) {
-                    reject(new Error("Error al procesar respuesta del servidor"));
+                    reject(new Error("Error parsing response"));
                 }
             } else {
                 try {

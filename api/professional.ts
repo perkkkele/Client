@@ -13,6 +13,16 @@ export interface Professional extends User {
     ratingCount: number;
     isOnline: boolean;
     isFeatured: boolean;
+    location?: {
+        lat: number | null;
+        lng: number | null;
+        city: string | null;
+    };
+    priceRange?: 1 | 2 | 3;
+    tags?: string[];
+    // Campos calculados por el servidor
+    relevanceScore?: number;
+    distance?: number | null;
 }
 
 export interface ProfessionalFilters {
@@ -74,6 +84,50 @@ export async function getFeaturedProfessionals(token: string): Promise<Professio
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.msg || 'Error al obtener profesionales destacados');
+    }
+
+    return response.json();
+}
+
+/**
+ * Obtener profesionales por categoría con ordenación
+ */
+export async function getProfessionalsByCategory(
+    token: string,
+    category: string,
+    options?: {
+        sortBy?: 'relevance' | 'distance' | 'price' | 'reviews';
+        userLat?: number;
+        userLng?: number;
+    }
+): Promise<Professional[]> {
+    const params = new URLSearchParams();
+
+    if (options?.sortBy) {
+        params.append('sortBy', options.sortBy);
+    }
+    if (options?.userLat) {
+        params.append('userLat', options.userLat.toString());
+    }
+    if (options?.userLng) {
+        params.append('userLng', options.userLng.toString());
+    }
+
+    const queryString = params.toString();
+    const url = queryString
+        ? `${API_URL}/professionals/category/${category}?${queryString}`
+        : `${API_URL}/professionals/category/${category}`;
+
+    const response = await fetch(url, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || 'Error al obtener profesionales');
     }
 
     return response.json();

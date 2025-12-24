@@ -117,6 +117,12 @@ export default function ProProfileScreen() {
                 await userApi.updateUser(token, {
                     firstname,
                     lastname,
+                    // Campos profesionales
+                    publicName: publicName.trim(),
+                    profession: profession.trim(),
+                    category: category as any,
+                    specialties: specialties,
+                    bio: bio.trim() || undefined,
                 });
 
                 // Subir avatar si se seleccionó uno

@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -11,6 +12,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -107,6 +110,7 @@ const segmentStyles = StyleSheet.create({
 });
 
 export default function TwinBehaviorScreen() {
+    const { token, refreshUser } = useAuth();
     const [formality, setFormality] = useState(1);
     const [depth, setDepth] = useState(1);
     const [tone, setTone] = useState(0);
@@ -156,7 +160,29 @@ export default function TwinBehaviorScreen() {
     async function handleContinue() {
         setIsLoading(true);
         try {
+            if (token) {
+                await userApi.updateUser(token, {
+                    digitalTwin: {
+                        behavior: {
+                            formality,
+                            depth,
+                            tone
+                        },
+                        guardrails: {
+                            allowed: allowedActions.map(a => a.text),
+                            restricted: restrictedActions.map(a => a.text)
+                        }
+                    }
+                });
+
+                if (refreshUser) {
+                    await refreshUser();
+                }
+            }
+
             router.push("/onboarding/twin-knowledge");
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Error al guardar");
         } finally {
             setIsLoading(false);
         }

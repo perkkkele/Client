@@ -14,6 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -38,16 +40,17 @@ const COLORS = {
 };
 
 const DAYS = [
-    { id: "L", label: "L" },
-    { id: "M", label: "M" },
-    { id: "X", label: "X" },
-    { id: "J", label: "J" },
-    { id: "V", label: "V" },
-    { id: "S", label: "S" },
-    { id: "D", label: "D" },
+    { id: "L", label: "L", key: "monday" },
+    { id: "M", label: "M", key: "tuesday" },
+    { id: "X", label: "X", key: "wednesday" },
+    { id: "J", label: "J", key: "thursday" },
+    { id: "V", label: "V", key: "friday" },
+    { id: "S", label: "S", key: "saturday" },
+    { id: "D", label: "D", key: "sunday" },
 ];
 
 export default function ProContactScreen() {
+    const { token, refreshUser } = useAuth();
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
     const [website, setWebsite] = useState("");
@@ -78,8 +81,41 @@ export default function ProContactScreen() {
     async function handleContinue() {
         setIsLoading(true);
         try {
-            // TODO: Guardar datos de contacto en backend
-            // Por ahora solo navegamos al siguiente paso
+            if (token) {
+                // Construir el schedule basado en los días seleccionados
+                const schedule: any = {};
+                DAYS.forEach(day => {
+                    schedule[day.key] = {
+                        from: workStart,
+                        to: workEnd,
+                        enabled: workDays.includes(day.id)
+                    };
+                });
+
+                await userApi.updateUser(token, {
+                    professionalEmail: contactEmail.trim() || undefined,
+                    phone: contactPhone.trim() || undefined,
+                    website: website.trim() || undefined,
+                    location: {
+                        address: location.trim() || null,
+                        city: null,
+                        lat: null,
+                        lng: null
+                    },
+                    schedule,
+                    socialLinks: {
+                        linkedin: linkedin.trim() || null,
+                        instagram: instagram.trim() || null,
+                        twitter: twitter.trim() || null,
+                        facebook: facebook.trim() || null
+                    }
+                });
+
+                if (refreshUser) {
+                    await refreshUser();
+                }
+            }
+
             router.push("/onboarding/pro-complete");
         } catch (error: any) {
             Alert.alert("Error", error.message || "Error al guardar");

@@ -343,7 +343,7 @@ export default function TwinProHomeScreen() {
                 if (cat.id === "todos") {
                   router.push("/(tabs)/all-categories");
                 } else {
-                  setSelectedCategory(cat.id);
+                  router.push(`/(tabs)/category-results?category=${cat.id}`);
                 }
               }}
             >

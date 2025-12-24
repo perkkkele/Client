@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,6 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -53,6 +56,7 @@ const KNOWLEDGE_CATEGORIES: KnowledgeCategory[] = [
 ];
 
 export default function TwinKnowledgeScreen() {
+    const { token, refreshUser } = useAuth();
     const [categories, setCategories] = useState(KNOWLEDGE_CATEGORIES);
     const [trainingProgress] = useState(5); // 5% por defecto
     const [isLoading, setIsLoading] = useState(false);
@@ -74,8 +78,26 @@ export default function TwinKnowledgeScreen() {
     async function handleActivate() {
         setIsLoading(true);
         try {
-            // TODO: Activar gemelo digital
+            if (token) {
+                // Activar gemelo digital (userType ya es 'userpro' desde el registro)
+                await userApi.updateUser(token, {
+                    digitalTwin: {
+                        knowledge: {
+                            trainingProgress: trainingProgress,
+                            trainingStatus: 'pending'
+                        },
+                        isActive: true
+                    }
+                });
+
+                if (refreshUser) {
+                    await refreshUser();
+                }
+            }
+
             router.push("/onboarding/pro-success");
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "Error al activar el gemelo");
         } finally {
             setIsLoading(false);
         }

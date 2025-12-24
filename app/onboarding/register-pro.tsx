@@ -59,8 +59,8 @@ export default function RegisterProScreen() {
 
         setIsLoading(true);
         try {
-            // Primero registrar la cuenta
-            await authApi.register(email, password);
+            // Primero registrar la cuenta como profesional (userpro)
+            await authApi.register(email, password, 'userpro');
 
             // Luego iniciar sesión automáticamente para obtener el token
             await login(email, password);
