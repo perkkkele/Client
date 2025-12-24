@@ -1,5 +1,8 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -9,8 +12,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { API_HOST, API_PORT, userApi } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -49,7 +53,8 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 }
 
 export default function SettingsScreen() {
-    const { user } = useAuth();
+    const { user, token, updateUserProfile } = useAuth();
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname
@@ -59,6 +64,46 @@ export default function SettingsScreen() {
 
     function handleBack() {
         router.back();
+    }
+
+    async function pickImage() {
+        // Pedir permiso
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para cambiar tu foto.");
+            return;
+        }
+
+        // Seleccionar imagen
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            handleChangeAvatar(result.assets[0].uri);
+        }
+    }
+
+    async function handleChangeAvatar(imageUri: string) {
+        if (!token) {
+            Alert.alert("Error", "No hay sesión activa");
+            return;
+        }
+
+        setIsUploadingAvatar(true);
+        try {
+            const updatedUser = await userApi.updateAvatar(token, imageUri);
+            await updateUserProfile(updatedUser);
+            Alert.alert("Éxito", "Foto de perfil actualizada correctamente");
+        } catch (error: any) {
+            console.error("Error updating avatar:", error.message || error);
+            Alert.alert("Error", error.message || "No se pudo actualizar la foto de perfil");
+        } finally {
+            setIsUploadingAvatar(false);
+        }
     }
 
     function handleEditProfile() {
@@ -188,7 +233,12 @@ export default function SettingsScreen() {
             >
                 {/* Profile Section */}
                 <View style={styles.profileSection}>
-                    <View style={styles.avatarContainer}>
+                    <TouchableOpacity
+                        style={styles.avatarContainer}
+                        onPress={pickImage}
+                        disabled={isUploadingAvatar}
+                        activeOpacity={0.8}
+                    >
                         {avatarUrl ? (
                             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
                         ) : (
@@ -196,10 +246,15 @@ export default function SettingsScreen() {
                                 <MaterialIcons name="person" size={48} color={COLORS.gray400} />
                             </View>
                         )}
-                        <TouchableOpacity style={styles.editAvatarButton}>
+                        {isUploadingAvatar && (
+                            <View style={styles.avatarLoading}>
+                                <ActivityIndicator size="large" color="#FFFFFF" />
+                            </View>
+                        )}
+                        <View style={styles.editAvatarButton}>
                             <MaterialIcons name="edit" size={14} color="#000000" />
-                        </TouchableOpacity>
-                    </View>
+                        </View>
+                    </TouchableOpacity>
                     <Text style={styles.displayName}>{displayName}</Text>
                     <Text style={styles.username}>@{username}</Text>
                     <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
@@ -275,6 +330,17 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         borderWidth: 4,
         borderColor: COLORS.surfaceLight,
+    },
+    avatarLoading: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        borderRadius: 48,
+        alignItems: "center",
+        justifyContent: "center",
     },
     editAvatarButton: {
         position: "absolute",

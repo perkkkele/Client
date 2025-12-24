@@ -70,8 +70,7 @@ export default function AllCategoriesScreen() {
     }
 
     function handleCategoryPress(categoryId: string) {
-        // TODO: Navegar a listado de profesionales filtrado por categoría
-        router.back();
+        router.push(`/(tabs)/category-results?category=${categoryId}`);
     }
 
     function handleProfilePress() {

@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    Modal,
     StyleSheet,
     Text,
     TextInput,
@@ -14,9 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { professionalApi } from "../../api";
+import { professionalApi, API_HOST, API_PORT } from "../../api";
 import { Professional } from "../../api/professional";
-import { API_URL } from "../../api/config";
 
 const COLORS = {
     primary: "#f9f506",
@@ -68,6 +68,12 @@ export default function CategoryResultsScreen() {
     const [sortBy, setSortBy] = useState<SortOption>("relevance");
     const [searchText, setSearchText] = useState("");
 
+    // Filter modal states
+    const [showFiltersModal, setShowFiltersModal] = useState(false);
+    const [filterDistance, setFilterDistance] = useState(15);
+    const [filterMaxPrice, setFilterMaxPrice] = useState(80);
+    const [filterMinRating, setFilterMinRating] = useState(4);
+
     const categoryLabel = CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory;
 
     const loadProfessionals = useCallback(async () => {
@@ -112,7 +118,11 @@ export default function CategoryResultsScreen() {
     function getAvatarUrl(avatar: string | null | undefined) {
         if (!avatar) return null;
         if (avatar.startsWith("http")) return avatar;
-        return `${API_URL}/${avatar}`;
+        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+    }
+
+    function handleProfilePress() {
+        router.push("/(tabs)/settings");
     }
 
     function renderProfessionalCard({ item }: { item: Professional }) {
@@ -216,7 +226,7 @@ export default function CategoryResultsScreen() {
 
                     {/* User greeting */}
                     <View style={styles.greetingContainer}>
-                        <TouchableOpacity style={styles.userAvatar}>
+                        <TouchableOpacity style={styles.userAvatar} onPress={handleProfilePress}>
                             {user?.avatar ? (
                                 <Image
                                     source={{ uri: getAvatarUrl(user.avatar) || "" }}
@@ -286,7 +296,10 @@ export default function CategoryResultsScreen() {
 
                 {/* Sort options */}
                 <View style={styles.sortContainer}>
-                    <TouchableOpacity style={styles.filterButton}>
+                    <TouchableOpacity
+                        style={styles.filterButton}
+                        onPress={() => setShowFiltersModal(true)}
+                    >
                         <MaterialIcons name="filter-list" size={20} color={COLORS.gray500} />
                     </TouchableOpacity>
                     <ScrollView
@@ -337,6 +350,161 @@ export default function CategoryResultsScreen() {
                     />
                 )}
             </View>
+
+            {/* Filters Modal */}
+            <Modal
+                visible={showFiltersModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowFiltersModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Filtros Avanzados</Text>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowFiltersModal(false)}
+                            >
+                                <MaterialIcons name="close" size={20} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                            {/* Distance Filter */}
+                            <View style={styles.filterSection}>
+                                <View style={styles.filterHeader}>
+                                    <View style={styles.filterLabelRow}>
+                                        <MaterialIcons name="location-on" size={18} color={COLORS.gray500} />
+                                        <Text style={styles.filterLabel}>Cercanía</Text>
+                                    </View>
+                                    <Text style={styles.filterValueText}>
+                                        {filterDistance >= 100 ? "Sin Límite" : `${filterDistance} km`}
+                                    </Text>
+                                </View>
+                                <View style={styles.filterOptionsRow}>
+                                    {[5, 10, 15, 30, 50, 100].map((val) => (
+                                        <TouchableOpacity
+                                            key={val}
+                                            style={[
+                                                styles.filterOptionButton,
+                                                filterDistance === val && styles.filterOptionButtonActive
+                                            ]}
+                                            onPress={() => setFilterDistance(val)}
+                                        >
+                                            <Text style={[
+                                                styles.filterOptionText,
+                                                filterDistance === val && styles.filterOptionTextActive
+                                            ]}>
+                                                {val >= 100 ? "∞" : val}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <View style={styles.sliderLabels}>
+                                    <Text style={styles.sliderLabelText}>0 km</Text>
+                                    <Text style={styles.sliderLabelText}>Sin Límite</Text>
+                                </View>
+                            </View>
+
+                            {/* Price Filter */}
+                            <View style={styles.filterSection}>
+                                <View style={styles.filterHeader}>
+                                    <View style={styles.filterLabelRow}>
+                                        <MaterialIcons name="attach-money" size={18} color={COLORS.gray500} />
+                                        <Text style={styles.filterLabel}>Precio / hora</Text>
+                                    </View>
+                                    <Text style={styles.filterValueText}>
+                                        {filterMaxPrice >= 200 ? "Máximo Sector" : `Max: ${filterMaxPrice}€`}
+                                    </Text>
+                                </View>
+                                <View style={styles.filterOptionsRow}>
+                                    {[20, 40, 60, 80, 120, 200].map((val) => (
+                                        <TouchableOpacity
+                                            key={val}
+                                            style={[
+                                                styles.filterOptionButton,
+                                                filterMaxPrice === val && styles.filterOptionButtonActive
+                                            ]}
+                                            onPress={() => setFilterMaxPrice(val)}
+                                        >
+                                            <Text style={[
+                                                styles.filterOptionText,
+                                                filterMaxPrice === val && styles.filterOptionTextActive
+                                            ]}>
+                                                {val >= 200 ? "∞" : val}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <View style={styles.sliderLabels}>
+                                    <Text style={styles.sliderLabelText}>0€</Text>
+                                    <Text style={styles.sliderLabelText}>Máximo Sector</Text>
+                                </View>
+                            </View>
+
+                            {/* Rating Filter */}
+                            <View style={styles.filterSection}>
+                                <View style={styles.filterHeader}>
+                                    <View style={styles.filterLabelRow}>
+                                        <MaterialIcons name="star" size={18} color={COLORS.gray500} />
+                                        <Text style={styles.filterLabel}>Reseñas mínimas</Text>
+                                    </View>
+                                    <Text style={styles.filterValueText}>{filterMinRating}.0+</Text>
+                                </View>
+                                <View style={styles.ratingButtons}>
+                                    {[1, 2, 3, 4, 5].map((rating) => (
+                                        <TouchableOpacity
+                                            key={rating}
+                                            style={[
+                                                styles.ratingButton,
+                                                filterMinRating === rating && styles.ratingButtonActive
+                                            ]}
+                                            onPress={() => setFilterMinRating(rating)}
+                                        >
+                                            <Text style={[
+                                                styles.ratingButtonText,
+                                                filterMinRating === rating && styles.ratingButtonTextActive
+                                            ]}>
+                                                {rating}
+                                            </Text>
+                                            <MaterialIcons
+                                                name="star"
+                                                size={14}
+                                                color={filterMinRating === rating ? "#000000" : COLORS.gray400}
+                                            />
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </ScrollView>
+
+                        {/* Modal Footer */}
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.resetButton}
+                                onPress={() => {
+                                    setFilterDistance(15);
+                                    setFilterMaxPrice(80);
+                                    setFilterMinRating(4);
+                                }}
+                            >
+                                <Text style={styles.resetButtonText}>Restablecer</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.applyButton}
+                                onPress={() => {
+                                    setShowFiltersModal(false);
+                                    // TODO: Apply filters to the professional list
+                                }}
+                            >
+                                <Text style={styles.applyButtonText}>Aplicar filtros</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -688,6 +856,186 @@ const styles = StyleSheet.create({
     },
     contactButtonText: {
         fontSize: 12,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 40,
+        borderTopRightRadius: 40,
+        paddingTop: 24,
+        paddingHorizontal: 24,
+        paddingBottom: 40,
+        minHeight: 450,
+        maxHeight: "85%",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    modalCloseButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    modalBody: {
+        flexGrow: 1,
+        marginBottom: 16,
+    },
+    filterSection: {
+        marginBottom: 32,
+    },
+    filterHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    filterLabelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    filterLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    filterValueBadge: {
+        backgroundColor: "rgba(249, 245, 6, 0.15)",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    filterValueText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: COLORS.primary,
+    },
+    filterOptionsRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        gap: 8,
+        marginBottom: 8,
+    },
+    filterOptionButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    filterOptionButtonActive: {
+        backgroundColor: COLORS.primary,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    filterOptionText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.gray400,
+    },
+    filterOptionTextActive: {
+        color: "#000000",
+    },
+    sliderLabels: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    sliderLabelText: {
+        fontSize: 10,
+        color: COLORS.gray400,
+        fontWeight: "500",
+    },
+
+    ratingButtons: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    ratingButton: {
+        flex: 1,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: 4,
+    },
+    ratingButtonActive: {
+        backgroundColor: COLORS.primary,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    ratingButtonText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.gray400,
+    },
+    ratingButtonTextActive: {
+        color: "#000000",
+    },
+    modalFooter: {
+        flexDirection: "row",
+        gap: 12,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray100,
+        marginTop: 16,
+    },
+    resetButton: {
+        flex: 1,
+        height: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    resetButtonText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.gray500,
+    },
+    applyButton: {
+        flex: 2,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: COLORS.slate900,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    applyButtonText: {
+        fontSize: 14,
         fontWeight: "bold",
         color: "#FFFFFF",
     },
