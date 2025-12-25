@@ -166,7 +166,13 @@ export default function FavoritesScreen() {
             </View>
 
             {/* Contact button */}
-            <TouchableOpacity style={styles.contactButton}>
+            <TouchableOpacity
+                style={styles.contactButton}
+                onPress={(e) => {
+                    e.stopPropagation();
+                    router.push(`/avatar-chat/${item._id}`);
+                }}
+            >
                 <Text style={styles.contactButtonText}>Contactar</Text>
             </TouchableOpacity>
         </TouchableOpacity>

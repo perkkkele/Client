@@ -84,14 +84,9 @@ export default function ProfessionalProfileScreen() {
         }
     };
 
-    const handleStartChat = async () => {
-        if (!token || !user || !professionalId) return;
-        try {
-            const chat = await chatApi.createChat(token, professionalId, user._id);
-            router.push(`/chat/${chat._id}`);
-        } catch (error) {
-            console.error("Error creating chat:", error);
-        }
+    const handleStartChat = () => {
+        if (!professionalId) return;
+        router.push(`/avatar-chat/${professionalId}`);
     };
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
