@@ -12,9 +12,10 @@ import {
     Animated,
     Easing,
     Dimensions,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, API_HOST, API_PORT } from "../../api";
 import { User } from "../../api/user";
@@ -43,6 +44,12 @@ const COLORS = {
     green500: "#22C55E",
     indigo50: "#EEF2FF",
     indigo100: "#E0E7FF",
+    indigo200: "#C7D2FE",
+    indigo300: "#A5B4FC",
+    indigo400: "#818CF8",
+    indigo600: "#4F46E5",
+    indigo700: "#4338CA",
+    indigo800: "#3730A3",
     indigo900: "#312E81",
     purple50: "#FAF5FF",
     purple900: "#581C87",
@@ -50,7 +57,7 @@ const COLORS = {
     black: "#000000",
 };
 
-type InfoBubbleType = "profile" | "contact" | "location" | "share" | null;
+type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | null;
 
 interface Message {
     id: string;
@@ -79,7 +86,7 @@ const QUICK_REPLIES = [
     "Renovar receta",
 ];
 
-const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string; content: string; icon: string }> = {
+const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string; content: string; icon: string; subtitle?: string }> = {
     profile: {
         title: "Sobre mí",
         content: "Especialista con más de 15 años de experiencia. Formación en las mejores instituciones. Comprometido con tu bienestar.",
@@ -100,6 +107,12 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
         content: "Comparte este perfil con amigos o familiares que puedan beneficiarse de una consulta profesional.",
         icon: "share",
     },
+    private: {
+        title: "Conversación Privada",
+        subtitle: "Modo incógnito",
+        content: "Al activar esta opción, los mensajes de esta sesión no aparecerán en el historial, proporcionando máxima seguridad y privacidad.",
+        icon: "lock",
+    },
 };
 
 export default function AvatarChatScreen() {
@@ -113,6 +126,8 @@ export default function AvatarChatScreen() {
     const [isMuted, setIsMuted] = useState(false);
     const [activeInfoBubble, setActiveInfoBubble] = useState<InfoBubbleType>(null);
     const [isVideoMinimized, setIsVideoMinimized] = useState(false);
+    const [isPrivateMode, setIsPrivateMode] = useState(false);
+    const [hasShownPrivateBubble, setHasShownPrivateBubble] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Animation values
@@ -338,8 +353,30 @@ export default function AvatarChatScreen() {
                             </View>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.historyButton}>
-                        <MaterialIcons name="history" size={20} color={COLORS.gray600} />
+                    <TouchableOpacity
+                        style={[
+                            styles.historyButton,
+                            isPrivateMode && styles.historyButtonActive
+                        ]}
+                        onPress={() => {
+                            const newPrivateMode = !isPrivateMode;
+                            setIsPrivateMode(newPrivateMode);
+
+                            if (newPrivateMode && !hasShownPrivateBubble) {
+                                // Only show bubble the first time
+                                setActiveInfoBubble("private");
+                                setHasShownPrivateBubble(true);
+                            } else {
+                                // Close any open bubble when toggling
+                                setActiveInfoBubble(null);
+                            }
+                        }}
+                    >
+                        <MaterialIcons
+                            name={isPrivateMode ? "lock" : "history"}
+                            size={20}
+                            color={isPrivateMode ? COLORS.textMain : COLORS.gray600}
+                        />
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -465,56 +502,364 @@ export default function AvatarChatScreen() {
                 </TouchableOpacity>
             </Animated.View>
 
-            {/* Dynamic Info Bubble */}
+            {/* Dynamic Info Bubble with overlay to close on tap outside */}
             {activeInfoBubble && (
-                <Animated.View
-                    style={[
-                        styles.infoBubble,
-                        {
-                            opacity: infoBubbleAnim,
-                            transform: [
-                                { scale: infoBubbleScaleAnim },
-                                {
-                                    translateY: infoBubbleAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [20, 0],
-                                    })
-                                }
-                            ]
-                        }
-                    ]}
-                >
-                    <View style={styles.infoBubbleHeader}>
-                        <View style={styles.infoBubbleIconContainer}>
-                            <MaterialIcons
-                                name={INFO_BUBBLE_CONTENT[activeInfoBubble].icon as any}
-                                size={20}
-                                color={COLORS.primary}
-                            />
-                        </View>
-                        <Text style={styles.infoBubbleTitle}>
-                            {INFO_BUBBLE_CONTENT[activeInfoBubble].title}
-                        </Text>
-                        <TouchableOpacity
-                            style={styles.infoBubbleClose}
-                            onPress={() => setActiveInfoBubble(null)}
-                        >
-                            <MaterialIcons name="close" size={18} color={COLORS.gray400} />
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={styles.infoBubbleContent}>
-                        {INFO_BUBBLE_CONTENT[activeInfoBubble].content}
-                    </Text>
-                    {activeInfoBubble === "profile" && (
-                        <TouchableOpacity
-                            style={styles.infoBubbleAction}
-                            onPress={handleViewProfile}
-                        >
-                            <Text style={styles.infoBubbleActionText}>Ver perfil completo</Text>
-                            <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
-                        </TouchableOpacity>
-                    )}
-                </Animated.View>
+                <>
+                    {/* Invisible overlay to capture taps outside the bubble */}
+                    <TouchableOpacity
+                        style={styles.bubbleOverlay}
+                        activeOpacity={1}
+                        onPress={() => setActiveInfoBubble(null)}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.infoBubble,
+                            activeInfoBubble === "private" && styles.infoBubbleDark,
+                            activeInfoBubble === "contact" && styles.infoBubbleContact,
+                            activeInfoBubble === "location" && styles.infoBubbleLocation,
+                            activeInfoBubble === "share" && styles.infoBubbleShare,
+                            {
+                                opacity: infoBubbleAnim,
+                                transform: [
+                                    { scale: infoBubbleScaleAnim },
+                                    {
+                                        translateY: infoBubbleAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [20, 0],
+                                        })
+                                    }
+                                ]
+                            }
+                        ]}
+                    >
+                        {activeInfoBubble === "private" && (
+                            <View style={styles.privateBubbleGlow} />
+                        )}
+
+                        {/* Header (not shown for location bubble) */}
+                        {activeInfoBubble !== "location" && (
+                            <View style={styles.infoBubbleHeader}>
+                                <View style={[
+                                    styles.infoBubbleIconContainer,
+                                    activeInfoBubble === "private" && styles.infoBubbleIconContainerDark
+                                ]}>
+                                    <MaterialIcons
+                                        name={INFO_BUBBLE_CONTENT[activeInfoBubble].icon as any}
+                                        size={20}
+                                        color={COLORS.primary}
+                                    />
+                                </View>
+                                <View style={styles.infoBubbleTitleContainer}>
+                                    <Text style={[
+                                        styles.infoBubbleTitle,
+                                        activeInfoBubble === "private" && styles.infoBubbleTitleDark
+                                    ]}>
+                                        {INFO_BUBBLE_CONTENT[activeInfoBubble].title}
+                                    </Text>
+                                    {INFO_BUBBLE_CONTENT[activeInfoBubble].subtitle && (
+                                        <Text style={styles.infoBubbleSubtitle}>
+                                            {INFO_BUBBLE_CONTENT[activeInfoBubble].subtitle}
+                                        </Text>
+                                    )}
+                                </View>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.infoBubbleClose,
+                                        activeInfoBubble === "private" && styles.infoBubbleCloseDark
+                                    ]}
+                                    onPress={() => setActiveInfoBubble(null)}
+                                >
+                                    <MaterialIcons name="close" size={18} color={activeInfoBubble === "contact" ? COLORS.indigo300 : COLORS.gray400} />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* Location bubble has its own close button */}
+                        {activeInfoBubble === "location" && (
+                            <TouchableOpacity
+                                style={styles.locationCloseButton}
+                                onPress={() => setActiveInfoBubble(null)}
+                            >
+                                <MaterialIcons name="close" size={20} color={COLORS.gray600} />
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Special Contact Content */}
+                        {activeInfoBubble === "contact" && professional ? (
+                            <View style={styles.contactContent}>
+                                {/* Phone - Primary CTA */}
+                                {professional.phone && (
+                                    <TouchableOpacity
+                                        style={styles.contactItemPrimary}
+                                        onPress={() => Linking.openURL(`tel:${professional.phone}`)}
+                                    >
+                                        <View style={styles.contactIconPrimary}>
+                                            <MaterialIcons name="call" size={20} color={COLORS.white} />
+                                        </View>
+                                        <View style={styles.contactItemInfo}>
+                                            <View style={styles.contactLabelRow}>
+                                                <Text style={styles.contactLabel}>Móvil</Text>
+                                                <View style={styles.callNowBadge}>
+                                                    <Text style={styles.callNowText}>LLAMAR AHORA</Text>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.contactValue}>{professional.phone}</Text>
+                                        </View>
+                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.indigo400} />
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Email */}
+                                {professional.professionalEmail && (
+                                    <TouchableOpacity
+                                        style={styles.contactItem}
+                                        onPress={() => Linking.openURL(`mailto:${professional.professionalEmail}`)}
+                                    >
+                                        <View style={styles.contactIcon}>
+                                            <MaterialIcons name="mail" size={20} color={COLORS.indigo600} />
+                                        </View>
+                                        <View style={styles.contactItemInfo}>
+                                            <Text style={styles.contactLabel}>Email</Text>
+                                            <Text style={styles.contactValue}>{professional.professionalEmail}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Website */}
+                                {professional.website && (
+                                    <TouchableOpacity
+                                        style={styles.contactItem}
+                                        onPress={() => {
+                                            const url = professional.website!.startsWith('http')
+                                                ? professional.website!
+                                                : `https://${professional.website}`;
+                                            Linking.openURL(url);
+                                        }}
+                                    >
+                                        <View style={styles.contactIcon}>
+                                            <MaterialIcons name="language" size={20} color={COLORS.indigo600} />
+                                        </View>
+                                        <View style={styles.contactItemInfo}>
+                                            <Text style={styles.contactLabel}>Sitio Web</Text>
+                                            <Text style={styles.contactValue}>{professional.website}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Social Links */}
+                                {professional.socialLinks && (
+                                    <View style={styles.socialSection}>
+                                        <Text style={styles.socialTitle}>Redes Sociales</Text>
+                                        <View style={styles.socialLinks}>
+                                            {professional.socialLinks.instagram && (
+                                                <TouchableOpacity
+                                                    style={styles.socialButton}
+                                                    onPress={() => Linking.openURL(professional.socialLinks!.instagram!)}
+                                                >
+                                                    <Text style={[styles.socialIcon, { color: "#E4405F" }]}>📷</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                            {professional.socialLinks.facebook && (
+                                                <TouchableOpacity
+                                                    style={styles.socialButton}
+                                                    onPress={() => Linking.openURL(professional.socialLinks!.facebook!)}
+                                                >
+                                                    <Text style={[styles.socialIcon, { color: "#1877F2" }]}>📘</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                            {professional.socialLinks.twitter && (
+                                                <TouchableOpacity
+                                                    style={styles.socialButton}
+                                                    onPress={() => Linking.openURL(professional.socialLinks!.twitter!)}
+                                                >
+                                                    <Text style={[styles.socialIcon, { color: "#1DA1F2" }]}>🐦</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                            {professional.socialLinks.linkedin && (
+                                                <TouchableOpacity
+                                                    style={styles.socialButton}
+                                                    onPress={() => Linking.openURL(professional.socialLinks!.linkedin!)}
+                                                >
+                                                    <Text style={[styles.socialIcon, { color: "#0A66C2" }]}>💼</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        ) : activeInfoBubble === "location" && professional?.location ? (
+                            <View style={styles.locationContent}>
+                                {/* Map Container */}
+                                <View style={styles.mapContainer}>
+                                    <Image
+                                        source={{
+                                            uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=400x200&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=AIzaSyDummy`
+                                        }}
+                                        style={styles.mapImage}
+                                        resizeMode="cover"
+                                    />
+                                    {/* Fallback placeholder if no API key */}
+                                    <View style={styles.mapPlaceholder}>
+                                        <MaterialIcons name="map" size={40} color={COLORS.gray400} />
+                                        <Text style={styles.mapPlaceholderText}>Mapa de ubicación</Text>
+                                    </View>
+                                    {/* Open indicator */}
+                                    <View style={styles.openIndicator}>
+                                        <View style={styles.openDot} />
+                                        <Text style={styles.openText}>Abierto</Text>
+                                    </View>
+                                </View>
+
+                                {/* Location Info */}
+                                <View style={styles.locationInfo}>
+                                    <View style={styles.locationHeader}>
+                                        <View style={styles.locationIconContainer}>
+                                            <MaterialIcons name="local-hospital" size={24} color={COLORS.indigo600} />
+                                        </View>
+                                        <View style={styles.locationDetails}>
+                                            <Text style={styles.locationName}>
+                                                {professional.publicName || `${professional.firstname} ${professional.lastname}`}
+                                            </Text>
+                                            <Text style={styles.locationAddress}>
+                                                {professional.location.address || "Dirección no disponible"}
+                                                {professional.location.city && `, ${professional.location.city}`}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    {/* Action Buttons */}
+                                    <View style={styles.locationButtons}>
+                                        <TouchableOpacity
+                                            style={styles.directionsButton}
+                                            onPress={() => {
+                                                const lat = professional.location?.lat || 40.4168;
+                                                const lng = professional.location?.lng || -3.7038;
+                                                Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`);
+                                            }}
+                                        >
+                                            <MaterialIcons name="directions" size={20} color={COLORS.textMain} />
+                                            <Text style={styles.directionsButtonText}>Cómo llegar</Text>
+                                        </TouchableOpacity>
+
+                                        {professional.phone && (
+                                            <TouchableOpacity
+                                                style={styles.callLocationButton}
+                                                onPress={() => Linking.openURL(`tel:${professional.phone}`)}
+                                            >
+                                                <MaterialIcons name="call" size={20} color={COLORS.textMain} />
+                                                <Text style={styles.callLocationButtonText}>Llamar</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
+                        ) : activeInfoBubble === "share" && professional ? (
+                            <View style={styles.shareContent}>
+                                {/* Share Grid */}
+                                <View style={styles.shareGrid}>
+                                    {/* WhatsApp */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            const message = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
+                                            Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, { backgroundColor: "#25D366" }]}>
+                                            <FontAwesome5 name="whatsapp" size={24} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>WhatsApp</Text>
+                                    </TouchableOpacity>
+
+                                    {/* Facebook */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            Linking.openURL(`https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(`¡Mira este profesional! ${professional.publicName || professional.firstname}`)}`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, { backgroundColor: "#1877F2" }]}>
+                                            <FontAwesome5 name="facebook-f" size={24} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>Facebook</Text>
+                                    </TouchableOpacity>
+
+                                    {/* Instagram */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            Linking.openURL(`instagram://`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, styles.shareIconInstagram]}>
+                                            <FontAwesome5 name="instagram" size={24} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>Instagram</Text>
+                                    </TouchableOpacity>
+
+                                    {/* X (Twitter) */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            const text = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
+                                            Linking.openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, { backgroundColor: COLORS.black }]}>
+                                            <FontAwesome5 name="x-twitter" size={22} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>X</Text>
+                                    </TouchableOpacity>
+
+                                    {/* LinkedIn */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            Linking.openURL(`https://www.linkedin.com/sharing/share-offsite/`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, { backgroundColor: "#0A66C2" }]}>
+                                            <FontAwesome5 name="linkedin-in" size={22} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>LinkedIn</Text>
+                                    </TouchableOpacity>
+
+                                    {/* Telegram */}
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => {
+                                            const text = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
+                                            Linking.openURL(`https://t.me/share/url?text=${encodeURIComponent(text)}`);
+                                        }}
+                                    >
+                                        <View style={[styles.shareIconContainer, { backgroundColor: "#229ED9" }]}>
+                                            <FontAwesome5 name="telegram-plane" size={22} color={COLORS.white} />
+                                        </View>
+                                        <Text style={styles.shareLabel}>Telegram</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            <>
+                                <Text style={[
+                                    styles.infoBubbleContent,
+                                    activeInfoBubble === "private" && styles.infoBubbleContentDark
+                                ]}>
+                                    {INFO_BUBBLE_CONTENT[activeInfoBubble].content}
+                                </Text>
+                                {activeInfoBubble === "profile" && (
+                                    <TouchableOpacity
+                                        style={styles.infoBubbleAction}
+                                        onPress={handleViewProfile}
+                                    >
+                                        <Text style={styles.infoBubbleActionText}>Ver perfil completo</Text>
+                                        <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
+                                    </TouchableOpacity>
+                                )}
+                            </>
+                        )}
+                    </Animated.View>
+                </>
             )}
 
             {/* Chat Messages */}
@@ -674,7 +1019,7 @@ export default function AvatarChatScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </View >
     );
 }
 
@@ -901,10 +1246,10 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     infoBubbleTitle: {
-        flex: 1,
         fontSize: 16,
         fontWeight: "bold",
         color: COLORS.textMain,
+        lineHeight: 20,
     },
     infoBubbleClose: {
         width: 28,
@@ -1190,5 +1535,359 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "600",
         color: COLORS.white,
+    },
+    // Private mode styles
+    historyButtonActive: {
+        backgroundColor: COLORS.primary,
+    },
+    infoBubbleDark: {
+        backgroundColor: "#2c2c24",
+    },
+    privateBubbleGlow: {
+        position: "absolute",
+        top: -16,
+        right: -16,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: `${COLORS.primary}15`,
+    },
+    infoBubbleIconContainerDark: {
+        backgroundColor: "#414136",
+    },
+    infoBubbleTitleContainer: {
+        flex: 1,
+    },
+    infoBubbleTitleDark: {
+        color: COLORS.white,
+    },
+    infoBubbleSubtitle: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: COLORS.gray400,
+        marginTop: 2,
+    },
+    infoBubbleCloseDark: {
+        backgroundColor: "transparent",
+    },
+    infoBubbleContentDark: {
+        color: "#d1d5db",
+    },
+    bubbleOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99,
+    },
+    // Contact Bubble Styles
+    infoBubbleContact: {
+        backgroundColor: COLORS.indigo50,
+    },
+    contactContent: {
+        marginTop: 4,
+    },
+    contactItemPrimary: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.6)",
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: COLORS.indigo200,
+        marginBottom: 8,
+        shadowColor: COLORS.indigo600,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    contactItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.4)",
+        padding: 10,
+        borderRadius: 16,
+        marginBottom: 8,
+    },
+    contactIconPrimary: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.indigo600,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    contactIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.white,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    contactItemInfo: {
+        flex: 1,
+    },
+    contactLabelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    contactLabel: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: COLORS.indigo700,
+        opacity: 0.7,
+    },
+    callNowBadge: {
+        backgroundColor: COLORS.indigo100,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    callNowText: {
+        fontSize: 8,
+        fontWeight: "700",
+        color: COLORS.indigo700,
+        letterSpacing: 0.5,
+    },
+    contactValue: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.indigo900,
+        marginTop: 2,
+    },
+    socialSection: {
+        marginTop: 12,
+    },
+    socialTitle: {
+        fontSize: 10,
+        fontWeight: "600",
+        color: COLORS.indigo800,
+        opacity: 0.6,
+        letterSpacing: 0.8,
+        textTransform: "uppercase",
+        marginBottom: 10,
+        marginLeft: 4,
+    },
+    socialLinks: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        paddingHorizontal: 4,
+    },
+    socialButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: COLORS.white,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    socialIcon: {
+        fontSize: 20,
+    },
+    // Location Bubble Styles
+    infoBubbleLocation: {
+        padding: 0,
+        overflow: "hidden",
+    },
+    locationContent: {
+        width: "100%",
+    },
+    mapContainer: {
+        height: 160,
+        backgroundColor: COLORS.gray200,
+        position: "relative",
+        overflow: "hidden",
+    },
+    mapImage: {
+        width: "100%",
+        height: "100%",
+        position: "absolute",
+    },
+    mapPlaceholder: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.gray100,
+    },
+    mapPlaceholderText: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        marginTop: 8,
+    },
+    openIndicator: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 6,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    openDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: COLORS.green500,
+    },
+    openText: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.green500,
+    },
+    locationInfo: {
+        padding: 16,
+    },
+    locationHeader: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+    },
+    locationIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        backgroundColor: COLORS.indigo50,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    locationDetails: {
+        flex: 1,
+    },
+    locationName: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.textMain,
+        marginBottom: 4,
+    },
+    locationAddress: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        lineHeight: 18,
+    },
+    locationButtons: {
+        flexDirection: "row",
+        gap: 12,
+        marginTop: 16,
+    },
+    directionsButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        paddingVertical: 12,
+        borderRadius: 12,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    directionsButtonText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: COLORS.textMain,
+    },
+    callLocationButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.gray100,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    callLocationButtonText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.textMain,
+    },
+    locationCloseButton: {
+        position: "absolute",
+        top: 12,
+        left: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "rgba(255,255,255,0.95)",
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.15,
+        shadowRadius: 2,
+        elevation: 3,
+        zIndex: 10,
+    },
+    // Share Bubble Styles
+    infoBubbleShare: {
+        backgroundColor: COLORS.indigo50,
+    },
+    shareContent: {
+        marginTop: 4,
+    },
+    shareGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
+    shareButton: {
+        width: "30%",
+        alignItems: "center",
+        marginBottom: 20,
+    },
+    shareIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    shareIconInstagram: {
+        backgroundColor: "#E4405F",
+    },
+    shareEmoji: {
+        fontSize: 22,
+    },
+    shareLabel: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: COLORS.gray600,
     },
 });
