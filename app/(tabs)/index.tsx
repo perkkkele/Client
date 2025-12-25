@@ -205,7 +205,12 @@ export default function TwinProHomeScreen() {
     return (
       <TouchableOpacity
         style={styles.chatCard}
-        onPress={() => router.push(`/chat/${item._id}`)}
+        onPress={() => {
+          // Navigate to avatar-chat using the partner's ID to unify chat rooms
+          if (partner?._id) {
+            router.push(`/avatar-chat/${partner._id}`);
+          }
+        }}
         activeOpacity={0.95}
       >
         <View style={styles.chatAvatarContainer}>

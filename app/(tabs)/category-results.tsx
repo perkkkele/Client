@@ -319,10 +319,13 @@ export default function CategoryResultsScreen() {
                     )}
                 </View>
 
-                {/* Contact button */}
+                {/* Contact button - goes directly to chat */}
                 <TouchableOpacity
                     style={styles.contactButton}
-                    onPress={() => handleContactProfessional(item)}
+                    onPress={(e) => {
+                        e.stopPropagation();
+                        router.push(`/avatar-chat/${item._id}`);
+                    }}
                 >
                     <Text style={styles.contactButtonText}>Contactar</Text>
                 </TouchableOpacity>

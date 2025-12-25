@@ -58,9 +58,9 @@ export default function ExploreScreen() {
     if (!token || !user) return;
     setCreatingChat(userId);
     try {
-      // Pass current user ID as participant_id_two
-      const chat = await chatApi.createChat(token, userId, user._id);
-      router.push(`/chat/${chat._id}`);
+      // Create chat and then navigate to avatar-chat using the user's ID
+      await chatApi.createChat(token, userId, user._id);
+      router.push(`/avatar-chat/${userId}`);
     } catch (error: any) {
       Alert.alert("Error", error.message || "No se pudo crear el chat");
     } finally {
