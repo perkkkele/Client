@@ -334,7 +334,7 @@ export default function AvatarChatScreen() {
                         <TouchableOpacity style={styles.menuButton} onPress={handleBack}>
                             <MaterialIcons name="arrow-back" size={20} color={COLORS.gray600} />
                         </TouchableOpacity>
-                        <View style={styles.professionalChip}>
+                        <TouchableOpacity style={styles.professionalChip} onPress={handleViewProfile}>
                             <View style={styles.avatarSmallContainer}>
                                 {avatarUrl ? (
                                     <Image source={{ uri: avatarUrl }} style={styles.avatarSmall} />
@@ -351,7 +351,7 @@ export default function AvatarChatScreen() {
                                     {professional?.profession || "Profesional"} AI
                                 </Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
                     <TouchableOpacity
                         style={[

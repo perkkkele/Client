@@ -83,3 +83,25 @@ export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
 
     return response.json();
 }
+
+export async function changePassword(
+    token: string,
+    currentPassword: string,
+    newPassword: string
+): Promise<{ message: string }> {
+    const response = await fetch(`${API_URL}/auth/change-password`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al cambiar la contraseña");
+    }
+
+    return response.json();
+}

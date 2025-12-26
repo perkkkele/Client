@@ -107,7 +107,7 @@ export default function SettingsScreen() {
     }
 
     function handleEditProfile() {
-        // TODO: Navegar a pantalla de editar perfil
+        router.push("/(tabs)/edit-profile");
     }
 
     function handleLogout() {
