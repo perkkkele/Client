@@ -9,6 +9,7 @@ interface AuthContextType {
     refreshToken: string | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
+    loginWithGoogle: (idToken: string) => Promise<void>;
     register: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     updateUserProfile: (updatedUser: User) => Promise<void>;
@@ -92,6 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await login(email, password);
     }
 
+    async function loginWithGoogle(idToken: string) {
+        const response = await authApi.loginWithGoogle(idToken);
+
+        await SecureStore.setItemAsync("accessToken", response.accessToken);
+        await SecureStore.setItemAsync("refreshToken", response.refresh);
+
+        setToken(response.accessToken);
+        setRefreshToken(response.refresh);
+
+        const userData = await userApi.getMe(response.accessToken);
+        setUser(userData);
+    }
+
     async function logout() {
         await clearAuth();
     }
@@ -118,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 refreshToken,
                 loading,
                 login,
+                loginWithGoogle,
                 register,
                 logout,
                 updateUserProfile,

@@ -693,7 +693,7 @@ export default function AvatarChatScreen() {
                                 <View style={styles.mapContainer}>
                                     <Image
                                         source={{
-                                            uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=400x200&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=AIzaSyDummy`
+                                            uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=400x200&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`
                                         }}
                                         style={styles.mapImage}
                                         resizeMode="cover"

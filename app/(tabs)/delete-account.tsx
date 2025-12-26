@@ -64,11 +64,15 @@ export default function DeleteAccountScreen() {
             // Llamar a la API para eliminar la cuenta
             await userApi.deleteAccount(token);
 
-            // Cerrar sesión
-            await logout();
-
-            // Navegar a la pantalla de éxito
+            // IMPORTANTE: Navegar PRIMERO a la pantalla de éxito
+            // Si hacemos logout antes, el layout detecta que no hay token
+            // y redirige automáticamente a login antes de que la navegación se ejecute
             router.replace("/delete-account-success");
+
+            // Cerrar sesión después de navegar (se ejecuta en background)
+            setTimeout(() => {
+                logout();
+            }, 100);
         } catch (error: any) {
             Alert.alert("Error", error.message || "No se pudo eliminar la cuenta");
         } finally {

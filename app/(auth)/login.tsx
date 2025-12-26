@@ -1,5 +1,5 @@
 import { Link, router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import * as WebBrowser from "expo-web-browser";
+
+// Try to import Google OAuth - it may fail in Expo Go
+let useIdTokenAuthRequest: any = null;
+try {
+  const Google = require("expo-auth-session/providers/google");
+  useIdTokenAuthRequest = Google.useIdTokenAuthRequest;
+  WebBrowser.maybeCompleteAuthSession();
+} catch (e) {
+  console.log("Google OAuth not available (Expo Go)");
+}
 
 const COLORS = {
   primary: "#FFED00",
@@ -38,7 +49,42 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
+
+  // Google OAuth configuration - only if available
+  const googleAuth = useIdTokenAuthRequest ? useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+  }) : [null, null, null];
+
+  const [request, response, promptAsync] = googleAuth;
+
+  useEffect(() => {
+    setIsGoogleAvailable(!!useIdTokenAuthRequest && !!request);
+  }, [request]);
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      handleGoogleLogin(id_token);
+    } else if (response?.type === "error") {
+      Alert.alert("Error", "Error al conectar con Google");
+    }
+  }, [response]);
+
+  async function handleGoogleLogin(idToken: string) {
+    setIsGoogleLoading(true);
+    try {
+      await loginWithGoogle(idToken);
+      router.replace("/(tabs)");
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }
 
   async function handleLogin() {
     if (!email || !password) {
@@ -81,7 +127,7 @@ export default function LoginScreen() {
                   <Text style={styles.logoSubtitle}>Professional Chat</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.helpButton}>
+              <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/(auth)/help")}>
                 <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
@@ -182,14 +228,24 @@ export default function LoginScreen() {
 
             {/* Botones sociales */}
             <View style={styles.socialButtonsContainer}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Image
-                  source={{
-                    uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg",
-                  }}
-                  style={styles.socialIcon}
-                />
-                <Text style={styles.socialButtonText}>Google</Text>
+              <TouchableOpacity
+                style={[styles.socialButton, (isGoogleLoading || !isGoogleAvailable) && styles.buttonDisabled]}
+                onPress={() => promptAsync && promptAsync()}
+                disabled={isGoogleLoading || !isGoogleAvailable}
+              >
+                {isGoogleLoading ? (
+                  <ActivityIndicator size="small" color="#000000" />
+                ) : (
+                  <>
+                    <Image
+                      source={{
+                        uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg",
+                      }}
+                      style={styles.socialIcon}
+                    />
+                    <Text style={styles.socialButtonText}>Google</Text>
+                  </>
+                )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialButton}>
                 <Ionicons name="logo-apple" size={16} color="#000000" />
