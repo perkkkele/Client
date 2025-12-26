@@ -107,7 +107,7 @@ export default function SettingsScreen() {
     }
 
     function handleEditProfile() {
-        router.push("/(tabs)/edit-profile");
+        router.push("/(settings)/edit-profile");
     }
 
     function handleLogout() {
@@ -134,24 +134,35 @@ export default function SettingsScreen() {
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
             label: "Centro de ayuda",
+            onPress: () => router.push("/(settings)/help-center"),
+        },
+        {
+            icon: "support-agent",
+            iconColor: COLORS.blue600,
+            iconBg: COLORS.blue100,
+            label: "Contactar con soporte",
+            onPress: () => router.push("/(settings)/contact-support"),
         },
         {
             icon: "feedback",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
             label: "Enviar comentarios",
+            onPress: () => router.push("/(settings)/send-feedback"),
         },
         {
             icon: "description",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
             label: "Condiciones y Política de privacidad",
+            onPress: () => router.push("/(settings)/terms-privacy"),
         },
         {
             icon: "info",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
             label: "Info de la aplicación",
+            onPress: () => router.push("/(settings)/app-info"),
         },
     ];
 

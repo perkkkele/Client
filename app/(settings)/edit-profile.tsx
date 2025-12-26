@@ -118,7 +118,7 @@ export default function EditProfileScreen() {
     }
 
     function handleChangePassword() {
-        router.push("/(tabs)/change-password");
+        router.push("/(settings)/change-password");
     }
 
     return (

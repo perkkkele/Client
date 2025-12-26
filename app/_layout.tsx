@@ -1,5 +1,5 @@
 import { registerGlobals } from "@livekit/react-native";
-import { Redirect, Slot, useSegments } from "expo-router";
+import { Redirect, Stack, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../context";
@@ -40,7 +40,15 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="auto" />
-      <Slot />
+      <Stack screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(settings)" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="avatar-chat" />
+        <Stack.Screen name="professional" />
+        <Stack.Screen name="delete-account-success" />
+      </Stack>
     </>
   );
 }
@@ -52,3 +60,4 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
