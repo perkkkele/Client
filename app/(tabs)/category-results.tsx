@@ -666,7 +666,13 @@ export default function CategoryResultsScreen() {
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
                     <Text style={styles.navLabel}>Favoritos</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/profile")}>
+                <TouchableOpacity style={styles.navItem} onPress={() => {
+                    if (user?.userType === 'userpro') {
+                        router.push("/(tabs)/pro-dashboard");
+                    } else {
+                        router.push("/(tabs)/become-pro");
+                    }
+                }}>
                     <MaterialIcons name="badge" size={24} color={COLORS.gray500} />
                     <Text style={styles.navLabel}>Perfil Pro</Text>
                 </TouchableOpacity>
