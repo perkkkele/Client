@@ -25,7 +25,7 @@ const COLORS = {
 interface LegalItem {
     icon: string;
     label: string;
-    onPress?: () => void;
+    route: string;
 }
 
 export default function AppInfoScreen() {
@@ -42,10 +42,10 @@ export default function AppInfoScreen() {
     }
 
     const legalItems: LegalItem[] = [
-        { icon: "gavel", label: "Términos de Servicio" },
-        { icon: "policy", label: "Política de Privacidad" },
-        { icon: "code", label: "Licencias de Código Abierto" },
-        { icon: "volunteer-activism", label: "Créditos" },
+        { icon: "gavel", label: "Términos de Servicio", route: "/(settings)/terms-of-service" },
+        { icon: "policy", label: "Política de Privacidad", route: "/(settings)/privacy-policy" },
+        { icon: "code", label: "Licencias de Código Abierto", route: "/(settings)/licenses" },
+        { icon: "volunteer-activism", label: "Créditos", route: "/(settings)/credits" },
     ];
 
     return (
@@ -67,7 +67,7 @@ export default function AppInfoScreen() {
                 {/* App Logo & Version */}
                 <View style={styles.logoSection}>
                     <View style={styles.appLogo}>
-                        <MaterialIcons name="smart-toy" size={56} color={COLORS.textMain} />
+                        <MaterialIcons name="group" size={56} color={COLORS.primary} />
                     </View>
                     <Text style={styles.appName}>TwinPro</Text>
                     <Text style={styles.appVersion}>Versión 1.0.0</Text>
@@ -79,7 +79,7 @@ export default function AppInfoScreen() {
                     <View style={styles.legalCard}>
                         {legalItems.map((item, index) => (
                             <View key={item.label}>
-                                <TouchableOpacity style={styles.legalItem} onPress={item.onPress}>
+                                <TouchableOpacity style={styles.legalItem} onPress={() => router.push(item.route as any)}>
                                     <View style={styles.legalItemLeft}>
                                         <View style={styles.legalIcon}>
                                             <MaterialIcons name={item.icon as any} size={18} color={COLORS.gray600} />
@@ -158,8 +158,13 @@ const styles = StyleSheet.create({
     appLogo: {
         width: 112,
         height: 112,
-        borderRadius: 32,
-        backgroundColor: COLORS.primary,
+        borderTopLeftRadius: 40,
+        borderTopRightRadius: 40,
+        borderBottomRightRadius: 40,
+        borderBottomLeftRadius: 10,
+        backgroundColor: "#000000",
+        borderWidth: 4,
+        borderColor: COLORS.primary,
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 16,
