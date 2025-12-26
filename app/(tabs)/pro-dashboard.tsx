@@ -215,78 +215,145 @@ export default function ProDashboardScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
                 }
             >
-                {/* Greeting & Edit Button */}
+                {/* Greeting */}
                 <View style={styles.greetingSection}>
-                    <View style={styles.greetingLeft}>
-                        <View style={styles.greetingRow}>
-                            <Text style={styles.greetingText}>Hola, {displayName}</Text>
-                            <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
-                        </View>
-                        <Text style={styles.greetingSubtext}>Gestiona tu negocio y tu IA</Text>
-                    </View>
-                    <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                        <MaterialIcons name="edit" size={18} color={COLORS.textMain} />
-                        <Text style={styles.editButtonText}>Editar</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Mi Negocio Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>MI NEGOCIO</Text>
-                    <View style={styles.menuCard}>
-                        {menuSections[0].items.map((item, i) => renderMenuItem(item, i, i === menuSections[0].items.length - 1))}
+                    <View style={styles.greetingRow}>
+                        <Text style={styles.greetingText}>Hola, {displayName}</Text>
+                        <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
                     </View>
                 </View>
 
-                {/* Agenda Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>AGENDA</Text>
-                    <View style={styles.menuCard}>
-                        {menuSections[1].items.map((item, i) => renderMenuItem(item, i, true))}
-                    </View>
-                </View>
-
-                {/* Tu Gemelo Digital IA Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>TU GEMELO DIGITAL IA</Text>
-
-                    {/* AI Control Panel Button */}
-                    <TouchableOpacity style={styles.aiControlButton} onPress={handleConfigureGemini}>
-                        <View style={styles.aiControlLeft}>
-                            <View style={styles.aiControlIcon}>
-                                <MaterialIcons name="smart-toy" size={24} color="#FFFFFF" />
+                {/* Digital Twin Card */}
+                <View style={styles.twinCard}>
+                    <View style={styles.twinCardGlow1} />
+                    <View style={styles.twinCardGlow2} />
+                    <View style={styles.twinCardContent}>
+                        <View style={styles.twinHeader}>
+                            <View style={styles.twinIconContainer}>
+                                <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
                             </View>
-                            <View>
-                                <Text style={styles.aiControlTitle}>Panel de Control</Text>
-                                <Text style={styles.aiControlSubtitle}>Configura tu asistente de IA</Text>
+                            <View style={styles.twinInfo}>
+                                <Text style={styles.twinTitle}>Gemelo Digital</Text>
+                                <View style={styles.twinStatus}>
+                                    <View style={styles.statusDot} />
+                                    <Text style={styles.statusText}>Activo y público</Text>
+                                </View>
+                            </View>
+                            <Switch
+                                value={geminiActive}
+                                onValueChange={setGeminiActive}
+                                trackColor={{ false: "rgba(0,0,0,0.2)", true: "rgba(255,255,255,0.3)" }}
+                                thumbColor="#FFFFFF"
+                            />
+                        </View>
+                        <TouchableOpacity style={styles.configureButton} onPress={handleConfigureGemini}>
+                            <View style={styles.configureButtonContent}>
+                                <MaterialIcons name="tune" size={20} color={COLORS.primary} />
+                                <Text style={styles.configureButtonText}>Configurar Gemelo</Text>
+                            </View>
+                            <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Activity Summary */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Resumen de Actividad</Text>
+                        <TouchableOpacity style={styles.sectionLink}>
+                            <Text style={styles.sectionLinkText}>Configuración</Text>
+                            <MaterialIcons name="settings" size={16} color={COLORS.primary} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.statsGrid}>
+                        <View style={styles.statCard}>
+                            <View style={styles.statHeader}>
+                                <View style={[styles.statIcon, { backgroundColor: COLORS.blue50 }]}>
+                                    <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
+                                </View>
+                                <View style={styles.statBadge}>
+                                    <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
+                                    <Text style={styles.statBadgeText}>+12%</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.statLabel}>Visitas Perfil</Text>
+                            <Text style={styles.statValue}>1,240</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <View style={styles.statHeader}>
+                                <View style={[styles.statIcon, { backgroundColor: COLORS.purple50 }]}>
+                                    <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
+                                </View>
+                            </View>
+                            <Text style={styles.statLabel}>Duración Chats</Text>
+                            <Text style={styles.statValue}>45h 20m</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <View style={styles.statHeader}>
+                                <View style={[styles.statIcon, { backgroundColor: COLORS.orange50 }]}>
+                                    <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
+                                </View>
+                            </View>
+                            <Text style={styles.statLabel}>Citas Agendadas</Text>
+                            <Text style={styles.statValue}>8</Text>
+                        </View>
+                        <View style={styles.statCard}>
+                            <View style={styles.statHeader}>
+                                <View style={[styles.statIcon, { backgroundColor: COLORS.green50 }]}>
+                                    <MaterialIcons name="call" size={20} color={COLORS.green600} />
+                                </View>
+                                <View style={styles.statBadge}>
+                                    <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
+                                    <Text style={styles.statBadgeText}>+5%</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.statLabel}>Llamadas recibidas</Text>
+                            <Text style={styles.statValue}>42</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Important Alerts */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Alertas Importantes</Text>
+                        <TouchableOpacity>
+                            <Text style={styles.sectionLinkText}>Ver todo</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.alertsList}>
+                        <View style={[styles.alertCard, { borderLeftColor: COLORS.primary }]}>
+                            <MaterialIcons name="check-circle" size={20} color={COLORS.primary} />
+                            <View style={styles.alertContent}>
+                                <Text style={styles.alertTitle}>Cita completada</Text>
+                                <Text style={styles.alertDescription}>Tu avatar ha completado una cita con Juan P. exitosamente.</Text>
+                                <Text style={styles.alertTime}>Hace 15 min</Text>
                             </View>
                         </View>
-                        <View style={styles.aiControlArrow}>
-                            <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />
+                        <View style={[styles.alertCard, { borderLeftColor: "#f59e0b" }]}>
+                            <MaterialIcons name="receipt-long" size={20} color="#f59e0b" />
+                            <View style={styles.alertContent}>
+                                <Text style={styles.alertTitle}>Factura Disponible</Text>
+                                <Text style={styles.alertDescription}>Tu factura del mes de Mayo está lista para descargar.</Text>
+                                <Text style={styles.alertTime}>Hace 2 horas</Text>
+                            </View>
                         </View>
-                    </TouchableOpacity>
-
-                    <View style={styles.menuCard}>
-                        {menuSections[2].items.map((item, i) => renderMenuItem(item, i, i === menuSections[2].items.length - 1))}
-                    </View>
-                </View>
-
-                {/* Cuenta Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>CUENTA</Text>
-                    <View style={styles.menuCard}>
-                        {menuSections[3].items.map((item, i) => renderMenuItem(item, i, i === menuSections[3].items.length - 1))}
-                    </View>
-                </View>
-
-                {/* Ayuda Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>AYUDA Y COMENTARIOS</Text>
-                    <View style={styles.menuCard}>
-                        {menuSections[4].items.map((item, i) => renderMenuItem(item, i, i === menuSections[4].items.length - 1))}
+                        <View style={[styles.alertCard, { borderLeftColor: COLORS.gray300 }]}>
+                            <MaterialIcons name="update" size={20} color={COLORS.gray400} />
+                            <View style={styles.alertContent}>
+                                <Text style={styles.alertTitle}>Recordatorio de Horario</Text>
+                                <Text style={styles.alertDescription}>Recuerda actualizar tu disponibilidad para la próxima semana.</Text>
+                                <Text style={styles.alertTime}>Ayer</Text>
+                            </View>
+                        </View>
                     </View>
                 </View>
             </ScrollView>
+
+            {/* FAB */}
+            <TouchableOpacity style={styles.fab}>
+                <MaterialIcons name="edit-calendar" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
 
             {/* Side Menu Modal */}
             <Modal
@@ -914,5 +981,233 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255,255,255,0.2)",
         alignItems: "center",
         justifyContent: "center",
+    },
+    // Dashboard Twin Card
+    twinCard: {
+        marginHorizontal: 16,
+        marginTop: 8,
+        borderRadius: 16,
+        overflow: "hidden",
+        backgroundColor: COLORS.primary,
+        padding: 20,
+        position: "relative",
+    },
+    twinCardGlow1: {
+        position: "absolute",
+        top: -16,
+        right: -16,
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        backgroundColor: "rgba(255,255,255,0.2)",
+    },
+    twinCardGlow2: {
+        position: "absolute",
+        bottom: -16,
+        left: -16,
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+        backgroundColor: "rgba(0,0,0,0.1)",
+    },
+    twinCardContent: {
+        position: "relative",
+        zIndex: 1,
+    },
+    twinHeader: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+    },
+    twinIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: "rgba(255,255,255,0.2)",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.1)",
+    },
+    twinInfo: {
+        flex: 1,
+        marginLeft: 16,
+    },
+    twinTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+    },
+    twinStatus: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 4,
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#4ade80",
+        shadowColor: "#4ade80",
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 8,
+    },
+    statusText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "rgba(255,255,255,0.9)",
+    },
+    configureButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+    },
+    configureButtonContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    configureButtonText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.primary,
+    },
+    // Dashboard Stats
+    sectionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    sectionLink: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+    },
+    sectionLinkText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.primary,
+    },
+    statsGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12,
+    },
+    statCard: {
+        width: "48%",
+        gap: 12,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: COLORS.surfaceLight,
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    statHeader: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+    },
+    statIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    statBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 2,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
+        backgroundColor: COLORS.green50,
+    },
+    statBadgeText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: COLORS.green600,
+    },
+    statLabel: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray500,
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    // Dashboard Alerts
+    alertsList: {
+        gap: 12,
+    },
+    alertCard: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: COLORS.surfaceLight,
+        borderLeftWidth: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    alertContent: {
+        flex: 1,
+    },
+    alertTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    alertDescription: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        marginTop: 4,
+    },
+    alertTime: {
+        fontSize: 10,
+        color: COLORS.gray400,
+        marginTop: 8,
+    },
+    // FAB
+    fab: {
+        position: "absolute",
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: COLORS.textMain,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 8,
+        zIndex: 30,
     },
 });

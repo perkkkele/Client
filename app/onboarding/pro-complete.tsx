@@ -44,7 +44,7 @@ export default function ProCompleteScreen() {
     }, [floatAnim]);
 
     function handleContinue() {
-        router.push("/onboarding/twin-behavior");
+        router.push("/onboarding/twin-appearance");
     }
 
     return (
