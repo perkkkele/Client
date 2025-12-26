@@ -109,7 +109,7 @@ export default function ProDashboardScreen() {
 
     function handleLogout() {
         setMenuVisible(false);
-        logout();
+        router.push("/(tabs)/logout-confirm");
     }
 
     const onRefresh = useCallback(() => {
@@ -428,16 +428,43 @@ export default function ProDashboardScreen() {
                                         <Text style={[styles.sideMenuCardLabel, styles.sideMenuCardLabelActive]}>Área personal Pro</Text>
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity
-                                        style={styles.sideMenuCardItem}
-                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/edit-profile"); }}
-                                    >
-                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.blue50 }]}>
-                                            <MaterialIcons name="public" size={20} color={COLORS.blue600} />
+                                    {/* Mi perfil público - Parent with subitems */}
+                                    <View style={styles.sideMenuParentItem}>
+                                        {/* Parent header - clickable to view full profile */}
+                                        <TouchableOpacity
+                                            style={styles.sideMenuParentHeader}
+                                            onPress={() => { setMenuVisible(false); router.push(`/professional/${user?._id}`); }}
+                                        >
+                                            <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.blue50 }]}>
+                                                <MaterialIcons name="public" size={20} color={COLORS.blue600} />
+                                            </View>
+                                            <Text style={styles.sideMenuParentLabel}>Mi perfil público</Text>
+                                            <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                        </TouchableOpacity>
+                                        {/* Sub-items - indented */}
+                                        <View style={styles.sideMenuSubItems}>
+                                            <TouchableOpacity
+                                                style={styles.sideMenuSubItem}
+                                                onPress={() => { setMenuVisible(false); router.push("/(settings)/edit-pro-profile"); }}
+                                            >
+                                                <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.purple50 }]}>
+                                                    <MaterialIcons name="work" size={16} color={COLORS.purple600} />
+                                                </View>
+                                                <Text style={styles.sideMenuSubLabel}>Perfil profesional</Text>
+                                                <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.sideMenuSubItem}
+                                                onPress={() => { setMenuVisible(false); router.push("/(settings)/contact-info"); }}
+                                            >
+                                                <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.green50 }]}>
+                                                    <MaterialIcons name="contact-phone" size={16} color={COLORS.green600} />
+                                                </View>
+                                                <Text style={styles.sideMenuSubLabel}>Datos de contacto</Text>
+                                                <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
+                                            </TouchableOpacity>
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Mi perfil público</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-                                    </TouchableOpacity>
+                                    </View>
                                     <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
@@ -554,7 +581,10 @@ export default function ProDashboardScreen() {
                             <View style={styles.sideMenuSection}>
                                 <Text style={styles.sideMenuSectionTitle}>CUENTA</Text>
                                 <View style={styles.sideMenuCard}>
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/plans-credits"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>
                                             <MaterialIcons name="credit-card" size={20} color={COLORS.gray600} />
                                         </View>
@@ -1005,6 +1035,55 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: COLORS.gray100,
         marginLeft: 62,
+    },
+    // Hierarchical parent-child menu styles
+    sideMenuParentItem: {
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+    },
+    sideMenuParentHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 6,
+    },
+    sideMenuParentLabel: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    sideMenuSubItems: {
+        marginLeft: 48,
+        marginTop: 4,
+        paddingLeft: 0,
+    },
+    sideMenuSubItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingVertical: 10,
+        paddingRight: 8,
+    },
+    sideMenuSubItemLine: {
+        position: "absolute",
+        left: -14,
+        width: 12,
+        height: 2,
+        backgroundColor: COLORS.gray200,
+    },
+    sideMenuSubIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    sideMenuSubLabel: {
+        flex: 1,
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.gray600,
     },
     sideMenuAiButton: {
         flexDirection: "row",

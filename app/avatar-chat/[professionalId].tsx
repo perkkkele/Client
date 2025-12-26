@@ -128,6 +128,7 @@ export default function AvatarChatScreen() {
     const [isVideoMinimized, setIsVideoMinimized] = useState(false);
     const [isPrivateMode, setIsPrivateMode] = useState(false);
     const [hasShownPrivateBubble, setHasShownPrivateBubble] = useState(false);
+    const [mapLoaded, setMapLoaded] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Animation values
@@ -691,18 +692,23 @@ export default function AvatarChatScreen() {
                             <View style={styles.locationContent}>
                                 {/* Map Container */}
                                 <View style={styles.mapContainer}>
-                                    <Image
-                                        source={{
-                                            uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=400x200&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY}`
-                                        }}
-                                        style={styles.mapImage}
-                                        resizeMode="cover"
-                                    />
-                                    {/* Fallback placeholder if no API key */}
+                                    {/* Base placeholder layer */}
                                     <View style={styles.mapPlaceholder}>
                                         <MaterialIcons name="map" size={40} color={COLORS.gray400} />
-                                        <Text style={styles.mapPlaceholderText}>Mapa de ubicación</Text>
+                                        <Text style={styles.mapPlaceholderText}>Cargando mapa...</Text>
                                     </View>
+                                    {/* Map image overlay */}
+                                    {mapLoaded !== false && (
+                                        <Image
+                                            source={{
+                                                uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=600x300&scale=2&maptype=roadmap&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=AIzaSyAkX-f7HUJxbV87LpDJKbcnieeQDYzkAyw`
+                                            }}
+                                            style={styles.mapImageOverlay}
+                                            resizeMode="cover"
+                                            onLoad={() => setMapLoaded(true)}
+                                            onError={() => setMapLoaded(false)}
+                                        />
+                                    )}
                                     {/* Open indicator */}
                                     <View style={styles.openIndicator}>
                                         <View style={styles.openDot} />
@@ -1718,6 +1724,17 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         position: "absolute",
+        zIndex: 2,
+    },
+    mapImageOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100%",
+        height: "100%",
+        zIndex: 3,
     },
     mapPlaceholder: {
         position: "absolute",
@@ -1728,6 +1745,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: COLORS.gray100,
+        zIndex: 1,
     },
     mapPlaceholderText: {
         fontSize: 12,
