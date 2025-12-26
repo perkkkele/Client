@@ -236,21 +236,32 @@ export default function ProDashboardScreen() {
                     <View style={styles.twinCardGlow2} />
                     <View style={styles.twinCardContent}>
                         <View style={styles.twinHeader}>
-                            <View style={styles.twinIconContainer}>
-                                <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
-                            </View>
-                            <View style={styles.twinInfo}>
-                                <Text style={styles.twinTitle}>Gemelo Digital</Text>
-                                <View style={styles.twinStatus}>
-                                    <View style={[
-                                        styles.statusDot,
-                                        !geminiActive && styles.statusDotInactive
-                                    ]} />
-                                    <Text style={styles.statusText}>
-                                        {geminiActive ? "Activo y público" : "Inactivo"}
-                                    </Text>
+                            <TouchableOpacity
+                                style={styles.twinHeaderTouchable}
+                                onPress={() => {
+                                    // Navigate to avatar chat with own profile for testing
+                                    if (user?._id) {
+                                        router.push(`/avatar-chat/${user._id}` as any);
+                                    }
+                                }}
+                            >
+                                <View style={styles.twinIconContainer}>
+                                    <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
                                 </View>
-                            </View>
+                                <View style={styles.twinInfo}>
+                                    <Text style={styles.twinTitle}>Gemelo Digital</Text>
+                                    <View style={styles.twinStatus}>
+                                        <View style={[
+                                            styles.statusDot,
+                                            !geminiActive && styles.statusDotInactive
+                                        ]} />
+                                        <Text style={styles.statusText}>
+                                            {geminiActive ? "Activo y público" : "Inactivo"}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.testHint}>Toca para probar tu gemelo</Text>
+                                </View>
+                            </TouchableOpacity>
                             <Switch
                                 value={geminiActive}
                                 onValueChange={setGeminiActive}
@@ -1079,6 +1090,11 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         justifyContent: "space-between",
     },
+    twinHeaderTouchable: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        flex: 1,
+    },
     twinIconContainer: {
         width: 48,
         height: 48,
@@ -1123,6 +1139,13 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500",
         color: "rgba(255,255,255,0.9)",
+    },
+    testHint: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: "rgba(255,255,255,0.6)",
+        marginTop: 4,
+        fontStyle: "italic",
     },
     configureButton: {
         flexDirection: "row",
