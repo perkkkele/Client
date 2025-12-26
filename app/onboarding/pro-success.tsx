@@ -60,7 +60,7 @@ export default function ProSuccessScreen() {
     }, [floatAnim, popAnim]);
 
     function handleGoToDashboard() {
-        router.push("/onboarding/twin-appearance");
+        router.replace("/(tabs)/pro-dashboard");
     }
 
     return (
@@ -161,7 +161,7 @@ export default function ProSuccessScreen() {
                         onPress={handleGoToDashboard}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.dashboardButtonText}>Configurar mi Gemelo</Text>
+                        <Text style={styles.dashboardButtonText}>Ir a mi Área personal Pro</Text>
                         <View style={styles.dashboardButtonIcon}>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </View>

@@ -70,6 +70,7 @@ interface MenuItem {
     iconColor: string;
     onPress?: () => void;
     isLogout?: boolean;
+    isActive?: boolean;
 }
 
 interface MenuSection {
@@ -98,7 +99,7 @@ export default function ProDashboardScreen() {
     }
 
     function handleConfigureGemini() {
-        // TODO: Navigate to gemini configuration
+        router.push("/onboarding/twin-appearance");
     }
 
     function handleEditProfile() {
@@ -121,6 +122,7 @@ export default function ProDashboardScreen() {
         {
             title: "Mi Negocio",
             items: [
+                { icon: "dashboard", label: "Área personal Pro", iconBg: COLORS.primary, iconColor: COLORS.textMain, isActive: true, onPress: () => { setMenuVisible(false); } },
                 { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600 },
                 { icon: "reviews", label: "Gestión de reseñas", iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
                 { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600 },
@@ -169,6 +171,7 @@ export default function ProDashboardScreen() {
                 styles.menuItem,
                 !isLast && styles.menuItemBorder,
                 item.isLogout && styles.menuItemLogout,
+                item.isActive && styles.menuItemActive,
             ]}
             onPress={item.onPress}
         >
@@ -176,11 +179,15 @@ export default function ProDashboardScreen() {
                 <View style={[styles.menuItemIcon, { backgroundColor: item.iconBg }]}>
                     <MaterialIcons name={item.icon as any} size={20} color={item.iconColor} />
                 </View>
-                <Text style={[styles.menuItemLabel, item.isLogout && styles.menuItemLabelLogout]}>
+                <Text style={[
+                    styles.menuItemLabel,
+                    item.isLogout && styles.menuItemLabelLogout,
+                    item.isActive && styles.menuItemLabelActive
+                ]}>
                     {item.label}
                 </Text>
             </View>
-            {!item.isLogout && (
+            {!item.isLogout && !item.isActive && (
                 <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
             )}
         </TouchableOpacity>
@@ -235,15 +242,21 @@ export default function ProDashboardScreen() {
                             <View style={styles.twinInfo}>
                                 <Text style={styles.twinTitle}>Gemelo Digital</Text>
                                 <View style={styles.twinStatus}>
-                                    <View style={styles.statusDot} />
-                                    <Text style={styles.statusText}>Activo y público</Text>
+                                    <View style={[
+                                        styles.statusDot,
+                                        !geminiActive && styles.statusDotInactive
+                                    ]} />
+                                    <Text style={styles.statusText}>
+                                        {geminiActive ? "Activo y público" : "Inactivo"}
+                                    </Text>
                                 </View>
                             </View>
                             <Switch
                                 value={geminiActive}
                                 onValueChange={setGeminiActive}
-                                trackColor={{ false: "rgba(0,0,0,0.2)", true: "rgba(255,255,255,0.3)" }}
+                                trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
                                 thumbColor="#FFFFFF"
+                                ios_backgroundColor="rgba(0,0,0,0.3)"
                             />
                         </View>
                         <TouchableOpacity style={styles.configureButton} onPress={handleConfigureGemini}>
@@ -393,7 +406,21 @@ export default function ProDashboardScreen() {
                             <View style={styles.sideMenuSection}>
                                 <Text style={styles.sideMenuSectionTitle}>MI NEGOCIO</Text>
                                 <View style={styles.sideMenuCard}>
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    {/* Área personal Pro - Active item */}
+                                    <TouchableOpacity
+                                        style={[styles.sideMenuCardItem, styles.sideMenuCardItemActive]}
+                                        onPress={handleCloseMenu}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.primary }]}>
+                                            <MaterialIcons name="dashboard" size={20} color={COLORS.textMain} />
+                                        </View>
+                                        <Text style={[styles.sideMenuCardLabel, styles.sideMenuCardLabelActive]}>Área personal Pro</Text>
+                                    </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/edit-profile"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.blue50 }]}>
                                             <MaterialIcons name="public" size={20} color={COLORS.blue600} />
                                         </View>
@@ -401,7 +428,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/manage-reviews"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.yellow50 }]}>
                                             <MaterialIcons name="rate-review" size={20} color={COLORS.yellow600} />
                                         </View>
@@ -409,7 +439,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/work-schedule"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.purple50 }]}>
                                             <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
                                         </View>
@@ -431,7 +464,10 @@ export default function ProDashboardScreen() {
                             <View style={styles.sideMenuSection}>
                                 <Text style={styles.sideMenuSectionTitle}>AGENDA</Text>
                                 <View style={styles.sideMenuCard}>
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.orange50 }]}>
                                             <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
                                         </View>
@@ -445,7 +481,10 @@ export default function ProDashboardScreen() {
                             <View style={styles.sideMenuSection}>
                                 <Text style={styles.sideMenuSectionTitle}>TU GEMELO DIGITAL IA</Text>
                                 {/* AI Control Panel Button */}
-                                <TouchableOpacity style={styles.sideMenuAiButton}>
+                                <TouchableOpacity
+                                    style={styles.sideMenuAiButton}
+                                    onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-control-panel"); }}
+                                >
                                     <View style={styles.sideMenuAiLeft}>
                                         <View style={styles.sideMenuAiIcon}>
                                             <MaterialIcons name="smart-toy" size={24} color="#FFFFFF" />
@@ -468,7 +507,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-history"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.teal50 }]}>
                                             <MaterialIcons name="history" size={20} color={COLORS.teal600} />
                                         </View>
@@ -476,7 +518,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-performance"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.rose50 }]}>
                                             <MaterialIcons name="analytics" size={20} color={COLORS.rose600} />
                                         </View>
@@ -731,6 +776,15 @@ const styles = StyleSheet.create({
     menuItemLabelLogout: {
         color: COLORS.red600,
     },
+    menuItemActive: {
+        backgroundColor: "rgba(253, 224, 71, 0.15)",
+        borderWidth: 1,
+        borderColor: "rgba(253, 224, 71, 0.3)",
+    },
+    menuItemLabelActive: {
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
     // AI Control Button
     aiControlButton: {
         flexDirection: "row",
@@ -930,6 +984,12 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: COLORS.textMain,
     },
+    sideMenuCardItemActive: {
+        backgroundColor: "rgba(253, 224, 71, 0.15)",
+    },
+    sideMenuCardLabelActive: {
+        fontWeight: "bold",
+    },
     sideMenuCardDivider: {
         height: 1,
         backgroundColor: COLORS.gray100,
@@ -1053,6 +1113,11 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.8,
         shadowRadius: 8,
+    },
+    statusDotInactive: {
+        backgroundColor: "#9CA3AF",
+        shadowColor: "#9CA3AF",
+        shadowOpacity: 0,
     },
     statusText: {
         fontSize: 12,
