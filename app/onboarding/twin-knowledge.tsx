@@ -6,13 +6,14 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi } from "../../api";
+import { userApi, liveAvatarApi } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -45,21 +46,90 @@ interface KnowledgeCategory {
     color: string;
     bgColor: string;
     count: number;
+    url: string;
 }
 
-const KNOWLEDGE_CATEGORIES: KnowledgeCategory[] = [
-    { id: "faq", title: "Preguntas Frecuentes", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0 },
-    { id: "services", title: "Servicios y Productos", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0 },
-    { id: "pricing", title: "Tarifa de Precios", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0 },
-    { id: "policy", title: "Política de Empresa", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0 },
-    { id: "troubleshooting", title: "Resolución de Problemas", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0 },
+const INITIAL_CATEGORIES: KnowledgeCategory[] = [
+    { id: "faq", title: "Preguntas Frecuentes", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0, url: "" },
+    { id: "services", title: "Servicios y Productos", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0, url: "" },
+    { id: "pricing", title: "Tarifa de Precios", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0, url: "" },
+    { id: "policy", title: "Política de Empresa", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0, url: "" },
+    { id: "troubleshooting", title: "Resolución de Problemas", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0, url: "" },
 ];
 
+// Helper to build prompt from user data
+function buildContextPrompt(user: any): string {
+    const parts: string[] = [];
+
+    // Professional info
+    if (user?.publicName || user?.profession) {
+        parts.push(`Eres ${user.publicName || 'un profesional'}, ${user.profession || 'experto en tu campo'}.`);
+    }
+    if (user?.bio) {
+        parts.push(user.bio);
+    }
+
+    // Behavior settings
+    const behavior = user?.digitalTwin?.behavior;
+    if (behavior) {
+        const formalityLabels = ["muy cercano y amigable", "profesional y equilibrado", "muy formal y respetuoso"];
+        const depthLabels = ["respuestas cortas y directas", "respuestas equilibradas", "respuestas detalladas y completas"];
+        const toneLabels = ["empático y comprensivo", "neutral y objetivo", "directo y conciso"];
+
+        parts.push(`Tu estilo de comunicación es ${formalityLabels[behavior.formality || 1]}.`);
+        parts.push(`Das ${depthLabels[behavior.depth || 1]}.`);
+        parts.push(`Tu tono es ${toneLabels[behavior.tone || 0]}.`);
+    }
+
+    // Guardrails
+    const guardrails = user?.digitalTwin?.guardrails;
+    if (guardrails) {
+        if (guardrails.allowed && guardrails.allowed.length > 0) {
+            parts.push(`Puedes: ${guardrails.allowed.join(', ')}.`);
+        }
+        if (guardrails.restricted && guardrails.restricted.length > 0) {
+            parts.push(`No debes: ${guardrails.restricted.join(', ')}.`);
+        }
+    }
+
+    // Specialties
+    if (user?.specialties && user.specialties.length > 0) {
+        parts.push(`Tus especialidades incluyen: ${user.specialties.join(', ')}.`);
+    }
+
+    return parts.join(' ');
+}
+
+// Helper to build links array from categories
+function buildContextLinks(categories: KnowledgeCategory[], otherUrl: string): { url: string; description: string }[] {
+    const result: { url: string; description: string }[] = [];
+
+    for (const cat of categories) {
+        if (cat.url && cat.url.trim()) {
+            result.push({
+                url: cat.url.trim(),
+                description: cat.title,
+            });
+        }
+    }
+
+    if (otherUrl && otherUrl.trim()) {
+        result.push({
+            url: otherUrl.trim(),
+            description: "Documentación adicional",
+        });
+    }
+
+    return result;
+}
+
 export default function TwinKnowledgeScreen() {
-    const { token, refreshUser } = useAuth();
-    const [categories, setCategories] = useState(KNOWLEDGE_CATEGORIES);
+    const { user, token, refreshUser } = useAuth();
+    const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+    const [otherUrl, setOtherUrl] = useState("");
     const [trainingProgress] = useState(5); // 5% por defecto
     const [isLoading, setIsLoading] = useState(false);
+    const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
     function handleBack() {
         router.back();
@@ -67,36 +137,134 @@ export default function TwinKnowledgeScreen() {
 
     function handleUpload(categoryId: string) {
         // TODO: Implementar subida de documentos
+        Alert.alert("Próximamente", "La subida de documentos estará disponible próximamente.");
         console.log("Upload for category:", categoryId);
     }
 
     function handleManualAdd(categoryId: string) {
         // TODO: Implementar añadir manual
+        Alert.alert("Próximamente", "La entrada manual estará disponible próximamente.");
         console.log("Manual add for category:", categoryId);
     }
+
+    function toggleUrlInput(categoryId: string) {
+        setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
+    }
+
+    function updateCategoryUrl(categoryId: string, url: string) {
+        setCategories(prev => prev.map(cat =>
+            cat.id === categoryId ? { ...cat, url } : cat
+        ));
+    }
+
+    // Count filled URLs
+    const filledUrlCount = categories.filter(c => c.url.trim() !== "").length + (otherUrl.trim() !== "" ? 1 : 0);
 
     async function handleActivate() {
         setIsLoading(true);
         try {
-            if (token) {
-                // Activar gemelo digital (userType ya es 'userpro' desde el registro)
-                await userApi.updateUser(token, {
-                    digitalTwin: {
-                        knowledge: {
-                            trainingProgress: trainingProgress,
-                            trainingStatus: 'pending'
-                        },
-                        isActive: true
-                    }
-                });
+            if (!token) {
+                throw new Error("No estás autenticado");
+            }
 
-                if (refreshUser) {
-                    await refreshUser();
+            // First, refresh user to get the latest data from previous screens
+            console.log("Refreshing user data...");
+            let freshUser = user;
+            if (refreshUser) {
+                await refreshUser();
+                // Get fresh user data by fetching directly
+                const userData = await userApi.getMe(token);
+                freshUser = userData;
+                console.log("Fresh user data:", JSON.stringify(freshUser?.digitalTwin, null, 2));
+            }
+
+            // Build links object for storage
+            const linksToStore: Record<string, string> = {};
+            for (const cat of categories) {
+                linksToStore[cat.id] = cat.url || "";
+            }
+            linksToStore.other = otherUrl || "";
+
+            // Build the context prompt with fresh user data
+            const contextPrompt = buildContextPrompt(freshUser);
+            console.log("Context prompt built:", contextPrompt);
+
+            // Build the links array from URLs
+            const contextLinks = buildContextLinks(categories, otherUrl);
+            console.log("Context links:", JSON.stringify(contextLinks, null, 2));
+
+            // Check if user already has a context
+            const existingContextId = freshUser?.digitalTwin?.liveAvatarContextId;
+            let contextId: string | null = existingContextId || null;
+
+            // Create or update the LiveAvatar context
+            const contextName = `TwinPro - ${freshUser?.publicName || freshUser?.firstname || 'Professional'}`;
+            console.log("Context name:", contextName);
+            console.log("Existing context ID:", existingContextId);
+
+            try {
+                if (existingContextId) {
+                    // Update existing context
+                    console.log("Updating existing context...");
+                    const result = await liveAvatarApi.updateContext(
+                        existingContextId,
+                        contextName,
+                        contextPrompt,
+                        contextLinks
+                    );
+                    console.log("Update context result:", result);
+                    if (result) {
+                        contextId = result.id;
+                    }
+                } else {
+                    // Create new context (always create, even without links)
+                    console.log("Creating new context...");
+                    console.log("Request body:", { name: contextName, prompt: contextPrompt, links: contextLinks });
+                    const result = await liveAvatarApi.createContext(
+                        contextName,
+                        contextPrompt,
+                        contextLinks
+                    );
+                    console.log("Create context result:", JSON.stringify(result, null, 2));
+                    if (result) {
+                        contextId = result.id;
+                        console.log("Context created with ID:", contextId);
+                    } else {
+                        console.warn("Context creation returned null");
+                        Alert.alert("Aviso", "No se pudo crear el contexto en LiveAvatar, pero el gemelo se activará igualmente.");
+                    }
                 }
+            } catch (contextError: any) {
+                console.error("Error with LiveAvatar context:", contextError);
+                console.error("Error details:", contextError?.message, contextError?.stack);
+                Alert.alert("Aviso", `Error al crear contexto: ${contextError?.message || 'Error desconocido'}. El gemelo se activará igualmente.`);
+                // Continue anyway - the twin can still be activated
+            }
+
+            console.log("Final context ID:", contextId);
+
+            // Activar gemelo digital
+            await userApi.updateUser(token, {
+                digitalTwin: {
+                    knowledge: {
+                        links: linksToStore,
+                        contextPrompt: contextPrompt,
+                        trainingProgress: trainingProgress,
+                        trainingStatus: 'ready'
+                    },
+                    liveAvatarContextId: contextId,
+                    isActive: true,
+                    activatedAt: new Date().toISOString()
+                }
+            });
+
+            if (refreshUser) {
+                await refreshUser();
             }
 
             router.push("/onboarding/pro-success");
         } catch (error: any) {
+            console.error("Error activating twin:", error);
             Alert.alert("Error", error.message || "Error al activar el gemelo");
         } finally {
             setIsLoading(false);
@@ -150,8 +318,12 @@ export default function TwinKnowledgeScreen() {
                         <View style={[styles.progressFill, { width: `${trainingProgress}%` }]} />
                     </View>
                     <View style={styles.progressFooter}>
-                        <Text style={styles.progressFooterText}>0/5 Categorías completadas</Text>
-                        <Text style={styles.progressFooterHint}>Falta información clave</Text>
+                        <Text style={styles.progressFooterText}>
+                            {filledUrlCount > 0 ? `${filledUrlCount} URLs configuradas` : "0/5 Categorías completadas"}
+                        </Text>
+                        <Text style={styles.progressFooterHint}>
+                            {filledUrlCount > 0 ? "URLs añadidas" : "Falta información clave"}
+                        </Text>
                     </View>
                 </View>
 
@@ -164,9 +336,13 @@ export default function TwinKnowledgeScreen() {
                             </View>
                             <Text style={styles.categoryTitle}>{category.title}</Text>
                             <View style={styles.categoryBadge}>
-                                <Text style={styles.categoryBadgeText}>{category.count} Cargados</Text>
+                                <Text style={styles.categoryBadgeText}>
+                                    {category.url.trim() ? "URL" : `${category.count} Cargados`}
+                                </Text>
                             </View>
                         </View>
+
+                        {/* Original buttons */}
                         <View style={styles.categoryButtons}>
                             <TouchableOpacity
                                 style={styles.categoryButton}
@@ -195,6 +371,44 @@ export default function TwinKnowledgeScreen() {
                                 </Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* URL Input Toggle */}
+                        <TouchableOpacity
+                            style={styles.urlToggle}
+                            onPress={() => toggleUrlInput(category.id)}
+                        >
+                            <MaterialIcons name="link" size={16} color={COLORS.accentBlue} />
+                            <Text style={styles.urlToggleText}>
+                                {expandedCategory === category.id ? "Ocultar URL" : "Añadir URL"}
+                            </Text>
+                            <MaterialIcons
+                                name={expandedCategory === category.id ? "expand-less" : "expand-more"}
+                                size={18}
+                                color={COLORS.accentBlue}
+                            />
+                        </TouchableOpacity>
+
+                        {/* URL Input Field */}
+                        {expandedCategory === category.id && (
+                            <View style={styles.urlInputContainer}>
+                                <MaterialIcons name="link" size={18} color={COLORS.gray400} />
+                                <TextInput
+                                    style={styles.urlInput}
+                                    placeholder={`https://tudominio.com/${category.id}`}
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={category.url}
+                                    onChangeText={(text) => updateCategoryUrl(category.id, text)}
+                                    keyboardType="url"
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                                {category.url.trim() !== "" && (
+                                    <TouchableOpacity onPress={() => updateCategoryUrl(category.id, "")}>
+                                        <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
                     </View>
                 ))}
 
@@ -209,13 +423,36 @@ export default function TwinKnowledgeScreen() {
                             <Text style={styles.otherDocsSubtitle}>Archivos adicionales no categorizados</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.uploadZone}>
+                    <TouchableOpacity style={styles.uploadZone} onPress={() => handleUpload("other")}>
                         <View style={styles.uploadIconContainer}>
                             <MaterialIcons name="cloud-upload" size={24} color={COLORS.gray400} />
                         </View>
                         <Text style={styles.uploadTitle}>Subir Documento Libre</Text>
                         <Text style={styles.uploadSubtitle}>Soporta PDF, DOCX, TXT</Text>
                     </TouchableOpacity>
+
+                    {/* URL Input for Other Documents */}
+                    <View style={styles.urlInputContainerOther}>
+                        <Text style={styles.urlLabel}>O añade una URL:</Text>
+                        <View style={styles.urlInputRow}>
+                            <MaterialIcons name="link" size={18} color={COLORS.gray400} />
+                            <TextInput
+                                style={styles.urlInput}
+                                placeholder="https://tudominio.com/otros"
+                                placeholderTextColor={COLORS.gray400}
+                                value={otherUrl}
+                                onChangeText={setOtherUrl}
+                                keyboardType="url"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                            {otherUrl.trim() !== "" && (
+                                <TouchableOpacity onPress={() => setOtherUrl("")}>
+                                    <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
                 </View>
 
                 <Text style={styles.disclaimer}>Los documentos se procesarán de forma segura.</Text>
@@ -465,6 +702,36 @@ const styles = StyleSheet.create({
         color: COLORS.gray500,
         textAlign: "center",
     },
+    urlToggle: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 8,
+        marginTop: 8,
+        gap: 4,
+    },
+    urlToggleText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: COLORS.accentBlue,
+    },
+    urlInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        gap: 8,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        marginTop: 8,
+    },
+    urlInput: {
+        flex: 1,
+        fontSize: 13,
+        color: COLORS.textMain,
+    },
     otherDocsCard: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
@@ -507,6 +774,25 @@ const styles = StyleSheet.create({
     uploadSubtitle: {
         fontSize: 9,
         color: COLORS.gray400,
+    },
+    urlInputContainerOther: {
+        marginTop: 12,
+    },
+    urlLabel: {
+        fontSize: 11,
+        color: COLORS.gray500,
+        marginBottom: 6,
+    },
+    urlInputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        gap: 8,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
     },
     disclaimer: {
         fontSize: 10,

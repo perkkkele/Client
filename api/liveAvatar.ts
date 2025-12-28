@@ -134,6 +134,130 @@ export async function getPublicVoices(): Promise<PublicVoice[]> {
     }
 }
 
+// ========================
+// CONTEXT MANAGEMENT
+// ========================
+
+export interface ContextLink {
+    url: string;
+    description?: string;
+}
+
+export interface CreateContextRequest {
+    name: string;
+    prompt: string;
+    opening_text: string;
+    links?: ContextLink[];
+}
+
+export interface ContextResponse {
+    id: string;
+    name: string;
+    prompt: string;
+    opening_text?: string;
+    links?: ContextLink[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+/**
+ * Create a new LiveAvatar context
+ */
+export async function createContext(
+    name: string,
+    prompt: string,
+    links: ContextLink[] = [],
+    openingText: string = "¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?"
+): Promise<ContextResponse | null> {
+    try {
+        const requestBody: CreateContextRequest = {
+            name,
+            prompt,
+            opening_text: openingText,
+            links
+        };
+
+        console.log("Creating LiveAvatar context:", requestBody);
+
+        const response = await fetch(`${LIVEAVATAR_API_URL}/contexts`, {
+            method: "POST",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar create context error:", error);
+            throw new Error(error.message || `Error creating context: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar create context response:", responseData);
+
+        // API returns { code: 1000, data: {...}, message }
+        if (responseData.data) {
+            return responseData.data;
+        }
+        return responseData;
+    } catch (error) {
+        console.error("Error creating context:", error);
+        return null;
+    }
+}
+
+/**
+ * Update an existing LiveAvatar context
+ */
+export async function updateContext(
+    contextId: string,
+    name: string,
+    prompt: string,
+    links: ContextLink[] = [],
+    openingText: string = "¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?"
+): Promise<ContextResponse | null> {
+    try {
+        const requestBody: CreateContextRequest = {
+            name,
+            prompt,
+            opening_text: openingText,
+            links
+        };
+
+        console.log("Updating LiveAvatar context:", contextId, requestBody);
+
+        const response = await fetch(`${LIVEAVATAR_API_URL}/contexts/${contextId}`, {
+            method: "PUT",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar update context error:", error);
+            throw new Error(error.message || `Error updating context: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar update context response:", responseData);
+
+        if (responseData.data) {
+            return responseData.data;
+        }
+        return responseData;
+    } catch (error) {
+        console.error("Error updating context:", error);
+        return null;
+    }
+}
+
 /**
  * Create a LiveAvatar session token
  */

@@ -17,8 +17,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
 import { User } from "../../api/user";
+import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -131,6 +132,13 @@ export default function AvatarChatScreen() {
     const [mapLoaded, setMapLoaded] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
 
+    // LiveAvatar Session State
+    const [sessionStatus, setSessionStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
+    const [sessionError, setSessionError] = useState<string | null>(null);
+    const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
+    const [livekitToken, setLivekitToken] = useState<string | null>(null);
+    const [sessionId, setSessionId] = useState<string | null>(null);
+
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
     const videoPositionAnim = useRef(new Animated.Value(0)).current; // 0 = full, 1 = PiP
@@ -183,6 +191,70 @@ export default function AvatarChatScreen() {
     useEffect(() => {
         loadProfessional();
     }, [loadProfessional]);
+
+    // Initialize LiveAvatar session when professional is loaded
+    const initializeLiveAvatarSession = useCallback(async () => {
+        if (!professional?.digitalTwin?.isActive) {
+            console.log("Digital twin not active, skipping session initialization");
+            return;
+        }
+
+        const digitalTwin = professional.digitalTwin;
+        const avatarId = digitalTwin.appearance?.liveAvatarId;
+        const voiceId = digitalTwin.appearance?.liveVoiceId;
+        const contextId = digitalTwin.liveAvatarContextId;
+
+        if (!avatarId) {
+            console.log("No avatar ID configured, skipping session");
+            setSessionError("El profesional no tiene un avatar configurado");
+            setSessionStatus('error');
+            return;
+        }
+
+        console.log("Initializing LiveAvatar session with:", { avatarId, voiceId, contextId });
+        setSessionStatus('connecting');
+        setSessionError(null);
+
+        try {
+            // Step 1: Create session token
+            const config = {
+                avatarId,
+                voiceId: voiceId || undefined,
+                contextId: contextId || undefined,
+                language: "es", // Default to Spanish
+            };
+
+            console.log("Creating session token with config:", config);
+            const tokenResponse = await liveAvatarApi.createSessionToken(config);
+            console.log("Session token created:", tokenResponse.session_id);
+
+            // Step 2: Start the session
+            console.log("Starting session...");
+            const startResponse = await liveAvatarApi.startSession(tokenResponse.session_token);
+            console.log("Session started:", startResponse);
+
+            // Step 3: Store LiveKit credentials
+            setLivekitUrl(startResponse.livekit_url);
+            setLivekitToken(startResponse.livekit_client_token);
+            setSessionId(startResponse.session_id);
+            setSessionStatus('active');
+
+            console.log("LiveAvatar session active!");
+            console.log("LiveKit URL:", startResponse.livekit_url);
+
+        } catch (error: any) {
+            console.error("Error initializing LiveAvatar session:", error);
+            setSessionError(error.message || "Error al conectar con el avatar");
+            setSessionStatus('error');
+        }
+    }, [professional]);
+
+    // Start session when professional is loaded
+    useEffect(() => {
+        if (professional && !isLoading && sessionStatus === 'idle') {
+            initializeLiveAvatarSession();
+        }
+    }, [professional, isLoading, sessionStatus, initializeLiveAvatarSession]);
 
     useEffect(() => {
         // Animate wave bars
@@ -429,11 +501,62 @@ export default function AvatarChatScreen() {
                     activeOpacity={isVideoMinimized ? 0.8 : 1}
                     onPress={isVideoMinimized ? maximizeVideo : undefined}
                 >
-                    {avatarUrl ? (
+                    {/* LiveKit Video when session is active */}
+                    {sessionStatus === 'active' && livekitUrl && livekitToken ? (
+                        <LiveAvatarVideo
+                            livekitUrl={livekitUrl}
+                            livekitToken={livekitToken}
+                            style={styles.videoImage}
+                            onConnectionChange={(connected) => {
+                                console.log('LiveKit connection:', connected);
+                            }}
+                            onError={(error) => {
+                                console.error('LiveKit error:', error);
+                            }}
+                        />
+                    ) : avatarUrl ? (
                         <Image source={{ uri: avatarUrl }} style={styles.videoImage} />
                     ) : (
                         <View style={styles.videoPlaceholderInner}>
                             <MaterialIcons name="person" size={80} color={COLORS.gray400} />
+                        </View>
+                    )}
+
+                    {/* Session Status Overlay */}
+                    {sessionStatus === 'connecting' && !isVideoMinimized && (
+                        <View style={styles.sessionOverlay}>
+                            <ActivityIndicator size="large" color={COLORS.primary} />
+                            <Text style={styles.sessionOverlayText}>Conectando con el avatar...</Text>
+                        </View>
+                    )}
+
+                    {sessionStatus === 'active' && !isVideoMinimized && (
+                        <View style={styles.sessionBadge}>
+                            <View style={styles.sessionBadgeDot} />
+                            <Text style={styles.sessionBadgeText}>EN VIVO</Text>
+                        </View>
+                    )}
+
+                    {sessionStatus === 'error' && !isVideoMinimized && (
+                        <View style={styles.sessionOverlay}>
+                            <MaterialIcons name="error-outline" size={48} color={COLORS.gray400} />
+                            <Text style={styles.sessionOverlayText}>{sessionError || 'Error de conexión'}</Text>
+                            <TouchableOpacity
+                                style={styles.retryButton}
+                                onPress={() => {
+                                    setSessionStatus('idle');
+                                    setSessionError(null);
+                                }}
+                            >
+                                <Text style={styles.retryButtonText}>Reintentar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {/* Debug info (remove in production) */}
+                    {livekitUrl && !isVideoMinimized && (
+                        <View style={styles.debugInfo}>
+                            <Text style={styles.debugText}>Session: {sessionId?.substring(0, 8)}...</Text>
                         </View>
                     )}
 
@@ -1999,5 +2122,71 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontWeight: "500",
         color: COLORS.gray600,
+    },
+    // LiveAvatar Session Styles
+    sessionOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 16,
+    },
+    sessionOverlayText: {
+        color: COLORS.white,
+        fontSize: 14,
+        fontWeight: "500",
+        marginTop: 12,
+        textAlign: "center",
+        paddingHorizontal: 20,
+    },
+    sessionBadge: {
+        position: "absolute",
+        top: 12,
+        left: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(239, 68, 68, 0.9)",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 6,
+    },
+    sessionBadgeDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: COLORS.white,
+    },
+    sessionBadgeText: {
+        color: COLORS.white,
+        fontSize: 10,
+        fontWeight: "700",
+        letterSpacing: 0.5,
+    },
+    retryButton: {
+        marginTop: 16,
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    retryButtonText: {
+        color: COLORS.black,
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    debugInfo: {
+        position: "absolute",
+        bottom: 60,
+        left: 12,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    debugText: {
+        color: COLORS.white,
+        fontSize: 9,
+        fontFamily: "monospace",
     },
 });

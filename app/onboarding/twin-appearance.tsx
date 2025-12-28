@@ -77,7 +77,9 @@ export default function TwinAppearanceScreen() {
     const [loadingVoices, setLoadingVoices] = useState(false);
     const [selectedVoice, setSelectedVoice] = useState<PublicVoice | null>(null);
     const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+    const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
     const soundRef = useRef<any>(null);
+    const previewSoundRef = useRef<any>(null);
 
     const avatarUrl = selectedAvatar?.preview_url || getAvatarUrl(user?.avatar);
 
@@ -100,6 +102,9 @@ export default function TwinAppearanceScreen() {
         return () => {
             if (soundRef.current) {
                 soundRef.current.unloadAsync();
+            }
+            if (previewSoundRef.current) {
+                previewSoundRef.current.unloadAsync();
             }
         };
     }, []);
@@ -173,6 +178,56 @@ export default function TwinAppearanceScreen() {
             console.error("Error playing voice preview:", error);
             setPlayingVoiceId(null);
             Alert.alert("Error", "No se pudo reproducir la muestra de voz");
+        }
+    }
+
+    // Play preview in the main card (selected voice sample)
+    async function playPreview() {
+        if (!Audio) {
+            Alert.alert("No disponible", "La reproducción de audio requiere un build de desarrollo");
+            return;
+        }
+
+        if (!selectedVoice) {
+            Alert.alert("Selecciona una voz", "Primero elige una voz del catálogo para escuchar la vista previa");
+            return;
+        }
+
+        const previewUrl = selectedVoice.preview_url || selectedVoice.sample_url;
+        if (!previewUrl) {
+            Alert.alert("Sin muestra", "Esta voz no tiene una muestra de audio disponible");
+            return;
+        }
+
+        try {
+            // Stop if already playing
+            if (previewSoundRef.current) {
+                await previewSoundRef.current.unloadAsync();
+                previewSoundRef.current = null;
+            }
+
+            if (isPreviewPlaying) {
+                setIsPreviewPlaying(false);
+                return;
+            }
+
+            setIsPreviewPlaying(true);
+
+            const { sound } = await Audio.Sound.createAsync(
+                { uri: previewUrl },
+                { shouldPlay: true }
+            );
+            previewSoundRef.current = sound;
+
+            sound.setOnPlaybackStatusUpdate((status: any) => {
+                if (status.isLoaded && status.didJustFinish) {
+                    setIsPreviewPlaying(false);
+                }
+            });
+        } catch (error) {
+            console.error("Error playing preview:", error);
+            setIsPreviewPlaying(false);
+            Alert.alert("Error", "No se pudo reproducir la vista previa");
         }
     }
 
@@ -398,8 +453,15 @@ export default function TwinAppearanceScreen() {
 
                     {/* Bottom controls */}
                     <View style={styles.previewBottom}>
-                        <TouchableOpacity style={styles.playButton}>
-                            <MaterialIcons name="play-arrow" size={28} color="#000000" />
+                        <TouchableOpacity
+                            style={[styles.playButton, isPreviewPlaying && styles.playButtonActive]}
+                            onPress={playPreview}
+                        >
+                            <MaterialIcons
+                                name={isPreviewPlaying ? "stop" : "play-arrow"}
+                                size={28}
+                                color={isPreviewPlaying ? "#FFFFFF" : "#000000"}
+                            />
                         </TouchableOpacity>
                         <View style={styles.voiceInfo}>
                             <View style={styles.waveform}>
@@ -408,14 +470,18 @@ export default function TwinAppearanceScreen() {
                                         key={i}
                                         style={[
                                             styles.waveBar,
-                                            { height: h * 4, opacity: i < 6 ? 1 : 0.3 + (0.2 * (6 - i)) }
+                                            { height: h * 4, opacity: i < 6 ? 1 : 0.3 + (0.2 * (6 - i)) },
+                                            isPreviewPlaying && styles.waveBarActive
                                         ]}
                                     />
                                 ))}
                             </View>
                             <Text style={styles.voiceLabel}>
-                                Voz: <Text style={styles.voiceName}>{selectedVoice ? selectedVoice.name : "Estándar (Profesional)"}</Text>
+                                Voz: <Text style={styles.voiceName}>{selectedVoice ? selectedVoice.name : "Elige una voz"}</Text>
                             </Text>
+                            {!selectedVoice && (
+                                <Text style={styles.voiceHint}>Pulsa "Voz Estándar" para elegir</Text>
+                            )}
                         </View>
                     </View>
                 </View>
@@ -1233,5 +1299,16 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.accentGreen,
         alignItems: "center",
         justifyContent: "center",
+    },
+    playButtonActive: {
+        backgroundColor: COLORS.accentPurple,
+    },
+    waveBarActive: {
+        backgroundColor: COLORS.accentPurple,
+    },
+    voiceHint: {
+        fontSize: 10,
+        color: COLORS.gray400,
+        marginTop: 2,
     },
 });

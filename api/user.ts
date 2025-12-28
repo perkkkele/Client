@@ -51,7 +51,18 @@ export interface DigitalTwinGuardrails {
     restricted?: string[];
 }
 
+export interface DigitalTwinKnowledgeLinks {
+    faq?: string | null;
+    services?: string | null;
+    pricing?: string | null;
+    policy?: string | null;
+    troubleshooting?: string | null;
+    other?: string | null;
+}
+
 export interface DigitalTwinKnowledge {
+    links?: DigitalTwinKnowledgeLinks;
+    contextPrompt?: string | null;
     documents?: Array<{
         name: string;
         type: 'servicios' | 'precios' | 'faqs' | 'otro';
@@ -62,11 +73,27 @@ export interface DigitalTwinKnowledge {
     trainingStatus?: 'pending' | 'training' | 'ready' | null;
 }
 
+export interface DigitalTwinAppearance {
+    videoType?: 'predefined' | 'trained' | null;
+    videoId?: string | null;
+    voiceType?: 'standard' | 'cloned' | null;
+    voiceId?: string | null;
+    liveAvatarId?: string | null;
+    liveAvatarName?: string | null;
+    liveAvatarPreview?: string | null;
+    liveVoiceId?: string | null;
+    liveVoiceName?: string | null;
+    liveVoiceGender?: string | null;
+    liveVoiceLanguage?: string | null;
+}
+
 export interface DigitalTwin {
+    appearance?: DigitalTwinAppearance;
     personality?: DigitalTwinPersonality;
     behavior?: DigitalTwinBehavior;
     guardrails?: DigitalTwinGuardrails;
     knowledge?: DigitalTwinKnowledge;
+    liveAvatarContextId?: string | null;
     isActive?: boolean;
     activatedAt?: string | null;
 }
