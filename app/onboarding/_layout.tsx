@@ -14,6 +14,7 @@ export default function OnboardingLayout() {
             <Stack.Screen name="pro-profile" />
             <Stack.Screen name="pro-contact" />
             <Stack.Screen name="pro-complete" />
+            <Stack.Screen name="twin-appearance" />
             <Stack.Screen name="twin-behavior" />
             <Stack.Screen name="twin-knowledge" />
             <Stack.Screen name="pro-success" />

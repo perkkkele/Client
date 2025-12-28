@@ -31,6 +31,109 @@ export interface SessionStartResponse {
     session_id: string;
 }
 
+// Public avatar from LiveAvatar catalog
+export interface PublicAvatar {
+    id: string;
+    name: string;
+    preview_url: string;
+    gender?: string;
+    style?: string;
+    created_at?: string;
+}
+
+/**
+ * Get list of public avatars from LiveAvatar catalog
+ */
+export async function getPublicAvatars(): Promise<PublicAvatar[]> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/avatars/public`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar public avatars error:", error);
+            throw new Error(error.message || `Error fetching avatars: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar public avatars response:", responseData);
+
+        // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
+        if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
+            return responseData.data.results;
+        }
+        // Fallback for direct array in data
+        if (responseData.data && Array.isArray(responseData.data)) {
+            return responseData.data;
+        }
+        if (Array.isArray(responseData)) {
+            return responseData;
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching public avatars:", error);
+        return [];
+    }
+}
+
+// Public voice from LiveAvatar catalog
+export interface PublicVoice {
+    id: string;
+    name: string;
+    gender?: string;
+    language?: string;
+    accent?: string;
+    preview_url?: string;
+    sample_url?: string;
+    provider?: string;
+    description?: string;
+}
+
+/**
+ * Get list of public voices from LiveAvatar catalog
+ */
+export async function getPublicVoices(): Promise<PublicVoice[]> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/voices`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar voices error:", error);
+            throw new Error(error.message || `Error fetching voices: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar voices response:", responseData);
+
+        // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
+        if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
+            return responseData.data.results;
+        }
+        // Fallback for direct array in data
+        if (responseData.data && Array.isArray(responseData.data)) {
+            return responseData.data;
+        }
+        if (Array.isArray(responseData)) {
+            return responseData;
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching public voices:", error);
+        return [];
+    }
+}
+
 /**
  * Create a LiveAvatar session token
  */

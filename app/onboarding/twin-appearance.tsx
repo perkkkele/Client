@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -9,11 +9,25 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Modal,
+    FlatList,
+    Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
+import { PublicAvatar, PublicVoice } from "../../api/liveAvatar";
+
+// Dynamic import for expo-av (may not be available in Expo Go)
+let Audio: any = null;
+try {
+    Audio = require("expo-av").Audio;
+} catch (e) {
+    console.log("expo-av not available, voice preview disabled");
+}
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const COLORS = {
     primary: "#FDE047",
@@ -51,26 +65,178 @@ export default function TwinAppearanceScreen() {
     const [voiceType, setVoiceType] = useState<"standard" | "cloned">("cloned");
     const [isLoading, setIsLoading] = useState(false);
 
-    const avatarUrl = getAvatarUrl(user?.avatar);
+    // Avatar catalog state
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const [publicAvatars, setPublicAvatars] = useState<PublicAvatar[]>([]);
+    const [loadingAvatars, setLoadingAvatars] = useState(false);
+    const [selectedAvatar, setSelectedAvatar] = useState<PublicAvatar | null>(null);
+
+    // Voice catalog state
+    const [showVoiceModal, setShowVoiceModal] = useState(false);
+    const [publicVoices, setPublicVoices] = useState<PublicVoice[]>([]);
+    const [loadingVoices, setLoadingVoices] = useState(false);
+    const [selectedVoice, setSelectedVoice] = useState<PublicVoice | null>(null);
+    const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+    const soundRef = useRef<any>(null);
+
+    const avatarUrl = selectedAvatar?.preview_url || getAvatarUrl(user?.avatar);
+
+    // Load public avatars when modal opens
+    useEffect(() => {
+        if (showAvatarModal && publicAvatars.length === 0) {
+            loadPublicAvatars();
+        }
+    }, [showAvatarModal]);
+
+    // Load public voices when modal opens
+    useEffect(() => {
+        if (showVoiceModal && publicVoices.length === 0) {
+            loadPublicVoices();
+        }
+    }, [showVoiceModal]);
+
+    // Cleanup audio on unmount
+    useEffect(() => {
+        return () => {
+            if (soundRef.current) {
+                soundRef.current.unloadAsync();
+            }
+        };
+    }, []);
+
+    async function loadPublicAvatars() {
+        setLoadingAvatars(true);
+        try {
+            const avatars = await liveAvatarApi.getPublicAvatars();
+            setPublicAvatars(avatars);
+        } catch (error) {
+            console.error("Error loading avatars:", error);
+            Alert.alert("Error", "No se pudieron cargar los avatares");
+        } finally {
+            setLoadingAvatars(false);
+        }
+    }
+
+    async function loadPublicVoices() {
+        setLoadingVoices(true);
+        try {
+            const voices = await liveAvatarApi.getPublicVoices();
+            setPublicVoices(voices);
+        } catch (error) {
+            console.error("Error loading voices:", error);
+            Alert.alert("Error", "No se pudieron cargar las voces");
+        } finally {
+            setLoadingVoices(false);
+        }
+    }
+
+    async function playVoicePreview(voice: PublicVoice) {
+        if (!Audio) {
+            Alert.alert("No disponible", "La reproducción de audio requiere un build de desarrollo");
+            return;
+        }
+
+        const previewUrl = voice.preview_url || voice.sample_url;
+        if (!previewUrl) {
+            Alert.alert("Sin muestra", "Esta voz no tiene una muestra de audio disponible");
+            return;
+        }
+
+        try {
+            // Stop any currently playing audio
+            if (soundRef.current) {
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+            }
+
+            if (playingVoiceId === voice.id) {
+                // If same voice, just stop
+                setPlayingVoiceId(null);
+                return;
+            }
+
+            setPlayingVoiceId(voice.id);
+
+            const { sound } = await Audio.Sound.createAsync(
+                { uri: previewUrl },
+                { shouldPlay: true }
+            );
+            soundRef.current = sound;
+
+            // Listen for playback completion
+            sound.setOnPlaybackStatusUpdate((status: any) => {
+                if (status.isLoaded && status.didJustFinish) {
+                    setPlayingVoiceId(null);
+                }
+            });
+        } catch (error) {
+            console.error("Error playing voice preview:", error);
+            setPlayingVoiceId(null);
+            Alert.alert("Error", "No se pudo reproducir la muestra de voz");
+        }
+    }
 
     function handleBack() {
         router.back();
+    }
+
+    function handleSelectPredefined() {
+        setVideoType("predefined");
+        setShowAvatarModal(true);
+    }
+
+    function handleSelectStandardVoice() {
+        setVoiceType("standard");
+        setShowVoiceModal(true);
+    }
+
+    function handleAvatarSelect(avatar: PublicAvatar) {
+        setSelectedAvatar(avatar);
+        setShowAvatarModal(false);
+    }
+
+    async function handleVoiceSelect(voice: PublicVoice) {
+        // Stop any playing audio
+        if (soundRef.current) {
+            await soundRef.current.unloadAsync();
+            soundRef.current = null;
+        }
+        setPlayingVoiceId(null);
+        setSelectedVoice(voice);
+        setShowVoiceModal(false);
     }
 
     async function handleContinue() {
         setIsLoading(true);
         try {
             if (token) {
-                await userApi.updateUser(token, {
+                const updateData: any = {
                     digitalTwin: {
                         appearance: {
                             videoType,
-                            videoId: null, // Will be set after upload
+                            videoId: selectedAvatar?.id || null,
                             voiceType,
-                            voiceId: null, // Will be set after upload
+                            voiceId: selectedVoice?.id || null,
                         }
                     }
-                });
+                };
+
+                // If a predefined avatar is selected, save its data
+                if (selectedAvatar && videoType === "predefined") {
+                    updateData.digitalTwin.appearance.liveAvatarId = selectedAvatar.id;
+                    updateData.digitalTwin.appearance.liveAvatarName = selectedAvatar.name;
+                    updateData.digitalTwin.appearance.liveAvatarPreview = selectedAvatar.preview_url;
+                }
+
+                // If a standard voice is selected, save its data
+                if (selectedVoice && voiceType === "standard") {
+                    updateData.digitalTwin.appearance.liveVoiceId = selectedVoice.id;
+                    updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
+                    updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
+                    updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
+                }
+
+                await userApi.updateUser(token, updateData);
 
                 if (refreshUser) {
                     await refreshUser();
@@ -83,6 +249,96 @@ export default function TwinAppearanceScreen() {
         } finally {
             setIsLoading(false);
         }
+    }
+
+    function renderAvatarItem({ item }: { item: PublicAvatar }) {
+        const isSelected = selectedAvatar?.id === item.id;
+
+        return (
+            <TouchableOpacity
+                style={[styles.avatarItem, isSelected && styles.avatarItemSelected]}
+                onPress={() => handleAvatarSelect(item)}
+                activeOpacity={0.8}
+            >
+                <View style={[styles.avatarImageContainer, isSelected && styles.avatarImageContainerSelected]}>
+                    {item.preview_url ? (
+                        <Image
+                            source={{ uri: item.preview_url }}
+                            style={styles.avatarImage}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <MaterialIcons name="person" size={40} color={COLORS.gray400} />
+                        </View>
+                    )}
+                    {isSelected && (
+                        <View style={styles.selectedBadge}>
+                            <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                        </View>
+                    )}
+                </View>
+                <Text style={[styles.avatarName, isSelected && styles.avatarNameSelected]} numberOfLines={2}>
+                    {item.name || "Avatar"}
+                </Text>
+                {item.gender && (
+                    <Text style={styles.avatarGender}>{item.gender}</Text>
+                )}
+            </TouchableOpacity>
+        );
+    }
+
+    function renderVoiceItem({ item }: { item: PublicVoice }) {
+        const isSelected = selectedVoice?.id === item.id;
+        const isPlaying = playingVoiceId === item.id;
+
+        return (
+            <TouchableOpacity
+                style={[styles.voiceItem, isSelected && styles.voiceItemSelected]}
+                onPress={() => handleVoiceSelect(item)}
+                activeOpacity={0.8}
+            >
+                <View style={styles.voiceItemContent}>
+                    <View style={[styles.voiceIcon, isSelected && styles.voiceIconSelected]}>
+                        <MaterialIcons
+                            name={item.gender?.toLowerCase() === 'female' ? 'person-2' : 'person'}
+                            size={24}
+                            color={isSelected ? COLORS.primaryDark : COLORS.gray500}
+                        />
+                    </View>
+                    <View style={styles.voiceItemInfo}>
+                        <Text style={[styles.voiceItemName, isSelected && styles.voiceItemNameSelected]} numberOfLines={1}>
+                            {item.name || "Voz"}
+                        </Text>
+                        <Text style={styles.voiceItemMeta}>
+                            {item.gender || "Neutral"} • {item.language || "ES"}
+                        </Text>
+                    </View>
+                </View>
+                <View style={styles.voiceItemActions}>
+                    {(item.preview_url || item.sample_url) && (
+                        <TouchableOpacity
+                            style={[styles.voicePlayButton, isPlaying && styles.voicePlayButtonActive]}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                playVoicePreview(item);
+                            }}
+                        >
+                            <MaterialIcons
+                                name={isPlaying ? "stop" : "play-arrow"}
+                                size={20}
+                                color={isPlaying ? "#FFFFFF" : COLORS.gray700}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    {isSelected && (
+                        <View style={styles.voiceSelectedCheck}>
+                            <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        );
     }
 
     return (
@@ -132,6 +388,14 @@ export default function TwinAppearanceScreen() {
                         <Text style={styles.previewBadgeText}>VISTA PREVIA</Text>
                     </View>
 
+                    {/* Selected avatar name */}
+                    {selectedAvatar && (
+                        <View style={styles.selectedAvatarBadge}>
+                            <MaterialIcons name="face" size={14} color={COLORS.primaryDark} />
+                            <Text style={styles.selectedAvatarText}>{selectedAvatar.name}</Text>
+                        </View>
+                    )}
+
                     {/* Bottom controls */}
                     <View style={styles.previewBottom}>
                         <TouchableOpacity style={styles.playButton}>
@@ -150,7 +414,7 @@ export default function TwinAppearanceScreen() {
                                 ))}
                             </View>
                             <Text style={styles.voiceLabel}>
-                                Voz: <Text style={styles.voiceName}>Estándar (Profesional)</Text>
+                                Voz: <Text style={styles.voiceName}>{selectedVoice ? selectedVoice.name : "Estándar (Profesional)"}</Text>
                             </Text>
                         </View>
                     </View>
@@ -172,13 +436,18 @@ export default function TwinAppearanceScreen() {
                                     styles.optionCard,
                                     videoType === "predefined" && styles.optionCardSelected
                                 ]}
-                                onPress={() => setVideoType("predefined")}
+                                onPress={handleSelectPredefined}
                             >
+                                {videoType === "predefined" && selectedAvatar && (
+                                    <View style={styles.activeDot} />
+                                )}
                                 <View style={[styles.optionIcon, videoType === "predefined" && styles.optionIconSelected]}>
                                     <MaterialIcons name="face" size={18} color={videoType === "predefined" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
                                 <Text style={[styles.optionTitle, videoType === "predefined" && styles.optionTitleSelected]}>Avatar Predefinido</Text>
-                                <Text style={styles.optionSubtitle}>Importar Live Avatar</Text>
+                                <Text style={styles.optionSubtitle}>
+                                    {selectedAvatar ? selectedAvatar.name : "Elegir del catálogo"}
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -207,13 +476,18 @@ export default function TwinAppearanceScreen() {
                                     styles.optionCard,
                                     voiceType === "standard" && styles.optionCardSelected
                                 ]}
-                                onPress={() => setVoiceType("standard")}
+                                onPress={handleSelectStandardVoice}
                             >
+                                {voiceType === "standard" && selectedVoice && (
+                                    <View style={styles.activeDot} />
+                                )}
                                 <View style={[styles.optionIcon, voiceType === "standard" && styles.optionIconSelected]}>
                                     <MaterialIcons name="graphic-eq" size={18} color={voiceType === "standard" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
                                 <Text style={[styles.optionTitle, voiceType === "standard" && styles.optionTitleSelected]}>Voz Estándar</Text>
-                                <Text style={styles.optionSubtitle}>Seleccionar tono</Text>
+                                <Text style={styles.optionSubtitle}>
+                                    {selectedVoice ? selectedVoice.name : "Elegir del catálogo"}
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -257,6 +531,134 @@ export default function TwinAppearanceScreen() {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Avatar Catalog Modal */}
+            <Modal
+                visible={showAvatarModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowAvatarModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Catálogo de Avatares</Text>
+                                <Text style={styles.modalSubtitle}>Elige la apariencia de tu gemelo digital</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowAvatarModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Avatar Grid */}
+                        {loadingAvatars ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <Text style={styles.loadingText}>Cargando avatares...</Text>
+                            </View>
+                        ) : publicAvatars.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <MaterialIcons name="face" size={64} color={COLORS.gray400} />
+                                <Text style={styles.emptyText}>No hay avatares disponibles</Text>
+                                <TouchableOpacity style={styles.retryButton} onPress={loadPublicAvatars}>
+                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={publicAvatars}
+                                renderItem={renderAvatarItem}
+                                keyExtractor={(item) => item.id}
+                                numColumns={2}
+                                contentContainerStyle={styles.avatarGrid}
+                                columnWrapperStyle={styles.avatarRow}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
+
+                        {/* Modal Footer */}
+                        {selectedAvatar && (
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={styles.confirmButton}
+                                    onPress={() => setShowAvatarModal(false)}
+                                >
+                                    <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
+                                    <MaterialIcons name="check" size={20} color="#000000" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Voice Catalog Modal */}
+            <Modal
+                visible={showVoiceModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowVoiceModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Catálogo de Voces</Text>
+                                <Text style={styles.modalSubtitle}>Elige la voz de tu gemelo digital</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowVoiceModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Voice List */}
+                        {loadingVoices ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <Text style={styles.loadingText}>Cargando voces...</Text>
+                            </View>
+                        ) : publicVoices.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <MaterialIcons name="mic-off" size={64} color={COLORS.gray400} />
+                                <Text style={styles.emptyText}>No hay voces disponibles</Text>
+                                <TouchableOpacity style={styles.retryButton} onPress={loadPublicVoices}>
+                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={publicVoices}
+                                renderItem={renderVoiceItem}
+                                keyExtractor={(item) => item.id}
+                                contentContainerStyle={styles.voiceList}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
+
+                        {/* Modal Footer */}
+                        {selectedVoice && (
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={styles.confirmButton}
+                                    onPress={() => setShowVoiceModal(false)}
+                                >
+                                    <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
+                                    <MaterialIcons name="check" size={20} color="#000000" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -386,6 +788,23 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: "bold",
         color: "#FFFFFF",
+    },
+    selectedAvatarBadge: {
+        position: "absolute",
+        top: 16,
+        right: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(253, 224, 71, 0.9)",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
+        gap: 6,
+    },
+    selectedAvatarText: {
+        fontSize: 11,
+        fontWeight: "bold",
+        color: COLORS.gray900,
     },
     previewBottom: {
         position: "absolute",
@@ -570,5 +989,249 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
         color: "#000000",
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: COLORS.surfaceLight,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: "85%",
+        minHeight: "60%",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray200,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    modalSubtitle: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+        marginTop: 4,
+    },
+    modalCloseButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 40,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        marginTop: 16,
+    },
+    emptyContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 40,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: COLORS.textMuted,
+        marginTop: 16,
+        marginBottom: 24,
+    },
+    retryButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    retryButtonText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "#000000",
+    },
+    avatarGrid: {
+        padding: 16,
+    },
+    avatarRow: {
+        justifyContent: "space-between",
+        marginBottom: 16,
+    },
+    avatarItem: {
+        width: (SCREEN_WIDTH - 48) / 2 - 8,
+        backgroundColor: COLORS.gray50,
+        borderRadius: 16,
+        padding: 12,
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    avatarItemSelected: {
+        borderColor: COLORS.primary,
+        backgroundColor: "rgba(253, 224, 71, 0.1)",
+    },
+    avatarImageContainer: {
+        width: "100%",
+        aspectRatio: 1,
+        borderRadius: 12,
+        overflow: "hidden",
+        marginBottom: 12,
+        position: "relative",
+    },
+    avatarImageContainerSelected: {
+        borderWidth: 3,
+        borderColor: COLORS.primary,
+    },
+    avatarImage: {
+        width: "100%",
+        height: "100%",
+    },
+    avatarPlaceholder: {
+        width: "100%",
+        height: "100%",
+        backgroundColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    selectedBadge: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: COLORS.accentGreen,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    avatarName: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        textAlign: "center",
+        marginBottom: 4,
+    },
+    avatarNameSelected: {
+        color: COLORS.primaryDark,
+        fontWeight: "bold",
+    },
+    avatarGender: {
+        fontSize: 11,
+        color: COLORS.textMuted,
+        textAlign: "center",
+    },
+    modalFooter: {
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+    },
+    confirmButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primary,
+        paddingVertical: 16,
+        borderRadius: 16,
+        gap: 8,
+    },
+    confirmButtonText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#000000",
+    },
+    // Voice list styles
+    voiceList: {
+        padding: 16,
+    },
+    voiceItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    voiceItemSelected: {
+        borderColor: COLORS.primary,
+        backgroundColor: "rgba(253, 224, 71, 0.1)",
+    },
+    voiceItemContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        flex: 1,
+    },
+    voiceIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    voiceIconSelected: {
+        backgroundColor: "rgba(253, 224, 71, 0.3)",
+    },
+    voiceItemInfo: {
+        flex: 1,
+    },
+    voiceItemName: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        marginBottom: 4,
+    },
+    voiceItemNameSelected: {
+        color: COLORS.primaryDark,
+        fontWeight: "bold",
+    },
+    voiceItemMeta: {
+        fontSize: 12,
+        color: COLORS.textMuted,
+    },
+    voiceItemActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    voicePlayButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    voicePlayButtonActive: {
+        backgroundColor: COLORS.accentPurple,
+    },
+    voiceSelectedCheck: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: COLORS.accentGreen,
+        alignItems: "center",
+        justifyContent: "center",
     },
 });
