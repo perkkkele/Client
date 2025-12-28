@@ -374,6 +374,28 @@ export default function ProDashboardScreen() {
                 </View>
             </ScrollView>
 
+            {/* Bottom Navigation */}
+            <View style={styles.bottomNav}>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
+                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray400} />
+                    <Text style={styles.navLabel}>Chats</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
+                    <MaterialIcons name="diversity-2" size={24} color={COLORS.gray400} />
+                    <Text style={styles.navLabel}>Directorio</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
+                    <MaterialIcons name="favorite" size={24} color={COLORS.gray400} />
+                    <Text style={styles.navLabel}>Favoritos</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem}>
+                    <View style={styles.navItemActive}>
+                        <MaterialIcons name="badge" size={24} color={COLORS.textMain} />
+                    </View>
+                    <Text style={styles.navLabelActive}>Perfil Pro</Text>
+                </TouchableOpacity>
+            </View>
+
             {/* FAB */}
             <TouchableOpacity style={styles.fab}>
                 <MaterialIcons name="edit-calendar" size={28} color="#FFFFFF" />
@@ -1362,7 +1384,7 @@ const styles = StyleSheet.create({
     // FAB
     fab: {
         position: "absolute",
-        bottom: 24,
+        bottom: 100,
         right: 24,
         width: 56,
         height: 56,
@@ -1376,5 +1398,39 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 8,
         zIndex: 30,
+    },
+    // Bottom Navigation
+    bottomNav: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-around",
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderTopWidth: 1,
+        borderTopColor: "rgba(0,0,0,0.05)",
+        paddingTop: 12,
+        paddingBottom: 32,
+        paddingHorizontal: 24,
+    },
+    navItem: {
+        alignItems: "center",
+        gap: 4,
+    },
+    navLabel: {
+        fontSize: 10,
+        color: COLORS.gray400,
+        fontWeight: "500",
+    },
+    navItemActive: {
+        width: 40,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "rgba(19, 127, 236, 0.15)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    navLabelActive: {
+        fontSize: 10,
+        color: COLORS.textMain,
+        fontWeight: "bold",
     },
 });

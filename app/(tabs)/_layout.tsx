@@ -39,6 +39,22 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="qr-scanner"
+        options={{
+          title: "Escanear QR",
+          tabBarButton: () => null, // Ocultar de la barra de tabs
+        }}
+      />
+
+      <Tabs.Screen
+        name="my-qr-code"
+        options={{
+          title: "Mi Código QR",
+          tabBarButton: () => null, // Ocultar de la barra de tabs
+        }}
+      />
     </Tabs>
   );
 }

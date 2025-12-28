@@ -166,7 +166,9 @@ export default function TwinProHomeScreen() {
       <TouchableOpacity
         style={styles.featuredItem}
         onPress={() => {
-          // TODO: Navegar a chat con profesional
+          if (item._id) {
+            router.push(`/avatar-chat/${item._id}`);
+          }
         }}
       >
         <View style={styles.featuredAvatarContainer}>
@@ -286,7 +288,7 @@ export default function TwinProHomeScreen() {
               <Text style={styles.logoSubtitle}>Professional Chat</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.qrButton}>
+          <TouchableOpacity style={styles.qrButton} onPress={() => router.push("/(tabs)/qr-scanner")}>
             <Ionicons name="qr-code-outline" size={24} color={COLORS.slate400} />
           </TouchableOpacity>
         </View>
@@ -382,23 +384,60 @@ export default function TwinProHomeScreen() {
               <Text style={styles.sectionLink}>Marcar leídos</Text>
             </TouchableOpacity>
           </View>
-          {(() => {
-            // Filtrar chats donde el partner sea un profesional (userpro)
-            const professionalChats = chats.filter((chat) => {
-              const partner = getChatPartner(chat);
-              return partner?.userType === 'userpro';
-            });
+          {/* Mostrar contenido de bienvenida SOLO si no hay ningún chat */}
+          {chats.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              {/* Welcome Message - Centered Icon Layout */}
+              <View style={styles.welcomeContainer}>
+                <View style={styles.welcomeIconContainer}>
+                  <MaterialIcons name="waving-hand" size={36} color={COLORS.primary} />
+                </View>
+                <Text style={styles.welcomeTitle}>¡Bienvenido a TwinPro!</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Conecta con profesionales verificados y sus gemelos IA.
+                </Text>
 
-            return professionalChats.length > 0 ? (
-              professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
-            ) : (
-              <View style={styles.emptyState}>
-                <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.grayLight} />
-                <Text style={styles.emptyText}>No tienes chats con profesionales</Text>
-                <Text style={styles.emptySubtext}>Explora profesionales para iniciar una conversación</Text>
+                {/* Compact Feature highlights - horizontal */}
+                <View style={styles.featuresRow}>
+                  <View style={styles.featureChip}>
+                    <MaterialIcons name="smart-toy" size={14} color="#0284c7" />
+                    <Text style={styles.featureChipText}>24/7 IA</Text>
+                  </View>
+                  <View style={styles.featureChip}>
+                    <MaterialIcons name="verified" size={14} color="#16a34a" />
+                    <Text style={styles.featureChipText}>Verificados</Text>
+                  </View>
+                  <View style={styles.featureChip}>
+                    <MaterialIcons name="bolt" size={14} color="#ca8a04" />
+                    <Text style={styles.featureChipText}>Rápido</Text>
+                  </View>
+                </View>
+
+                {/* CTA Button */}
+                <TouchableOpacity
+                  style={styles.welcomeButton}
+                  onPress={() => router.push("/(tabs)/category-results?category=todos")}
+                >
+                  <Text style={styles.welcomeButtonText}>Explorar Profesionales</Text>
+                  <MaterialIcons name="arrow-forward" size={18} color={COLORS.black} />
+                </TouchableOpacity>
               </View>
-            );
-          })()}
+            </View>
+          ) : (
+            /* Mostrar lista de chats recientes cuando hay chats */
+            (() => {
+              const professionalChats = chats.filter((chat) => {
+                const partner = getChatPartner(chat);
+                return partner?.userType === 'userpro';
+              });
+
+              return professionalChats.length > 0 ? (
+                professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+              ) : (
+                chats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+              );
+            })()
+          )}
         </View>
       </ScrollView>
 
@@ -796,23 +835,127 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // Empty state
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+  // Empty state container
+  emptyStateContainer: {
+    marginTop: -8,
   },
-  emptyText: {
-    fontSize: 16,
+
+  // Featured section in empty state
+  featuredSection: {
+    marginBottom: 24,
+  },
+  featuredSectionTitle: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: COLORS.gray,
+    letterSpacing: 1,
+    marginBottom: 12,
+    paddingLeft: 4,
+  },
+  featuredScrollContent: {
+    paddingRight: 20,
+    gap: 16,
+  },
+  exploreMoreButton: {
+    alignItems: "center",
+    width: 72,
+  },
+  exploreMoreIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(249, 245, 6, 0.1)",
+    marginBottom: 8,
+  },
+  exploreMoreText: {
+    fontSize: 12,
     fontWeight: "600",
     color: COLORS.gray,
-    marginTop: 12,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: COLORS.grayLight,
+
+  // Welcome container - centered layout
+  welcomeContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 0,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  welcomeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(249, 245, 6, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  welcomeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.slate800,
     textAlign: "center",
-    marginTop: 4,
+    marginBottom: 4,
+  },
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: COLORS.gray,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+
+  // Compact feature chips - horizontal row
+  featuresRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  featureChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  featureChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.slate800,
+  },
+
+  // Welcome button
+  welcomeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    width: "100%",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  welcomeButtonText: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: COLORS.black,
   },
 
   // Bottom navigation

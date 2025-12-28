@@ -117,7 +117,7 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
 
 export default function AvatarChatScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
-    const { token } = useAuth();
+    const { token, user: currentUser } = useAuth();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -255,7 +255,7 @@ export default function AvatarChatScreen() {
         router.back();
     };
 
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!inputText.trim()) return;
 
         const newMessage: Message = {
@@ -272,6 +272,18 @@ export default function AvatarChatScreen() {
 
         // Hide info bubble when user sends a message
         setActiveInfoBubble(null);
+
+        // Create chat record on first user message
+        if (messages.filter(m => m.isUser).length === 0 && token && professionalId && currentUser?._id) {
+            try {
+                // Dynamically import to avoid bundling issues
+                const { chatApi } = await import("../../api");
+                await chatApi.createChat(token, currentUser._id, professionalId);
+                console.log("Chat created successfully");
+            } catch (error) {
+                console.log("Chat may already exist or error:", error);
+            }
+        }
 
         // Scroll to bottom
         setTimeout(() => {
@@ -692,23 +704,38 @@ export default function AvatarChatScreen() {
                             <View style={styles.locationContent}>
                                 {/* Map Container */}
                                 <View style={styles.mapContainer}>
-                                    {/* Base placeholder layer */}
-                                    <View style={styles.mapPlaceholder}>
-                                        <MaterialIcons name="map" size={40} color={COLORS.gray400} />
-                                        <Text style={styles.mapPlaceholderText}>Cargando mapa...</Text>
+                                    {/* Map using simple colored background with location marker */}
+                                    <View style={styles.mapVisual}>
+                                        <View style={styles.mapBackground}>
+                                            {/* Grid pattern for map effect */}
+                                            <View style={styles.mapGrid}>
+                                                {[...Array(6)].map((_, i) => (
+                                                    <View key={i} style={styles.mapGridLine} />
+                                                ))}
+                                            </View>
+                                            {/* Location marker */}
+                                            <View style={styles.mapMarkerContainer}>
+                                                <View style={styles.mapMarkerPin}>
+                                                    <MaterialIcons name="location-on" size={32} color="#DC2626" />
+                                                </View>
+                                                <View style={styles.mapMarkerShadow} />
+                                            </View>
+                                            {/* Tap to open maps */}
+                                            <TouchableOpacity
+                                                style={styles.mapTapOverlay}
+                                                onPress={() => {
+                                                    const lat = professional.location?.lat || 40.4168;
+                                                    const lng = professional.location?.lng || -3.7038;
+                                                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+                                                }}
+                                            >
+                                                <View style={styles.mapTapHint}>
+                                                    <MaterialIcons name="open-in-new" size={14} color={COLORS.white} />
+                                                    <Text style={styles.mapTapText}>Ver en Google Maps</Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
-                                    {/* Map image overlay */}
-                                    {mapLoaded !== false && (
-                                        <Image
-                                            source={{
-                                                uri: `https://maps.googleapis.com/maps/api/staticmap?center=${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&zoom=15&size=600x300&scale=2&maptype=roadmap&markers=color:red%7C${professional.location.lat || 40.4168},${professional.location.lng || -3.7038}&key=AIzaSyAkX-f7HUJxbV87LpDJKbcnieeQDYzkAyw`
-                                            }}
-                                            style={styles.mapImageOverlay}
-                                            resizeMode="cover"
-                                            onLoad={() => setMapLoaded(true)}
-                                            onError={() => setMapLoaded(false)}
-                                        />
-                                    )}
                                     {/* Open indicator */}
                                     <View style={styles.openIndicator}>
                                         <View style={styles.openDot} />
@@ -1716,9 +1743,74 @@ const styles = StyleSheet.create({
     },
     mapContainer: {
         height: 160,
-        backgroundColor: COLORS.gray200,
+        backgroundColor: "#E8F4E8",
         position: "relative",
         overflow: "hidden",
+    },
+    mapVisual: {
+        flex: 1,
+    },
+    mapBackground: {
+        flex: 1,
+        backgroundColor: "#D4E4D4",
+        position: "relative",
+    },
+    mapGrid: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        flexDirection: "row",
+        justifyContent: "space-evenly",
+    },
+    mapGridLine: {
+        width: 1,
+        height: "100%",
+        backgroundColor: "rgba(100, 150, 100, 0.2)",
+    },
+    mapMarkerContainer: {
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        marginTop: -24,
+        marginLeft: -16,
+        alignItems: "center",
+    },
+    mapMarkerPin: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    mapMarkerShadow: {
+        width: 16,
+        height: 6,
+        backgroundColor: "rgba(0,0,0,0.2)",
+        borderRadius: 8,
+        marginTop: -4,
+    },
+    mapTapOverlay: {
+        position: "absolute",
+        bottom: 12,
+        left: 12,
+        right: 12,
+        alignItems: "center",
+    },
+    mapTapHint: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: "rgba(0,0,0,0.7)",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    mapTapText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.white,
     },
     mapImage: {
         width: "100%",
