@@ -41,10 +41,18 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="settings"
+        options={{
+          title: "Configuración",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
         name="qr-scanner"
         options={{
           title: "Escanear QR",
-          tabBarButton: () => null, // Ocultar de la barra de tabs
+          tabBarButton: () => null,
         }}
       />
 
@@ -52,7 +60,63 @@ export default function TabsLayout() {
         name="my-qr-code"
         options={{
           title: "Mi Código QR",
-          tabBarButton: () => null, // Ocultar de la barra de tabs
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: "Favoritos",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="category-results"
+        options={{
+          title: "Resultados",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="all-categories"
+        options={{
+          title: "Categorías",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="become-pro"
+        options={{
+          title: "Ser Pro",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="pro-dashboard"
+        options={{
+          title: "Dashboard Pro",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="delete-account"
+        options={{
+          title: "Eliminar Cuenta",
+          tabBarButton: () => null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="logout-confirm"
+        options={{
+          title: "Cerrar Sesión",
+          tabBarButton: () => null,
         }}
       />
     </Tabs>

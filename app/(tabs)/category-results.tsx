@@ -415,19 +415,6 @@ export default function CategoryResultsScreen() {
                 </SafeAreaView>
             </View>
 
-            {/* Featured Professionals Carousel */}
-            {featuredProfessionals.length > 0 && (
-                <View style={styles.featuredSection}>
-                    <Text style={styles.featuredTitle}>PROFESIONALES DESTACADOS</Text>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.featuredList}
-                    >
-                        {featuredProfessionals.map((prof) => renderFeaturedProfessional(prof))}
-                    </ScrollView>
-                </View>
-            )}
 
             {/* Main content */}
             <View style={styles.main}>
@@ -895,6 +882,20 @@ const styles = StyleSheet.create({
     emptySubtext: {
         fontSize: 14,
         color: COLORS.gray500,
+    },
+    // Grid styles for ScrollView approach
+    gridScrollContent: {
+        paddingHorizontal: 24,
+        paddingBottom: 120,
+    },
+    gridContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
+    cardWrapper: {
+        width: "48%",
+        marginBottom: 16,
     },
     grid: {
         paddingHorizontal: 24,
