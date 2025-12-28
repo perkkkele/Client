@@ -187,6 +187,7 @@ export default function AvatarChatScreen() {
     const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
     const [livekitToken, setLivekitToken] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [sessionToken, setSessionToken] = useState<string | null>(null);
 
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
@@ -194,6 +195,12 @@ export default function AvatarChatScreen() {
     const infoBubbleAnim = useRef(new Animated.Value(0)).current;
     const infoBubbleScaleAnim = useRef(new Animated.Value(0)).current;
     const drawerAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.85)).current;
+
+    // Ref to store send text function from LiveAvatarVideo
+    const sendTextToAvatarRef = useRef<((text: string) => void) | null>(null);
+
+    // Ref to track last typed message to prevent duplicates from user.transcription events
+    const lastTypedMessageRef = useRef<string | null>(null);
 
     // Toggle video size
     const toggleVideoSize = () => {
@@ -320,10 +327,11 @@ export default function AvatarChatScreen() {
             const startResponse = await liveAvatarApi.startSession(tokenResponse.session_token);
             console.log("Session started:", startResponse);
 
-            // Step 3: Store LiveKit credentials
+            // Step 3: Store LiveKit credentials and session token
             setLivekitUrl(startResponse.livekit_url);
             setLivekitToken(startResponse.livekit_client_token);
             setSessionId(startResponse.session_id);
+            setSessionToken(tokenResponse.session_token); // Store for sendTextToAvatar
             setSessionStatus('active');
 
             console.log("LiveAvatar session active!");
@@ -423,19 +431,25 @@ export default function AvatarChatScreen() {
     };
 
     const handleSendMessage = async () => {
+        console.log('handleSendMessage called, inputText:', inputText);
         if (!inputText.trim()) return;
+
+        const messageText = inputText.trim();
 
         const newMessage: Message = {
             id: Date.now().toString(),
             type: "text",
-            content: inputText.trim(),
+            content: messageText,
             isUser: true,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
 
-        setMessages(prev => [...prev, newMessage]);
+        console.log('Adding new user message:', newMessage);
+        setMessages(prev => {
+            console.log('Current messages count:', prev.length);
+            return [...prev, newMessage];
+        });
         setInputText("");
-        setIsTyping(true);
 
         // Hide info bubble when user sends a message
         setActiveInfoBubble(null);
@@ -457,21 +471,40 @@ export default function AvatarChatScreen() {
             scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
 
-        // Simulate bot response
-        setTimeout(() => {
-            setIsTyping(false);
-            const botResponse: Message = {
+        // Send text to LiveAvatar via data channel if available
+        if (sessionStatus === 'active' && sendTextToAvatarRef.current) {
+            try {
+                // Store the typed message to prevent duplicate from user.transcription event
+                lastTypedMessageRef.current = messageText;
+
+                console.log('Sending text to LiveAvatar via data channel:', messageText);
+                sendTextToAvatarRef.current(messageText);
+                console.log('Text sent to LiveAvatar successfully');
+                // The avatar's response will come through the onTranscription callback
+            } catch (error: any) {
+                console.error('Error sending text to LiveAvatar:', error);
+                // Show error as a system message
+                const errorMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    type: "text",
+                    content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                    isUser: false,
+                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                };
+                setMessages(prev => [...prev, errorMessage]);
+            }
+        } else {
+            console.log('Session not active or data channel not ready, cannot send message to avatar');
+            // If session is not active, show a message
+            const infoMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: "text",
-                content: "Gracias por tu mensaje. Estoy analizando tu consulta y te responderé en breve con información personalizada.",
+                content: "El avatar no está conectado. Espera a que se establezca la conexión.",
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             };
-            setMessages(prev => [...prev, botResponse]);
-            setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-        }, 2000);
+            setMessages(prev => [...prev, infoMessage]);
+        }
     };
 
     const handleQuickReply = (text: string) => {
@@ -609,7 +642,7 @@ export default function AvatarChatScreen() {
                                 console.error('LiveKit error:', error);
                             }}
                             onTranscription={(text, isFinal) => {
-                                // Only add final transcriptions as messages
+                                // Only add final transcriptions as messages (avatar's response)
                                 if (isFinal && text.trim()) {
                                     const newMessage: Message = {
                                         id: `avatar-${Date.now()}`,
@@ -628,6 +661,41 @@ export default function AvatarChatScreen() {
                                         scrollViewRef.current?.scrollToEnd({ animated: true });
                                     }, 100);
                                 }
+                            }}
+                            onUserTranscription={(text, isFinal) => {
+                                // Add user's spoken words as messages (but not typed messages that echo back)
+                                if (isFinal && text.trim()) {
+                                    const trimmedText = text.trim();
+
+                                    // Check if this is a duplicate of a typed message
+                                    if (lastTypedMessageRef.current &&
+                                        trimmedText.toLowerCase() === lastTypedMessageRef.current.toLowerCase()) {
+                                        console.log('Skipping duplicate user.transcription for typed message:', trimmedText);
+                                        lastTypedMessageRef.current = null; // Clear after checking
+                                        return;
+                                    }
+
+                                    const newMessage: Message = {
+                                        id: `user-voice-${Date.now()}`,
+                                        type: 'text',
+                                        content: trimmedText,
+                                        isUser: true,
+                                        timestamp: new Date().toLocaleTimeString('es-ES', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        }),
+                                    };
+                                    setMessages(prev => [...prev, newMessage]);
+
+                                    // Scroll to bottom
+                                    setTimeout(() => {
+                                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                                    }, 100);
+                                }
+                            }}
+                            onSendTextReady={(sendText) => {
+                                console.log('Text sender ready');
+                                sendTextToAvatarRef.current = sendText;
                             }}
                         />
                     ) : avatarUrl ? (
@@ -937,14 +1005,6 @@ export default function AvatarChatScreen() {
                             </View>
                         ) : activeInfoBubble === "location" && professional?.location ? (
                             <View style={styles.locationContent}>
-                                {/* Debug log for location data */}
-                                {console.log('Location bubble data:', {
-                                    address: professional.location?.address,
-                                    city: professional.location?.city,
-                                    lat: professional.location?.lat,
-                                    lng: professional.location?.lng,
-                                    phone: professional.phone,
-                                })}
                                 {/* Map Container with embedded Google Maps */}
                                 <View style={styles.mapContainer}>
                                     <View style={styles.mapVisual}>
@@ -2595,7 +2655,7 @@ const styles = StyleSheet.create({
     drawerConversationTitle: {
         fontSize: 14,
         fontWeight: "600",
-        color: COLORS.gray700,
+        color: COLORS.gray600,
         marginBottom: 4,
     },
     drawerConversationTitleActive: {

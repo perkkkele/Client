@@ -13,6 +13,8 @@ interface LiveAvatarVideoProps {
     onConnectionChange?: (connected: boolean) => void;
     onError?: (error: string) => void;
     onTranscription?: (text: string, isFinal: boolean) => void;
+    onUserTranscription?: (text: string, isFinal: boolean) => void;
+    onSendTextReady?: (sendText: (text: string) => void) => void;
     style?: any;
 }
 
@@ -79,12 +81,15 @@ function LiveKitFallback({ style, error }: { style?: any; error?: string }) {
 // Component to capture transcriptions via LiveKit data channel
 // LiveAvatar sends events to 'agent-response' topic with avatar.transcription_ended
 function TranscriptionCapture({
-    onTranscription
+    onTranscription,
+    onUserTranscription
 }: {
-    onTranscription?: (text: string, isFinal: boolean) => void
+    onTranscription?: (text: string, isFinal: boolean) => void;
+    onUserTranscription?: (text: string, isFinal: boolean) => void;
 }) {
     const { useDataChannel } = LiveKitModule;
     const lastTranscriptRef = useRef<string>('');
+    const lastUserTranscriptRef = useRef<string>('');
 
     // Subscribe to agent-response topic for avatar transcriptions
     const dataChannel = useDataChannel ? useDataChannel('agent-response') : null;
@@ -126,14 +131,64 @@ function TranscriptionCapture({
                 }
             }
 
-            // Also capture user transcription for logging
+            // Capture user transcription and add to messages
             if (event.event_type === 'user.transcription' && event.text) {
-                console.log('User said:', event.text);
+                const text = event.text.trim();
+                if (text && text !== lastUserTranscriptRef.current) {
+                    lastUserTranscriptRef.current = text;
+                    console.log('User said:', text);
+                    onUserTranscription?.(text, true);
+                }
             }
         } catch (e: any) {
             // Silently ignore parse errors
         }
-    }, [dataChannel?.message, dataChannel?.payload, onTranscription]);
+    }, [dataChannel?.message, dataChannel?.payload, onTranscription, onUserTranscription]);
+
+    return null;
+}
+
+// Component to send text to avatar via LiveKit data channel
+function TextSender({
+    onSendTextReady
+}: {
+    onSendTextReady?: (sendText: (text: string) => void) => void;
+}) {
+    const { useDataChannel } = LiveKitModule;
+    const sendReadyCalledRef = useRef(false);
+
+    // Get the data channel for agent-control topic
+    const dataChannel = useDataChannel ? useDataChannel('agent-control') : null;
+
+    useEffect(() => {
+        if (dataChannel && dataChannel.send && onSendTextReady && !sendReadyCalledRef.current) {
+            sendReadyCalledRef.current = true;
+
+            // Create the sendText function
+            const sendText = (text: string) => {
+                try {
+                    // Send avatar.speak_response event (passes through LLM)
+                    const event = {
+                        event_type: 'avatar.speak_response',
+                        text: text
+                    };
+                    const message = JSON.stringify(event);
+                    console.log('Sending text to avatar via data channel:', message);
+
+                    // Convert to Uint8Array
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(message);
+
+                    dataChannel.send(data);
+                    console.log('Text sent to avatar successfully');
+                } catch (error: any) {
+                    console.error('Error sending text to avatar:', error);
+                }
+            };
+
+            onSendTextReady(sendText);
+        }
+    }, [dataChannel, onSendTextReady]);
 
     return null;
 }
@@ -141,10 +196,14 @@ function TranscriptionCapture({
 // Inner component that uses LiveKit hooks (must be inside LiveKitRoom)
 function VideoRenderer({
     style,
-    onTranscription
+    onTranscription,
+    onUserTranscription,
+    onSendTextReady
 }: {
     style?: any;
     onTranscription?: (text: string, isFinal: boolean) => void;
+    onUserTranscription?: (text: string, isFinal: boolean) => void;
+    onSendTextReady?: (sendText: (text: string) => void) => void;
 }) {
     const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
 
@@ -162,6 +221,7 @@ function VideoRenderer({
             <View style={[styles.loadingContainer, style]}>
                 <ActivityIndicator size="small" color="#f9f506" />
                 <Text style={styles.loadingText}>Esperando avatar...</Text>
+                <TextSender onSendTextReady={onSendTextReady} />
             </View>
         );
     }
@@ -173,7 +233,11 @@ function VideoRenderer({
                 style={styles.videoTrack}
                 objectFit="cover"
             />
-            <TranscriptionCapture onTranscription={onTranscription} />
+            <TranscriptionCapture
+                onTranscription={onTranscription}
+                onUserTranscription={onUserTranscription}
+            />
+            <TextSender onSendTextReady={onSendTextReady} />
         </View>
     );
 }
@@ -185,6 +249,8 @@ function LiveKitVideoPlayer({
     onConnectionChange,
     onError,
     onTranscription,
+    onUserTranscription,
+    onSendTextReady,
     style
 }: LiveAvatarVideoProps) {
     const [isConnected, setIsConnected] = useState(false);
@@ -226,7 +292,12 @@ function LiveKitVideoPlayer({
                     <Text style={styles.loadingText}>Conectando video...</Text>
                 </View>
             ) : (
-                <VideoRenderer style={style} onTranscription={onTranscription} />
+                <VideoRenderer
+                    style={style}
+                    onTranscription={onTranscription}
+                    onUserTranscription={onUserTranscription}
+                    onSendTextReady={onSendTextReady}
+                />
             )}
         </LiveKitRoom>
     );
