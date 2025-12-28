@@ -247,6 +247,7 @@ export default function TwinAppearanceScreen() {
 
     function handleAvatarSelect(avatar: PublicAvatar) {
         setSelectedAvatar(avatar);
+        setVideoType("predefined"); // Auto-set to predefined when avatar is selected
         setShowAvatarModal(false);
     }
 
@@ -258,6 +259,7 @@ export default function TwinAppearanceScreen() {
         }
         setPlayingVoiceId(null);
         setSelectedVoice(voice);
+        setVoiceType("standard"); // Auto-set to standard when voice is selected
         setShowVoiceModal(false);
     }
 

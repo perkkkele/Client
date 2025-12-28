@@ -1,29 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-// Dynamic import for LiveKit (may not work in Expo Go)
-let Room: any = null;
-let RoomContext: any = null;
-let VideoTrack: any = null;
-let useRemoteParticipants: any = null;
-let useParticipantTracks: any = null;
-let Track: any = null;
-let isLiveKitAvailable = false;
-
-try {
-    const livekit = require('@livekit/react-native');
-    Room = livekit.Room;
-    RoomContext = livekit.RoomContext;
-    VideoTrack = livekit.VideoTrack;
-    useRemoteParticipants = livekit.useRemoteParticipants;
-    useParticipantTracks = livekit.useParticipantTracks;
-    Track = livekit.Track;
-    isLiveKitAvailable = true;
-    console.log('LiveKit loaded successfully');
-} catch (e) {
-    console.log('LiveKit not available (requires development build)');
-}
-
 interface LiveAvatarVideoProps {
     livekitUrl: string;
     livekitToken: string;
@@ -32,13 +9,58 @@ interface LiveAvatarVideoProps {
     style?: any;
 }
 
+// Try to import LiveKit
+let LiveKitModule: any = null;
+let isLiveKitAvailable = false;
+let initError: string | null = null;
+
+try {
+    LiveKitModule = require('@livekit/react-native');
+
+    // LiveKit React Native needs registerGlobals to be called first
+    if (LiveKitModule?.registerGlobals) {
+        LiveKitModule.registerGlobals();
+    }
+
+    // Configure AudioSession for better volume on Android
+    if (LiveKitModule?.AudioSession) {
+        const { AudioSession } = LiveKitModule;
+
+        // Start audio session with speaker output
+        AudioSession.getAudioOutputs().then((outputs: any[]) => {
+            console.log('Available audio outputs:', outputs);
+        }).catch(() => { });
+
+        // Configure for media playback with speaker
+        AudioSession.configureAudio({
+            android: {
+                audioMode: 'normal',
+                audioFocusMode: 'gain',
+                audioAttributesUsage: 'media',
+                audioAttributesContentType: 'speech',
+            },
+        }).catch(() => { });
+
+        AudioSession.startAudioSession().catch(() => { });
+    }
+
+    // Check for required exports
+    if (LiveKitModule?.LiveKitRoom && LiveKitModule?.VideoTrack) {
+        isLiveKitAvailable = true;
+    } else {
+        initError = 'LiveKit: LiveKitRoom or VideoTrack not available';
+    }
+} catch (e: any) {
+    initError = e.message || 'Failed to load LiveKit';
+}
+
 // Fallback component when LiveKit is not available
-function LiveKitFallback({ style }: { style?: any }) {
+function LiveKitFallback({ style, error }: { style?: any; error?: string }) {
     return (
         <View style={[styles.fallbackContainer, style]}>
-            <Text style={styles.fallbackTitle}>Video en Vivo</Text>
+            <Text style={styles.fallbackTitle}>Sesión Activa</Text>
             <Text style={styles.fallbackText}>
-                El video requiere un build de desarrollo.
+                {error || 'El video requiere un build de desarrollo.'}
             </Text>
             <Text style={styles.fallbackHint}>
                 La sesión está activa - usa el chat de texto.
@@ -47,7 +69,42 @@ function LiveKitFallback({ style }: { style?: any }) {
     );
 }
 
-// Actual video component using LiveKit
+// Inner component that uses LiveKit hooks (must be inside LiveKitRoom)
+function VideoRenderer({ style }: { style?: any }) {
+    const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
+
+    // Get all tracks
+    const tracks = useTracks ? useTracks() : [];
+    console.log('All tracks:', tracks?.length || 0);
+
+    // Find video track from remote participant (heygen)
+    const videoTrack = tracks?.find((t: any) => {
+        if (!isTrackReference?.(t)) return false;
+        // Look for video from heygen participant
+        return t.publication?.kind === 'video' && t.participant?.identity === 'heygen';
+    });
+
+    if (!videoTrack) {
+        return (
+            <View style={[styles.loadingContainer, style]}>
+                <ActivityIndicator size="small" color="#f9f506" />
+                <Text style={styles.loadingText}>Esperando avatar...</Text>
+            </View>
+        );
+    }
+
+    return (
+        <View style={[styles.videoContainer, style]}>
+            <VideoTrack
+                trackRef={videoTrack}
+                style={styles.videoTrack}
+                objectFit="cover"
+            />
+        </View>
+    );
+}
+
+// Main video player using LiveKitRoom component
 function LiveKitVideoPlayer({
     livekitUrl,
     livekitToken,
@@ -55,55 +112,10 @@ function LiveKitVideoPlayer({
     onError,
     style
 }: LiveAvatarVideoProps) {
-    const [room] = useState(() => new Room());
-    const [isConnecting, setIsConnecting] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        let mounted = true;
-
-        async function connect() {
-            try {
-                console.log('Connecting to LiveKit room:', livekitUrl);
-                setIsConnecting(true);
-                setError(null);
-
-                await room.connect(livekitUrl, livekitToken);
-
-                if (mounted) {
-                    console.log('Connected to LiveKit room');
-                    setIsConnected(true);
-                    setIsConnecting(false);
-                    onConnectionChange?.(true);
-                }
-            } catch (e: any) {
-                console.error('LiveKit connection error:', e);
-                if (mounted) {
-                    setError(e.message || 'Error de conexión');
-                    setIsConnecting(false);
-                    onError?.(e.message || 'Error de conexión');
-                }
-            }
-        }
-
-        connect();
-
-        return () => {
-            mounted = false;
-            room.disconnect();
-            onConnectionChange?.(false);
-        };
-    }, [livekitUrl, livekitToken, room, onConnectionChange, onError]);
-
-    if (isConnecting) {
-        return (
-            <View style={[styles.loadingContainer, style]}>
-                <ActivityIndicator size="large" color="#f9f506" />
-                <Text style={styles.loadingText}>Conectando video...</Text>
-            </View>
-        );
-    }
+    const { LiveKitRoom, RoomContext } = LiveKitModule;
 
     if (error) {
         return (
@@ -113,65 +125,45 @@ function LiveKitVideoPlayer({
         );
     }
 
-    if (!isConnected) {
-        return (
-            <View style={[styles.loadingContainer, style]}>
-                <Text style={styles.loadingText}>Esperando conexión...</Text>
-            </View>
-        );
-    }
-
-    // Render the video track
     return (
-        <RoomContext.Provider value={room}>
-            <RemoteVideoRenderer style={style} />
-        </RoomContext.Provider>
-    );
-}
-
-// Component to render remote participant video
-function RemoteVideoRenderer({ style }: { style?: any }) {
-    const participants = useRemoteParticipants();
-
-    if (participants.length === 0) {
-        return (
-            <View style={[styles.loadingContainer, style]}>
-                <ActivityIndicator size="small" color="#f9f506" />
-                <Text style={styles.loadingText}>Esperando avatar...</Text>
-            </View>
-        );
-    }
-
-    const participant = participants[0];
-    const tracks = useParticipantTracks(
-        [Track.Source.Camera, Track.Source.ScreenShare],
-        participant.identity
-    );
-
-    const videoTrack = tracks.find(
-        (t: any) => t.source === Track.Source.Camera || t.source === Track.Source.ScreenShare
-    );
-
-    if (!videoTrack) {
-        return (
-            <View style={[styles.loadingContainer, style]}>
-                <Text style={styles.loadingText}>Cargando video...</Text>
-            </View>
-        );
-    }
-
-    return (
-        <VideoTrack
-            trackRef={videoTrack}
-            style={[styles.videoTrack, style]}
-        />
+        <LiveKitRoom
+            serverUrl={livekitUrl}
+            token={livekitToken}
+            connect={true}
+            audio={true}
+            video={false}
+            onConnected={() => {
+                console.log('LiveKit connected!');
+                setIsConnected(true);
+                onConnectionChange?.(true);
+            }}
+            onDisconnected={() => {
+                console.log('LiveKit disconnected');
+                setIsConnected(false);
+                onConnectionChange?.(false);
+            }}
+            onError={(e: any) => {
+                console.error('LiveKit error:', e);
+                setError(e?.message || 'Error de conexión');
+                onError?.(e?.message);
+            }}
+        >
+            {!isConnected ? (
+                <View style={[styles.loadingContainer, style]}>
+                    <ActivityIndicator size="large" color="#f9f506" />
+                    <Text style={styles.loadingText}>Conectando video...</Text>
+                </View>
+            ) : (
+                <VideoRenderer style={style} />
+            )}
+        </LiveKitRoom>
     );
 }
 
 // Main exported component
 export default function LiveAvatarVideo(props: LiveAvatarVideoProps) {
     if (!isLiveKitAvailable) {
-        return <LiveKitFallback style={props.style} />;
+        return <LiveKitFallback style={props.style} error={initError || undefined} />;
     }
 
     return <LiveKitVideoPlayer {...props} />;
@@ -231,8 +223,15 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
     },
+    videoContainer: {
+        flex: 1,
+        backgroundColor: '#000000',
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
     videoTrack: {
         flex: 1,
-        borderRadius: 16,
+        width: '100%',
+        height: '100%',
     },
 });

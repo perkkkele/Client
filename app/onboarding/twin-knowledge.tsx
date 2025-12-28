@@ -197,8 +197,9 @@ export default function TwinKnowledgeScreen() {
             const existingContextId = freshUser?.digitalTwin?.liveAvatarContextId;
             let contextId: string | null = existingContextId || null;
 
-            // Create or update the LiveAvatar context
-            const contextName = `TwinPro - ${freshUser?.publicName || freshUser?.firstname || 'Professional'}`;
+            // Create or update the LiveAvatar context with unique name (include user ID)
+            const userId = (freshUser as any)?._id || Date.now().toString();
+            const contextName = `TwinPro - ${freshUser?.publicName || freshUser?.firstname || 'Professional'} (${userId.toString().slice(-6)})`;
             console.log("Context name:", contextName);
             console.log("Existing context ID:", existingContextId);
 
@@ -217,21 +218,39 @@ export default function TwinKnowledgeScreen() {
                         contextId = result.id;
                     }
                 } else {
-                    // Create new context (always create, even without links)
+                    // Create new context (without links - API has complex format requirements)
+                    // The prompt already contains the important business info
                     console.log("Creating new context...");
-                    console.log("Request body:", { name: contextName, prompt: contextPrompt, links: contextLinks });
-                    const result = await liveAvatarApi.createContext(
-                        contextName,
-                        contextPrompt,
-                        contextLinks
-                    );
-                    console.log("Create context result:", JSON.stringify(result, null, 2));
-                    if (result) {
-                        contextId = result.id;
-                        console.log("Context created with ID:", contextId);
-                    } else {
-                        console.warn("Context creation returned null");
-                        Alert.alert("Aviso", "No se pudo crear el contexto en LiveAvatar, pero el gemelo se activará igualmente.");
+                    console.log("Request body:", { name: contextName, prompt: contextPrompt });
+
+                    try {
+                        const result = await liveAvatarApi.createContext(
+                            contextName,
+                            contextPrompt,
+                            [] // Empty links - API format is complex, prompt is sufficient
+                        );
+                        console.log("Create context result:", JSON.stringify(result, null, 2));
+                        if (result) {
+                            contextId = result.id;
+                            console.log("Context created with ID:", contextId);
+                        }
+                    } catch (createError: any) {
+                        // If context with name exists, try with a more unique name
+                        if (createError.message?.includes("already exists")) {
+                            console.log("Context name exists, trying with timestamp...");
+                            const uniqueName = `TwinPro - ${freshUser?.publicName || 'Professional'} (${Date.now()})`;
+                            const result = await liveAvatarApi.createContext(
+                                uniqueName,
+                                contextPrompt,
+                                []
+                            );
+                            if (result) {
+                                contextId = result.id;
+                                console.log("Context created with unique name, ID:", contextId);
+                            }
+                        } else {
+                            throw createError;
+                        }
                     }
                 }
             } catch (contextError: any) {

@@ -168,45 +168,45 @@ export async function createContext(
     prompt: string,
     links: ContextLink[] = [],
     openingText: string = "¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?"
-): Promise<ContextResponse | null> {
-    try {
-        const requestBody: CreateContextRequest = {
-            name,
-            prompt,
-            opening_text: openingText,
-            links
-        };
+): Promise<ContextResponse> {
+    const requestBody: CreateContextRequest = {
+        name,
+        prompt,
+        opening_text: openingText,
+        links
+    };
 
-        console.log("Creating LiveAvatar context:", requestBody);
+    console.log("Creating LiveAvatar context:", requestBody);
 
-        const response = await fetch(`${LIVEAVATAR_API_URL}/contexts`, {
-            method: "POST",
-            headers: {
-                "X-API-KEY": LIVEAVATAR_API_KEY,
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestBody),
-        });
+    const response = await fetch(`${LIVEAVATAR_API_URL}/contexts`, {
+        method: "POST",
+        headers: {
+            "X-API-KEY": LIVEAVATAR_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+    });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            console.error("LiveAvatar create context error:", error);
-            throw new Error(error.message || `Error creating context: ${response.status}`);
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("LiveAvatar create context error:", error);
+        // Extract detailed message if available
+        let errorMessage = error.message || `Error creating context: ${response.status}`;
+        if (error.data && Array.isArray(error.data)) {
+            errorMessage = error.data.map((e: any) => e.message).join(', ');
         }
-
-        const responseData = await response.json();
-        console.log("LiveAvatar create context response:", responseData);
-
-        // API returns { code: 1000, data: {...}, message }
-        if (responseData.data) {
-            return responseData.data;
-        }
-        return responseData;
-    } catch (error) {
-        console.error("Error creating context:", error);
-        return null;
+        throw new Error(errorMessage);
     }
+
+    const responseData = await response.json();
+    console.log("LiveAvatar create context response:", responseData);
+
+    // API returns { code: 1000, data: {...}, message }
+    if (responseData.data) {
+        return responseData.data;
+    }
+    return responseData;
 }
 
 /**
@@ -260,17 +260,31 @@ export async function updateContext(
 
 /**
  * Create a LiveAvatar session token
+ * Note: FULL mode requires a valid context_id
  */
 export async function createSessionToken(config: AvatarConfig): Promise<SessionTokenResponse> {
-    const requestBody = {
+    // Validate required fields for FULL mode
+    if (!config.contextId) {
+        throw new Error("Se requiere un contexto configurado para iniciar la sesión. Por favor, configura el gemelo digital primero.");
+    }
+
+    if (!config.avatarId) {
+        throw new Error("Se requiere un avatar configurado para iniciar la sesión.");
+    }
+
+    const requestBody: any = {
         mode: "FULL",
         avatar_id: config.avatarId,
         avatar_persona: {
-            voice_id: config.voiceId,
             context_id: config.contextId,
             language: config.language || "es",
         },
     };
+
+    // Only include voice_id if it's set
+    if (config.voiceId) {
+        requestBody.avatar_persona.voice_id = config.voiceId;
+    }
 
     console.log("LiveAvatar request:", JSON.stringify(requestBody, null, 2));
 

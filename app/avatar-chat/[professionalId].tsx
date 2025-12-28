@@ -211,6 +211,13 @@ export default function AvatarChatScreen() {
             return;
         }
 
+        if (!contextId) {
+            console.log("No context ID configured, skipping session");
+            setSessionError("El gemelo digital no está completamente configurado. Falta el contexto.");
+            setSessionStatus('error');
+            return;
+        }
+
         console.log("Initializing LiveAvatar session with:", { avatarId, voiceId, contextId });
         setSessionStatus('connecting');
         setSessionError(null);
@@ -553,12 +560,6 @@ export default function AvatarChatScreen() {
                         </View>
                     )}
 
-                    {/* Debug info (remove in production) */}
-                    {livekitUrl && !isVideoMinimized && (
-                        <View style={styles.debugInfo}>
-                            <Text style={styles.debugText}>Session: {sessionId?.substring(0, 8)}...</Text>
-                        </View>
-                    )}
 
                     {/* Reduced gradient - only at bottom near buttons */}
                     <View style={styles.videoGradient} />
