@@ -89,6 +89,50 @@ const QUICK_REPLIES = [
     "Renovar receta",
 ];
 
+// Conversation interface for drawer
+interface Conversation {
+    id: string;
+    title: string;
+    preview: string;
+    date: string;
+    isActive?: boolean;
+}
+
+// Mock conversations for drawer
+const MOCK_CONVERSATIONS: Conversation[] = [
+    {
+        id: "1",
+        title: "Consulta actual",
+        preview: "Hola, ¿en qué puedo ayudarte hoy con tu salud?",
+        date: "Hoy",
+        isActive: true,
+    },
+    {
+        id: "2",
+        title: "Seguimiento Tratamiento",
+        preview: "Muchas gracias, he notado mejoría con el nuevo tratamiento.",
+        date: "Ayer",
+    },
+    {
+        id: "3",
+        title: "Análisis de Laboratorio",
+        preview: "Aquí adjunto los resultados del perfil lipídico.",
+        date: "12 Oct",
+    },
+    {
+        id: "4",
+        title: "Consulta Inicial",
+        preview: "Hola, me gustaría agendar una revisión general.",
+        date: "28 Sep",
+    },
+    {
+        id: "5",
+        title: "Dudas Generales",
+        preview: "¿Es normal tener pulsaciones altas después de comer?",
+        date: "15 Sep",
+    },
+];
+
 const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string; content: string; icon: string; subtitle?: string }> = {
     profile: {
         title: "Sobre mí",
@@ -132,6 +176,9 @@ export default function AvatarChatScreen() {
     const [isPrivateMode, setIsPrivateMode] = useState(false);
     const [hasShownPrivateBubble, setHasShownPrivateBubble] = useState(false);
     const [mapLoaded, setMapLoaded] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [drawerSearchText, setDrawerSearchText] = useState("");
+    const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
     const scrollViewRef = useRef<ScrollView>(null);
 
     // LiveAvatar Session State
@@ -146,6 +193,7 @@ export default function AvatarChatScreen() {
     const videoPositionAnim = useRef(new Animated.Value(0)).current; // 0 = full, 1 = PiP
     const infoBubbleAnim = useRef(new Animated.Value(0)).current;
     const infoBubbleScaleAnim = useRef(new Animated.Value(0)).current;
+    const drawerAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.85)).current;
 
     // Toggle video size
     const toggleVideoSize = () => {
@@ -175,6 +223,36 @@ export default function AvatarChatScreen() {
             tension: 40,
             useNativeDriver: false,
         }).start();
+    };
+
+    // Drawer functions
+    const openDrawer = () => {
+        setIsDrawerOpen(true);
+        Animated.spring(drawerAnim, {
+            toValue: 0,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const closeDrawer = () => {
+        Animated.spring(drawerAnim, {
+            toValue: -SCREEN_WIDTH * 0.85,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+        }).start(() => {
+            setIsDrawerOpen(false);
+        });
+    };
+
+    const handleDeleteConversation = (id: string) => {
+        setConversations(prev => prev.filter(c => c.id !== id));
+    };
+
+    const handleClearAllHistory = () => {
+        setConversations([]);
     };
 
     const loadProfessional = useCallback(async () => {
@@ -433,8 +511,8 @@ export default function AvatarChatScreen() {
             <SafeAreaView edges={["top"]} style={styles.headerOverlay}>
                 <View style={styles.headerContent}>
                     <View style={styles.headerLeft}>
-                        <TouchableOpacity style={styles.menuButton} onPress={handleBack}>
-                            <MaterialIcons name="arrow-back" size={20} color={COLORS.gray600} />
+                        <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
+                            <MaterialIcons name="menu" size={20} color={COLORS.gray600} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.professionalChip} onPress={handleViewProfile}>
                             <View style={styles.avatarSmallContainer}>
@@ -1236,7 +1314,134 @@ export default function AvatarChatScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
-        </View >
+
+            {/* Conversations Drawer */}
+            {isDrawerOpen && (
+                <>
+                    {/* Drawer Overlay */}
+                    <TouchableOpacity
+                        style={styles.drawerOverlay}
+                        activeOpacity={1}
+                        onPress={closeDrawer}
+                    />
+                    {/* Drawer Panel */}
+                    <Animated.View
+                        style={[
+                            styles.drawer,
+                            { transform: [{ translateX: drawerAnim }] }
+                        ]}
+                    >
+                        {/* Drawer Header */}
+                        <View style={styles.drawerHeader}>
+                            <Text style={styles.drawerTitle}>Conversaciones</Text>
+                            <TouchableOpacity
+                                style={styles.drawerCloseButton}
+                                onPress={closeDrawer}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray400} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Search Input */}
+                        <View style={styles.drawerSearchContainer}>
+                            <View style={styles.drawerSearchInputWrapper}>
+                                <MaterialIcons name="search" size={20} color={COLORS.gray400} />
+                                <TextInput
+                                    style={styles.drawerSearchInput}
+                                    placeholder="Buscar conversaciones..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={drawerSearchText}
+                                    onChangeText={setDrawerSearchText}
+                                />
+                            </View>
+                            <TouchableOpacity style={styles.newConversationButton}>
+                                <MaterialIcons name="add-comment" size={20} color={COLORS.white} />
+                                <Text style={styles.newConversationText}>Nueva Conversación</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Conversations List */}
+                        <ScrollView style={styles.drawerConversationsList} showsVerticalScrollIndicator={false}>
+                            {conversations.filter(c =>
+                                c.title.toLowerCase().includes(drawerSearchText.toLowerCase()) ||
+                                c.preview.toLowerCase().includes(drawerSearchText.toLowerCase())
+                            ).map((conversation) => (
+                                <TouchableOpacity
+                                    key={conversation.id}
+                                    style={[
+                                        styles.drawerConversationItem,
+                                        conversation.isActive && styles.drawerConversationItemActive
+                                    ]}
+                                >
+                                    <View style={styles.drawerConversationHeader}>
+                                        <Text style={[
+                                            styles.drawerConversationDate,
+                                            conversation.isActive && styles.drawerConversationDateActive
+                                        ]}>
+                                            {conversation.date}
+                                        </Text>
+                                    </View>
+                                    <Text style={[
+                                        styles.drawerConversationTitle,
+                                        conversation.isActive && styles.drawerConversationTitleActive
+                                    ]} numberOfLines={1}>
+                                        {conversation.title}
+                                    </Text>
+                                    <Text style={styles.drawerConversationPreview} numberOfLines={2}>
+                                        {conversation.preview}
+                                    </Text>
+                                    {conversation.isActive && (
+                                        <View style={styles.drawerConversationArrow}>
+                                            <MaterialIcons name="arrow-forward-ios" size={16} color={COLORS.primary} />
+                                        </View>
+                                    )}
+                                    <TouchableOpacity
+                                        style={styles.drawerDeleteButton}
+                                        onPress={() => handleDeleteConversation(conversation.id)}
+                                    >
+                                        <MaterialIcons name="delete" size={18} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        {/* Drawer Footer */}
+                        <View style={styles.drawerFooter}>
+                            <TouchableOpacity style={styles.drawerFooterOption}>
+                                <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
+                                <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.drawerFooterOption}>
+                                <MaterialIcons name="notifications-off" size={20} color={COLORS.gray400} />
+                                <Text style={styles.drawerFooterOptionText}>Silenciar notificaciones</Text>
+                            </TouchableOpacity>
+                            <View style={styles.drawerDivider} />
+                            <TouchableOpacity style={styles.drawerHistoryToggle}>
+                                <View style={styles.drawerHistoryToggleLeft}>
+                                    <View style={styles.drawerHistoryIcon}>
+                                        <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.drawerHistoryTitle}>Historial</Text>
+                                        <Text style={styles.drawerHistorySubtitle}>Visible y guardado</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.drawerHistoryToggleSwitch}>
+                                    <View style={styles.drawerHistoryToggleDot} />
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.drawerDeleteAllButton}
+                                onPress={handleClearAllHistory}
+                            >
+                                <MaterialIcons name="delete-sweep" size={18} color="#EF4444" />
+                                <Text style={styles.drawerDeleteAllText}>Borrar todo el historial</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                </>
+            )}
+        </View>
     );
 }
 
@@ -2268,5 +2473,236 @@ const styles = StyleSheet.create({
         marginTop: 8,
         fontSize: 12,
         color: COLORS.gray600,
+    },
+    // Drawer styles
+    drawerOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        zIndex: 100,
+    },
+    drawer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: SCREEN_WIDTH * 0.85,
+        maxWidth: 320,
+        height: "100%",
+        backgroundColor: COLORS.backgroundLight,
+        zIndex: 101,
+        shadowColor: "#000",
+        shadowOffset: { width: 2, height: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+        elevation: 20,
+    },
+    drawerHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 24,
+        paddingTop: 48,
+        paddingBottom: 8,
+    },
+    drawerTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    drawerCloseButton: {
+        padding: 8,
+        marginRight: -8,
+    },
+    drawerSearchContainer: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        gap: 12,
+    },
+    drawerSearchInputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        gap: 8,
+    },
+    drawerSearchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.textMain,
+        padding: 0,
+    },
+    newConversationButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.textMain,
+        borderRadius: 16,
+        paddingVertical: 14,
+        gap: 8,
+    },
+    newConversationText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.white,
+    },
+    drawerConversationsList: {
+        flex: 1,
+        paddingHorizontal: 16,
+    },
+    drawerConversationItem: {
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 8,
+        position: "relative",
+    },
+    drawerConversationItemActive: {
+        backgroundColor: COLORS.white,
+        borderLeftWidth: 4,
+        borderLeftColor: COLORS.primary,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    drawerConversationHeader: {
+        marginBottom: 4,
+    },
+    drawerConversationDate: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.gray400,
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        alignSelf: "flex-start",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    drawerConversationDateActive: {
+        backgroundColor: `${COLORS.primary}20`,
+        color: COLORS.primary,
+        fontWeight: "bold",
+    },
+    drawerConversationTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray700,
+        marginBottom: 4,
+    },
+    drawerConversationTitleActive: {
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
+    drawerConversationPreview: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        lineHeight: 18,
+    },
+    drawerConversationArrow: {
+        position: "absolute",
+        right: 16,
+        top: 16,
+    },
+    drawerDeleteButton: {
+        position: "absolute",
+        right: 8,
+        bottom: 8,
+        padding: 6,
+    },
+    drawerFooter: {
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+        backgroundColor: `${COLORS.gray100}80`,
+    },
+    drawerFooterOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        gap: 12,
+    },
+    drawerFooterOptionText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray600,
+    },
+    drawerDivider: {
+        height: 1,
+        backgroundColor: COLORS.gray200,
+        marginVertical: 8,
+    },
+    drawerHistoryToggle: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        marginBottom: 8,
+    },
+    drawerHistoryToggleLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    drawerHistoryIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: `${COLORS.primary}20`,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    drawerHistoryTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    drawerHistorySubtitle: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.gray500,
+    },
+    drawerHistoryToggleSwitch: {
+        width: 36,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: "#22C55E",
+        justifyContent: "center",
+        alignItems: "flex-end",
+        paddingHorizontal: 2,
+    },
+    drawerHistoryToggleDot: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.white,
+    },
+    drawerDeleteAllButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 10,
+        gap: 8,
+    },
+    drawerDeleteAllText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: "#EF4444",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
 });
