@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+
+interface TranscriptionSegment {
+    id: string;
+    text: string;
+    final: boolean;
+}
 
 interface LiveAvatarVideoProps {
     livekitUrl: string;
     livekitToken: string;
     onConnectionChange?: (connected: boolean) => void;
     onError?: (error: string) => void;
+    onTranscription?: (text: string, isFinal: boolean) => void;
     style?: any;
 }
 
@@ -69,18 +76,84 @@ function LiveKitFallback({ style, error }: { style?: any; error?: string }) {
     );
 }
 
+// Component to capture transcriptions via LiveKit data channel
+// LiveAvatar sends events to 'agent-response' topic with avatar.transcription_ended
+function TranscriptionCapture({
+    onTranscription
+}: {
+    onTranscription?: (text: string, isFinal: boolean) => void
+}) {
+    const { useDataChannel } = LiveKitModule;
+    const lastTranscriptRef = useRef<string>('');
+
+    // Subscribe to agent-response topic for avatar transcriptions
+    const dataChannel = useDataChannel ? useDataChannel('agent-response') : null;
+
+
+    useEffect(() => {
+        if (!dataChannel) return;
+
+        // The message might be in different properties
+        const rawMessage = dataChannel.message || dataChannel.payload;
+        if (!rawMessage) return;
+
+        try {
+            // Try to get string from various formats
+            let messageStr = '';
+            if (typeof rawMessage === 'string') {
+                messageStr = rawMessage;
+            } else if (rawMessage instanceof ArrayBuffer) {
+                messageStr = new TextDecoder().decode(rawMessage);
+            } else if (rawMessage instanceof Uint8Array) {
+                messageStr = new TextDecoder().decode(rawMessage);
+            } else if (rawMessage.payload) {
+                messageStr = typeof rawMessage.payload === 'string'
+                    ? rawMessage.payload
+                    : new TextDecoder().decode(rawMessage.payload);
+            }
+
+            if (!messageStr || messageStr.length === 0) return;
+
+            const event = JSON.parse(messageStr);
+
+            // Handle avatar transcription event (this is the actual event name from HeyGen)
+            if (event.event_type === 'avatar.transcription' && event.text) {
+                const text = event.text.trim();
+                if (text && text !== lastTranscriptRef.current) {
+                    lastTranscriptRef.current = text;
+                    console.log('Avatar says:', text);
+                    onTranscription?.(text, true);
+                }
+            }
+
+            // Also capture user transcription for logging
+            if (event.event_type === 'user.transcription' && event.text) {
+                console.log('User said:', event.text);
+            }
+        } catch (e: any) {
+            // Silently ignore parse errors
+        }
+    }, [dataChannel?.message, dataChannel?.payload, onTranscription]);
+
+    return null;
+}
+
 // Inner component that uses LiveKit hooks (must be inside LiveKitRoom)
-function VideoRenderer({ style }: { style?: any }) {
+function VideoRenderer({
+    style,
+    onTranscription
+}: {
+    style?: any;
+    onTranscription?: (text: string, isFinal: boolean) => void;
+}) {
     const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
 
     // Get all tracks
     const tracks = useTracks ? useTracks() : [];
-    console.log('All tracks:', tracks?.length || 0);
 
     // Find video track from remote participant (heygen)
     const videoTrack = tracks?.find((t: any) => {
         if (!isTrackReference?.(t)) return false;
-        // Look for video from heygen participant
         return t.publication?.kind === 'video' && t.participant?.identity === 'heygen';
     });
 
@@ -100,6 +173,7 @@ function VideoRenderer({ style }: { style?: any }) {
                 style={styles.videoTrack}
                 objectFit="cover"
             />
+            <TranscriptionCapture onTranscription={onTranscription} />
         </View>
     );
 }
@@ -110,12 +184,13 @@ function LiveKitVideoPlayer({
     livekitToken,
     onConnectionChange,
     onError,
+    onTranscription,
     style
 }: LiveAvatarVideoProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { LiveKitRoom, RoomContext } = LiveKitModule;
+    const { LiveKitRoom } = LiveKitModule;
 
     if (error) {
         return (
@@ -133,17 +208,14 @@ function LiveKitVideoPlayer({
             audio={true}
             video={false}
             onConnected={() => {
-                console.log('LiveKit connected!');
                 setIsConnected(true);
                 onConnectionChange?.(true);
             }}
             onDisconnected={() => {
-                console.log('LiveKit disconnected');
                 setIsConnected(false);
                 onConnectionChange?.(false);
             }}
             onError={(e: any) => {
-                console.error('LiveKit error:', e);
                 setError(e?.message || 'Error de conexión');
                 onError?.(e?.message);
             }}
@@ -154,7 +226,7 @@ function LiveKitVideoPlayer({
                     <Text style={styles.loadingText}>Conectando video...</Text>
                 </View>
             ) : (
-                <VideoRenderer style={style} />
+                <VideoRenderer style={style} onTranscription={onTranscription} />
             )}
         </LiveKitRoom>
     );

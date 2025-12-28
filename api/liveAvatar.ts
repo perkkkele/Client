@@ -404,3 +404,57 @@ export function getAvatarConfig(email: string): AvatarConfig | null {
     }
     return null;
 }
+
+/**
+ * Transcript entry from LiveAvatar API
+ */
+export interface TranscriptEntry {
+    role: 'user' | 'assistant';
+    text: string;
+    start_time?: number;
+    end_time?: number;
+}
+
+export interface TranscriptResponse {
+    transcript: TranscriptEntry[];
+}
+
+/**
+ * Get session transcript from LiveAvatar API
+ * This returns the full conversation transcript including both user and assistant messages
+ */
+export async function getSessionTranscript(sessionId: string): Promise<TranscriptEntry[]> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/sessions/${sessionId}/transcript`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Failed to get session transcript:", response.status);
+            return [];
+        }
+
+        const data = await response.json();
+
+        if (data.code === 1000 && data.data?.transcript) {
+            return data.data.transcript;
+        }
+
+        // Some API versions may return transcript directly in data
+        if (data.data && Array.isArray(data.data)) {
+            return data.data;
+        }
+
+        if (Array.isArray(data.transcript)) {
+            return data.transcript;
+        }
+
+        return [];
+    } catch (error) {
+        console.error("Error getting session transcript:", error);
+        return [];
+    }
+}

@@ -263,6 +263,14 @@ export default function AvatarChatScreen() {
         }
     }, [professional, isLoading, sessionStatus, initializeLiveAvatarSession]);
 
+    // Track processed transcript entries to avoid duplicates
+    const processedTranscriptCountRef = useRef(0);
+
+    // NOTE: Transcript API polling disabled - endpoint returns 500 error
+    // Transcription is now handled via LiveKit hooks in LiveAvatarVideo component
+    // If you need to enable API polling in the future, the sessionId is available
+    // and liveAvatarApi.getSessionTranscript(sessionId) can be called
+
     useEffect(() => {
         // Animate wave bars
         const animations = waveAnims.map((anim, index) => {
@@ -519,6 +527,27 @@ export default function AvatarChatScreen() {
                             }}
                             onError={(error) => {
                                 console.error('LiveKit error:', error);
+                            }}
+                            onTranscription={(text, isFinal) => {
+                                // Only add final transcriptions as messages
+                                if (isFinal && text.trim()) {
+                                    const newMessage: Message = {
+                                        id: `avatar-${Date.now()}`,
+                                        type: 'text',
+                                        content: text.trim(),
+                                        isUser: false,
+                                        timestamp: new Date().toLocaleTimeString('es-ES', {
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        }),
+                                    };
+                                    setMessages(prev => [...prev, newMessage]);
+
+                                    // Scroll to bottom
+                                    setTimeout(() => {
+                                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                                    }, 100);
+                                }
                             }}
                         />
                     ) : avatarUrl ? (
