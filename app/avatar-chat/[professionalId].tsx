@@ -20,6 +20,7 @@ import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
+import { WebView } from "react-native-webview";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -855,39 +856,59 @@ export default function AvatarChatScreen() {
                             </View>
                         ) : activeInfoBubble === "location" && professional?.location ? (
                             <View style={styles.locationContent}>
-                                {/* Map Container */}
+                                {/* Map Container with embedded Google Maps */}
                                 <View style={styles.mapContainer}>
-                                    {/* Map using simple colored background with location marker */}
                                     <View style={styles.mapVisual}>
-                                        <View style={styles.mapBackground}>
-                                            {/* Grid pattern for map effect */}
-                                            <View style={styles.mapGrid}>
-                                                {[...Array(6)].map((_, i) => (
-                                                    <View key={i} style={styles.mapGridLine} />
-                                                ))}
+                                        <WebView
+                                            style={styles.mapWebView}
+                                            source={{
+                                                html: `
+                                                    <!DOCTYPE html>
+                                                    <html>
+                                                    <head>
+                                                        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                                                        <style>
+                                                            * { margin: 0; padding: 0; box-sizing: border-box; }
+                                                            html, body, iframe { width: 100%; height: 100%; border: 0; }
+                                                        </style>
+                                                    </head>
+                                                    <body>
+                                                        <iframe
+                                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${professional.location?.lng || -3.7038}!3d${professional.location?.lat || 40.4168}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zLocation!5e0!3m2!1sen!2ses!4v1"
+                                                            width="100%"
+                                                            height="100%"
+                                                            style="border:0;"
+                                                            allowfullscreen=""
+                                                            loading="lazy"
+                                                            referrerpolicy="no-referrer-when-downgrade">
+                                                        </iframe>
+                                                    </body>
+                                                    </html>
+                                                `
+                                            }}
+                                            scrollEnabled={false}
+                                            onLoad={() => setMapLoaded(true)}
+                                        />
+                                        {!mapLoaded && (
+                                            <View style={styles.mapLoading}>
+                                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                                <Text style={styles.mapLoadingText}>Cargando mapa...</Text>
                                             </View>
-                                            {/* Location marker */}
-                                            <View style={styles.mapMarkerContainer}>
-                                                <View style={styles.mapMarkerPin}>
-                                                    <MaterialIcons name="location-on" size={32} color="#DC2626" />
-                                                </View>
-                                                <View style={styles.mapMarkerShadow} />
+                                        )}
+                                        {/* Overlay button to open in external maps */}
+                                        <TouchableOpacity
+                                            style={styles.mapTapOverlay}
+                                            onPress={() => {
+                                                const lat = professional.location?.lat || 40.4168;
+                                                const lng = professional.location?.lng || -3.7038;
+                                                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+                                            }}
+                                        >
+                                            <View style={styles.mapTapHint}>
+                                                <MaterialIcons name="open-in-new" size={14} color={COLORS.white} />
+                                                <Text style={styles.mapTapText}>Abrir en Maps</Text>
                                             </View>
-                                            {/* Tap to open maps */}
-                                            <TouchableOpacity
-                                                style={styles.mapTapOverlay}
-                                                onPress={() => {
-                                                    const lat = professional.location?.lat || 40.4168;
-                                                    const lng = professional.location?.lng || -3.7038;
-                                                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
-                                                }}
-                                            >
-                                                <View style={styles.mapTapHint}>
-                                                    <MaterialIcons name="open-in-new" size={14} color={COLORS.white} />
-                                                    <Text style={styles.mapTapText}>Ver en Google Maps</Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        </View>
+                                        </TouchableOpacity>
                                     </View>
                                     {/* Open indicator */}
                                     <View style={styles.openIndicator}>
@@ -2218,5 +2239,23 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         fontSize: 9,
         fontFamily: "monospace",
+    },
+    // WebView Map styles
+    mapWebView: {
+        width: "100%" as any,
+        height: "100%" as any,
+        borderRadius: 12,
+    },
+    mapLoading: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        alignItems: "center" as const,
+        justifyContent: "center" as const,
+    },
+    mapLoadingText: {
+        marginTop: 8,
+        fontSize: 12,
+        color: COLORS.gray600,
     },
 });
