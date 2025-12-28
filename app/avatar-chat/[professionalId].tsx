@@ -8,6 +8,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
     Animated,
     Easing,
@@ -679,6 +680,8 @@ export default function AvatarChatScreen() {
                         onPress={() => setActiveInfoBubble(null)}
                     />
                     <Animated.View
+                        onStartShouldSetResponder={() => true}
+                        onResponderTerminationRequest={() => false}
                         style={[
                             styles.infoBubble,
                             activeInfoBubble === "private" && styles.infoBubbleDark,
@@ -856,6 +859,14 @@ export default function AvatarChatScreen() {
                             </View>
                         ) : activeInfoBubble === "location" && professional?.location ? (
                             <View style={styles.locationContent}>
+                                {/* Debug log for location data */}
+                                {console.log('Location bubble data:', {
+                                    address: professional.location?.address,
+                                    city: professional.location?.city,
+                                    lat: professional.location?.lat,
+                                    lng: professional.location?.lng,
+                                    phone: professional.phone,
+                                })}
                                 {/* Map Container with embedded Google Maps */}
                                 <View style={styles.mapContainer}>
                                     <View style={styles.mapVisual}>
@@ -1436,6 +1447,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 12,
         elevation: 4,
+        zIndex: 1000,
     },
     infoBubbleHeader: {
         flexDirection: "row",
