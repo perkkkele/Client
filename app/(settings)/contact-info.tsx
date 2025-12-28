@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import AddressAutocomplete from "../../components/AddressAutocomplete";
 
 const COLORS = {
     primary: "#f9f506",
@@ -59,6 +60,17 @@ export default function ContactInfoScreen() {
     const [website, setWebsite] = useState(user?.website || "");
     const [address, setAddress] = useState(user?.location?.address || "");
     const [city, setCity] = useState(user?.location?.city || "");
+    const [locationData, setLocationData] = useState<{
+        address: string | null;
+        city: string | null;
+        lat: number | null;
+        lng: number | null;
+    }>({
+        address: user?.location?.address || null,
+        city: user?.location?.city || null,
+        lat: user?.location?.lat || null,
+        lng: user?.location?.lng || null,
+    });
 
     // Social links state
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([
@@ -86,22 +98,24 @@ export default function ContactInfoScreen() {
                     }
                 });
 
-                // Update user with contact info
+                // Use locationData from autocomplete or preserve existing
+                const finalLocationData = locationData.lat && locationData.lng
+                    ? locationData
+                    : {
+                        address: address.trim() || null,
+                        city: city.trim() || null,
+                        lat: user?.location?.lat || null,
+                        lng: user?.location?.lng || null,
+                    };
+
                 await userApi.updateUser(token, {
                     phone: phone.trim() || undefined,
                     professionalEmail: professionalEmail.trim() || undefined,
                     website: website.trim() || undefined,
-                    location: {
-                        address: address.trim() || undefined,
-                        city: city.trim() || undefined,
-                        // Preserve existing lat/lng if available
-                        lat: user?.location?.lat,
-                        lng: user?.location?.lng,
-                    },
+                    location: finalLocationData,
                     socialLinks: Object.keys(socialLinksObj).length > 0 ? socialLinksObj : undefined,
                 } as any);
 
-                // Refresh user data
                 if (refreshUser) {
                     await refreshUser();
                 }
@@ -222,8 +236,8 @@ export default function ContactInfoScreen() {
                         Indica dónde ofreces tus servicios para que los clientes cercanos te encuentren.
                     </Text>
 
-                    <View style={styles.card}>
-                        {/* Address */}
+                    <View style={[styles.card, { zIndex: 100 }]}>
+                        {/* Address with Autocomplete */}
                         <View style={styles.inputGroup}>
                             <View style={styles.inputLabel}>
                                 <View style={[styles.inputIcon, { backgroundColor: COLORS.orange50 }]}>
@@ -231,31 +245,22 @@ export default function ContactInfoScreen() {
                                 </View>
                                 <Text style={styles.inputLabelText}>Dirección</Text>
                             </View>
-                            <TextInput
-                                style={styles.input}
+                            <AddressAutocomplete
                                 value={address}
                                 onChangeText={setAddress}
-                                placeholder="Calle Principal, 123"
-                                placeholderTextColor={COLORS.gray400}
-                            />
-                        </View>
-
-                        <View style={styles.divider} />
-
-                        {/* City */}
-                        <View style={styles.inputGroup}>
-                            <View style={styles.inputLabel}>
-                                <View style={[styles.inputIcon, { backgroundColor: COLORS.blue50 }]}>
-                                    <MaterialIcons name="location-city" size={18} color={COLORS.blue600} />
-                                </View>
-                                <Text style={styles.inputLabelText}>Ciudad</Text>
-                            </View>
-                            <TextInput
-                                style={styles.input}
-                                value={city}
-                                onChangeText={setCity}
-                                placeholder="Madrid"
-                                placeholderTextColor={COLORS.gray400}
+                                onAddressSelect={(selectedAddress) => {
+                                    setAddress(selectedAddress.formattedAddress);
+                                    if (selectedAddress.city) {
+                                        setCity(selectedAddress.city);
+                                    }
+                                    setLocationData({
+                                        address: selectedAddress.formattedAddress,
+                                        city: selectedAddress.city,
+                                        lat: selectedAddress.lat,
+                                        lng: selectedAddress.lng,
+                                    });
+                                }}
+                                placeholder="Escribe una dirección..."
                             />
                         </View>
                     </View>

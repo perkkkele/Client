@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import AddressAutocomplete from "../../components/AddressAutocomplete";
 
 const COLORS = {
     primary: "#FDE047",
@@ -55,6 +56,12 @@ export default function ProContactScreen() {
     const [contactPhone, setContactPhone] = useState("");
     const [website, setWebsite] = useState("");
     const [location, setLocation] = useState("");
+    const [locationData, setLocationData] = useState<{
+        address: string | null;
+        city: string | null;
+        lat: number | null;
+        lng: number | null;
+    }>({ address: null, city: null, lat: null, lng: null });
     const [workDays, setWorkDays] = useState<string[]>(["L", "M", "X", "J", "V"]);
     const [workStart, setWorkStart] = useState("09:00");
     const [workEnd, setWorkEnd] = useState("18:00");
@@ -92,16 +99,21 @@ export default function ProContactScreen() {
                     };
                 });
 
-                await userApi.updateUser(token, {
-                    professionalEmail: contactEmail.trim() || undefined,
-                    phone: contactPhone.trim() || undefined,
-                    website: website.trim() || undefined,
-                    location: {
+                // Usar locationData del autocompletado o dirección sin validar
+                const finalLocationData = locationData.lat && locationData.lng
+                    ? locationData
+                    : {
                         address: location.trim() || null,
                         city: null,
                         lat: null,
                         lng: null
-                    },
+                    };
+
+                await userApi.updateUser(token, {
+                    professionalEmail: contactEmail.trim() || undefined,
+                    phone: contactPhone.trim() || undefined,
+                    website: website.trim() || undefined,
+                    location: finalLocationData,
                     schedule,
                     socialLinks: {
                         linkedin: linkedin.trim() || null,
@@ -114,15 +126,16 @@ export default function ProContactScreen() {
                 if (refreshUser) {
                     await refreshUser();
                 }
-            }
 
-            router.push("/onboarding/pro-complete");
+                router.push("/onboarding/pro-complete");
+            }
         } catch (error: any) {
             Alert.alert("Error", error.message || "Error al guardar");
         } finally {
             setIsLoading(false);
         }
     }
+
 
     return (
         <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -227,24 +240,28 @@ export default function ProContactScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Ubicación */}
-                    <View style={styles.contactCard}>
-                        <View style={styles.contactIcon}>
-                            <MaterialIcons name="location-on" size={20} color={COLORS.gray400} />
-                        </View>
-                        <View style={styles.contactContent}>
+                    {/* Ubicación con autocompletado */}
+                    <View style={[styles.contactCard, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                            <View style={styles.contactIcon}>
+                                <MaterialIcons name="location-on" size={20} color={COLORS.gray400} />
+                            </View>
                             <Text style={styles.contactLabel}>Ubicación / Consulta</Text>
-                            <TextInput
-                                style={styles.contactInput}
-                                placeholder="Madrid, España"
-                                placeholderTextColor={COLORS.gray400}
-                                value={location}
-                                onChangeText={setLocation}
-                            />
                         </View>
-                        <TouchableOpacity style={styles.visibilityButton}>
-                            <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
-                        </TouchableOpacity>
+                        <AddressAutocomplete
+                            value={location}
+                            onChangeText={setLocation}
+                            onAddressSelect={(address) => {
+                                setLocation(address.formattedAddress);
+                                setLocationData({
+                                    address: address.formattedAddress,
+                                    city: address.city,
+                                    lat: address.lat,
+                                    lng: address.lng,
+                                });
+                            }}
+                            placeholder="Escribe una dirección..."
+                        />
                     </View>
 
                     {/* Horario Laboral */}
