@@ -103,6 +103,9 @@ export default function TwinProHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("todos");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Professional[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -131,6 +134,34 @@ export default function TwinProHomeScreen() {
     setRefreshing(true);
     loadData();
   }
+
+  // Execute search when user submits
+  const handleSearch = useCallback(async () => {
+    if (!token || !searchQuery.trim()) return;
+
+    setIsSearching(true);
+    setHasSearched(true);
+
+    try {
+      const results = await professionalApi.getProfessionals(token, {
+        search: searchQuery.trim()
+      });
+      setSearchResults(results);
+      console.log('[Search] Found:', results.length, 'professionals for:', searchQuery);
+    } catch (error) {
+      console.error('Error searching:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [token, searchQuery]);
+
+  // Clear search and go back to normal view
+  const clearSearch = useCallback(() => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setHasSearched(false);
+  }, []);
 
   function getChatPartner(chat: Chat) {
     const p1 = chat.participant_one;
@@ -320,10 +351,22 @@ export default function TwinProHomeScreen() {
               placeholderTextColor={COLORS.gray}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
             />
-            <TouchableOpacity style={styles.filterButton}>
-              <MaterialIcons name="tune" size={20} color={COLORS.gray} />
-            </TouchableOpacity>
+            {searchQuery.trim() ? (
+              <TouchableOpacity style={styles.filterButton} onPress={hasSearched ? clearSearch : handleSearch}>
+                <MaterialIcons
+                  name={hasSearched ? "close" : "arrow-forward"}
+                  size={20}
+                  color={hasSearched ? COLORS.gray : COLORS.primary}
+                />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.filterButton}>
+                <MaterialIcons name="tune" size={20} color={COLORS.gray} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -376,69 +419,151 @@ export default function TwinProHomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} />
         }
       >
-        {/* Recientes */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>RECIENTES</Text>
-            <TouchableOpacity>
-              <Text style={styles.sectionLink}>Marcar leídos</Text>
-            </TouchableOpacity>
-          </View>
-          {/* Mostrar contenido de bienvenida SOLO si no hay ningún chat */}
-          {chats.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              {/* Welcome Message - Centered Icon Layout */}
-              <View style={styles.welcomeContainer}>
-                <View style={styles.welcomeIconContainer}>
-                  <MaterialIcons name="waving-hand" size={36} color={COLORS.primary} />
-                </View>
-                <Text style={styles.welcomeTitle}>¡Bienvenido a TwinPro!</Text>
-                <Text style={styles.welcomeSubtitle}>
-                  Conecta con profesionales verificados y sus gemelos IA.
+        {/* Search Results Section */}
+        {hasSearched ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                RESULTADOS PARA "{searchQuery}"
+              </Text>
+              <TouchableOpacity onPress={clearSearch}>
+                <Text style={styles.sectionLink}>Limpiar</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isSearching ? (
+              <View style={styles.searchLoadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.searchLoadingText}>Buscando profesionales...</Text>
+              </View>
+            ) : searchResults.length === 0 ? (
+              <View style={styles.emptySearchContainer}>
+                <MaterialIcons name="search-off" size={48} color={COLORS.gray} />
+                <Text style={styles.emptySearchTitle}>Sin resultados</Text>
+                <Text style={styles.emptySearchSubtitle}>
+                  No encontramos profesionales para "{searchQuery}". Intenta con otros términos.
                 </Text>
-
-                {/* Compact Feature highlights - horizontal */}
-                <View style={styles.featuresRow}>
-                  <View style={styles.featureChip}>
-                    <MaterialIcons name="smart-toy" size={14} color="#0284c7" />
-                    <Text style={styles.featureChipText}>24/7 IA</Text>
-                  </View>
-                  <View style={styles.featureChip}>
-                    <MaterialIcons name="verified" size={14} color="#16a34a" />
-                    <Text style={styles.featureChipText}>Verificados</Text>
-                  </View>
-                  <View style={styles.featureChip}>
-                    <MaterialIcons name="bolt" size={14} color="#ca8a04" />
-                    <Text style={styles.featureChipText}>Rápido</Text>
-                  </View>
-                </View>
-
-                {/* CTA Button */}
-                <TouchableOpacity
-                  style={styles.welcomeButton}
-                  onPress={() => router.push("/(tabs)/category-results?category=todos")}
-                >
-                  <Text style={styles.welcomeButtonText}>Explorar Profesionales</Text>
-                  <MaterialIcons name="arrow-forward" size={18} color={COLORS.black} />
+              </View>
+            ) : (
+              <View style={styles.searchResultsGrid}>
+                {searchResults.map((professional) => (
+                  <TouchableOpacity
+                    key={professional._id}
+                    style={styles.searchResultCard}
+                    onPress={() => router.push(`/avatar-chat/${professional._id}`)}
+                  >
+                    {getAvatarUrl(professional.avatar) ? (
+                      <Image
+                        source={{ uri: getAvatarUrl(professional.avatar)! }}
+                        style={styles.searchResultAvatar}
+                      />
+                    ) : (
+                      <View style={styles.searchResultAvatarPlaceholder}>
+                        <MaterialIcons name="person" size={28} color={COLORS.slate400} />
+                      </View>
+                    )}
+                    <View style={styles.searchResultInfo}>
+                      <Text style={styles.searchResultName} numberOfLines={1}>
+                        {professional.firstname} {professional.lastname}
+                      </Text>
+                      <Text style={styles.searchResultProfession} numberOfLines={1}>
+                        {professional.profession}
+                      </Text>
+                      <View style={styles.searchResultMeta}>
+                        {professional.rating > 0 && (
+                          <View style={styles.searchResultRating}>
+                            <MaterialIcons name="star" size={14} color="#f59e0b" />
+                            <Text style={styles.searchResultRatingText}>
+                              {professional.rating.toFixed(1)}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={[
+                          styles.searchResultCategoryBadge,
+                          { backgroundColor: CATEGORY_COLORS[professional.category as keyof typeof CATEGORY_COLORS]?.bg || CATEGORY_COLORS.otros.bg }
+                        ]}>
+                          <Text style={[
+                            styles.searchResultCategoryText,
+                            { color: CATEGORY_COLORS[professional.category as keyof typeof CATEGORY_COLORS]?.text || CATEGORY_COLORS.otros.text }
+                          ]}>
+                            {ALL_CATEGORIES.find(c => c.id === professional.category)?.label || professional.category}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={24} color={COLORS.gray} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
+          <>
+            {/* Recientes */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>RECIENTES</Text>
+                <TouchableOpacity>
+                  <Text style={styles.sectionLink}>Marcar leídos</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          ) : (
-            /* Mostrar lista de chats recientes cuando hay chats */
-            (() => {
-              const professionalChats = chats.filter((chat) => {
-                const partner = getChatPartner(chat);
-                return partner?.userType === 'userpro';
-              });
+              {/* Mostrar contenido de bienvenida SOLO si no hay ningún chat */}
+              {chats.length === 0 ? (
+                <View style={styles.emptyStateContainer}>
+                  {/* Welcome Message - Centered Icon Layout */}
+                  <View style={styles.welcomeContainer}>
+                    <View style={styles.welcomeIconContainer}>
+                      <MaterialIcons name="waving-hand" size={36} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.welcomeTitle}>¡Bienvenido a TwinPro!</Text>
+                    <Text style={styles.welcomeSubtitle}>
+                      Conecta con profesionales verificados y sus gemelos IA.
+                    </Text>
 
-              return professionalChats.length > 0 ? (
-                professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+                    {/* Compact Feature highlights - horizontal */}
+                    <View style={styles.featuresRow}>
+                      <View style={styles.featureChip}>
+                        <MaterialIcons name="smart-toy" size={14} color="#0284c7" />
+                        <Text style={styles.featureChipText}>24/7 IA</Text>
+                      </View>
+                      <View style={styles.featureChip}>
+                        <MaterialIcons name="verified" size={14} color="#16a34a" />
+                        <Text style={styles.featureChipText}>Verificados</Text>
+                      </View>
+                      <View style={styles.featureChip}>
+                        <MaterialIcons name="bolt" size={14} color="#ca8a04" />
+                        <Text style={styles.featureChipText}>Rápido</Text>
+                      </View>
+                    </View>
+
+                    {/* CTA Button */}
+                    <TouchableOpacity
+                      style={styles.welcomeButton}
+                      onPress={() => router.push("/(tabs)/category-results?category=todos")}
+                    >
+                      <Text style={styles.welcomeButtonText}>Explorar Profesionales</Text>
+                      <MaterialIcons name="arrow-forward" size={18} color={COLORS.black} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               ) : (
-                chats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
-              );
-            })()
-          )}
-        </View>
+                /* Mostrar lista de chats recientes cuando hay chats */
+                (() => {
+                  const professionalChats = chats.filter((chat) => {
+                    const partner = getChatPartner(chat);
+                    return partner?.userType === 'userpro';
+                  });
+
+                  return professionalChats.length > 0 ? (
+                    professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+                  ) : (
+                    chats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+                  );
+                })()
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Bottom Navigation */}
@@ -994,5 +1119,103 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.black,
     fontWeight: "bold",
+  },
+  // Search Results Styles
+  searchLoadingContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.gray,
+  },
+  emptySearchContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptySearchTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.slate800,
+    marginTop: 12,
+  },
+  emptySearchSubtitle: {
+    fontSize: 14,
+    color: COLORS.gray,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 20,
+  },
+  searchResultsGrid: {
+    gap: 8,
+  },
+  searchResultCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  searchResultAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.backgroundLight,
+  },
+  searchResultAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.backgroundLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchResultInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.slate800,
+  },
+  searchResultProfession: {
+    fontSize: 13,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
+  searchResultMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    gap: 8,
+  },
+  searchResultRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  searchResultRatingText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#92400e",
+  },
+  searchResultCategoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  searchResultCategoryText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
