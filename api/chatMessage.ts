@@ -6,6 +6,7 @@ export interface ChatMessage {
     user: string | { _id: string; email: string };
     message?: string;
     type: "TEXT" | "IMAGE";
+    isFromBot?: boolean;
     createdAt: string;
 }
 
@@ -22,7 +23,8 @@ interface GetMessagesResponse {
 export async function sendTextMessage(
     token: string,
     chatId: string,
-    message: string
+    message: string,
+    isFromBot: boolean = false
 ): Promise<ChatMessage> {
     const response = await fetch(`${API_URL}/chat/message`, {
         method: "POST",
@@ -30,7 +32,7 @@ export async function sendTextMessage(
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ chat_id: chatId, message }),
+        body: JSON.stringify({ chat_id: chatId, message, isFromBot }),
     });
 
     if (!response.ok) {

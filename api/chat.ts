@@ -9,6 +9,8 @@ export interface Chat {
     participantTwo?: User;
     last_message_date?: string;
     last_message?: string;
+    title?: string;
+    isAvatarChat?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -45,6 +47,37 @@ export async function createChat(
     }
 
     const data: CreateChatResponse = await response.json();
+    return data.chat;
+}
+
+// Create a new avatar chat thread (allows multiple threads per professional)
+export async function createAvatarChat(
+    token: string,
+    participantIdOne: string,
+    participantIdTwo: string,
+    title?: string
+): Promise<Chat> {
+    const response = await fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            participant_id_one: participantIdOne,
+            participant_id_two: participantIdTwo,
+            isAvatarChat: true,
+            title: title || null
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al crear chat de avatar");
+    }
+
+    const data: CreateChatResponse = await response.json();
+    console.log('[createAvatarChat] Created new avatar chat:', data.chat._id);
     return data.chat;
 }
 

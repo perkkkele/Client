@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, API_HOST, API_PORT } from "../../api";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
 import { WebView } from "react-native-webview";
@@ -178,7 +178,9 @@ export default function AvatarChatScreen() {
     const [mapLoaded, setMapLoaded] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [drawerSearchText, setDrawerSearchText] = useState("");
-    const [conversations, setConversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+    const [loadingConversations, setLoadingConversations] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
 
     // LiveAvatar Session State
@@ -235,6 +237,8 @@ export default function AvatarChatScreen() {
     // Drawer functions
     const openDrawer = () => {
         setIsDrawerOpen(true);
+        // Reload conversations when drawer opens to show latest
+        loadConversations();
         Animated.spring(drawerAnim, {
             toValue: 0,
             friction: 8,
@@ -254,12 +258,68 @@ export default function AvatarChatScreen() {
         });
     };
 
-    const handleDeleteConversation = (id: string) => {
-        setConversations(prev => prev.filter(c => c.id !== id));
+    // Delete a specific conversation
+    const handleDeleteConversation = async (id: string) => {
+        if (!token) return;
+        try {
+            await chatApi.deleteChat(token, id);
+            setConversations(prev => prev.filter(c => c.id !== id));
+            // If we deleted the current chat, clear it
+            if (currentChatId === id) {
+                setCurrentChatId(null);
+                setMessages(INITIAL_MESSAGES);
+            }
+        } catch (error) {
+            console.error("Error deleting conversation:", error);
+        }
     };
 
-    const handleClearAllHistory = () => {
-        setConversations([]);
+    // Clear all conversation history
+    const handleClearAllHistory = async () => {
+        if (!token) return;
+        try {
+            for (const conv of conversations) {
+                await chatApi.deleteChat(token, conv.id);
+            }
+            setConversations([]);
+            setCurrentChatId(null);
+            setMessages(INITIAL_MESSAGES);
+        } catch (error) {
+            console.error("Error clearing history:", error);
+        }
+    };
+
+    // Select an existing conversation and load its messages
+    const handleSelectConversation = async (conversationId: string) => {
+        if (!token) return;
+        setCurrentChatId(conversationId);
+        closeDrawer();
+
+        try {
+            const chatMessages = await chatMessageApi.getMessages(token, conversationId);
+
+            // Convert backend messages to local Message format
+            const formattedMessages: Message[] = chatMessages.map((msg: any) => ({
+                id: msg._id,
+                type: 'text' as const, // Local Message type only supports text/audio/typing
+                content: msg.message || '',
+                isUser: !msg.isFromBot,
+                timestamp: new Date(msg.createdAt).toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+            }));
+
+            // Add initial message if no messages exist
+            if (formattedMessages.length === 0) {
+                setMessages(INITIAL_MESSAGES);
+            } else {
+                setMessages(formattedMessages);
+            }
+        } catch (error) {
+            console.error("Error loading conversation messages:", error);
+            setMessages(INITIAL_MESSAGES);
+        }
     };
 
     const loadProfessional = useCallback(async () => {
@@ -275,9 +335,127 @@ export default function AvatarChatScreen() {
         }
     }, [token, professionalId]);
 
+    // Load existing conversations with this professional
+    const loadConversations = useCallback(async () => {
+        if (!token || !professionalId) {
+            console.log('[loadConversations] Missing token or professionalId');
+            return;
+        }
+        setLoadingConversations(true);
+        console.log('[loadConversations] Loading conversations for professional:', professionalId);
+        try {
+            const chats = await chatApi.getChats(token);
+            console.log('[loadConversations] All chats from API:', chats.length);
+
+            // Filter avatar chats that involve this professional
+            const professionalChats = chats.filter((chat: any) => {
+                const p1Id = typeof chat.participant_one === 'string' ? chat.participant_one : chat.participant_one?._id;
+                const p2Id = typeof chat.participant_two === 'string' ? chat.participant_two : chat.participant_two?._id;
+                const matchesProfessional = p1Id === professionalId || p2Id === professionalId;
+                const isAvatarChat = chat.isAvatarChat === true;
+                console.log('[loadConversations] Chat:', chat._id, 'isAvatarChat:', isAvatarChat, 'matchesPro:', matchesProfessional);
+                return matchesProfessional && isAvatarChat;
+            });
+
+            console.log('[loadConversations] Filtered professional chats:', professionalChats.length);
+
+            // Format for drawer display
+            const formattedConversations: Conversation[] = await Promise.all(
+                professionalChats.map(async (chat: any, index: number) => {
+                    try {
+                        const lastMsg = await chatMessageApi.getLastMessage(token, chat._id);
+                        const date = new Date(chat.updatedAt || chat.createdAt);
+                        const today = new Date();
+                        const isToday = date.toDateString() === today.toDateString();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        const isYesterday = date.toDateString() === yesterday.toDateString();
+
+                        return {
+                            id: chat._id,
+                            title: `Conversación ${professionalChats.length - index}`,
+                            preview: lastMsg?.message || 'Sin mensajes',
+                            date: isToday ? 'Hoy' : isYesterday ? 'Ayer' : date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+                            isActive: chat._id === currentChatId,
+                        };
+                    } catch {
+                        return {
+                            id: chat._id,
+                            title: `Conversación ${professionalChats.length - index}`,
+                            preview: 'Sin mensajes',
+                            date: new Date(chat.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+                            isActive: chat._id === currentChatId,
+                        };
+                    }
+                })
+            );
+
+            console.log('[loadConversations] Formatted conversations:', formattedConversations.length);
+            setConversations(formattedConversations);
+        } catch (error) {
+            console.error("[loadConversations] Error loading conversations:", error);
+        } finally {
+            setLoadingConversations(false);
+        }
+    }, [token, professionalId, currentChatId]);
+
+    // Save current conversation to backend (called when pressing "New Conversation")
+    const saveCurrentConversation = useCallback(async () => {
+        // Filter out initial messages and only save actual conversation messages
+        const conversationMessages = messages.filter(msg =>
+            !INITIAL_MESSAGES.some(initial => initial.id === msg.id)
+        );
+
+        if (conversationMessages.length === 0 || isPrivateMode || !token || !professionalId || !currentUser?._id) {
+            console.log('[saveCurrentConversation] No messages to save or in private mode');
+            return null;
+        }
+
+        console.log('[saveCurrentConversation] Saving', conversationMessages.length, 'messages');
+
+        try {
+            // Create a new chat for this conversation
+            const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
+            console.log('[saveCurrentConversation] Created chat:', newChat._id);
+
+            // Save all messages to the chat
+            for (const msg of conversationMessages) {
+                const isFromBot = !msg.isUser;
+                await chatMessageApi.sendTextMessage(token, newChat._id, msg.content, isFromBot);
+            }
+
+            console.log('[saveCurrentConversation] All messages saved successfully');
+            return newChat._id;
+        } catch (error) {
+            console.error('[saveCurrentConversation] Error saving conversation:', error);
+            return null;
+        }
+    }, [messages, isPrivateMode, token, professionalId, currentUser]);
+
+    // Handle New Conversation button press
+    const handleNewConversation = useCallback(async () => {
+        console.log('[handleNewConversation] Starting new conversation');
+
+        // Save current conversation to backend first
+        await saveCurrentConversation();
+
+        // Clear current chat ID and messages
+        setCurrentChatId(null);
+        setMessages(INITIAL_MESSAGES);
+
+        // Close drawer
+        closeDrawer();
+
+        // Reload conversations list to show the saved one
+        await loadConversations();
+
+        console.log('[handleNewConversation] New conversation started');
+    }, [saveCurrentConversation, loadConversations, closeDrawer]);
+
     useEffect(() => {
         loadProfessional();
-    }, [loadProfessional]);
+        loadConversations();
+    }, [loadProfessional, loadConversations]);
 
     // Initialize LiveAvatar session when professional is loaded
     const initializeLiveAvatarSession = useCallback(async () => {
@@ -453,18 +631,6 @@ export default function AvatarChatScreen() {
 
         // Hide info bubble when user sends a message
         setActiveInfoBubble(null);
-
-        // Create chat record on first user message
-        if (messages.filter(m => m.isUser).length === 0 && token && professionalId && currentUser?._id) {
-            try {
-                // Dynamically import to avoid bundling issues
-                const { chatApi } = await import("../../api");
-                await chatApi.createChat(token, currentUser._id, professionalId);
-                console.log("Chat created successfully");
-            } catch (error) {
-                console.log("Chat may already exist or error:", error);
-            }
-        }
 
         // Scroll to bottom
         setTimeout(() => {
@@ -644,10 +810,11 @@ export default function AvatarChatScreen() {
                             onTranscription={(text, isFinal) => {
                                 // Only add final transcriptions as messages (avatar's response)
                                 if (isFinal && text.trim()) {
+                                    const trimmedText = text.trim();
                                     const newMessage: Message = {
                                         id: `avatar-${Date.now()}`,
                                         type: 'text',
-                                        content: text.trim(),
+                                        content: trimmedText,
                                         isUser: false,
                                         timestamp: new Date().toLocaleTimeString('es-ES', {
                                             hour: '2-digit',
@@ -655,6 +822,7 @@ export default function AvatarChatScreen() {
                                         }),
                                     };
                                     setMessages(prev => [...prev, newMessage]);
+                                    console.log('Avatar says:', trimmedText);
 
                                     // Scroll to bottom
                                     setTimeout(() => {
@@ -686,6 +854,7 @@ export default function AvatarChatScreen() {
                                         }),
                                     };
                                     setMessages(prev => [...prev, newMessage]);
+                                    console.log('User said:', trimmedText);
 
                                     // Scroll to bottom
                                     setTimeout(() => {
@@ -1414,7 +1583,7 @@ export default function AvatarChatScreen() {
                                     onChangeText={setDrawerSearchText}
                                 />
                             </View>
-                            <TouchableOpacity style={styles.newConversationButton}>
+                            <TouchableOpacity style={styles.newConversationButton} onPress={handleNewConversation}>
                                 <MaterialIcons name="add-comment" size={20} color={COLORS.white} />
                                 <Text style={styles.newConversationText}>Nueva Conversación</Text>
                             </TouchableOpacity>
@@ -1422,47 +1591,68 @@ export default function AvatarChatScreen() {
 
                         {/* Conversations List */}
                         <ScrollView style={styles.drawerConversationsList} showsVerticalScrollIndicator={false}>
-                            {conversations.filter(c =>
-                                c.title.toLowerCase().includes(drawerSearchText.toLowerCase()) ||
-                                c.preview.toLowerCase().includes(drawerSearchText.toLowerCase())
-                            ).map((conversation) => (
-                                <TouchableOpacity
-                                    key={conversation.id}
-                                    style={[
-                                        styles.drawerConversationItem,
-                                        conversation.isActive && styles.drawerConversationItemActive
-                                    ]}
-                                >
-                                    <View style={styles.drawerConversationHeader}>
-                                        <Text style={[
-                                            styles.drawerConversationDate,
-                                            conversation.isActive && styles.drawerConversationDateActive
-                                        ]}>
-                                            {conversation.date}
-                                        </Text>
-                                    </View>
-                                    <Text style={[
-                                        styles.drawerConversationTitle,
-                                        conversation.isActive && styles.drawerConversationTitleActive
-                                    ]} numberOfLines={1}>
-                                        {conversation.title}
+                            {/* Debug info - remove later */}
+                            <Text style={{ color: COLORS.gray400, fontSize: 10, textAlign: 'center', marginBottom: 8 }}>
+                                {loadingConversations ? 'Cargando...' : `${conversations.length} conversaciones encontradas`}
+                            </Text>
+
+                            {loadingConversations ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>Cargando historial...</Text>
+                                </View>
+                            ) : conversations.length === 0 ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.gray300} />
+                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>Sin conversaciones</Text>
+                                    <Text style={{ color: COLORS.gray400, marginTop: 4, fontSize: 12, textAlign: 'center' }}>
+                                        Tus conversaciones con este profesional aparecerán aquí
                                     </Text>
-                                    <Text style={styles.drawerConversationPreview} numberOfLines={2}>
-                                        {conversation.preview}
-                                    </Text>
-                                    {conversation.isActive && (
-                                        <View style={styles.drawerConversationArrow}>
-                                            <MaterialIcons name="arrow-forward-ios" size={16} color={COLORS.primary} />
-                                        </View>
-                                    )}
+                                </View>
+                            ) : (
+                                conversations.filter(c =>
+                                    c.title.toLowerCase().includes(drawerSearchText.toLowerCase()) ||
+                                    c.preview.toLowerCase().includes(drawerSearchText.toLowerCase())
+                                ).map((conversation) => (
                                     <TouchableOpacity
-                                        style={styles.drawerDeleteButton}
-                                        onPress={() => handleDeleteConversation(conversation.id)}
+                                        key={conversation.id}
+                                        style={[
+                                            styles.drawerConversationItem,
+                                            conversation.isActive && styles.drawerConversationItemActive
+                                        ]}
+                                        onPress={() => handleSelectConversation(conversation.id)}
                                     >
-                                        <MaterialIcons name="delete" size={18} color={COLORS.gray400} />
+                                        <View style={styles.drawerConversationHeader}>
+                                            <Text style={[
+                                                styles.drawerConversationDate,
+                                                conversation.isActive && styles.drawerConversationDateActive
+                                            ]}>
+                                                {conversation.date}
+                                            </Text>
+                                        </View>
+                                        <Text style={[
+                                            styles.drawerConversationTitle,
+                                            conversation.isActive && styles.drawerConversationTitleActive
+                                        ]} numberOfLines={1}>
+                                            {conversation.title}
+                                        </Text>
+                                        <Text style={styles.drawerConversationPreview} numberOfLines={2}>
+                                            {conversation.preview}
+                                        </Text>
+                                        {conversation.isActive && (
+                                            <View style={styles.drawerConversationArrow}>
+                                                <MaterialIcons name="arrow-forward-ios" size={16} color={COLORS.primary} />
+                                            </View>
+                                        )}
+                                        <TouchableOpacity
+                                            style={styles.drawerDeleteButton}
+                                            onPress={() => handleDeleteConversation(conversation.id)}
+                                        >
+                                            <MaterialIcons name="delete" size={18} color={COLORS.gray400} />
+                                        </TouchableOpacity>
                                     </TouchableOpacity>
-                                </TouchableOpacity>
-                            ))}
+                                ))
+                            )}
                         </ScrollView>
 
                         {/* Drawer Footer */}

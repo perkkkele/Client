@@ -108,13 +108,36 @@ export default function TwinProHomeScreen() {
   const [hasSearched, setHasSearched] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user) return;
     try {
       const [chatsData, professionalsData] = await Promise.all([
         chatApi.getChats(token),
         professionalApi.getFeaturedProfessionals(token),
       ]);
-      setChats(chatsData);
+
+      // Group chats by unique contact (participant) and keep only the most recent per contact
+      const uniqueContactChats = new Map<string, typeof chatsData[0]>();
+
+      for (const chat of chatsData) {
+        // Determine partner ID
+        const p1 = chat.participant_one;
+        const p2 = chat.participant_two;
+        const p1Id = typeof p1 === "string" ? p1 : p1?._id;
+        const p2Id = typeof p2 === "string" ? p2 : p2?._id;
+        const partnerId = p1Id === user._id ? p2Id : p1Id;
+
+        if (!partnerId) continue;
+
+        // Keep only the most recent chat per partner (chats are sorted by last_message_date desc from backend)
+        if (!uniqueContactChats.has(partnerId)) {
+          uniqueContactChats.set(partnerId, chat);
+        }
+      }
+
+      const filteredChats = Array.from(uniqueContactChats.values());
+      console.log('[loadData] Chats:', chatsData.length, '-> Unique contacts:', filteredChats.length);
+
+      setChats(filteredChats);
       setFeaturedProfessionals(professionalsData);
     } catch (error) {
       console.log("Error loading data:", error);
@@ -122,7 +145,7 @@ export default function TwinProHomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useFocusEffect(
     useCallback(() => {
