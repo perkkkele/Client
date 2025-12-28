@@ -158,26 +158,14 @@ export default function TwinProHomeScreen() {
     loadData();
   }
 
-  // Execute search when user submits
-  const handleSearch = useCallback(async () => {
-    if (!token || !searchQuery.trim()) return;
-
-    setIsSearching(true);
-    setHasSearched(true);
-
-    try {
-      const results = await professionalApi.getProfessionals(token, {
-        search: searchQuery.trim()
-      });
-      setSearchResults(results);
-      console.log('[Search] Found:', results.length, 'professionals for:', searchQuery);
-    } catch (error) {
-      console.error('Error searching:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [token, searchQuery]);
+  // Navigate to Directorio with search query
+  const handleSearch = useCallback(() => {
+    if (!searchQuery.trim()) return;
+    // Navigate to category-results (Directorio) with the search query
+    router.push(`/(tabs)/category-results?category=todos&search=${encodeURIComponent(searchQuery.trim())}`);
+    // Clear local search state
+    setSearchQuery("");
+  }, [searchQuery]);
 
   // Clear search and go back to normal view
   const clearSearch = useCallback(() => {

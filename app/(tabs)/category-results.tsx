@@ -59,14 +59,14 @@ const SORT_OPTIONS = [
 type SortOption = typeof SORT_OPTIONS[number]["id"];
 
 export default function CategoryResultsScreen() {
-    const { category } = useLocalSearchParams<{ category: string }>();
+    const { category, search } = useLocalSearchParams<{ category: string; search?: string }>();
     const { token, user } = useAuth();
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(category || "todos");
     const [sortBy, setSortBy] = useState<SortOption>("relevance");
-    const [searchText, setSearchText] = useState("");
+    const [searchText, setSearchText] = useState(search || "");
 
     // Filter modal states
     const [showFiltersModal, setShowFiltersModal] = useState(false);
@@ -85,8 +85,14 @@ export default function CategoryResultsScreen() {
         setIsLoading(true);
         try {
             let data;
-            if (selectedCategory === "todos") {
-                // Para "todos", usar getProfessionals sin filtro de categoría
+            // If there's a search query, search across professionals
+            if (searchText.trim()) {
+                data = await professionalApi.getProfessionals(token, {
+                    search: searchText.trim(),
+                    category: selectedCategory !== "todos" ? selectedCategory : undefined
+                });
+            } else if (selectedCategory === "todos") {
+                // For "todos", use getProfessionals without category filter
                 data = await professionalApi.getProfessionals(token);
             } else {
                 data = await professionalApi.getProfessionalsByCategory(
@@ -101,7 +107,7 @@ export default function CategoryResultsScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [token, selectedCategory, sortBy]);
+    }, [token, selectedCategory, sortBy, searchText]);
 
     const loadFavorites = useCallback(async () => {
         if (!token) return;
