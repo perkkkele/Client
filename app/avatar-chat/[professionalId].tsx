@@ -37,6 +37,7 @@ const COLORS = {
     surfaceDark: "#2c2c24",
     textMain: "#181811",
     textMuted: "#64748B",
+    gray50: "#F9FAFB",
     gray100: "#F1F5F9",
     gray200: "#E2E8F0",
     gray300: "#CBD5E1",
@@ -51,6 +52,7 @@ const COLORS = {
     indigo200: "#C7D2FE",
     indigo300: "#A5B4FC",
     indigo400: "#818CF8",
+    indigo500: "#6366F1",
     indigo600: "#4F46E5",
     indigo700: "#4338CA",
     indigo800: "#3730A3",
@@ -195,6 +197,9 @@ export default function AvatarChatScreen() {
     const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
     const [bookingAppointment, setBookingAppointment] = useState(false);
+
+    // Pause/Resume Avatar State
+    const [isPaused, setIsPaused] = useState(false);
 
     // LiveAvatar Session State
     const [sessionStatus, setSessionStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
@@ -626,6 +631,19 @@ export default function AvatarChatScreen() {
         console.log('handleSendMessage called, inputText:', inputText);
         if (!inputText.trim()) return;
 
+        // Block sending when communication is paused
+        if (isPaused) {
+            const pausedMessage: Message = {
+                id: `paused-${Date.now()}`,
+                type: "text",
+                content: "⏸️ La comunicación está en pausa. Toca el video para reanudar.",
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, pausedMessage]);
+            return;
+        }
+
         const messageText = inputText.trim();
 
         const newMessage: Message = {
@@ -889,9 +907,27 @@ export default function AvatarChatScreen() {
             >
                 <TouchableOpacity
                     style={styles.videoPlaceholder}
-                    activeOpacity={isVideoMinimized ? 0.8 : 1}
-                    onPress={isVideoMinimized ? maximizeVideo : undefined}
+                    activeOpacity={isVideoMinimized ? 0.8 : 0.9}
+                    onPress={() => {
+                        if (isVideoMinimized) {
+                            maximizeVideo();
+                        } else {
+                            // Toggle pause state when tapping center of video
+                            setIsPaused(!isPaused);
+                        }
+                    }}
                 >
+                    {/* Pause Overlay */}
+                    {isPaused && !isVideoMinimized && (
+                        <View style={styles.pauseOverlay}>
+                            <View style={styles.pauseIconContainer}>
+                                <MaterialIcons name="play-arrow" size={48} color={COLORS.white} />
+                            </View>
+                            <Text style={styles.pauseText}>EN PAUSA</Text>
+                            <Text style={styles.pauseHint}>Toca para reanudar</Text>
+                        </View>
+                    )}
+
                     {/* LiveKit Video when session is active */}
                     {sessionStatus === 'active' && livekitUrl && livekitToken ? (
                         <LiveAvatarVideo
@@ -905,6 +941,12 @@ export default function AvatarChatScreen() {
                                 console.error('LiveKit error:', error);
                             }}
                             onTranscription={(text, isFinal) => {
+                                // Ignore avatar responses when communication is paused
+                                if (isPaused) {
+                                    console.log('[Paused] Ignoring avatar transcription:', text);
+                                    return;
+                                }
+
                                 // Only add final transcriptions as messages (avatar's response)
                                 if (isFinal && text.trim()) {
                                     const trimmedText = text.trim();
@@ -928,6 +970,12 @@ export default function AvatarChatScreen() {
                                 }
                             }}
                             onUserTranscription={(text, isFinal) => {
+                                // Ignore user voice input when communication is paused
+                                if (isPaused) {
+                                    console.log('[Paused] Ignoring user transcription:', text);
+                                    return;
+                                }
+
                                 // Add user's spoken words as messages (but not typed messages that echo back)
                                 if (isFinal && text.trim()) {
                                     const trimmedText = text.trim();
@@ -2046,6 +2094,38 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         resizeMode: "cover",
+    },
+    // Pause Overlay Styles
+    pauseOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 100,
+    },
+    pauseIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "rgba(255, 255, 255, 0.25)",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 12,
+    },
+    pauseText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.white,
+        letterSpacing: 2,
+    },
+    pauseHint: {
+        fontSize: 12,
+        color: "rgba(255, 255, 255, 0.7)",
+        marginTop: 4,
     },
     videoPlaceholderInner: {
         flex: 1,
