@@ -1,6 +1,12 @@
 import { API_HOST, API_PORT } from "./config";
+import { Location } from "./user";
 
 const API_URL = `http://${API_HOST}:${API_PORT}/api`;
+
+// Tipos de cita
+export type AppointmentType = "presencial" | "videoconference";
+export type ServiceType = "30min" | "60min" | "custom";
+export type AppointmentStatus = "pending" | "confirmed" | "cancelled" | "completed";
 
 export interface Appointment {
     _id: string;
@@ -11,6 +17,10 @@ export interface Appointment {
         avatar?: string;
         profession?: string;
         publicName?: string;
+        phone?: string;
+        professionalEmail?: string;
+        location?: Location;
+        category?: string;
     };
     client: {
         _id: string;
@@ -18,15 +28,23 @@ export interface Appointment {
         lastname: string;
         avatar?: string;
         email: string;
+        phone?: string;
     };
     date: string;
     time: string;
     duration: number;
-    status: "pending" | "confirmed" | "cancelled" | "completed";
-    notes?: string;
+    type: AppointmentType;
+    serviceType: ServiceType;
+    price: number;
+    currency: string;
+    meetingLink?: string | null;
+    location?: Location;
+    status: AppointmentStatus;
+    notes?: string | null;
     createdAt: string;
-    confirmedAt?: string;
-    cancelledAt?: string;
+    confirmedAt?: string | null;
+    cancelledAt?: string | null;
+    completedAt?: string | null;
 }
 
 export interface TimeSlot {
@@ -41,29 +59,50 @@ export interface AvailableSlotsResponse {
     slots: TimeSlot[];
 }
 
+// Datos para crear una cita
+export interface CreateAppointmentData {
+    professionalId: string;
+    date: string;
+    time: string;
+    type: AppointmentType;
+    serviceType: ServiceType;
+    price: number;
+    notes?: string;
+}
+
 // Create a new appointment
 export async function createAppointment(
     token: string,
-    professionalId: string,
-    date: string,
-    time: string,
-    notes?: string
+    data: CreateAppointmentData
 ): Promise<Appointment> {
-    const response = await fetch(`${API_URL}/appointment`, {
+    const url = `${API_URL}/appointment`;
+    console.log("[Appointment API] POST", url, data);
+
+    const response = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ professionalId, date, time, notes }),
+        body: JSON.stringify(data),
     });
+
+    // Check content type to ensure it's JSON
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("[Appointment API] Non-JSON response:", text.substring(0, 200));
+        throw new Error(`Server returned non-JSON response (${response.status})`);
+    }
 
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to create appointment");
     }
 
-    return response.json();
+    const appointment = await response.json();
+    console.log("[Appointment API] Created appointment:", appointment._id);
+    return appointment;
 }
 
 // Get available slots for a specific date
@@ -100,6 +139,36 @@ export async function getAppointments(
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to get appointments");
+    }
+
+    return response.json();
+}
+
+// Get appointment by ID
+export async function getAppointmentById(
+    token: string,
+    appointmentId: string
+): Promise<Appointment> {
+    const url = `${API_URL}/appointment/${appointmentId}`;
+    console.log("[Appointment API] GET", url);
+
+    const response = await fetch(url, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    // Check content type to ensure it's JSON
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("[Appointment API] Non-JSON response:", text.substring(0, 200));
+        throw new Error(`Server returned non-JSON response (${response.status})`);
+    }
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to get appointment");
     }
 
     return response.json();

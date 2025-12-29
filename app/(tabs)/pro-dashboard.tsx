@@ -215,16 +215,7 @@ export default function ProDashboardScreen() {
                     <MaterialIcons name="menu" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Área Personal Pro</Text>
-                <TouchableOpacity style={styles.profileButton} onPress={handleEditProfile}>
-                    {avatarUrl ? (
-                        <Image source={{ uri: avatarUrl }} style={styles.profileAvatar} />
-                    ) : (
-                        <View style={styles.profileAvatarPlaceholder}>
-                            <MaterialIcons name="person" size={20} color={COLORS.gray400} />
-                        </View>
-                    )}
-                    <View style={styles.onlineIndicator} />
-                </TouchableOpacity>
+                <View style={styles.headerPlaceholder} />
             </View>
 
             {/* Main Content */}
@@ -238,9 +229,21 @@ export default function ProDashboardScreen() {
             >
                 {/* Greeting */}
                 <View style={styles.greetingSection}>
-                    <View style={styles.greetingRow}>
-                        <Text style={styles.greetingText}>Hola, {displayName}</Text>
-                        <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
+                    <TouchableOpacity style={styles.greetingProfileButton} onPress={handleEditProfile}>
+                        {avatarUrl ? (
+                            <Image source={{ uri: avatarUrl }} style={styles.greetingProfileAvatar} />
+                        ) : (
+                            <View style={styles.greetingProfileAvatarPlaceholder}>
+                                <MaterialIcons name="person" size={24} color={COLORS.gray400} />
+                            </View>
+                        )}
+                        <View style={styles.greetingOnlineIndicator} />
+                    </TouchableOpacity>
+                    <View style={styles.greetingTextContainer}>
+                        <View style={styles.greetingRow}>
+                            <Text style={styles.greetingText}>Hola, {displayName}</Text>
+                            <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
+                        </View>
                     </View>
                 </View>
 
@@ -744,6 +747,10 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.textMain,
     },
+    headerPlaceholder: {
+        width: 40,
+        height: 40,
+    },
     profileButton: {
         width: 40,
         height: 40,
@@ -782,11 +789,43 @@ const styles = StyleSheet.create({
     // Greeting
     greetingSection: {
         flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
+        alignItems: "center",
         paddingHorizontal: 16,
         paddingTop: 24,
         paddingBottom: 8,
+        gap: 12,
+    },
+    greetingProfileButton: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: COLORS.gray200,
+        overflow: "hidden",
+    },
+    greetingProfileAvatar: {
+        width: "100%",
+        height: "100%",
+    },
+    greetingProfileAvatarPlaceholder: {
+        width: "100%",
+        height: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.gray200,
+    },
+    greetingOnlineIndicator: {
+        position: "absolute",
+        bottom: 2,
+        right: 2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: COLORS.green500,
+        borderWidth: 2,
+        borderColor: COLORS.surfaceLight,
+    },
+    greetingTextContainer: {
+        flex: 1,
     },
     greetingLeft: {
         flex: 1,

@@ -45,8 +45,14 @@ function RootLayoutNav() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(settings)" />
         <Stack.Screen name="onboarding" />
-        <Stack.Screen name="avatar-chat" />
-        <Stack.Screen name="professional" />
+        <Stack.Screen name="avatar-chat/[professionalId]" />
+        <Stack.Screen name="professional/[professionalId]" />
+        <Stack.Screen name="book-appointment/[professionalId]" />
+        <Stack.Screen name="appointment-details/[appointmentId]" />
+        <Stack.Screen name="chat" />
+        <Stack.Screen name="reviews/[professionalId]" />
+        <Stack.Screen name="write-review/[professionalId]" />
+        <Stack.Screen name="review-success/[professionalId]" />
         <Stack.Screen name="delete-account-success" />
       </Stack>
     </>

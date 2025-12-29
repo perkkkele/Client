@@ -216,7 +216,7 @@ export default function ProfessionalProfileScreen() {
                             <MaterialIcons name="chat-bubble" size={20} color={COLORS.textMain} />
                             <Text style={styles.primaryButtonText}>Iniciar Chat</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.secondaryButton}>
+                        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(`/book-appointment/${professionalId}` as any)}>
                             <MaterialIcons name="calendar-month" size={20} color={COLORS.textMain} />
                             <Text style={styles.secondaryButtonText}>Agendar Cita</Text>
                         </TouchableOpacity>
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     profession: {
         fontSize: 14,
         fontWeight: "bold",
-        color: COLORS.primary,
+        color: COLORS.amber500,
         textTransform: "uppercase",
         letterSpacing: 1,
         marginBottom: 12,
