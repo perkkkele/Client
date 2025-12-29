@@ -101,7 +101,7 @@ export default function TwinProHomeScreen() {
   const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("todos");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Professional[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.white,
     overflow: "hidden",
     backgroundColor: "#1e293b",
   },
