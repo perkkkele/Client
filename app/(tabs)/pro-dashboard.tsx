@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { API_HOST, API_PORT, userApi } from "../../api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -79,7 +79,7 @@ interface MenuSection {
 }
 
 export default function ProDashboardScreen() {
-    const { user, logout } = useAuth();
+    const { user, logout, token, refreshUser } = useAuth();
     const [geminiActive, setGeminiActive] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
@@ -110,6 +110,20 @@ export default function ProDashboardScreen() {
     function handleLogout() {
         setMenuVisible(false);
         router.push("/(tabs)/logout-confirm");
+    }
+
+    async function handleToggleAppointments(value: boolean) {
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                appointmentsEnabled: value,
+                appointmentHours: value ? { start: "09:00", end: "18:00" } : undefined,
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error toggling appointments:", error);
+        }
     }
 
     const onRefresh = useCallback(() => {
@@ -277,6 +291,30 @@ export default function ProDashboardScreen() {
                             </View>
                             <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
                         </TouchableOpacity>
+
+                        {/* Appointments Toggle - Inside Twin Card */}
+                        <View style={styles.appointmentsDivider} />
+                        <View style={styles.appointmentsRow}>
+                            <View style={styles.appointmentsIconBox}>
+                                <MaterialIcons name="event" size={22} color="#FFFFFF" />
+                            </View>
+                            <View style={styles.appointmentsInfo}>
+                                <Text style={styles.appointmentsLabel}>Agendar Citas</Text>
+                                <Text style={styles.appointmentsHint}>
+                                    {user?.appointmentsEnabled
+                                        ? `${user?.appointmentHours?.start || "09:00"} - ${user?.appointmentHours?.end || "18:00"}`
+                                        : "Desactivado"
+                                    }
+                                </Text>
+                            </View>
+                            <Switch
+                                value={user?.appointmentsEnabled || false}
+                                onValueChange={handleToggleAppointments}
+                                trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
+                                thumbColor="#FFFFFF"
+                                ios_backgroundColor="rgba(0,0,0,0.3)"
+                            />
+                        </View>
                     </View>
                 </View>
 
@@ -1432,5 +1470,39 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: COLORS.textMain,
         fontWeight: "bold",
+    },
+
+    // Appointments Toggle inside Twin Card
+    appointmentsDivider: {
+        height: 1,
+        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        marginTop: 12,
+        marginBottom: 12,
+    },
+    appointmentsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    appointmentsIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    appointmentsInfo: {
+        flex: 1,
+    },
+    appointmentsLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    appointmentsHint: {
+        fontSize: 11,
+        color: "rgba(255, 255, 255, 0.6)",
+        marginTop: 2,
     },
 });

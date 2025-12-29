@@ -138,6 +138,14 @@ export interface User {
     priceRange?: 1 | 2 | 3 | null;
     tags?: string[];
 
+    // === Configuración de Citas ===
+    appointmentsEnabled?: boolean;
+    appointmentDuration?: number;
+    appointmentHours?: {
+        start?: string;
+        end?: string;
+    };
+
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
 }
@@ -174,6 +182,13 @@ export interface UserUpdateData {
     // Precios/tags
     priceRange?: 1 | 2 | 3;
     tags?: string[];
+
+    // Configuración de citas
+    appointmentsEnabled?: boolean;
+    appointmentHours?: {
+        start?: string;
+        end?: string;
+    };
 
     // Gemelo Digital
     digitalTwin?: DigitalTwin;

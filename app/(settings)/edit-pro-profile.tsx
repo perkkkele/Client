@@ -32,6 +32,10 @@ const COLORS = {
     gray600: "#4B5563",
     primaryDark: "#EAB308",
     white: "#FFFFFF",
+    indigo500: "#6366F1",
+    indigo600: "#4F46E5",
+    emerald500: "#10B981",
+    emerald600: "#059669",
 };
 
 const CATEGORIES = [
@@ -65,6 +69,11 @@ export default function EditProProfileScreen() {
     const [bio, setBio] = useState(user?.bio || "");
     const [isLoading, setIsLoading] = useState(false);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+    // Appointment settings
+    const [appointmentsEnabled, setAppointmentsEnabled] = useState(user?.appointmentsEnabled || false);
+    const [appointmentStartTime, setAppointmentStartTime] = useState(user?.appointmentHours?.start || "09:00");
+    const [appointmentEndTime, setAppointmentEndTime] = useState(user?.appointmentHours?.end || "18:00");
 
     const bioMaxLength = 300;
 
@@ -116,6 +125,11 @@ export default function EditProProfileScreen() {
                     category: category as any,
                     specialties: specialties,
                     bio: bio.trim() || undefined,
+                    appointmentsEnabled,
+                    appointmentHours: {
+                        start: appointmentStartTime,
+                        end: appointmentEndTime,
+                    },
                 });
 
                 // Upload avatar if changed
@@ -315,6 +329,86 @@ export default function EditProProfileScreen() {
                                 numberOfLines={5}
                                 textAlignVertical="top"
                             />
+                        </View>
+                    </View>
+
+                    {/* Appointments Section - Premium Card */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>AGENDA DE CITAS</Text>
+
+                        <View style={styles.appointmentsCard}>
+                            {/* Gradient Header */}
+                            <View style={styles.appointmentsHeader}>
+                                <View style={styles.appointmentsIconContainer}>
+                                    <MaterialIcons name="event" size={24} color={COLORS.white} />
+                                </View>
+                                <View style={styles.appointmentsHeaderText}>
+                                    <Text style={styles.appointmentsTitle}>Citas desde la app</Text>
+                                    <Text style={styles.appointmentsSubtitle}>
+                                        Permite que los clientes agenden contigo
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.appointmentsToggle,
+                                        appointmentsEnabled && styles.appointmentsToggleActive
+                                    ]}
+                                    onPress={() => setAppointmentsEnabled(!appointmentsEnabled)}
+                                >
+                                    <View style={[
+                                        styles.appointmentsToggleDot,
+                                        appointmentsEnabled && styles.appointmentsToggleDotActive
+                                    ]} />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Time Settings - Only show when enabled */}
+                            {appointmentsEnabled && (
+                                <View style={styles.appointmentsTimeSection}>
+                                    <View style={styles.appointmentsTimeHeader}>
+                                        <MaterialIcons name="schedule" size={16} color={COLORS.gray500} />
+                                        <Text style={styles.appointmentsTimeLabel}>Horario de atención</Text>
+                                    </View>
+
+                                    <View style={styles.appointmentsTimeRow}>
+                                        <View style={styles.appointmentsTimeInput}>
+                                            <Text style={styles.appointmentsTimeInputLabel}>Desde</Text>
+                                            <TextInput
+                                                style={styles.appointmentsTimeInputField}
+                                                value={appointmentStartTime}
+                                                onChangeText={setAppointmentStartTime}
+                                                placeholder="09:00"
+                                                placeholderTextColor={COLORS.gray400}
+                                                keyboardType="numbers-and-punctuation"
+                                            />
+                                        </View>
+
+                                        <View style={styles.appointmentsTimeSeparator}>
+                                            <MaterialIcons name="arrow-forward" size={20} color={COLORS.gray400} />
+                                        </View>
+
+                                        <View style={styles.appointmentsTimeInput}>
+                                            <Text style={styles.appointmentsTimeInputLabel}>Hasta</Text>
+                                            <TextInput
+                                                style={styles.appointmentsTimeInputField}
+                                                value={appointmentEndTime}
+                                                onChangeText={setAppointmentEndTime}
+                                                placeholder="18:00"
+                                                placeholderTextColor={COLORS.gray400}
+                                                keyboardType="numbers-and-punctuation"
+                                            />
+                                        </View>
+                                    </View>
+
+                                    {/* Info Badge */}
+                                    <View style={styles.appointmentsInfoBadge}>
+                                        <MaterialIcons name="info-outline" size={14} color={COLORS.indigo600} />
+                                        <Text style={styles.appointmentsInfoText}>
+                                            Los clientes podrán ver un icono de calendario en tu sala de chat
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
                         </View>
                     </View>
                 </ScrollView>
@@ -562,5 +656,125 @@ const styles = StyleSheet.create({
         color: COLORS.textMain,
         minHeight: 100,
         lineHeight: 20,
+    },
+
+    // =========================================
+    // APPOINTMENTS SECTION STYLES
+    // =========================================
+    appointmentsCard: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        overflow: "hidden",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
+    },
+    appointmentsHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        backgroundColor: COLORS.indigo600,
+        gap: 12,
+    },
+    appointmentsIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    appointmentsHeaderText: {
+        flex: 1,
+    },
+    appointmentsTitle: {
+        fontSize: 15,
+        fontWeight: "bold",
+        color: COLORS.white,
+    },
+    appointmentsSubtitle: {
+        fontSize: 12,
+        color: "rgba(255, 255, 255, 0.7)",
+        marginTop: 2,
+    },
+    appointmentsToggle: {
+        width: 52,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+        padding: 2,
+        justifyContent: "center",
+    },
+    appointmentsToggleActive: {
+        backgroundColor: COLORS.emerald500,
+    },
+    appointmentsToggleDot: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: COLORS.white,
+    },
+    appointmentsToggleDotActive: {
+        alignSelf: "flex-end",
+    },
+    appointmentsTimeSection: {
+        padding: 16,
+        gap: 12,
+    },
+    appointmentsTimeHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    appointmentsTimeLabel: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.gray500,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    appointmentsTimeRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    appointmentsTimeInput: {
+        flex: 1,
+    },
+    appointmentsTimeInputLabel: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: COLORS.gray500,
+        marginBottom: 4,
+    },
+    appointmentsTimeInputField: {
+        backgroundColor: COLORS.gray100,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        textAlign: "center",
+    },
+    appointmentsTimeSeparator: {
+        paddingTop: 16,
+    },
+    appointmentsInfoBadge: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 8,
+        backgroundColor: "rgba(99, 102, 241, 0.1)",
+        borderRadius: 10,
+        padding: 12,
+        marginTop: 4,
+    },
+    appointmentsInfoText: {
+        flex: 1,
+        fontSize: 12,
+        color: COLORS.indigo600,
+        lineHeight: 16,
     },
 });

@@ -18,7 +18,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, liveAvatarApi, chatApi, chatMessageApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, API_HOST, API_PORT } from "../../api";
+import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
 import { WebView } from "react-native-webview";
@@ -60,7 +61,7 @@ const COLORS = {
     black: "#000000",
 };
 
-type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | null;
+type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | "appointments" | null;
 
 interface Message {
     id: string;
@@ -160,6 +161,11 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
         content: "Al activar esta opción, los mensajes de esta sesión no aparecerán en el historial, proporcionando máxima seguridad y privacidad.",
         icon: "lock",
     },
+    appointments: {
+        title: "Agendar Cita",
+        content: "Agenda una cita con el profesional para una consulta presencial o virtual.",
+        icon: "event",
+    },
 };
 
 export default function AvatarChatScreen() {
@@ -182,6 +188,13 @@ export default function AvatarChatScreen() {
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);
     const [loadingConversations, setLoadingConversations] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    // Appointment Booking State
+    const [selectedDate, setSelectedDate] = useState<string>("");
+    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [bookingAppointment, setBookingAppointment] = useState(false);
 
     // LiveAvatar Session State
     const [sessionStatus, setSessionStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
@@ -327,6 +340,7 @@ export default function AvatarChatScreen() {
         setIsLoading(true);
         try {
             const data = await userApi.getUser(token, professionalId);
+            console.log('[DEBUG] Professional data loaded:', { appointmentsEnabled: data.appointmentsEnabled, appointmentHours: data.appointmentHours });
             setProfessional(data);
         } catch (error) {
             console.error("Error loading professional:", error);
@@ -683,11 +697,94 @@ export default function AvatarChatScreen() {
         }
     };
 
-    const handleInfoBubblePress = (type: InfoBubbleType) => {
+    const handleInfoBubblePress = async (type: InfoBubbleType) => {
         if (activeInfoBubble === type) {
             setActiveInfoBubble(null);
         } else {
             setActiveInfoBubble(type);
+            // Load available slots when opening appointments bubble
+            if (type === "appointments" && professionalId && token) {
+                const today = new Date().toISOString().split("T")[0];
+                setSelectedDate(today);
+                await loadAvailableSlots(today);
+            }
+        }
+    };
+
+    // Generate next 7 days for date selection
+    const generateNextDays = () => {
+        const days = [];
+        const today = new Date();
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            days.push({
+                date: date.toISOString().split("T")[0],
+                dayName: i === 0 ? "Hoy" : dayNames[date.getDay()],
+                dayNum: date.getDate().toString(),
+            });
+        }
+        return days;
+    };
+
+    // Load available time slots for a date
+    const loadAvailableSlots = async (date: string) => {
+        if (!token || !professionalId) return;
+
+        setLoadingSlots(true);
+        setSelectedTime(null);
+        try {
+            const response = await appointmentApi.getAvailableSlots(token, professionalId, date);
+            setAvailableSlots(response.slots);
+        } catch (error) {
+            console.error("Error loading slots:", error);
+            setAvailableSlots([]);
+        } finally {
+            setLoadingSlots(false);
+        }
+    };
+
+    // Handle date selection
+    const handleDateSelect = async (date: string) => {
+        setSelectedDate(date);
+        await loadAvailableSlots(date);
+    };
+
+    // Confirm appointment booking
+    const handleConfirmAppointment = async () => {
+        if (!token || !professionalId || !selectedDate || !selectedTime) return;
+
+        setBookingAppointment(true);
+        try {
+            await appointmentApi.createAppointment(token, professionalId, selectedDate, selectedTime);
+            // Show success and close bubble
+            setActiveInfoBubble(null);
+            setSelectedDate("");
+            setSelectedTime(null);
+            setAvailableSlots([]);
+            // Could add a success message to chat here
+            const successMessage: Message = {
+                id: `system-${Date.now()}`,
+                type: "text",
+                content: `✅ Cita confirmada para el ${selectedDate} a las ${selectedTime}. El profesional recibirá la notificación.`,
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, successMessage]);
+        } catch (error: any) {
+            console.error("Error booking appointment:", error);
+            const errorMessage: Message = {
+                id: `error-${Date.now()}`,
+                type: "text",
+                content: `❌ No se pudo agendar la cita: ${error.message || "Error desconocido"}`,
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setBookingAppointment(false);
         }
     };
 
@@ -962,6 +1059,18 @@ export default function AvatarChatScreen() {
                         >
                             <MaterialIcons name="ios-share" size={18} color={activeInfoBubble === "share" ? COLORS.black : COLORS.white} />
                         </TouchableOpacity>
+                        {/* Calendar icon for appointments - DEBUG: showing always */}
+                        {(professional?.appointmentsEnabled || true) && (
+                            <TouchableOpacity
+                                style={[
+                                    styles.videoActionButton,
+                                    activeInfoBubble === "appointments" && styles.videoActionPrimary
+                                ]}
+                                onPress={() => handleInfoBubblePress("appointments")}
+                            >
+                                <MaterialIcons name="event" size={18} color={activeInfoBubble === "appointments" ? COLORS.black : COLORS.white} />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Toggle Size Button */}
@@ -1362,6 +1471,118 @@ export default function AvatarChatScreen() {
                                         <Text style={styles.shareLabel}>Telegram</Text>
                                     </TouchableOpacity>
                                 </View>
+                            </View>
+                        ) : activeInfoBubble === "appointments" && professional ? (
+                            <View style={styles.appointmentBubbleContent}>
+                                {/* Header */}
+                                <View style={styles.appointmentHeader}>
+                                    <View>
+                                        <Text style={styles.appointmentTitle}>Agendar Cita</Text>
+                                        <View style={styles.appointmentScheduleRow}>
+                                            <MaterialIcons name="schedule" size={14} color={COLORS.gray400} />
+                                            <Text style={styles.appointmentScheduleText}>
+                                                Horario: {professional.appointmentHours?.start || "09:00"} - {professional.appointmentHours?.end || "18:00"}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.appointmentCloseButton}
+                                        onPress={() => setActiveInfoBubble(null)}
+                                    >
+                                        <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Date Selector */}
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.appointmentDateScroll}
+                                    contentContainerStyle={styles.appointmentDateContainer}
+                                >
+                                    {generateNextDays().map((day) => (
+                                        <TouchableOpacity
+                                            key={day.date}
+                                            style={[
+                                                styles.appointmentDateButton,
+                                                selectedDate === day.date && styles.appointmentDateButtonActive
+                                            ]}
+                                            onPress={() => handleDateSelect(day.date)}
+                                        >
+                                            <Text style={[
+                                                styles.appointmentDateDayName,
+                                                selectedDate === day.date && styles.appointmentDateTextActive
+                                            ]}>
+                                                {day.dayName}
+                                            </Text>
+                                            <Text style={[
+                                                styles.appointmentDateDayNum,
+                                                selectedDate === day.date && styles.appointmentDateTextActive
+                                            ]}>
+                                                {day.dayNum}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+
+                                {/* Time Slots Grid */}
+                                <View style={styles.appointmentSlotsContainer}>
+                                    {loadingSlots ? (
+                                        <View style={styles.appointmentSlotsLoading}>
+                                            <ActivityIndicator size="small" color={COLORS.primary} />
+                                            <Text style={styles.appointmentSlotsLoadingText}>Cargando horarios...</Text>
+                                        </View>
+                                    ) : availableSlots.length === 0 ? (
+                                        <Text style={styles.appointmentNoSlots}>No hay horarios disponibles</Text>
+                                    ) : (
+                                        <View style={styles.appointmentSlotsGrid}>
+                                            {availableSlots.map((slot) => (
+                                                <TouchableOpacity
+                                                    key={slot.time}
+                                                    style={[
+                                                        styles.appointmentSlotButton,
+                                                        !slot.available && styles.appointmentSlotDisabled,
+                                                        selectedTime === slot.time && styles.appointmentSlotSelected
+                                                    ]}
+                                                    disabled={!slot.available}
+                                                    onPress={() => setSelectedTime(slot.time)}
+                                                >
+                                                    <Text style={[
+                                                        styles.appointmentSlotText,
+                                                        !slot.available && styles.appointmentSlotTextDisabled,
+                                                        selectedTime === slot.time && styles.appointmentSlotTextSelected
+                                                    ]}>
+                                                        {slot.time}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* Confirm Button */}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.appointmentConfirmButton,
+                                        (!selectedDate || !selectedTime || bookingAppointment) && styles.appointmentConfirmButtonDisabled
+                                    ]}
+                                    disabled={!selectedDate || !selectedTime || bookingAppointment}
+                                    onPress={handleConfirmAppointment}
+                                >
+                                    {bookingAppointment ? (
+                                        <ActivityIndicator size="small" color={COLORS.black} />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.appointmentConfirmText}>CONFIRMAR CITA</Text>
+                                            <MaterialIcons name="check-circle" size={16} color={COLORS.black} />
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+
+                                {/* Terms */}
+                                <Text style={styles.appointmentTerms}>
+                                    Al confirmar la cita aceptas los términos y condiciones del servicio.
+                                </Text>
                             </View>
                         ) : (
                             <>
@@ -2954,5 +3175,157 @@ const styles = StyleSheet.create({
         color: "#EF4444",
         textTransform: "uppercase",
         letterSpacing: 0.5,
+    },
+
+    // =========================================
+    // APPOINTMENT BUBBLE STYLES
+    // =========================================
+    appointmentBubbleContent: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 20,
+    },
+    appointmentHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        marginBottom: 16,
+    },
+    appointmentTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    appointmentScheduleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 4,
+    },
+    appointmentScheduleText: {
+        fontSize: 10,
+        color: COLORS.gray500,
+        fontWeight: "500",
+    },
+    appointmentCloseButton: {
+        padding: 4,
+    },
+    appointmentDateScroll: {
+        marginBottom: 12,
+        marginHorizontal: -20,
+    },
+    appointmentDateContainer: {
+        paddingHorizontal: 20,
+        gap: 8,
+    },
+    appointmentDateButton: {
+        width: 42,
+        height: 52,
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    appointmentDateButtonActive: {
+        backgroundColor: COLORS.textMain,
+        borderColor: COLORS.textMain,
+    },
+    appointmentDateDayName: {
+        fontSize: 8,
+        fontWeight: "500",
+        textTransform: "uppercase",
+        color: COLORS.gray400,
+        marginBottom: 2,
+    },
+    appointmentDateDayNum: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.gray600,
+    },
+    appointmentDateTextActive: {
+        color: COLORS.white,
+    },
+    appointmentSlotsContainer: {
+        marginBottom: 16,
+    },
+    appointmentSlotsLoading: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 20,
+    },
+    appointmentSlotsLoadingText: {
+        fontSize: 12,
+        color: COLORS.gray500,
+    },
+    appointmentNoSlots: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        textAlign: "center",
+        paddingVertical: 20,
+    },
+    appointmentSlotsGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    appointmentSlotButton: {
+        width: "22%",
+        paddingVertical: 8,
+        backgroundColor: COLORS.white,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        alignItems: "center",
+    },
+    appointmentSlotDisabled: {
+        backgroundColor: COLORS.gray50,
+        borderColor: "transparent",
+    },
+    appointmentSlotSelected: {
+        backgroundColor: COLORS.indigo50,
+        borderColor: COLORS.indigo500,
+    },
+    appointmentSlotText: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: COLORS.gray600,
+    },
+    appointmentSlotTextDisabled: {
+        color: COLORS.gray300,
+        textDecorationLine: "line-through",
+    },
+    appointmentSlotTextSelected: {
+        color: COLORS.indigo700,
+        fontWeight: "bold",
+    },
+    appointmentConfirmButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.textMain,
+        paddingVertical: 12,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    appointmentConfirmButtonDisabled: {
+        backgroundColor: COLORS.gray300,
+    },
+    appointmentConfirmText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: COLORS.white,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    appointmentTerms: {
+        fontSize: 10,
+        color: COLORS.gray400,
+        textAlign: "center",
+        lineHeight: 14,
     },
 });
