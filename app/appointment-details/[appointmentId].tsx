@@ -20,6 +20,7 @@ import {
     cancelAppointment,
     Appointment,
 } from "../../api/appointment";
+import { createCheckoutSession } from "../../api/payment";
 
 const COLORS = {
     primary: "#137fec",
@@ -170,6 +171,23 @@ export default function AppointmentDetailsScreen() {
             return;
         }
         Linking.openURL(appointment.meetingLink);
+    };
+
+    const handlePayNow = async () => {
+        if (!token || !appointmentId) return;
+
+        try {
+            const session = await createCheckoutSession(token, appointmentId);
+            const canOpen = await Linking.canOpenURL(session.url);
+            if (canOpen) {
+                await Linking.openURL(session.url);
+            } else {
+                Alert.alert("Error", "No se pudo abrir el enlace de pago");
+            }
+        } catch (error: any) {
+            console.error("Payment error:", error);
+            Alert.alert("Error", error.message || "No se pudo iniciar el pago");
+        }
     };
 
     const handleReschedule = () => {
@@ -376,6 +394,39 @@ export default function AppointmentDetailsScreen() {
                         </View>
                         <View style={styles.divider} />
                     </>
+                )}
+
+                {/* Pay Now Button - Show if payment is pending */}
+                {isActive && appointment.paymentStatus === 'pending' && (
+                    <View style={styles.paymentSection}>
+                        <View style={styles.paymentCard}>
+                            <View style={styles.paymentCardContent}>
+                                <MaterialIcons name="payment" size={32} color={COLORS.primary} />
+                                <View style={styles.paymentCardText}>
+                                    <Text style={styles.paymentCardTitle}>Pago Pendiente</Text>
+                                    <Text style={styles.paymentCardSubtitle}>
+                                        Completa el pago para confirmar tu cita
+                                    </Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity style={styles.payNowButton} onPress={handlePayNow}>
+                                <MaterialIcons name="lock" size={18} color={COLORS.white} />
+                                <Text style={styles.payNowButtonText}>
+                                    Pagar {(appointment.price / 100).toFixed(0)}€
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
+                {/* Payment Status Badge - Show if paid */}
+                {appointment.paymentStatus === 'paid' && (
+                    <View style={styles.paidBadgeContainer}>
+                        <View style={styles.paidBadge}>
+                            <MaterialIcons name="check-circle" size={20} color={COLORS.green700} />
+                            <Text style={styles.paidBadgeText}>Pago Completado</Text>
+                        </View>
+                    </View>
                 )}
 
                 {/* Action Buttons */}
@@ -726,5 +777,67 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500",
         color: COLORS.textMuted,
+    },
+    // Payment Styles
+    paymentSection: {
+        paddingVertical: 8,
+    },
+    paymentCard: {
+        backgroundColor: "#fffbeb",
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: "#fef08a",
+    },
+    paymentCardContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginBottom: 12,
+    },
+    paymentCardText: {
+        flex: 1,
+    },
+    paymentCardTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    paymentCardSubtitle: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+        marginTop: 2,
+    },
+    payNowButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        paddingVertical: 14,
+        borderRadius: 12,
+    },
+    payNowButtonText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.white,
+    },
+    paidBadgeContainer: {
+        paddingVertical: 8,
+    },
+    paidBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.green100,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+    },
+    paidBadgeText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.green700,
     },
 });

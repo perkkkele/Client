@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -52,6 +52,7 @@ const CATEGORIES = [
 
 export default function EditProProfileScreen() {
     const { token, user, refreshUser } = useAuth();
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
     // Initialize with existing user data
     const getAvatarUrl = (avatar: string | null | undefined) => {
@@ -60,22 +61,60 @@ export default function EditProProfileScreen() {
         return `http://${API_HOST}:${API_PORT}/${avatar}`;
     };
 
-    const [avatarUri, setAvatarUri] = useState<string | null>(getAvatarUrl(user?.avatar) || null);
-    const [publicName, setPublicName] = useState(user?.publicName || "");
-    const [profession, setProfession] = useState(user?.profession || "");
-    const [category, setCategory] = useState(user?.category || "");
-    const [specialties, setSpecialties] = useState<string[]>(user?.specialties || []);
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [publicName, setPublicName] = useState("");
+    const [profession, setProfession] = useState("");
+    const [category, setCategory] = useState("");
+    const [specialties, setSpecialties] = useState<string[]>([]);
     const [newSpecialty, setNewSpecialty] = useState("");
-    const [bio, setBio] = useState(user?.bio || "");
+    const [bio, setBio] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
     // Appointment settings
-    const [appointmentsEnabled, setAppointmentsEnabled] = useState(user?.appointmentsEnabled || false);
-    const [appointmentStartTime, setAppointmentStartTime] = useState(user?.appointmentHours?.start || "09:00");
-    const [appointmentEndTime, setAppointmentEndTime] = useState(user?.appointmentHours?.end || "18:00");
+    const [appointmentsEnabled, setAppointmentsEnabled] = useState(false);
+    const [appointmentStartTime, setAppointmentStartTime] = useState("09:00");
+    const [appointmentEndTime, setAppointmentEndTime] = useState("18:00");
 
     const bioMaxLength = 300;
+
+    // Load fresh data from API on mount
+    useEffect(() => {
+        const loadUserData = async () => {
+            if (!token) {
+                setIsLoadingData(false);
+                return;
+            }
+
+            try {
+                // Refresh user data from server
+                if (refreshUser) {
+                    await refreshUser();
+                }
+            } catch (error) {
+                console.error("Error loading user data:", error);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        loadUserData();
+    }, [token]);
+
+    // Update local state when user context changes
+    useEffect(() => {
+        if (user) {
+            setAvatarUri(getAvatarUrl(user.avatar) || null);
+            setPublicName(user.publicName || "");
+            setProfession(user.profession || "");
+            setCategory(user.category || "");
+            setSpecialties(user.specialties || []);
+            setBio(user.bio || "");
+            setAppointmentsEnabled(user.appointmentsEnabled || false);
+            setAppointmentStartTime(user.appointmentHours?.start || "09:00");
+            setAppointmentEndTime(user.appointmentHours?.end || "18:00");
+        }
+    }, [user]);
 
     function handleBack() {
         router.back();

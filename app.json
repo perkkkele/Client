@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Client",
+    "name": "TwinPro",
     "slug": "Client",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "client",
+    "scheme": "twinpro",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "app.twinpro.twinpro",
       "infoPlist": {
         "NSCameraUsageDescription": "Esta app necesita acceso a la cámara para videollamadas con avatares",
         "NSMicrophoneUsageDescription": "Esta app necesita acceso al micrófono para comunicarte con avatares"
@@ -36,9 +37,12 @@
         "android.permission.INTERNET",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WAKE_LOCK",
-        "android.permission.BLUETOOTH"
+        "android.permission.BLUETOOTH",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
       ],
-      "package": "com.anonymous.Client"
+      "package": "app.twinpro.twinpro",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -50,7 +54,14 @@
       "expo-secure-store",
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#137fec"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

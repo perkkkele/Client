@@ -1,0 +1,39 @@
+{
+    "project_info": {
+        "project_number": "689354205188",
+        "project_id": "twinpro-482405",
+        "storage_bucket": "twinpro-482405.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:689354205188:android:02738e95ab468095aaed51",
+                "android_client_info": {
+                    "package_name": "app.twinpro.twinpro"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "689354205188-lh0997pqg6avg32bbig0avkj04oc55e6.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDb5DjaI8JYWhHuGmpwecXuG4pitwhbpIw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "689354205188-lh0997pqg6avg32bbig0avkj04oc55e6.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

@@ -247,6 +247,33 @@ export default function ProDashboardScreen() {
                     </View>
                 </View>
 
+                {/* Profile Preview Card */}
+                <TouchableOpacity
+                    style={styles.profilePreviewCard}
+                    onPress={() => {
+                        if (user?._id) {
+                            router.push(`/professional/${user._id}` as any);
+                        }
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.profilePreviewGlow} />
+                    <View style={styles.profilePreviewContent}>
+                        <View style={styles.profilePreviewLeft}>
+                            <View style={styles.profilePreviewIcon}>
+                                <MaterialIcons name="visibility" size={22} color="#FFFFFF" />
+                            </View>
+                            <View style={styles.profilePreviewText}>
+                                <Text style={styles.profilePreviewTitle}>Ver mi perfil público</Text>
+                                <Text style={styles.profilePreviewSubtitle}>Así te ven tus clientes</Text>
+                            </View>
+                        </View>
+                        <View style={styles.profilePreviewArrow}>
+                            <MaterialIcons name="arrow-forward-ios" size={16} color="#FFFFFF" />
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
                 {/* Digital Twin Card */}
                 <View style={styles.twinCard}>
                     <View style={styles.twinCardGlow1} />
@@ -860,6 +887,67 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: COLORS.textMain,
+    },
+    // Profile Preview Card
+    profilePreviewCard: {
+        marginHorizontal: 16,
+        marginBottom: 16,
+        borderRadius: 20,
+        overflow: "hidden",
+        backgroundColor: "#3b82f6",
+        shadowColor: "#3b82f6",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    profilePreviewGlow: {
+        position: "absolute",
+        top: -20,
+        right: -20,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: "rgba(255,255,255,0.15)",
+    },
+    profilePreviewContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+    },
+    profilePreviewLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+    },
+    profilePreviewIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "rgba(255,255,255,0.2)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    profilePreviewText: {
+        gap: 2,
+    },
+    profilePreviewTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+    },
+    profilePreviewSubtitle: {
+        fontSize: 13,
+        color: "rgba(255,255,255,0.75)",
+    },
+    profilePreviewArrow: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "rgba(255,255,255,0.2)",
+        alignItems: "center",
+        justifyContent: "center",
     },
     // Section
     section: {

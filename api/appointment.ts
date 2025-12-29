@@ -40,11 +40,14 @@ export interface Appointment {
     meetingLink?: string | null;
     location?: Location;
     status: AppointmentStatus;
+    paymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
     notes?: string | null;
     createdAt: string;
     confirmedAt?: string | null;
     cancelledAt?: string | null;
     completedAt?: string | null;
+    paidAt?: string | null;
+    refundedAt?: string | null;
 }
 
 export interface TimeSlot {

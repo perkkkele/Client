@@ -264,26 +264,33 @@ export default function ProProfileScreen() {
                     {/* Especialidades */}
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Especialidades</Text>
-                        <View style={styles.specialtiesContainer}>
-                            <View style={styles.specialtiesTags}>
-                                {specialties.map((specialty, index) => (
-                                    <View key={index} style={styles.specialtyTag}>
-                                        <Text style={styles.specialtyTagText}>{specialty}</Text>
-                                        <TouchableOpacity onPress={() => removeSpecialty(index)}>
-                                            <MaterialIcons name="close" size={14} color={COLORS.primaryDark} />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
+                        <View style={styles.specialtiesCard}>
+                            {specialties.length > 0 && (
+                                <View style={styles.specialtiesTags}>
+                                    {specialties.map((specialty, index) => (
+                                        <View key={index} style={styles.specialtyTag}>
+                                            <Text style={styles.specialtyTagText}>{specialty}</Text>
+                                            <TouchableOpacity onPress={() => removeSpecialty(index)}>
+                                                <MaterialIcons name="close" size={14} color={COLORS.primaryDark} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                            <View style={styles.addSpecialtyRow}>
+                                <TextInput
+                                    style={styles.specialtyInput}
+                                    placeholder="Añadir especialidad..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={newSpecialty}
+                                    onChangeText={setNewSpecialty}
+                                    onSubmitEditing={addSpecialty}
+                                    returnKeyType="done"
+                                />
+                                <TouchableOpacity style={styles.addButton} onPress={addSpecialty}>
+                                    <MaterialIcons name="add" size={20} color="#000000" />
+                                </TouchableOpacity>
                             </View>
-                            <TextInput
-                                style={styles.specialtyInput}
-                                placeholder="Añadir..."
-                                placeholderTextColor={COLORS.gray400}
-                                value={newSpecialty}
-                                onChangeText={setNewSpecialty}
-                                onSubmitEditing={addSpecialty}
-                                returnKeyType="done"
-                            />
                         </View>
                     </View>
 
@@ -521,6 +528,11 @@ const styles = StyleSheet.create({
         color: COLORS.primaryDark,
         fontWeight: "600",
     },
+    specialtiesCard: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 12,
+        padding: 12,
+    },
     specialtiesContainer: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 12,
@@ -535,29 +547,45 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 6,
+        marginBottom: 8,
     },
     specialtyTag: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(253, 224, 71, 0.15)",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
         borderWidth: 1,
-        borderColor: "rgba(253, 224, 71, 0.2)",
-        gap: 4,
+        borderColor: "rgba(253, 224, 71, 0.3)",
+        gap: 6,
     },
     specialtyTagText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: "600",
         color: COLORS.primaryDark,
     },
+    addSpecialtyRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
     specialtyInput: {
         flex: 1,
-        minWidth: 80,
+        backgroundColor: COLORS.gray200,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         fontSize: 12,
         color: COLORS.textMain,
-        padding: 4,
+    },
+    addButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
     },
     bioHeader: {
         flexDirection: "row",

@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     View,
     Alert,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -21,6 +22,7 @@ import {
     AppointmentType,
     ServiceType,
 } from "../../api/appointment";
+import { createCheckoutSession } from "../../api/payment";
 
 const COLORS = {
     primary: "#f9f506",
@@ -207,8 +209,41 @@ export default function BookAppointmentScreen() {
                 price: serviceOption.price,
             });
 
-            // Navegar a la pantalla de detalles de la cita
-            router.replace(`/appointment-details/${appointment._id}` as any);
+            // Ask user if they want to pay now
+            Alert.alert(
+                "¡Cita Agendada!",
+                `Tu cita ha sido reservada. ¿Deseas pagar ahora (${formatPrice(serviceOption.price)}) para confirmarla?`,
+                [
+                    {
+                        text: "Pagar Después",
+                        style: "cancel",
+                        onPress: () => {
+                            router.replace(`/appointment-details/${appointment._id}` as any);
+                        },
+                    },
+                    {
+                        text: "Pagar Ahora",
+                        style: "default",
+                        onPress: async () => {
+                            try {
+                                const session = await createCheckoutSession(token, appointment._id);
+                                // Open Stripe Checkout in browser
+                                const canOpen = await Linking.canOpenURL(session.url);
+                                if (canOpen) {
+                                    await Linking.openURL(session.url);
+                                } else {
+                                    Alert.alert("Error", "No se pudo abrir el enlace de pago");
+                                    router.replace(`/appointment-details/${appointment._id}` as any);
+                                }
+                            } catch (payError: any) {
+                                console.error("Payment error:", payError);
+                                Alert.alert("Error", "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.");
+                                router.replace(`/appointment-details/${appointment._id}` as any);
+                            }
+                        },
+                    },
+                ]
+            );
         } catch (error: any) {
             Alert.alert("Error", error.message || "No se pudo agendar la cita. Inténtalo de nuevo.");
         } finally {
