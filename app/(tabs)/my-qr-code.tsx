@@ -46,13 +46,16 @@ export default function MyQRCodeScreen() {
     const isVerified = user?.userType === "userpro";
 
     // Generar URL del código QR usando API pública
-    const qrData = `twinpro://user/${user?._id}`;
+    // Usar username si existe, sino usar el ID
+    const qrData = user?.username
+        ? `https://twinpro.app/@${user.username}`
+        : `https://twinpro.app/user/${user?._id}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrData)}&format=png&margin=10`;
 
     async function handleShare() {
         try {
             await Share.share({
-                message: `Conéctate conmigo en TwinPro: ${displayName}\n\nDescarga TwinPro para chatear directamente conmigo.`,
+                message: `Conéctate conmigo en TwinPro: ${displayName}\n\n${qrData}`,
                 // url: qrCodeUrl, // iOS only
             });
         } catch (error) {

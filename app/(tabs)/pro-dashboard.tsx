@@ -599,6 +599,16 @@ export default function ProDashboardScreen() {
                                                 <Text style={styles.sideMenuSubLabel}>Datos de contacto</Text>
                                                 <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                                             </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.sideMenuSubItem}
+                                                onPress={() => { setMenuVisible(false); router.push("/(tabs)/my-qr-code"); }}
+                                            >
+                                                <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.teal50 }]}>
+                                                    <MaterialIcons name="qr-code-2" size={16} color={COLORS.teal600} />
+                                                </View>
+                                                <Text style={styles.sideMenuSubLabel}>Mi Código QR</Text>
+                                                <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
+                                            </TouchableOpacity>
                                         </View>
                                     </View>
                                     <View style={styles.sideMenuCardDivider} />

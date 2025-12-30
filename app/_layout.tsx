@@ -2,12 +2,13 @@ import { registerGlobals } from "@livekit/react-native";
 import { Redirect, Stack, useSegments, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, Linking } from "react-native";
 import { AuthProvider, useAuth } from "../context";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { API_URL } from "../api/config";
+import { usernameApi } from "../api";
 
 // Initialize LiveKit WebRTC globals
 registerGlobals();
@@ -124,6 +125,49 @@ function RootLayoutNav() {
       }
     };
   }, [token]);
+
+  // Handle deep links (twinpro.app/@username or twinpro.app/user/{userId})
+  useEffect(() => {
+    const handleDeepLink = async (url: string) => {
+      console.log("[DeepLink] Received URL:", url);
+
+      // Match twinpro.app/user/{userId} pattern (direct user ID)
+      const userIdMatch = url.match(/twinpro\.app\/user\/([a-f0-9]{24})/i);
+      if (userIdMatch) {
+        const userId = userIdMatch[1];
+        console.log("[DeepLink] Direct userId:", userId);
+        router.push(`/avatar-chat/${userId}` as any);
+        return;
+      }
+
+      // Match twinpro.app/@username pattern
+      const usernameMatch = url.match(/twinpro\.app\/@([a-z0-9_-]+)/i);
+      if (usernameMatch) {
+        const username = usernameMatch[1].toLowerCase();
+        console.log("[DeepLink] Resolving username:", username);
+
+        try {
+          const profile = await usernameApi.getByUsername(username);
+          console.log("[DeepLink] Resolved to userId:", profile.userId);
+          router.push(`/avatar-chat/${profile.userId}` as any);
+        } catch (error) {
+          console.error("[DeepLink] Error resolving username:", error);
+        }
+      }
+    };
+
+    // Handle URL that opened the app
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+
+    // Listen for incoming deep links while app is running
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleDeepLink(event.url);
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Mientras se carga el token → pantalla estable
   if (loading) {

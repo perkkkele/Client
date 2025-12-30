@@ -8,3 +8,5 @@ export * as professionalApi from "./professional";
 export * as geocodingApi from "./geocoding";
 export * as placesApi from "./placesAutocomplete";
 export * as appointmentApi from "./appointment";
+export * as usernameApi from "./username";
+

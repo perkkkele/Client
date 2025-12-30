@@ -20,7 +20,10 @@
         "NSCameraUsageDescription": "Esta app necesita acceso a la cámara para videollamadas con avatares",
         "NSMicrophoneUsageDescription": "Esta app necesita acceso al micrófono para comunicarte con avatares"
       },
-      "bitcode": false
+      "bitcode": false,
+      "associatedDomains": [
+        "applinks:twinpro.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -42,7 +45,29 @@
         "android.permission.VIBRATE"
       ],
       "package": "app.twinpro.twinpro",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "twinpro.app",
+              "pathPrefix": "/@"
+            },
+            {
+              "scheme": "https",
+              "host": "twinpro.app",
+              "pathPrefix": "/user/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",

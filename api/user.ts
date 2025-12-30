@@ -117,6 +117,7 @@ export interface User {
     category?: CategoryType | null;
     specialties?: string[];
     bio?: string | null;
+    username?: string | null;  // Para QR code URL: twinpro.app/@username
 
     // Contacto profesional
     professionalEmail?: string | null;
