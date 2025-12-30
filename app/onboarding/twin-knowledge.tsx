@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -69,6 +69,12 @@ function buildContextPrompt(user: any): string {
         parts.push(user.bio);
     }
 
+    // Objective - what the twin should achieve
+    const objective = user?.digitalTwin?.behavior?.objective;
+    if (objective) {
+        parts.push(`Tu objetivo principal es: ${objective}`);
+    }
+
     // Behavior settings
     const behavior = user?.digitalTwin?.behavior;
     if (behavior) {
@@ -130,6 +136,27 @@ export default function TwinKnowledgeScreen() {
     const [trainingProgress] = useState(5); // 5% por defecto
     const [isLoading, setIsLoading] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+
+    // Load previous knowledge configuration from user data on mount
+    useEffect(() => {
+        const knowledgeLinks = user?.digitalTwin?.knowledge?.links;
+
+        if (knowledgeLinks) {
+            // Update categories with saved URLs
+            setCategories(prev => prev.map(cat => {
+                const savedUrl = (knowledgeLinks as any)[cat.id];
+                if (savedUrl) {
+                    return { ...cat, url: savedUrl };
+                }
+                return cat;
+            }));
+
+            // Load "other" URL if present
+            if (knowledgeLinks.other) {
+                setOtherUrl(knowledgeLinks.other);
+            }
+        }
+    }, [user]);
 
     function handleBack() {
         router.back();

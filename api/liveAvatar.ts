@@ -41,6 +41,132 @@ export interface PublicAvatar {
     created_at?: string;
 }
 
+// ========================
+// CUSTOM AVATAR CREATION
+// ========================
+
+export interface CreateAvatarRequest {
+    training_video_url?: string; // URL from S3/Drive/etc
+    name?: string;
+}
+
+export interface CreateAvatarResponse {
+    id: string;
+    name?: string;
+    status: 'processing' | 'ready' | 'failed' | 'pending';
+    preview_url?: string;
+    created_at?: string;
+}
+
+export interface VideoUploadResponse {
+    upload_url: string;
+    video_id: string;
+}
+
+/**
+ * Create a custom avatar from a training video
+ * The video should be at least 2 minutes with structure:
+ * - 15s listening
+ * - 90s speaking naturally
+ * - 90s speaking naturally 
+ * - 15s active waiting
+ */
+export async function createCustomAvatar(
+    videoUrl: string,
+    name?: string
+): Promise<CreateAvatarResponse> {
+    const requestBody: CreateAvatarRequest = {
+        training_video_url: videoUrl,
+        name: name || `Custom Avatar ${new Date().toISOString()}`,
+    };
+
+    console.log("Creating custom avatar:", requestBody);
+
+    const response = await fetch(`${LIVEAVATAR_API_URL}/avatars`, {
+        method: "POST",
+        headers: {
+            "X-API-KEY": LIVEAVATAR_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("LiveAvatar create avatar error:", error);
+        let errorMessage = error.message || `Error creating avatar: ${response.status}`;
+        if (error.data && Array.isArray(error.data)) {
+            errorMessage = error.data.map((e: any) => e.message).join(', ');
+        }
+        throw new Error(errorMessage);
+    }
+
+    const responseData = await response.json();
+    console.log("LiveAvatar create avatar response:", responseData);
+
+    // API returns { code: 1000, data: {...}, message }
+    if (responseData.data) {
+        return responseData.data;
+    }
+    return responseData;
+}
+
+/**
+ * Upload a video file to LiveAvatar for avatar training
+ * Returns a video URL that can be used with createCustomAvatar
+ */
+export async function uploadTrainingVideo(
+    videoUri: string,
+    mimeType: string = "video/mp4"
+): Promise<string> {
+    // Create form data with the video file
+    const formData = new FormData();
+
+    // For React Native, we need to construct the file object properly
+    const filename = videoUri.split('/').pop() || 'training_video.mp4';
+    formData.append('file', {
+        uri: videoUri,
+        type: mimeType,
+        name: filename,
+    } as any);
+
+    console.log("Uploading training video:", { uri: videoUri, filename, mimeType });
+
+    const response = await fetch(`${LIVEAVATAR_API_URL}/avatars/upload-video`, {
+        method: "POST",
+        headers: {
+            "X-API-KEY": LIVEAVATAR_API_KEY,
+            "Accept": "application/json",
+            // Don't set Content-Type - let fetch set it with boundary for multipart
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("LiveAvatar video upload error:", error);
+        throw new Error(error.message || `Error uploading video: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log("LiveAvatar video upload response:", responseData);
+
+    // Return the video URL for use with createCustomAvatar
+    if (responseData.data?.url) {
+        return responseData.data.url;
+    }
+    if (responseData.url) {
+        return responseData.url;
+    }
+    // If API returns the video ID, construct URL
+    if (responseData.data?.video_id) {
+        return responseData.data.video_id;
+    }
+
+    throw new Error("No video URL returned from upload");
+}
+
 /**
  * Get list of public avatars from LiveAvatar catalog
  */
@@ -131,6 +257,40 @@ export async function getPublicVoices(): Promise<PublicVoice[]> {
     } catch (error) {
         console.error("Error fetching public voices:", error);
         return [];
+    }
+}
+
+/**
+ * Get a specific voice by ID including preview URL
+ * API: GET /v1/voices/{voice_id}
+ */
+export async function getVoiceById(voiceId: string): Promise<PublicVoice | null> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/voices/${voiceId}`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar get voice error:", error);
+            return null;
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar voice details:", responseData);
+
+        // API returns { code: 1000, data: {...}, message }
+        if (responseData.data) {
+            return responseData.data;
+        }
+        return responseData;
+    } catch (error) {
+        console.error("Error fetching voice by ID:", error);
+        return null;
     }
 }
 
@@ -230,7 +390,7 @@ export async function updateContext(
         console.log("Updating LiveAvatar context:", contextId, requestBody);
 
         const response = await fetch(`${LIVEAVATAR_API_URL}/contexts/${contextId}`, {
-            method: "PUT",
+            method: "PATCH",
             headers: {
                 "X-API-KEY": LIVEAVATAR_API_KEY,
                 "Accept": "application/json",

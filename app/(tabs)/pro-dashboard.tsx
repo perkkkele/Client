@@ -345,8 +345,8 @@ export default function ProDashboardScreen() {
                                 <Text style={styles.appointmentsLabel}>Agendar Citas</Text>
                                 <Text style={styles.appointmentsHint}>
                                     {user?.appointmentsEnabled
-                                        ? `${user?.appointmentHours?.start || "09:00"} - ${user?.appointmentHours?.end || "18:00"}`
-                                        : "Desactivado"
+                                        ? "Los clientes pueden reservar citas contigo"
+                                        : "Activa para que los clientes reserven citas"
                                     }
                                 </Text>
                             </View>

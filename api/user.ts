@@ -44,6 +44,7 @@ export interface DigitalTwinBehavior {
     formality?: number; // 0-2
     depth?: number;     // 0-2
     tone?: number;      // 0-2
+    objective?: string | null;  // Objetivo general del gemelo digital
 }
 
 export interface DigitalTwinGuardrails {

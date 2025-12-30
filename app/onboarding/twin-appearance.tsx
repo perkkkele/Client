@@ -15,9 +15,21 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
-import { PublicAvatar, PublicVoice } from "../../api/liveAvatar";
+import { PublicAvatar, PublicVoice, CreateAvatarResponse } from "../../api/liveAvatar";
+
+// Video requirements constants
+const VIDEO_REQUIREMENTS = {
+    minDurationSeconds: 120, // 2 minutes
+    structure: {
+        listeningSeconds: 15,
+        speaking1Seconds: 90,
+        speaking2Seconds: 90,
+        waitingSeconds: 15,
+    },
+};
 
 // Dynamic import for expo-av (may not be available in Expo Go)
 let Audio: any = null;
@@ -26,6 +38,17 @@ try {
 } catch (e) {
     console.log("expo-av not available, voice preview disabled");
 }
+
+// Dynamic import for expo-speech (TTS fallback)
+let Speech: any = null;
+try {
+    Speech = require("expo-speech");
+} catch (e) {
+    console.log("expo-speech not available, TTS preview disabled");
+}
+
+// Sample text for voice preview when no audio sample is available
+const VOICE_PREVIEW_TEXT = "Hola, soy tu asistente virtual. Estoy aquí para ayudarte con cualquier consulta profesional.";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -61,8 +84,13 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 
 export default function TwinAppearanceScreen() {
     const { user, token, refreshUser } = useAuth();
-    const [videoType, setVideoType] = useState<"predefined" | "trained">("trained");
-    const [voiceType, setVoiceType] = useState<"standard" | "cloned">("cloned");
+    // Inicializar con valores guardados del usuario o defaults sensatos
+    const [videoType, setVideoType] = useState<"predefined" | "trained">(
+        user?.digitalTwin?.appearance?.videoType || "predefined"
+    );
+    const [voiceType, setVoiceType] = useState<"standard" | "cloned">(
+        user?.digitalTwin?.appearance?.voiceType || "standard"
+    );
     const [isLoading, setIsLoading] = useState(false);
 
     // Avatar catalog state
@@ -81,7 +109,51 @@ export default function TwinAppearanceScreen() {
     const soundRef = useRef<any>(null);
     const previewSoundRef = useRef<any>(null);
 
-    const avatarUrl = selectedAvatar?.preview_url || getAvatarUrl(user?.avatar);
+    // Video upload modal state
+    const [showVideoModal, setShowVideoModal] = useState(false);
+    const [uploadingVideo, setUploadingVideo] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<string>("");
+    const [customAvatarStatus, setCustomAvatarStatus] = useState<CreateAvatarResponse | null>(null);
+
+    // Help modal state
+    const [showHelpModal, setShowHelpModal] = useState(false);
+
+    // Priorizar: avatar seleccionado en sesión > avatar guardado previamente > foto de usuario
+    const avatarUrl = selectedAvatar?.preview_url
+        || user?.digitalTwin?.appearance?.liveAvatarPreview
+        || getAvatarUrl(user?.avatar);
+
+    // Load previous selections from user data on mount
+    useEffect(() => {
+        const appearance = user?.digitalTwin?.appearance;
+        if (appearance) {
+            // Restore video type
+            if (appearance.videoType) {
+                setVideoType(appearance.videoType);
+            }
+            // Restore voice type  
+            if (appearance.voiceType) {
+                setVoiceType(appearance.voiceType);
+            }
+            // Restore selected avatar
+            if (appearance.liveAvatarId && !selectedAvatar) {
+                setSelectedAvatar({
+                    id: appearance.liveAvatarId,
+                    name: appearance.liveAvatarName || "Avatar",
+                    preview_url: appearance.liveAvatarPreview || "",
+                });
+            }
+            // Restore selected voice
+            if (appearance.liveVoiceId && !selectedVoice) {
+                setSelectedVoice({
+                    id: appearance.liveVoiceId,
+                    name: appearance.liveVoiceName || "Voz",
+                    gender: appearance.liveVoiceGender || undefined,
+                    language: appearance.liveVoiceLanguage || "es",
+                });
+            }
+        }
+    }, [user]);
 
     // Load public avatars when modal opens
     useEffect(() => {
@@ -141,8 +213,23 @@ export default function TwinAppearanceScreen() {
             return;
         }
 
-        const previewUrl = voice.preview_url || voice.sample_url;
+        let previewUrl = voice.preview_url || voice.sample_url;
+
+        // If no preview URL, try to fetch voice details from API
         if (!previewUrl) {
+            try {
+                setPlayingVoiceId(voice.id); // Show loading state
+                const voiceDetails = await liveAvatarApi.getVoiceById(voice.id);
+                if (voiceDetails) {
+                    previewUrl = voiceDetails.preview_url || voiceDetails.sample_url;
+                }
+            } catch (error) {
+                console.error("Error fetching voice details:", error);
+            }
+        }
+
+        if (!previewUrl) {
+            setPlayingVoiceId(null);
             Alert.alert("Sin muestra", "Esta voz no tiene una muestra de audio disponible");
             return;
         }
@@ -193,10 +280,48 @@ export default function TwinAppearanceScreen() {
             return;
         }
 
-        const previewUrl = selectedVoice.preview_url || selectedVoice.sample_url;
+        let previewUrl = selectedVoice.preview_url || selectedVoice.sample_url;
+
+        // If no preview URL, try to fetch voice details from API
         if (!previewUrl) {
-            Alert.alert("Sin muestra", "Esta voz no tiene una muestra de audio disponible");
-            return;
+            try {
+                setIsPreviewPlaying(true); // Show loading state
+                const voiceDetails = await liveAvatarApi.getVoiceById(selectedVoice.id);
+                if (voiceDetails) {
+                    previewUrl = voiceDetails.preview_url || voiceDetails.sample_url;
+                    // Update selectedVoice with the new preview URL for future plays
+                    if (previewUrl) {
+                        setSelectedVoice({ ...selectedVoice, preview_url: previewUrl });
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching voice details:", error);
+            }
+        }
+
+        // If still no preview URL, use TTS fallback
+        if (!previewUrl) {
+            if (Speech) {
+                setIsPreviewPlaying(true);
+                const language = selectedVoice.language?.toLowerCase().includes('en') ? 'en' : 'es';
+                const voiceGender = selectedVoice.gender?.toLowerCase();
+
+                Speech.speak(VOICE_PREVIEW_TEXT, {
+                    language: language === 'en' ? 'en-US' : 'es-ES',
+                    pitch: voiceGender === 'female' ? 1.1 : 0.9,
+                    rate: 0.9,
+                    onDone: () => setIsPreviewPlaying(false),
+                    onError: () => setIsPreviewPlaying(false),
+                });
+                return;
+            } else {
+                setIsPreviewPlaying(false);
+                Alert.alert(
+                    "Vista previa no disponible",
+                    "La muestra de voz no está disponible. Podrás escuchar la voz cuando actives tu gemelo digital."
+                );
+                return;
+            }
         }
 
         try {
@@ -245,9 +370,145 @@ export default function TwinAppearanceScreen() {
         setShowVoiceModal(true);
     }
 
+    // Handler for "Entrenar con Video" button - opens video upload modal
+    function handleSelectTrainedVideo() {
+        setVideoType("trained");
+        setShowVideoModal(true);
+    }
+
+    // Handler for voice cloning - show out of service message
+    function handleVoiceCloning() {
+        Alert.alert(
+            "Función No Disponible",
+            "La clonación de voz está temporalmente fuera de servicio. Por favor, utiliza una voz estándar del catálogo.",
+            [{ text: "Entendido", style: "default" }]
+        );
+    }
+
+    // Record video from camera
+    async function handleRecordFromCamera() {
+        try {
+            // Request camera permissions
+            const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+            const microphonePermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+            if (cameraPermission.status !== 'granted') {
+                Alert.alert(
+                    "Permiso Requerido",
+                    "Necesitamos acceso a la cámara para grabar tu video de entrenamiento."
+                );
+                return;
+            }
+
+            // Launch camera to record video
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: 'videos',
+                allowsEditing: true,
+                quality: 1,
+                videoMaxDuration: 300, // 5 minutes max
+            });
+
+            if (result.canceled || !result.assets || result.assets.length === 0) {
+                return;
+            }
+
+            const videoAsset = result.assets[0];
+            const durationSeconds = (videoAsset.duration || 0) / 1000;
+
+            // Validate minimum duration
+            if (durationSeconds < VIDEO_REQUIREMENTS.minDurationSeconds) {
+                Alert.alert(
+                    "Video Demasiado Corto",
+                    `El video debe tener al menos ${VIDEO_REQUIREMENTS.minDurationSeconds / 60} minutos de duración. Tu video tiene ${Math.floor(durationSeconds / 60)} minutos y ${Math.floor(durationSeconds % 60)} segundos.`,
+                    [{ text: "Reintentar", onPress: handleRecordFromCamera }]
+                );
+                return;
+            }
+
+            // Start upload process
+            await uploadVideoForAvatar(videoAsset.uri);
+        } catch (error: any) {
+            console.error("Error recording video:", error);
+            Alert.alert("Error", error.message || "No se pudo grabar el video");
+        }
+    }
+
+    // Upload video and create custom avatar
+    async function uploadVideoForAvatar(videoUri: string) {
+        setUploadingVideo(true);
+        setUploadProgress("Subiendo video...");
+        setShowVideoModal(false);
+
+        try {
+            // Upload the video
+            setUploadProgress("Subiendo video a la nube...");
+            const videoUrl = await liveAvatarApi.uploadTrainingVideo(videoUri);
+
+            // Create the custom avatar
+            setUploadProgress("Creando avatar personalizado...");
+            const userName = user?.firstname || "Usuario";
+            const avatarResponse = await liveAvatarApi.createCustomAvatar(
+                videoUrl,
+                `Avatar de ${userName}`
+            );
+
+            setCustomAvatarStatus(avatarResponse);
+            setUploadProgress("");
+
+            if (avatarResponse.status === 'processing' || avatarResponse.status === 'pending') {
+                Alert.alert(
+                    "¡Avatar en Proceso!",
+                    "Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.",
+                    [
+                        { text: "Continuar con Predefinido", onPress: () => setShowAvatarModal(true) },
+                        { text: "Esperar", style: "cancel" }
+                    ]
+                );
+            } else if (avatarResponse.status === 'ready') {
+                // Avatar is ready, update selection
+                setSelectedAvatar({
+                    id: avatarResponse.id,
+                    name: avatarResponse.name || `Avatar Personalizado`,
+                    preview_url: avatarResponse.preview_url || "",
+                });
+                Alert.alert("¡Éxito!", "Tu avatar personalizado ha sido creado correctamente.");
+            }
+        } catch (error: any) {
+            console.error("Error uploading video for avatar:", error);
+            Alert.alert(
+                "Error al Crear Avatar",
+                error.message || "No se pudo crear el avatar. Por favor, inténtalo de nuevo.",
+                [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
+            );
+        } finally {
+            setUploadingVideo(false);
+            setUploadProgress("");
+        }
+    }
+
+    // Handle Google Drive (coming soon)
+    function handleGoogleDrive() {
+        Alert.alert(
+            "Próximamente",
+            "La integración con Google Drive estará disponible pronto.",
+            [{ text: "Entendido" }]
+        );
+    }
+
+    // Handle AWS S3 (coming soon)
+    function handleAwsS3() {
+        Alert.alert(
+            "Próximamente",
+            "La integración con AWS S3 estará disponible pronto.",
+            [{ text: "Entendido" }]
+        );
+    }
+
     function handleAvatarSelect(avatar: PublicAvatar) {
         setSelectedAvatar(avatar);
         setVideoType("predefined"); // Auto-set to predefined when avatar is selected
+        // Auto-set voice to standard since predefined avatars come with standard voices
+        setVoiceType("standard");
         setShowAvatarModal(false);
     }
 
@@ -414,7 +675,7 @@ export default function TwinAppearanceScreen() {
                             <View style={styles.stepDot} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton}>
+                    <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelpModal(true)}>
                         <Text style={styles.helpText}>Ayuda</Text>
                     </TouchableOpacity>
                 </View>
@@ -444,14 +705,6 @@ export default function TwinAppearanceScreen() {
                         <View style={styles.previewDot} />
                         <Text style={styles.previewBadgeText}>VISTA PREVIA</Text>
                     </View>
-
-                    {/* Selected avatar name */}
-                    {selectedAvatar && (
-                        <View style={styles.selectedAvatarBadge}>
-                            <MaterialIcons name="face" size={14} color={COLORS.primaryDark} />
-                            <Text style={styles.selectedAvatarText}>{selectedAvatar.name}</Text>
-                        </View>
-                    )}
 
                     {/* Bottom controls */}
                     <View style={styles.previewBottom}>
@@ -523,7 +776,7 @@ export default function TwinAppearanceScreen() {
                                     styles.optionCard,
                                     videoType === "trained" && styles.optionCardSelected
                                 ]}
-                                onPress={() => setVideoType("trained")}
+                                onPress={handleSelectTrainedVideo}
                             >
                                 {videoType === "trained" && <View style={styles.activeDot} />}
                                 <View style={[styles.optionIcon, videoType === "trained" && styles.optionIconSelected]}>
@@ -563,7 +816,7 @@ export default function TwinAppearanceScreen() {
                                     styles.optionCard,
                                     voiceType === "cloned" && styles.optionCardSelectedPurple
                                 ]}
-                                onPress={() => setVoiceType("cloned")}
+                                onPress={handleVoiceCloning}
                             >
                                 {voiceType === "cloned" && (
                                     <View style={styles.engagementBadge}>
@@ -727,6 +980,209 @@ export default function TwinAppearanceScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Video Upload Modal */}
+            <Modal
+                visible={showVideoModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowVideoModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Crear Avatar Personalizado</Text>
+                                <Text style={styles.modalSubtitle}>Sube un video para entrenar tu avatar</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowVideoModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Video Requirements */}
+                        <View style={styles.videoRequirements}>
+                            <View style={styles.requirementHeader}>
+                                <MaterialIcons name="info" size={20} color={COLORS.accentBlue} />
+                                <Text style={styles.requirementTitle}>Requisitos del Video</Text>
+                            </View>
+                            <Text style={styles.requirementDuration}>⏱️ Duración mínima: 2 minutos</Text>
+                            <View style={styles.requirementList}>
+                                <Text style={styles.requirementItem}>• 15 segundos en estado de escucha</Text>
+                                <Text style={styles.requirementItem}>• 90 segundos hablando naturalmente</Text>
+                                <Text style={styles.requirementItem}>• 90 segundos hablando naturalmente</Text>
+                                <Text style={styles.requirementItem}>• 15 segundos en espera activa</Text>
+                            </View>
+                            <View style={styles.tipBox}>
+                                <MaterialIcons name="lightbulb" size={16} color={COLORS.primaryDark} />
+                                <Text style={styles.tipText}>Habla con posturas naturales, gestos suaves y ritmo pausado.</Text>
+                            </View>
+                        </View>
+
+                        {/* Upload Options */}
+                        <View style={styles.uploadOptions}>
+                            <Text style={styles.uploadOptionsTitle}>Selecciona una opción:</Text>
+
+                            {/* Camera Option */}
+                            <TouchableOpacity
+                                style={styles.uploadOption}
+                                onPress={handleRecordFromCamera}
+                            >
+                                <View style={[styles.uploadOptionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                                    <MaterialIcons name="videocam" size={28} color={COLORS.accentBlue} />
+                                </View>
+                                <View style={styles.uploadOptionContent}>
+                                    <Text style={styles.uploadOptionTitle}>Grabar Video</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>Usa la cámara de tu dispositivo</Text>
+                                </View>
+                                <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
+                            </TouchableOpacity>
+
+                            {/* Google Drive Option */}
+                            <TouchableOpacity
+                                style={[styles.uploadOption, styles.uploadOptionDisabled]}
+                                onPress={handleGoogleDrive}
+                            >
+                                <View style={[styles.uploadOptionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                                    <MaterialIcons name="cloud" size={28} color={COLORS.accentGreen} />
+                                </View>
+                                <View style={styles.uploadOptionContent}>
+                                    <Text style={styles.uploadOptionTitle}>Google Drive</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>Próximamente</Text>
+                                </View>
+                                <View style={styles.comingSoonBadge}>
+                                    <Text style={styles.comingSoonText}>PRONTO</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            {/* AWS S3 Option */}
+                            <TouchableOpacity
+                                style={[styles.uploadOption, styles.uploadOptionDisabled]}
+                                onPress={handleAwsS3}
+                            >
+                                <View style={[styles.uploadOptionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                                    <MaterialIcons name="storage" size={28} color={COLORS.accentPurple} />
+                                </View>
+                                <View style={styles.uploadOptionContent}>
+                                    <Text style={styles.uploadOptionTitle}>AWS S3</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>Próximamente</Text>
+                                </View>
+                                <View style={styles.comingSoonBadge}>
+                                    <Text style={styles.comingSoonText}>PRONTO</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Help Modal */}
+            <Modal
+                visible={showHelpModal}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowHelpModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Ayuda</Text>
+                                <Text style={styles.modalSubtitle}>Cómo configurar tu Gemelo Digital</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowHelpModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                            {/* Apariencia Section */}
+                            <View style={styles.helpSection}>
+                                <View style={styles.helpSectionHeader}>
+                                    <MaterialIcons name="face" size={24} color={COLORS.accentBlue} />
+                                    <Text style={styles.helpSectionTitle}>Apariencia del Avatar</Text>
+                                </View>
+                                <Text style={styles.helpModalText}>
+                                    Elige cómo se verá tu gemelo digital cuando hable con tus clientes:
+                                </Text>
+                                <View style={styles.helpBullet}>
+                                    <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
+                                    <Text style={styles.helpBulletText}>
+                                        <Text style={{ fontWeight: '700' }}>Avatar Predefinido:</Text> Selecciona uno de nuestros avatares profesionales del catálogo. Recomendado para comenzar rápidamente.
+                                    </Text>
+                                </View>
+                                <View style={styles.helpBullet}>
+                                    <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
+                                    <Text style={styles.helpBulletText}>
+                                        <Text style={{ fontWeight: '700' }}>Entrenar con Video:</Text> Sube un video de ti mismo de al menos 2 minutos para crear un avatar personalizado que se parezca a ti.
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Voz Section */}
+                            <View style={styles.helpSection}>
+                                <View style={styles.helpSectionHeader}>
+                                    <MaterialIcons name="graphic-eq" size={24} color={COLORS.accentPurple} />
+                                    <Text style={styles.helpSectionTitle}>Voz del Profesional</Text>
+                                </View>
+                                <Text style={styles.helpModalText}>
+                                    Define cómo sonará tu gemelo digital:
+                                </Text>
+                                <View style={styles.helpBullet}>
+                                    <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
+                                    <Text style={styles.helpBulletText}>
+                                        <Text style={{ fontWeight: '700' }}>Voz Estándar:</Text> Elige una voz profesional de nuestro catálogo. Hay opciones masculinas y femeninas en varios idiomas.
+                                    </Text>
+                                </View>
+                                <View style={styles.helpBullet}>
+                                    <MaterialIcons name="info" size={16} color={COLORS.gray400} />
+                                    <Text style={styles.helpBulletText}>
+                                        <Text style={{ fontWeight: '700' }}>Clonar mi Voz:</Text> Función próximamente disponible para crear una voz idéntica a la tuya.
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Tips Section */}
+                            <View style={[styles.helpSection, { backgroundColor: COLORS.primary + '20', borderRadius: 12, padding: 16 }]}>
+                                <View style={styles.helpSectionHeader}>
+                                    <MaterialIcons name="lightbulb" size={24} color={COLORS.primaryDark} />
+                                    <Text style={[styles.helpSectionTitle, { color: COLORS.primaryDark }]}>Consejos</Text>
+                                </View>
+                                <Text style={styles.helpModalText}>
+                                    • Los avatares predefinidos funcionan perfecto con voces estándar.{'\n'}
+                                    • Puedes cambiar la configuración en cualquier momento.{'\n'}
+                                    • Prueba el botón de play para escuchar la voz seleccionada.
+                                </Text>
+                            </View>
+                        </ScrollView>
+
+                        <TouchableOpacity
+                            style={[styles.continueButton, { marginTop: 16 }]}
+                            onPress={() => setShowHelpModal(false)}
+                        >
+                            <Text style={styles.continueButtonText}>Entendido</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Upload Progress Overlay */}
+            {uploadingVideo && (
+                <View style={styles.uploadOverlay}>
+                    <View style={styles.uploadCard}>
+                        <ActivityIndicator size="large" color={COLORS.primary} />
+                        <Text style={styles.uploadProgressText}>{uploadProgress}</Text>
+                        <Text style={styles.uploadHintText}>Por favor, no cierres la aplicación</Text>
+                    </View>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
@@ -1313,4 +1769,178 @@ const styles = StyleSheet.create({
         color: COLORS.gray400,
         marginTop: 2,
     },
+    // Video Upload Modal Styles
+    videoRequirements: {
+        backgroundColor: "rgba(59, 130, 246, 0.05)",
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: "rgba(59, 130, 246, 0.1)",
+    },
+    requirementHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    requirementTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.accentBlue,
+    },
+    requirementDuration: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.gray900,
+        marginBottom: 12,
+    },
+    requirementList: {
+        marginBottom: 12,
+    },
+    requirementItem: {
+        fontSize: 13,
+        color: COLORS.gray700,
+        marginBottom: 4,
+        paddingLeft: 8,
+    },
+    tipBox: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 8,
+        backgroundColor: "rgba(253, 224, 71, 0.15)",
+        padding: 12,
+        borderRadius: 8,
+    },
+    tipText: {
+        fontSize: 12,
+        color: COLORS.gray700,
+        flex: 1,
+        lineHeight: 18,
+    },
+    uploadOptions: {
+        gap: 12,
+    },
+    uploadOptionsTitle: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.gray500,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        marginBottom: 4,
+    },
+    uploadOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 16,
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    uploadOptionDisabled: {
+        opacity: 0.6,
+    },
+    uploadOptionIcon: {
+        width: 52,
+        height: 52,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 14,
+    },
+    uploadOptionContent: {
+        flex: 1,
+    },
+    uploadOptionTitle: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: COLORS.gray900,
+        marginBottom: 2,
+    },
+    uploadOptionSubtitle: {
+        fontSize: 13,
+        color: COLORS.gray500,
+    },
+    comingSoonBadge: {
+        backgroundColor: "rgba(234, 179, 8, 0.15)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    comingSoonText: {
+        fontSize: 9,
+        fontWeight: "bold",
+        color: COLORS.primaryDark,
+    },
+    uploadOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    uploadCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        padding: 32,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 10,
+        minWidth: 260,
+    },
+    uploadProgressText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.gray900,
+        marginTop: 16,
+        textAlign: "center",
+    },
+    uploadHintText: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        marginTop: 8,
+        textAlign: "center",
+    },
+    // Help modal styles
+    helpSection: {
+        marginBottom: 20,
+    },
+    helpSectionHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        marginBottom: 10,
+    },
+    helpSectionTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.gray900,
+    },
+    helpModalText: {
+        fontSize: 14,
+        color: COLORS.gray700,
+        lineHeight: 22,
+        marginBottom: 10,
+    },
+    helpBullet: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 10,
+        marginVertical: 6,
+        paddingRight: 8,
+    },
+    helpBulletText: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.gray700,
+        lineHeight: 20,
+    },
 });
+

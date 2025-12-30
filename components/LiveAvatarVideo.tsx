@@ -40,15 +40,21 @@ try {
             console.log('Available audio outputs:', outputs);
         }).catch(() => { });
 
-        // Configure for media playback with speaker
+        // Configure for communication mode with speaker output for better volume
         AudioSession.configureAudio({
             android: {
-                audioMode: 'normal',
+                audioMode: 'communication',  // Better volume for voice
                 audioFocusMode: 'gain',
-                audioAttributesUsage: 'media',
+                audioAttributesUsage: 'voiceCommunication',
                 audioAttributesContentType: 'speech',
+                preferredOutputList: ['speaker'],  // Force speaker output
             },
-        }).catch(() => { });
+            ios: {
+                defaultOutput: 'speaker',  // Force speaker on iOS
+            },
+        }).catch((e: any) => {
+            console.log('AudioSession configure error:', e);
+        });
 
         AudioSession.startAudioSession().catch(() => { });
     }

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -110,7 +110,7 @@ const segmentStyles = StyleSheet.create({
 });
 
 export default function TwinBehaviorScreen() {
-    const { token, refreshUser } = useAuth();
+    const { token, refreshUser, user } = useAuth();
     const [formality, setFormality] = useState(1);
     const [depth, setDepth] = useState(1);
     const [tone, setTone] = useState(0);
@@ -129,7 +129,44 @@ export default function TwinBehaviorScreen() {
     ]);
     const [newRestricted, setNewRestricted] = useState("");
 
+    const [objective, setObjective] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    // Load previous configuration from user data on mount
+    useEffect(() => {
+        const behavior = user?.digitalTwin?.behavior;
+        const guardrails = user?.digitalTwin?.guardrails;
+
+        if (behavior) {
+            if (behavior.formality !== undefined) setFormality(behavior.formality);
+            if (behavior.depth !== undefined) setDepth(behavior.depth);
+            if (behavior.tone !== undefined) setTone(behavior.tone);
+            if (behavior.objective) setObjective(behavior.objective);
+        }
+
+        if (guardrails) {
+            // Load allowed actions if user has saved them
+            if (guardrails.allowed && guardrails.allowed.length > 0) {
+                setAllowedActions(
+                    guardrails.allowed.map((text, index) => ({
+                        id: `saved-allowed-${index}`,
+                        text,
+                        enabled: true
+                    }))
+                );
+            }
+            // Load restricted actions if user has saved them
+            if (guardrails.restricted && guardrails.restricted.length > 0) {
+                setRestrictedActions(
+                    guardrails.restricted.map((text, index) => ({
+                        id: `saved-restricted-${index}`,
+                        text,
+                        enabled: true
+                    }))
+                );
+            }
+        }
+    }, [user]);
 
     function handleBack() {
         router.back();
@@ -166,7 +203,8 @@ export default function TwinBehaviorScreen() {
                         behavior: {
                             formality,
                             depth,
-                            tone
+                            tone,
+                            objective
                         },
                         guardrails: {
                             allowed: allowedActions.map(a => a.text),
@@ -218,6 +256,27 @@ export default function TwinBehaviorScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                {/* Objetivo del Gemelo */}
+                <View style={styles.card}>
+                    <View style={styles.cardHeader}>
+                        <MaterialIcons name="flag" size={20} color={COLORS.accentGreen} />
+                        <Text style={styles.cardTitle}>Objetivo del Gemelo</Text>
+                    </View>
+                    <Text style={styles.objectiveDescription}>
+                        Define el propósito principal de tu gemelo digital. ¿Qué quieres que logre por ti?
+                    </Text>
+                    <TextInput
+                        style={styles.objectiveInput}
+                        placeholder="Ej: Atender consultas de clientes, agendar citas, responder preguntas frecuentes sobre mis servicios..."
+                        placeholderTextColor={COLORS.gray400}
+                        value={objective}
+                        onChangeText={setObjective}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                    />
+                </View>
+
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <MaterialIcons name="tune" size={20} color={COLORS.primary} />
@@ -487,6 +546,22 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: COLORS.gray500,
         marginBottom: 8,
+    },
+    objectiveDescription: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        marginBottom: 12,
+        lineHeight: 18,
+    },
+    objectiveInput: {
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 14,
+        color: COLORS.textMain,
+        minHeight: 100,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
     },
     rulesSection: {
         marginBottom: 16,
