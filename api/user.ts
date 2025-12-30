@@ -145,6 +145,7 @@ export interface User {
         start?: string;
         end?: string;
     };
+    autoConfirmAppointments?: boolean;
 
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
@@ -189,6 +190,7 @@ export interface UserUpdateData {
         start?: string;
         end?: string;
     };
+    autoConfirmAppointments?: boolean;
 
     // Gemelo Digital
     digitalTwin?: DigitalTwin;

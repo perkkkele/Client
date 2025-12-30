@@ -44,7 +44,10 @@ export async function createCheckoutSession(
     token: string,
     appointmentId: string
 ): Promise<PaymentSession> {
-    const response = await fetch(`${API_URL}/payment/checkout/${appointmentId}`, {
+    const url = `${API_URL}/payment/checkout/${appointmentId}`;
+    console.log('[Payment] POST', url);
+
+    const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -53,8 +56,14 @@ export async function createCheckoutSession(
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create checkout session');
+        const errorText = await response.text();
+        console.error('[Payment] Server error response:', errorText);
+        try {
+            const error = JSON.parse(errorText);
+            throw new Error(error.message || error.error || 'Failed to create checkout session');
+        } catch (parseError) {
+            throw new Error(`Server error (${response.status}): ${errorText.substring(0, 200)}`);
+        }
     }
 
     return response.json();
@@ -157,10 +166,38 @@ export function formatPrice(cents: number, currency: string = 'EUR'): string {
     }
 }
 
+/**
+ * Confirm payment success after returning from Stripe
+ * This is a fallback for local dev where webhooks don't work
+ * @param token - Auth token
+ * @param appointmentId - The appointment ID that was paid
+ */
+export async function confirmPaymentSuccess(
+    token: string,
+    appointmentId: string
+): Promise<{ success: boolean; appointment: { status: string; paymentStatus: string } }> {
+    const response = await fetch(`${API_URL}/payment/confirm/${appointmentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to confirm payment');
+    }
+
+    return response.json();
+}
+
 export default {
     createCheckoutSession,
     initiatePayment,
     getPaymentHistory,
     requestRefund,
     formatPrice,
+    confirmPaymentSuccess,
 };
+

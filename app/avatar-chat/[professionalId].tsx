@@ -441,7 +441,7 @@ export default function AvatarChatScreen() {
             // Save all messages to the chat
             for (const msg of conversationMessages) {
                 const isFromBot = !msg.isUser;
-                await chatMessageApi.sendTextMessage(token, newChat._id, msg.content, isFromBot);
+                await chatMessageApi.sendTextMessage(token, newChat._id, msg.content || '', isFromBot);
             }
 
             console.log('[saveCurrentConversation] All messages saved successfully');
@@ -802,7 +802,14 @@ export default function AvatarChatScreen() {
 
         setBookingAppointment(true);
         try {
-            await appointmentApi.createAppointment(token, professionalId, selectedDate, selectedTime);
+            await appointmentApi.createAppointment(token, {
+                professionalId,
+                date: selectedDate,
+                time: selectedTime,
+                type: 'presencial',
+                serviceType: '30min',
+                price: 0, // Default price, can be configured in professional settings
+            });
             // Show success and close bubble
             setActiveInfoBubble(null);
             setSelectedDate("");

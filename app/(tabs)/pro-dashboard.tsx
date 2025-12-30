@@ -126,6 +126,19 @@ export default function ProDashboardScreen() {
         }
     }
 
+    async function handleToggleAutoConfirm(value: boolean) {
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                autoConfirmAppointments: value,
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error toggling auto-confirm:", error);
+        }
+    }
+
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         setTimeout(() => setRefreshing(false), 1000);
@@ -345,6 +358,39 @@ export default function ProDashboardScreen() {
                                 ios_backgroundColor="rgba(0,0,0,0.3)"
                             />
                         </View>
+
+                        {/* Auto-Confirm Toggle - Only visible when appointments enabled */}
+                        {user?.appointmentsEnabled && (
+                            <View style={styles.appointmentsRow}>
+                                <View style={[styles.appointmentsIconBox, {
+                                    backgroundColor: user?.autoConfirmAppointments !== false
+                                        ? COLORS.green500
+                                        : COLORS.orange600
+                                }]}>
+                                    <MaterialIcons
+                                        name={user?.autoConfirmAppointments !== false ? "check-circle" : "schedule"}
+                                        size={22}
+                                        color="#FFFFFF"
+                                    />
+                                </View>
+                                <View style={styles.appointmentsInfo}>
+                                    <Text style={styles.appointmentsLabel}>Confirmación automática</Text>
+                                    <Text style={styles.appointmentsHint}>
+                                        {user?.autoConfirmAppointments !== false
+                                            ? "Citas se confirman al instante"
+                                            : "Requiere confirmación manual"
+                                        }
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={user?.autoConfirmAppointments !== false}
+                                    onValueChange={handleToggleAutoConfirm}
+                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
+                                    thumbColor="#FFFFFF"
+                                    ios_backgroundColor="rgba(0,0,0,0.3)"
+                                />
+                            </View>
+                        )}
                     </View>
                 </View>
 

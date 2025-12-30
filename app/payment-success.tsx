@@ -1,7 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "../context";
+import { confirmPaymentSuccess } from "../api/payment";
 
 const COLORS = {
     primary: "#137fec",
@@ -17,6 +20,33 @@ const COLORS = {
 
 export default function PaymentSuccessScreen() {
     const { appointmentId } = useLocalSearchParams<{ appointmentId?: string }>();
+    const { token } = useAuth();
+    const [isConfirming, setIsConfirming] = useState(true);
+    const [confirmed, setConfirmed] = useState(false);
+
+    // Confirm payment on mount
+    useEffect(() => {
+        async function confirmPayment() {
+            if (!token || !appointmentId) {
+                setIsConfirming(false);
+                return;
+            }
+
+            try {
+                console.log("[PaymentSuccess] Confirming payment for:", appointmentId);
+                await confirmPaymentSuccess(token, appointmentId);
+                console.log("[PaymentSuccess] Payment confirmed successfully");
+                setConfirmed(true);
+            } catch (error) {
+                console.error("[PaymentSuccess] Error confirming payment:", error);
+                // Don't block the user, just log the error
+            } finally {
+                setIsConfirming(false);
+            }
+        }
+
+        confirmPayment();
+    }, [token, appointmentId]);
 
     const handleViewAppointment = () => {
         if (appointmentId) {
@@ -36,36 +66,49 @@ export default function PaymentSuccessScreen() {
                 {/* Success Icon */}
                 <View style={styles.iconContainer}>
                     <View style={styles.iconCircle}>
-                        <MaterialIcons name="check" size={64} color={COLORS.green700} />
+                        {isConfirming ? (
+                            <ActivityIndicator size="large" color={COLORS.green700} />
+                        ) : (
+                            <MaterialIcons name="check" size={64} color={COLORS.green700} />
+                        )}
                     </View>
                 </View>
 
                 {/* Title and Message */}
-                <Text style={styles.title}>¡Pago Completado!</Text>
+                <Text style={styles.title}>
+                    {isConfirming ? "Confirmando Pago..." : "¡Pago Completado!"}
+                </Text>
                 <Text style={styles.message}>
-                    Tu cita ha sido confirmada y el pago se ha procesado correctamente.
+                    {isConfirming
+                        ? "Por favor espera mientras confirmamos tu pago."
+                        : "Tu cita ha sido confirmada y el pago se ha procesado correctamente."
+                    }
                 </Text>
-                <Text style={styles.subMessage}>
-                    Recibirás una notificación como recordatorio antes de tu cita.
-                </Text>
+                {!isConfirming && (
+                    <Text style={styles.subMessage}>
+                        Recibirás una notificación como recordatorio antes de tu cita.
+                    </Text>
+                )}
 
-                {/* Buttons */}
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={styles.primaryButton}
-                        onPress={handleViewAppointment}
-                    >
-                        <MaterialIcons name="event" size={20} color={COLORS.white} />
-                        <Text style={styles.primaryButtonText}>Ver Cita</Text>
-                    </TouchableOpacity>
+                {/* Buttons - Only show when not confirming */}
+                {!isConfirming && (
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={handleViewAppointment}
+                        >
+                            <MaterialIcons name="event" size={20} color={COLORS.white} />
+                            <Text style={styles.primaryButtonText}>Ver Cita</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.secondaryButton}
-                        onPress={handleGoHome}
-                    >
-                        <Text style={styles.secondaryButtonText}>Ir al Inicio</Text>
-                    </TouchableOpacity>
-                </View>
+                        <TouchableOpacity
+                            style={styles.secondaryButton}
+                            onPress={handleGoHome}
+                        >
+                            <Text style={styles.secondaryButtonText}>Ir al Inicio</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
         </SafeAreaView>
     );

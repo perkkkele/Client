@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useState, useCallback } from "react";
 import {
     Image,
     ScrollView,
@@ -7,11 +7,16 @@ import {
     Text,
     TouchableOpacity,
     View,
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { API_HOST, API_PORT } from "../../api";
+import * as appointmentApi from "../../api/appointment";
+import { Appointment } from "../../api/appointment";
 
 const COLORS = {
     primary: "#137fec",
@@ -37,6 +42,9 @@ const COLORS = {
     purple600: "#9333ea",
     blue100: "#dbeafe",
     blue600: "#2563eb",
+    red50: "#fef2f2",
+    red500: "#ef4444",
+    red700: "#b91c1c",
 };
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
@@ -45,100 +53,198 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
     return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
 }
 
-interface Appointment {
-    id: string;
-    time: string;
-    period: string;
-    clientName: string;
-    clientInitials?: string;
-    clientAvatar?: string;
-    service: string;
-    duration: string;
-    status: "confirmed" | "pending" | "cancelled";
-    bgColor?: string;
-    textColor?: string;
+function formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (date.toDateString() === today.toDateString()) {
+        return "Hoy";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+        return "Mañana";
+    } else {
+        return date.toLocaleDateString("es-ES", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+        });
+    }
 }
 
-interface DayData {
-    day: string;
-    date: number;
-    isSelected?: boolean;
-    hasAppointments?: boolean;
+function getClientInitials(client: Appointment["client"]): string {
+    const first = client.firstname?.charAt(0) || "";
+    const last = client.lastname?.charAt(0) || "";
+    return (first + last).toUpperCase() || "?";
 }
 
-const WEEK_DAYS: DayData[] = [
-    { day: "Lun", date: 11 },
-    { day: "Mar", date: 12, hasAppointments: true },
-    { day: "Mié", date: 13, isSelected: true, hasAppointments: true },
-    { day: "Jue", date: 14, hasAppointments: true },
-    { day: "Vie", date: 15, hasAppointments: true },
-];
+function getStatusStyle(status: Appointment["status"]) {
+    switch (status) {
+        case "confirmed":
+            return { bg: COLORS.green50, text: COLORS.green700, border: COLORS.green100, indicator: COLORS.green500 };
+        case "pending":
+            return { bg: COLORS.orange50, text: COLORS.orange700, border: COLORS.orange100, indicator: COLORS.orange400 };
+        case "cancelled":
+            return { bg: COLORS.gray200, text: COLORS.gray500, border: COLORS.gray300, indicator: COLORS.gray400 };
+        case "completed":
+            return { bg: COLORS.blue100, text: COLORS.blue600, border: COLORS.blue100, indicator: COLORS.blue600 };
+        default:
+            return { bg: COLORS.gray200, text: COLORS.gray500, border: COLORS.gray300, indicator: COLORS.gray400 };
+    }
+}
 
-const MOCK_APPOINTMENTS: Appointment[] = [
-    {
-        id: "1",
-        time: "09:30",
-        period: "AM",
-        clientName: "María González",
-        clientAvatar: "https://i.pravatar.cc/100?img=1",
-        service: "Terapia de Pareja",
-        duration: "1h",
-        status: "confirmed",
-    },
-    {
-        id: "2",
-        time: "11:00",
-        period: "AM",
-        clientName: "Carlos Ruiz",
-        clientInitials: "CR",
-        service: "Consulta Inicial",
-        duration: "45m",
-        status: "pending",
-        bgColor: COLORS.blue100,
-        textColor: COLORS.blue600,
-    },
-    {
-        id: "3",
-        time: "15:30",
-        period: "PM",
-        clientName: "Laura Sánchez",
-        clientInitials: "LS",
-        service: "Seguimiento",
-        duration: "30m",
-        status: "cancelled",
-        bgColor: COLORS.purple100,
-        textColor: COLORS.purple600,
-    },
-];
+function getStatusLabel(status: Appointment["status"]) {
+    switch (status) {
+        case "confirmed": return "Confirmada";
+        case "pending": return "Pendiente";
+        case "cancelled": return "Cancelada";
+        case "completed": return "Completada";
+        default: return status;
+    }
+}
+
+function getPaymentStatusLabel(status: string | undefined) {
+    switch (status) {
+        case "paid": return "Pagada";
+        case "pending": return "Pago pendiente";
+        case "failed": return "Pago fallido";
+        case "refunded": return "Reembolsada";
+        default: return "";
+    }
+}
 
 export default function ManageAppointmentsScreen() {
-    const { user } = useAuth();
-    const [selectedDay, setSelectedDay] = useState(13);
+    const { user, token } = useAuth();
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
+
+    const loadAppointments = useCallback(async () => {
+        if (!token) return;
+
+        try {
+            const data = await appointmentApi.getAppointments(token, "professional");
+            // Sort by date and time (upcoming first)
+            const sorted = data.sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.time}`);
+                const dateB = new Date(`${b.date}T${b.time}`);
+                return dateA.getTime() - dateB.getTime();
+            });
+            setAppointments(sorted);
+        } catch (error: any) {
+            console.error("[ManageAppointments] Error loading:", error);
+            Alert.alert("Error", "No se pudieron cargar las citas");
+        } finally {
+            setIsLoading(false);
+            setRefreshing(false);
+        }
+    }, [token]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadAppointments();
+        }, [loadAppointments])
+    );
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        loadAppointments();
+    };
+
+    const handleConfirm = async (appointmentId: string) => {
+        if (!token) return;
+
+        Alert.alert(
+            "Confirmar Cita",
+            "¿Estás seguro de que quieres confirmar esta cita?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Confirmar",
+                    onPress: async () => {
+                        setActionLoading(appointmentId);
+                        try {
+                            await appointmentApi.confirmAppointment(token, appointmentId);
+                            // Update local state
+                            setAppointments(prev =>
+                                prev.map(apt =>
+                                    apt._id === appointmentId
+                                        ? { ...apt, status: "confirmed", confirmedAt: new Date().toISOString() }
+                                        : apt
+                                )
+                            );
+                            Alert.alert("Éxito", "Cita confirmada correctamente");
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "No se pudo confirmar la cita");
+                        } finally {
+                            setActionLoading(null);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleCancel = async (appointmentId: string) => {
+        if (!token) return;
+
+        Alert.alert(
+            "Cancelar Cita",
+            "¿Estás seguro de que quieres cancelar esta cita? Esta acción no se puede deshacer.",
+            [
+                { text: "No", style: "cancel" },
+                {
+                    text: "Sí, cancelar",
+                    style: "destructive",
+                    onPress: async () => {
+                        setActionLoading(appointmentId);
+                        try {
+                            await appointmentApi.cancelAppointment(token, appointmentId);
+                            setAppointments(prev =>
+                                prev.map(apt =>
+                                    apt._id === appointmentId
+                                        ? { ...apt, status: "cancelled", cancelledAt: new Date().toISOString() }
+                                        : apt
+                                )
+                            );
+                            Alert.alert("Cita cancelada", "La cita ha sido cancelada");
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "No se pudo cancelar la cita");
+                        } finally {
+                            setActionLoading(null);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleViewDetails = (appointmentId: string) => {
+        router.push(`/appointment-details/${appointmentId}` as any);
+    };
 
     function handleBack() {
         router.back();
     }
 
-    function getStatusStyle(status: Appointment["status"]) {
-        switch (status) {
-            case "confirmed":
-                return { bg: COLORS.green50, text: COLORS.green700, border: COLORS.green100, indicator: COLORS.green500 };
-            case "pending":
-                return { bg: COLORS.orange50, text: COLORS.orange700, border: COLORS.orange100, indicator: COLORS.orange400 };
-            case "cancelled":
-                return { bg: COLORS.gray200, text: COLORS.gray500, border: COLORS.gray300, indicator: COLORS.gray400 };
+    // Group appointments by date
+    const groupedAppointments = appointments.reduce((acc, apt) => {
+        const dateKey = apt.date;
+        if (!acc[dateKey]) {
+            acc[dateKey] = [];
         }
-    }
+        acc[dateKey].push(apt);
+        return acc;
+    }, {} as Record<string, Appointment[]>);
 
-    function getStatusLabel(status: Appointment["status"]) {
-        switch (status) {
-            case "confirmed": return "Confirmada";
-            case "pending": return "Pendiente";
-            case "cancelled": return "Cancelada";
-        }
-    }
+    const pendingCount = appointments.filter(a => a.status === "pending").length;
+    const todayCount = appointments.filter(a => {
+        const today = new Date().toISOString().split("T")[0];
+        return a.date === today && a.status !== "cancelled";
+    }).length;
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
@@ -160,176 +266,193 @@ export default function ManageAppointmentsScreen() {
                 </View>
             </View>
 
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {/* Calendar Section */}
-                <View style={styles.calendarSection}>
-                    <View style={styles.monthSelector}>
-                        <TouchableOpacity>
-                            <MaterialIcons name="chevron-left" size={24} color={COLORS.gray500} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.monthButton}>
-                            <Text style={styles.monthText}>Septiembre 2023</Text>
-                            <MaterialIcons name="arrow-drop-down" size={20} color={COLORS.textMain} />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <MaterialIcons name="chevron-right" size={24} color={COLORS.gray500} />
-                        </TouchableOpacity>
+            {/* Stats Summary */}
+            <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                    <View style={[styles.statIcon, { backgroundColor: COLORS.orange50 }]}>
+                        <MaterialIcons name="pending-actions" size={24} color={COLORS.orange500} />
                     </View>
-
-                    <View style={styles.weekDays}>
-                        {WEEK_DAYS.map((item) => (
-                            <TouchableOpacity
-                                key={item.date}
-                                style={[
-                                    styles.dayItem,
-                                    item.isSelected && styles.dayItemSelected
-                                ]}
-                                onPress={() => setSelectedDay(item.date)}
-                            >
-                                <Text style={[
-                                    styles.dayLabel,
-                                    item.isSelected && styles.dayLabelSelected
-                                ]}>
-                                    {item.day}
-                                </Text>
-                                <Text style={[
-                                    styles.dayNumber,
-                                    item.isSelected && styles.dayNumberSelected
-                                ]}>
-                                    {item.date}
-                                </Text>
-                                {item.hasAppointments && (
-                                    <View style={[
-                                        styles.appointmentDot,
-                                        item.isSelected && styles.appointmentDotSelected
-                                    ]} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
+                    <View>
+                        <Text style={styles.statNumber}>{pendingCount}</Text>
+                        <Text style={styles.statLabel}>Pendientes</Text>
                     </View>
                 </View>
-
-                {/* Quick Actions */}
-                <View style={styles.quickActions}>
-                    <TouchableOpacity
-                        style={styles.quickActionButton}
-                        onPress={() => router.push("/(settings)/work-schedule")}
-                    >
-                        <MaterialIcons name="schedule" size={24} color={COLORS.purple600} />
-                        <Text style={styles.quickActionText}>Horario Laboral</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickActionButton}>
-                        <MaterialIcons name="event-busy" size={24} color={COLORS.orange500} />
-                        <Text style={styles.quickActionText}>Ausencias</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Appointments Section */}
-                <View style={styles.appointmentsSection}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Para hoy (3)</Text>
-                        <TouchableOpacity style={styles.newAppointmentButton}>
-                            <MaterialIcons name="add" size={18} color={COLORS.primary} />
-                            <Text style={styles.newAppointmentText}>Nueva Cita</Text>
-                        </TouchableOpacity>
+                <View style={styles.statCard}>
+                    <View style={[styles.statIcon, { backgroundColor: COLORS.green50 }]}>
+                        <MaterialIcons name="today" size={24} color={COLORS.green500} />
                     </View>
+                    <View>
+                        <Text style={styles.statNumber}>{todayCount}</Text>
+                        <Text style={styles.statLabel}>Hoy</Text>
+                    </View>
+                </View>
+                <View style={styles.statCard}>
+                    <View style={[styles.statIcon, { backgroundColor: COLORS.blue100 }]}>
+                        <MaterialIcons name="event" size={24} color={COLORS.blue600} />
+                    </View>
+                    <View>
+                        <Text style={styles.statNumber}>{appointments.length}</Text>
+                        <Text style={styles.statLabel}>Total</Text>
+                    </View>
+                </View>
+            </View>
 
-                    {MOCK_APPOINTMENTS.map((appointment) => {
-                        const statusStyle = getStatusStyle(appointment.status);
-                        const isCancelled = appointment.status === "cancelled";
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>Cargando citas...</Text>
+                </View>
+            ) : appointments.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                    <MaterialIcons name="event-available" size={64} color={COLORS.gray300} />
+                    <Text style={styles.emptyTitle}>No tienes citas</Text>
+                    <Text style={styles.emptySubtitle}>
+                        Cuando los clientes reserven contigo, aparecerán aquí
+                    </Text>
+                </View>
+            ) : (
+                <ScrollView
+                    style={styles.scrollView}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+                    }
+                >
+                    {Object.entries(groupedAppointments).map(([date, dateAppointments]) => (
+                        <View key={date} style={styles.dateSection}>
+                            <Text style={styles.dateHeader}>{formatDate(date)}</Text>
 
-                        return (
-                            <View
-                                key={appointment.id}
-                                style={[
-                                    styles.appointmentCard,
-                                    isCancelled && styles.appointmentCardCancelled
-                                ]}
-                            >
-                                <View style={[styles.statusIndicator, { backgroundColor: statusStyle.indicator }]} />
-                                <View style={styles.appointmentContent}>
-                                    {/* Time and Status */}
-                                    <View style={styles.appointmentHeader}>
-                                        <View>
-                                            <Text style={[
-                                                styles.appointmentTime,
-                                                isCancelled && styles.appointmentTimeCancelled
-                                            ]}>
-                                                {appointment.time}
-                                            </Text>
-                                            <Text style={styles.appointmentPeriod}>{appointment.period}</Text>
-                                        </View>
-                                        <View style={[
-                                            styles.statusBadge,
-                                            { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }
-                                        ]}>
-                                            <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                                                {getStatusLabel(appointment.status)}
-                                            </Text>
-                                        </View>
-                                    </View>
+                            {dateAppointments.map((appointment) => {
+                                const statusStyle = getStatusStyle(appointment.status);
+                                const isCancelled = appointment.status === "cancelled";
+                                const isPending = appointment.status === "pending";
+                                const isActionLoading = actionLoading === appointment._id;
 
-                                    {/* Client Info */}
-                                    <View style={styles.clientInfo}>
-                                        {appointment.clientAvatar ? (
-                                            <Image source={{ uri: appointment.clientAvatar }} style={styles.clientAvatar} />
-                                        ) : (
-                                            <View style={[
-                                                styles.clientAvatar,
-                                                styles.clientInitialsContainer,
-                                                { backgroundColor: appointment.bgColor || COLORS.gray200 }
-                                            ]}>
-                                                <Text style={[
-                                                    styles.clientInitials,
-                                                    { color: appointment.textColor || COLORS.gray500 }
-                                                ]}>
-                                                    {appointment.clientInitials}
+                                return (
+                                    <View
+                                        key={appointment._id}
+                                        style={[
+                                            styles.appointmentCard,
+                                            isCancelled && styles.appointmentCardCancelled
+                                        ]}
+                                    >
+                                        <View style={[styles.statusIndicator, { backgroundColor: statusStyle.indicator }]} />
+                                        <View style={styles.appointmentContent}>
+                                            {/* Time and Status */}
+                                            <View style={styles.appointmentHeader}>
+                                                <View>
+                                                    <Text style={[
+                                                        styles.appointmentTime,
+                                                        isCancelled && styles.appointmentTimeCancelled
+                                                    ]}>
+                                                        {appointment.time}
+                                                    </Text>
+                                                    <Text style={styles.appointmentDuration}>
+                                                        {appointment.serviceType === "30min" ? "30 min" : "60 min"} • {appointment.type === "videoconference" ? "Online" : "Presencial"}
+                                                    </Text>
+                                                </View>
+                                                <View style={{ alignItems: "flex-end" }}>
+                                                    <View style={[
+                                                        styles.statusBadge,
+                                                        { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }
+                                                    ]}>
+                                                        <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                                                            {getStatusLabel(appointment.status)}
+                                                        </Text>
+                                                    </View>
+                                                    {appointment.paymentStatus && (
+                                                        <Text style={[
+                                                            styles.paymentStatus,
+                                                            { color: appointment.paymentStatus === "paid" ? COLORS.green700 : COLORS.orange700 }
+                                                        ]}>
+                                                            {getPaymentStatusLabel(appointment.paymentStatus)}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                            </View>
+
+                                            {/* Client Info */}
+                                            <View style={styles.clientInfo}>
+                                                {appointment.client.avatar ? (
+                                                    <Image
+                                                        source={{ uri: getAvatarUrl(appointment.client.avatar) || undefined }}
+                                                        style={styles.clientAvatar}
+                                                    />
+                                                ) : (
+                                                    <View style={[styles.clientAvatar, styles.clientInitialsContainer]}>
+                                                        <Text style={styles.clientInitials}>
+                                                            {getClientInitials(appointment.client)}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={[
+                                                        styles.clientName,
+                                                        isCancelled && styles.clientNameCancelled
+                                                    ]}>
+                                                        {appointment.client.firstname} {appointment.client.lastname}
+                                                    </Text>
+                                                    <Text style={styles.clientEmail}>{appointment.client.email}</Text>
+                                                </View>
+                                                <Text style={styles.priceText}>
+                                                    {(appointment.price / 100).toFixed(0)}€
                                                 </Text>
                                             </View>
-                                        )}
-                                        <View>
-                                            <Text style={[
-                                                styles.clientName,
-                                                isCancelled && styles.clientNameCancelled
-                                            ]}>
-                                                {appointment.clientName}
-                                            </Text>
-                                            <Text style={styles.serviceText}>
-                                                {appointment.service} • {appointment.duration}
-                                            </Text>
+
+                                            {/* Actions */}
+                                            <View style={styles.appointmentActions}>
+                                                {isActionLoading ? (
+                                                    <View style={styles.loadingAction}>
+                                                        <ActivityIndicator size="small" color={COLORS.primary} />
+                                                    </View>
+                                                ) : isCancelled ? (
+                                                    <TouchableOpacity
+                                                        style={styles.singleAction}
+                                                        onPress={() => handleViewDetails(appointment._id)}
+                                                    >
+                                                        <MaterialIcons name="info" size={18} color={COLORS.gray500} />
+                                                        <Text style={styles.actionText}>Ver Detalles</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <>
+                                                        <TouchableOpacity
+                                                            style={styles.actionButton}
+                                                            onPress={() => handleViewDetails(appointment._id)}
+                                                        >
+                                                            <MaterialIcons name="visibility" size={20} color={COLORS.gray500} />
+                                                            <Text style={styles.actionLabel}>Detalles</Text>
+                                                        </TouchableOpacity>
+
+                                                        {isPending && (
+                                                            <TouchableOpacity
+                                                                style={[styles.actionButton, styles.confirmButton]}
+                                                                onPress={() => handleConfirm(appointment._id)}
+                                                            >
+                                                                <MaterialIcons name="check-circle" size={20} color={COLORS.green500} />
+                                                                <Text style={[styles.actionLabel, { color: COLORS.green700 }]}>Confirmar</Text>
+                                                            </TouchableOpacity>
+                                                        )}
+
+                                                        <TouchableOpacity
+                                                            style={styles.actionButton}
+                                                            onPress={() => handleCancel(appointment._id)}
+                                                        >
+                                                            <MaterialIcons name="cancel" size={20} color={COLORS.red500} />
+                                                            <Text style={[styles.actionLabel, { color: COLORS.red700 }]}>Cancelar</Text>
+                                                        </TouchableOpacity>
+                                                    </>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
+                                );
+                            })}
+                        </View>
+                    ))}
 
-                                    {/* Actions */}
-                                    <View style={styles.appointmentActions}>
-                                        {isCancelled ? (
-                                            <TouchableOpacity style={styles.singleAction}>
-                                                <MaterialIcons name="info" size={18} color={COLORS.gray500} />
-                                                <Text style={styles.actionText}>Ver Motivo</Text>
-                                            </TouchableOpacity>
-                                        ) : (
-                                            <>
-                                                <TouchableOpacity style={styles.actionButton}>
-                                                    <MaterialIcons name="visibility" size={20} color={COLORS.gray500} />
-                                                    <Text style={styles.actionLabel}>Detalles</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={styles.actionButton}>
-                                                    <MaterialIcons name="edit-calendar" size={20} color={COLORS.gray500} />
-                                                    <Text style={styles.actionLabel}>Reagendar</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity style={styles.actionButton}>
-                                                    <MaterialIcons name="cancel" size={20} color={COLORS.gray500} />
-                                                    <Text style={styles.actionLabel}>Cancelar</Text>
-                                                </TouchableOpacity>
-                                            </>
-                                        )}
-                                    </View>
-                                </View>
-                            </View>
-                        );
-                    })}
-                </View>
-            </ScrollView>
+                    <View style={{ height: 40 }} />
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 }
@@ -382,136 +505,87 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: COLORS.surfaceLight,
     },
+    statsContainer: {
+        flexDirection: "row",
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        gap: 12,
+        backgroundColor: COLORS.surfaceLight,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray200,
+    },
+    statCard: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        padding: 12,
+    },
+    statIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    statNumber: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: COLORS.gray500,
+        fontWeight: "500",
+    },
     scrollView: {
         flex: 1,
     },
-    calendarSection: {
-        backgroundColor: COLORS.surfaceLight,
-        paddingBottom: 16,
-        borderBottomLeftRadius: 16,
-        borderBottomRightRadius: 16,
-        marginBottom: 16,
-    },
-    monthSelector: {
-        flexDirection: "row",
+    loadingContainer: {
+        flex: 1,
         alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        justifyContent: "center",
+        gap: 12,
     },
-    monthButton: {
-        flexDirection: "row",
+    loadingText: {
+        fontSize: 14,
+        color: COLORS.gray500,
+    },
+    emptyContainer: {
+        flex: 1,
         alignItems: "center",
-        gap: 4,
+        justifyContent: "center",
+        paddingHorizontal: 40,
     },
-    monthText: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    weekDays: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        paddingHorizontal: 16,
-    },
-    dayItem: {
-        alignItems: "center",
-        paddingVertical: 12,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        minWidth: 56,
-    },
-    dayItemSelected: {
-        backgroundColor: COLORS.primary,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    dayLabel: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: COLORS.gray400,
-        marginBottom: 4,
-    },
-    dayLabelSelected: {
-        color: "rgba(255,255,255,0.8)",
-    },
-    dayNumber: {
+    emptyTitle: {
         fontSize: 18,
         fontWeight: "bold",
         color: COLORS.textMain,
+        marginTop: 16,
     },
-    dayNumberSelected: {
-        color: "#FFFFFF",
+    emptySubtitle: {
+        fontSize: 14,
+        color: COLORS.gray500,
+        textAlign: "center",
+        marginTop: 8,
     },
-    appointmentDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: COLORS.primary,
-        marginTop: 4,
-    },
-    appointmentDotSelected: {
-        backgroundColor: "#FFFFFF",
-    },
-    quickActions: {
-        flexDirection: "row",
+    dateSection: {
         paddingHorizontal: 16,
-        gap: 12,
-        marginBottom: 24,
+        paddingTop: 16,
     },
-    quickActionButton: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        paddingVertical: 12,
-        backgroundColor: COLORS.surfaceLight,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.gray100,
-    },
-    quickActionText: {
+    dateHeader: {
         fontSize: 14,
         fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    appointmentsSection: {
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-    },
-    sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 16,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    newAppointmentButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        backgroundColor: "rgba(19, 127, 236, 0.1)",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    newAppointmentText: {
-        fontSize: 14,
-        fontWeight: "bold",
-        color: COLORS.primary,
+        color: COLORS.gray500,
+        textTransform: "uppercase",
+        marginBottom: 12,
     },
     appointmentCard: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
-        marginBottom: 16,
+        marginBottom: 12,
         overflow: "hidden",
         borderWidth: 1,
         borderColor: COLORS.gray100,
@@ -525,11 +599,11 @@ const styles = StyleSheet.create({
         left: 0,
         top: 0,
         bottom: 0,
-        width: 6,
+        width: 5,
     },
     appointmentContent: {
         padding: 16,
-        paddingLeft: 20,
+        paddingLeft: 18,
     },
     appointmentHeader: {
         flexDirection: "row",
@@ -538,7 +612,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     appointmentTime: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: "bold",
         color: COLORS.textMain,
     },
@@ -546,11 +620,10 @@ const styles = StyleSheet.create({
         color: COLORS.gray500,
         textDecorationLine: "line-through",
     },
-    appointmentPeriod: {
+    appointmentDuration: {
         fontSize: 12,
-        fontWeight: "500",
-        color: COLORS.gray400,
-        textTransform: "uppercase",
+        color: COLORS.gray500,
+        marginTop: 2,
     },
     statusBadge: {
         paddingHorizontal: 10,
@@ -559,55 +632,74 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     statusText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: "bold",
+    },
+    paymentStatus: {
+        fontSize: 10,
+        fontWeight: "600",
+        marginTop: 4,
     },
     clientInfo: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        marginBottom: 16,
+        marginBottom: 12,
     },
     clientAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
     },
     clientInitialsContainer: {
+        backgroundColor: COLORS.blue100,
         alignItems: "center",
         justifyContent: "center",
     },
     clientInitials: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: "bold",
+        color: COLORS.blue600,
     },
     clientName: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: "bold",
         color: COLORS.textMain,
     },
     clientNameCancelled: {
         color: COLORS.gray500,
     },
-    serviceText: {
+    clientEmail: {
         fontSize: 12,
         color: COLORS.gray500,
         marginTop: 2,
+    },
+    priceText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
     },
     appointmentActions: {
         flexDirection: "row",
         borderTopWidth: 1,
         borderTopColor: COLORS.gray100,
         paddingTop: 12,
+        gap: 8,
     },
     actionButton: {
         flex: 1,
         alignItems: "center",
         gap: 4,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: COLORS.gray100,
+    },
+    confirmButton: {
+        backgroundColor: COLORS.green50,
     },
     actionLabel: {
-        fontSize: 10,
-        fontWeight: "500",
+        fontSize: 11,
+        fontWeight: "600",
         color: COLORS.gray500,
     },
     singleAction: {
@@ -616,10 +708,17 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
+        paddingVertical: 8,
     },
     actionText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: "500",
         color: COLORS.gray500,
+    },
+    loadingAction: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 12,
     },
 });

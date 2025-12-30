@@ -90,8 +90,8 @@ export default function FavoritesScreen() {
         }
     };
 
-    const getAvatarUrl = (avatar?: string) => {
-        if (!avatar) return null;
+    const getAvatarUrl = (avatar?: string): string | undefined => {
+        if (!avatar) return undefined;
         if (avatar.startsWith("http")) return avatar;
         return `http://${API_HOST}:${API_PORT}/${avatar}`;
     };
