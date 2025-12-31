@@ -16,7 +16,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as Speech from "expo-speech";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
 import { PublicAvatar, PublicVoice, CreateAvatarResponse } from "../../api/liveAvatar";
@@ -32,12 +31,20 @@ const VIDEO_REQUIREMENTS = {
     },
 };
 
-// Dynamic import for expo-av (may not be available in Expo Go)
+// Dynamic imports for native modules (may not be available in Expo Go)
 let Audio: any = null;
+let Speech: any = null;
+
 try {
     Audio = require("expo-av").Audio;
 } catch (e) {
     console.log("expo-av not available, voice preview disabled");
+}
+
+try {
+    Speech = require("expo-speech");
+} catch (e) {
+    console.log("expo-speech not available, TTS preview disabled");
 }
 
 // Sample text for voice preview when no audio sample is available
@@ -294,6 +301,10 @@ export default function TwinAppearanceScreen() {
 
         // If still no preview URL, use TTS fallback
         if (!previewUrl) {
+            if (!Speech) {
+                Alert.alert("No disponible", "La síntesis de voz requiere un build de desarrollo");
+                return;
+            }
             setIsPreviewPlaying(true);
             const language = selectedVoice.language?.toLowerCase().includes('en') ? 'en' : 'es';
             const voiceGender = selectedVoice.gender?.toLowerCase();

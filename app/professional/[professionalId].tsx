@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT, chatApi } from "../../api";
+import { userApi, API_HOST, API_PORT, chatApi, analyticsApi } from "../../api";
 import { User } from "../../api/user";
 
 const COLORS = {
@@ -55,6 +55,9 @@ export default function ProfessionalProfileScreen() {
             // Check if favorite
             const favorites = await userApi.getFavorites(token);
             setIsFavorite(favorites.some(f => f._id === professionalId));
+
+            // Record profile view (async, don't block)
+            analyticsApi.recordEvent(token, professionalId, "profileView").catch(() => { });
         } catch (error) {
             console.error("Error loading professional:", error);
         } finally {
@@ -107,6 +110,10 @@ export default function ProfessionalProfileScreen() {
 
     const callPhone = (phone: string | null | undefined) => {
         if (phone) {
+            // Record phone call event
+            if (token && professionalId) {
+                analyticsApi.recordEvent(token, professionalId, "phoneCall").catch(() => { });
+            }
             Linking.openURL(`tel:${phone}`);
         }
     };

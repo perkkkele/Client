@@ -1,5 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useRef } from "react";
 import {
     Image,
     Platform,
@@ -11,6 +12,8 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import QRCode from "react-native-qrcode-svg";
+import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import { useAuth } from "../../context";
 import { API_HOST, API_PORT } from "../../api";
 
@@ -26,6 +29,7 @@ const COLORS = {
     gray500: "#6b7280",
     cardDark: "#2f2e16",
     borderDark: "#3a391d",
+    black: "#000000",
 };
 
 // Helper to build avatar URL from server path
@@ -35,8 +39,47 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
     return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
 }
 
+// TwinPro Logo component for QR center
+const TwinProLogo = () => (
+    <Svg width={70} height={70} viewBox="0 0 70 70">
+        {/* Yellow background */}
+        <Rect x="0" y="0" width="70" height="70" rx="12" fill={COLORS.primary} />
+
+        {/* Chat bubble with two heads */}
+        <G transform="translate(10, 8)">
+            {/* Speech bubble outline */}
+            <Path
+                d="M25 5 C10 5 2 15 2 25 C2 35 10 42 20 44 L18 52 L28 44 C42 42 48 35 48 25 C48 15 40 5 25 5 Z"
+                fill={COLORS.black}
+            />
+            {/* Two heads/avatars inside */}
+            <Circle cx="17" cy="22" r="8" fill={COLORS.primary} />
+            <Circle cx="33" cy="22" r="8" fill={COLORS.primary} />
+            {/* Eyes for left head */}
+            <Circle cx="15" cy="20" r="2" fill={COLORS.black} />
+            <Circle cx="19" cy="20" r="2" fill={COLORS.black} />
+            {/* Eyes for right head */}
+            <Circle cx="31" cy="20" r="2" fill={COLORS.black} />
+            <Circle cx="35" cy="20" r="2" fill={COLORS.black} />
+        </G>
+
+        {/* TwinPro text */}
+        <SvgText
+            x="35"
+            y="62"
+            fontSize="10"
+            fontWeight="bold"
+            fill={COLORS.black}
+            textAnchor="middle"
+        >
+            TwinPro
+        </SvgText>
+    </Svg>
+);
+
 export default function MyQRCodeScreen() {
     const { user } = useAuth();
+    const qrRef = useRef<any>(null);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname
@@ -45,18 +88,16 @@ export default function MyQRCodeScreen() {
     const profession = user?.profession || "Profesional";
     const isVerified = user?.userType === "userpro";
 
-    // Generar URL del código QR usando API pública
+    // Generar URL del código QR
     // Usar username si existe, sino usar el ID
     const qrData = user?.username
         ? `https://twinpro.app/@${user.username}`
         : `https://twinpro.app/user/${user?._id}`;
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrData)}&format=png&margin=10`;
 
     async function handleShare() {
         try {
             await Share.share({
                 message: `Conéctate conmigo en TwinPro: ${displayName}\n\n${qrData}`,
-                // url: qrCodeUrl, // iOS only
             });
         } catch (error) {
             console.log("Error sharing:", error);
@@ -122,17 +163,26 @@ export default function MyQRCodeScreen() {
                         </View>
                     </View>
 
-                    {/* Código QR */}
+                    {/* Código QR Corporativo TwinPro */}
                     <View style={styles.qrContainer}>
-                        <Image
-                            source={{ uri: qrCodeUrl }}
-                            style={styles.qrImage}
-                            resizeMode="contain"
-                        />
-                        {/* Logo central */}
-                        <View style={styles.qrLogoContainer}>
-                            <View style={styles.qrLogo}>
-                                <MaterialIcons name="chat-bubble" size={20} color={COLORS.textDark} />
+                        <View style={styles.qrWrapper}>
+                            <QRCode
+                                value={qrData}
+                                size={240}
+                                backgroundColor={COLORS.primary}
+                                color={COLORS.black}
+                                logo={undefined}
+                                logoSize={70}
+                                logoBackgroundColor="transparent"
+                                logoMargin={0}
+                                logoBorderRadius={12}
+                                quietZone={15}
+                                getRef={(ref) => (qrRef.current = ref)}
+                                ecl="M" // Medium error correction to allow logo
+                            />
+                            {/* Logo overlay in center */}
+                            <View style={styles.logoOverlay}>
+                                <TwinProLogo />
                             </View>
                         </View>
                     </View>
@@ -203,7 +253,7 @@ const styles = StyleSheet.create({
         color: COLORS.textDark,
         flex: 1,
         textAlign: "center",
-        marginRight: 40, // Compensar el botón de atrás
+        marginRight: 40,
     },
     headerSpacer: {
         width: 0,
@@ -293,44 +343,35 @@ const styles = StyleSheet.create({
 
     // Código QR
     qrContainer: {
-        position: "relative",
-        backgroundColor: COLORS.white,
-        borderRadius: 16,
-        padding: 4,
-        width: 260,
-        height: 260,
         alignItems: "center",
         justifyContent: "center",
     },
-    qrImage: {
-        width: "100%",
-        height: "100%",
-        borderRadius: 12,
-    },
-    qrLogoContainer: {
-        position: "absolute",
-        backgroundColor: COLORS.white,
-        padding: 4,
+    qrWrapper: {
+        position: "relative",
         borderRadius: 20,
+        overflow: "hidden",
+        // Add subtle border to match the premium look
+        borderWidth: 3,
+        borderColor: COLORS.primary,
+    },
+    logoOverlay: {
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: [{ translateX: -35 }, { translateY: -35 }],
+        backgroundColor: COLORS.primary,
+        borderRadius: 12,
         ...Platform.select({
             ios: {
                 shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.1,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
                 shadowRadius: 4,
             },
             android: {
-                elevation: 2,
+                elevation: 4,
             },
         }),
-    },
-    qrLogo: {
-        width: 32,
-        height: 32,
-        backgroundColor: COLORS.primary,
-        borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
     },
 
     // Texto de ayuda
@@ -345,7 +386,7 @@ const styles = StyleSheet.create({
     },
     helperTextBrand: {
         fontWeight: "bold",
-        color: COLORS.primary,
+        color: COLORS.textDark,
     },
 
     // Botones de acción

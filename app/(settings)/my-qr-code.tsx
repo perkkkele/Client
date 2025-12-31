@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
+import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import { useAuth } from "../../context";
 import { usernameApi } from "../../api";
 
@@ -40,7 +41,46 @@ const COLORS = {
     red500: "#ef4444",
     red600: "#dc2626",
     white: "#FFFFFF",
+    black: "#000000",
 };
+
+// TwinPro Logo component for QR center
+const TwinProLogo = () => (
+    <Svg width={60} height={60} viewBox="0 0 70 70">
+        {/* Yellow background */}
+        <Rect x="0" y="0" width="70" height="70" rx="12" fill={COLORS.primary} />
+
+        {/* Chat bubble with two heads */}
+        <G transform="translate(10, 8)">
+            {/* Speech bubble outline */}
+            <Path
+                d="M25 5 C10 5 2 15 2 25 C2 35 10 42 20 44 L18 52 L28 44 C42 42 48 35 48 25 C48 15 40 5 25 5 Z"
+                fill={COLORS.black}
+            />
+            {/* Two heads/avatars inside */}
+            <Circle cx="17" cy="22" r="8" fill={COLORS.primary} />
+            <Circle cx="33" cy="22" r="8" fill={COLORS.primary} />
+            {/* Eyes for left head */}
+            <Circle cx="15" cy="20" r="2" fill={COLORS.black} />
+            <Circle cx="19" cy="20" r="2" fill={COLORS.black} />
+            {/* Eyes for right head */}
+            <Circle cx="31" cy="20" r="2" fill={COLORS.black} />
+            <Circle cx="35" cy="20" r="2" fill={COLORS.black} />
+        </G>
+
+        {/* TwinPro text */}
+        <SvgText
+            x="35"
+            y="62"
+            fontSize="10"
+            fontWeight="bold"
+            fill={COLORS.black}
+            textAnchor="middle"
+        >
+            TwinPro
+        </SvgText>
+    </Svg>
+);
 
 export default function MyQRCodeScreen() {
     const { token, user, refreshUser } = useAuth();
@@ -132,12 +172,20 @@ export default function MyQRCodeScreen() {
                     {user?.username ? (
                         <>
                             <View style={styles.qrContainer}>
-                                <QRCode
-                                    value={qrUrl!}
-                                    size={200}
-                                    color={COLORS.textMain}
-                                    backgroundColor={COLORS.white}
-                                />
+                                <View style={styles.qrWrapper}>
+                                    <QRCode
+                                        value={qrUrl!}
+                                        size={200}
+                                        color={COLORS.black}
+                                        backgroundColor={COLORS.primary}
+                                        quietZone={12}
+                                        ecl="M"
+                                    />
+                                    {/* Logo overlay in center */}
+                                    <View style={styles.logoOverlay}>
+                                        <TwinProLogo />
+                                    </View>
+                                </View>
                             </View>
                             <Text style={styles.qrUrl}>{qrUrl}</Text>
                             <Text style={styles.qrHint}>
@@ -343,10 +391,29 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     qrContainer: {
-        padding: 16,
-        backgroundColor: COLORS.white,
-        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
         marginBottom: 16,
+    },
+    qrWrapper: {
+        position: "relative",
+        borderRadius: 16,
+        overflow: "hidden",
+        borderWidth: 3,
+        borderColor: COLORS.primary,
+    },
+    logoOverlay: {
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: [{ translateX: -30 }, { translateY: -30 }],
+        backgroundColor: COLORS.primary,
+        borderRadius: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 4,
     },
     qrUrl: {
         fontSize: 14,

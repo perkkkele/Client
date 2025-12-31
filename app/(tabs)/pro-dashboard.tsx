@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";;
 import {
     Image,
     Modal,
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT, userApi } from "../../api";
+import { API_HOST, API_PORT, userApi, analyticsApi } from "../../api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -84,6 +84,35 @@ export default function ProDashboardScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
 
+    // Analytics state
+    const [analytics, setAnalytics] = useState({
+        profileViews: 0,
+        totalConversationSeconds: 0,
+        appointmentsBooked: 0,
+        phoneCalls: 0,
+    });
+    const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+    // Load analytics data
+    const loadAnalytics = useCallback(async () => {
+        if (!token || !user?._id) return;
+        try {
+            const summary = await analyticsApi.getSummary(token, user._id);
+            if (summary) {
+                setAnalytics(summary);
+            }
+        } catch (error) {
+            console.error("Error loading analytics:", error);
+        } finally {
+            setLoadingAnalytics(false);
+        }
+    }, [token, user?._id]);
+
+    // Load analytics on mount
+    useEffect(() => {
+        loadAnalytics();
+    }, [loadAnalytics]);
+
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname || user?.email?.split("@")[0] || "Profesional";
     const fullName = user?.firstname && user?.lastname
@@ -139,10 +168,11 @@ export default function ProDashboardScreen() {
         }
     }
 
-    const onRefresh = useCallback(() => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        setTimeout(() => setRefreshing(false), 1000);
-    }, []);
+        await loadAnalytics();
+        setRefreshing(false);
+    }, [loadAnalytics]);
 
     // Menu sections data
     const menuSections: MenuSection[] = [
@@ -415,7 +445,7 @@ export default function ProDashboardScreen() {
                                 </View>
                             </View>
                             <Text style={styles.statLabel}>Visitas Perfil</Text>
-                            <Text style={styles.statValue}>1,240</Text>
+                            <Text style={styles.statValue}>{analytics.profileViews.toLocaleString()}</Text>
                         </View>
                         <View style={styles.statCard}>
                             <View style={styles.statHeader}>
@@ -424,7 +454,7 @@ export default function ProDashboardScreen() {
                                 </View>
                             </View>
                             <Text style={styles.statLabel}>Duración Chats</Text>
-                            <Text style={styles.statValue}>45h 20m</Text>
+                            <Text style={styles.statValue}>{analyticsApi.formatDuration(analytics.totalConversationSeconds)}</Text>
                         </View>
                         <View style={styles.statCard}>
                             <View style={styles.statHeader}>
@@ -433,7 +463,7 @@ export default function ProDashboardScreen() {
                                 </View>
                             </View>
                             <Text style={styles.statLabel}>Citas Agendadas</Text>
-                            <Text style={styles.statValue}>8</Text>
+                            <Text style={styles.statValue}>{analytics.appointmentsBooked}</Text>
                         </View>
                         <View style={styles.statCard}>
                             <View style={styles.statHeader}>
@@ -446,7 +476,7 @@ export default function ProDashboardScreen() {
                                 </View>
                             </View>
                             <Text style={styles.statLabel}>Llamadas recibidas</Text>
-                            <Text style={styles.statValue}>42</Text>
+                            <Text style={styles.statValue}>{analytics.phoneCalls}</Text>
                         </View>
                     </View>
                 </View>

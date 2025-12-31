@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, API_HOST, API_PORT, analyticsApi } from "../../api";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
@@ -221,6 +221,9 @@ export default function AvatarChatScreen() {
 
     // Ref to track last typed message to prevent duplicates from user.transcription events
     const lastTypedMessageRef = useRef<string | null>(null);
+
+    // Ref to track conversation start time for analytics
+    const conversationStartTimeRef = useRef<number | null>(null);
 
     // Toggle video size
     const toggleVideoSize = () => {
@@ -532,6 +535,9 @@ export default function AvatarChatScreen() {
             setSessionToken(tokenResponse.session_token); // Store for sendTextToAvatar
             setSessionStatus('active');
 
+            // Start tracking conversation duration
+            conversationStartTimeRef.current = Date.now();
+
             console.log("LiveAvatar session active!");
             console.log("LiveKit URL:", startResponse.livekit_url);
 
@@ -625,6 +631,17 @@ export default function AvatarChatScreen() {
     };
 
     const handleBack = () => {
+        // Record conversation end event with duration
+        if (token && professionalId && conversationStartTimeRef.current) {
+            const durationSeconds = Math.floor((Date.now() - conversationStartTimeRef.current) / 1000);
+            if (durationSeconds > 10) { // Only record if conversation lasted more than 10 seconds
+                analyticsApi.recordEvent(token, professionalId, "conversationEnd", {
+                    durationSeconds,
+                    source: "app"
+                }).catch(() => { });
+            }
+            conversationStartTimeRef.current = null;
+        }
         router.back();
     };
 
