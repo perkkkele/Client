@@ -149,6 +149,7 @@ export interface User {
         end?: string;
     };
     autoConfirmAppointments?: boolean;
+    requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
 
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
@@ -195,6 +196,7 @@ export interface UserUpdateData {
         end?: string;
     };
     autoConfirmAppointments?: boolean;
+    requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
 
     // Gemelo Digital
     digitalTwin?: DigitalTwin;

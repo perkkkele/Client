@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -46,10 +46,20 @@ export default function EditProfileScreen() {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     // Form state
-    const [firstname, setFirstname] = useState(user?.firstname || "");
-    const [lastname, setLastname] = useState(user?.lastname || "");
-    const [email] = useState(user?.email || "");
-    const [phone, setPhone] = useState(user?.phone || "");
+    const [firstname, setFirstname] = useState("");
+    const [lastname, setLastname] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+
+    // Sync form state with user data when it loads or updates
+    useEffect(() => {
+        if (user) {
+            setFirstname(user.firstname || "");
+            setLastname(user.lastname || "");
+            setEmail(user.email || "");
+            setPhone(user.phone || "");
+        }
+    }, [user]);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const username = user?.email?.split("@")[0] || "usuario";
@@ -105,6 +115,7 @@ export default function EditProfileScreen() {
             const updatedUser = await userApi.updateUser(token, {
                 firstname: firstname.trim() || undefined,
                 lastname: lastname.trim() || undefined,
+                phone: phone.trim() || undefined,
             });
             await updateUserProfile(updatedUser);
             Alert.alert("Éxito", "Perfil actualizado correctamente", [

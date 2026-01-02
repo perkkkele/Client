@@ -57,6 +57,14 @@ const MONTHS = [
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ];
 
+// Format date to YYYY-MM-DD using LOCAL timezone (not UTC)
+function formatLocalDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 interface ServiceOption {
     id: ServiceType;
     label: string;
@@ -109,7 +117,7 @@ export default function BookAppointmentScreen() {
 
         setIsLoadingSlots(true);
         try {
-            const dateStr = selectedDate.toISOString().split("T")[0];
+            const dateStr = formatLocalDate(selectedDate);
             const response = await getAvailableSlots(token, professionalId, dateStr);
             setTimeSlots(response.slots);
             setSelectedTime(null);
@@ -197,7 +205,7 @@ export default function BookAppointmentScreen() {
 
         setIsSubmitting(true);
         try {
-            const dateStr = selectedDate.toISOString().split("T")[0];
+            const dateStr = formatLocalDate(selectedDate);
             const serviceOption = getSelectedServiceOption();
 
             const appointment = await createAppointment(token, {
@@ -209,41 +217,41 @@ export default function BookAppointmentScreen() {
                 price: serviceOption.price,
             });
 
-            // Ask user if they want to pay now
-            Alert.alert(
-                "¡Cita Agendada!",
-                `Tu cita ha sido reservada. ¿Deseas pagar ahora (${formatPrice(serviceOption.price)}) para confirmarla?`,
-                [
-                    {
-                        text: "Pagar Después",
-                        style: "cancel",
-                        onPress: () => {
-                            router.replace(`/appointment-details/${appointment._id}` as any);
-                        },
-                    },
-                    {
-                        text: "Pagar Ahora",
-                        style: "default",
-                        onPress: async () => {
-                            try {
-                                const session = await createCheckoutSession(token, appointment._id);
-                                // Open Stripe Checkout in browser
-                                const canOpen = await Linking.canOpenURL(session.url);
-                                if (canOpen) {
-                                    await Linking.openURL(session.url);
-                                } else {
-                                    Alert.alert("Error", "No se pudo abrir el enlace de pago");
-                                    router.replace(`/appointment-details/${appointment._id}` as any);
-                                }
-                            } catch (payError: any) {
-                                console.error("Payment error:", payError);
-                                Alert.alert("Error", "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.");
-                                router.replace(`/appointment-details/${appointment._id}` as any);
-                            }
-                        },
-                    },
-                ]
-            );
+            // Payment logic:
+            // - Videollamada: SIEMPRE requiere pago al agendar
+            // - Presencial: Depende de la configuración del profesional
+            const requiresPayment =
+                appointmentType === "videoconference" ||
+                (appointmentType === "presencial" && professional?.requirePaymentOnBooking !== false);
+
+            if (requiresPayment) {
+                // Pago obligatorio - abrir Stripe Checkout
+                try {
+                    const session = await createCheckoutSession(token, appointment._id);
+                    const canOpen = await Linking.canOpenURL(session.url);
+                    if (canOpen) {
+                        Alert.alert(
+                            "¡Cita Agendada!",
+                            `Se abrirá la página de pago (${formatPrice(serviceOption.price)}) para confirmar tu cita.`,
+                            [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
+                        );
+                    } else {
+                        Alert.alert("Error", "No se pudo abrir el enlace de pago");
+                        router.replace(`/appointment-details/${appointment._id}` as any);
+                    }
+                } catch (payError: any) {
+                    console.error("Payment error:", payError);
+                    Alert.alert("Error", "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.");
+                    router.replace(`/appointment-details/${appointment._id}` as any);
+                }
+            } else {
+                // Pago in situ - el profesional cobra directamente
+                Alert.alert(
+                    "¡Cita Agendada!",
+                    "Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.",
+                    [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
+                );
+            }
         } catch (error: any) {
             Alert.alert("Error", error.message || "No se pudo agendar la cita. Inténtalo de nuevo.");
         } finally {

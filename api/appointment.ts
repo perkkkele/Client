@@ -21,6 +21,7 @@ export interface Appointment {
         professionalEmail?: string;
         location?: Location;
         category?: string;
+        requirePaymentOnBooking?: boolean;  // If false, presencial appointments are paid in-situ
     };
     client: {
         _id: string;
@@ -133,7 +134,10 @@ export async function getAppointments(
     token: string,
     role: "client" | "professional" = "client"
 ): Promise<Appointment[]> {
-    const response = await fetch(`${API_URL}/appointment?role=${role}`, {
+    const url = `${API_URL}/appointment?role=${role}`;
+    console.log("[Appointment API] GET", url);
+
+    const response = await fetch(url, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -141,10 +145,13 @@ export async function getAppointments(
 
     if (!response.ok) {
         const error = await response.json();
+        console.error("[Appointment API] Error:", error);
         throw new Error(error.message || "Failed to get appointments");
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log("[Appointment API] getAppointments response:", data.length, "appointments");
+    return data;
 }
 
 // Get appointment by ID

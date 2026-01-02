@@ -396,27 +396,67 @@ export default function AppointmentDetailsScreen() {
                     </>
                 )}
 
-                {/* Pay Now Button - Show if payment is pending */}
+                {/* Pay Now Button - Show if payment is pending AND requires online payment */}
                 {isActive && appointment.paymentStatus === 'pending' && (
-                    <View style={styles.paymentSection}>
-                        <View style={styles.paymentCard}>
-                            <View style={styles.paymentCardContent}>
-                                <MaterialIcons name="payment" size={32} color={COLORS.primary} />
-                                <View style={styles.paymentCardText}>
-                                    <Text style={styles.paymentCardTitle}>Pago Pendiente</Text>
-                                    <Text style={styles.paymentCardSubtitle}>
-                                        Completa el pago para confirmar tu cita
-                                    </Text>
+                    (() => {
+                        // Determine if this appointment requires online payment
+                        // Videoconference: ALWAYS requires online payment
+                        // Presencial: Only if professional has requirePaymentOnBooking === true (default)
+                        const requiresOnlinePayment =
+                            appointment.type === 'videoconference' ||
+                            appointment.professional.requirePaymentOnBooking !== false;
+
+                        if (requiresOnlinePayment) {
+                            return (
+                                <View style={styles.paymentSection}>
+                                    <View style={styles.paymentCard}>
+                                        <View style={styles.paymentCardContent}>
+                                            <MaterialIcons name="payment" size={32} color={COLORS.primary} />
+                                            <View style={styles.paymentCardText}>
+                                                <Text style={styles.paymentCardTitle}>Pago Pendiente</Text>
+                                                <Text style={styles.paymentCardSubtitle}>
+                                                    Completa el pago para confirmar tu cita
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <TouchableOpacity style={styles.payNowButton} onPress={handlePayNow}>
+                                            <MaterialIcons name="lock" size={18} color={COLORS.white} />
+                                            <Text style={styles.payNowButtonText}>
+                                                Pagar {(appointment.price / 100).toFixed(0)}€
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
-                            </View>
-                            <TouchableOpacity style={styles.payNowButton} onPress={handlePayNow}>
-                                <MaterialIcons name="lock" size={18} color={COLORS.white} />
-                                <Text style={styles.payNowButtonText}>
-                                    Pagar {(appointment.price / 100).toFixed(0)}€
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                            );
+                        } else {
+                            // In-situ payment - show informative message with optional early pay
+                            return (
+                                <View style={styles.paymentSection}>
+                                    <View style={[styles.paymentCard, { backgroundColor: '#f0f9ff', borderColor: '#bae6fd' }]}>
+                                        <View style={styles.paymentCardContent}>
+                                            <MaterialIcons name="storefront" size={32} color="#0284c7" />
+                                            <View style={styles.paymentCardText}>
+                                                <Text style={[styles.paymentCardTitle, { color: '#0369a1' }]}>Pago Presencial</Text>
+                                                <Text style={[styles.paymentCardSubtitle, { color: '#0369a1' }]}>
+                                                    Pagarás {(appointment.price / 100).toFixed(0)}€ directamente al profesional cuando asistas
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {/* Optional early payment button */}
+                                        <TouchableOpacity
+                                            style={styles.optionalPayButton}
+                                            onPress={handlePayNow}
+                                        >
+                                            <MaterialIcons name="payment" size={18} color={COLORS.primary} />
+                                            <Text style={styles.optionalPayButtonText}>
+                                                ¿Prefieres pagar ahora?
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            );
+                        }
+                    })()
                 )}
 
                 {/* Payment Status Badge - Show if paid */}
@@ -429,37 +469,25 @@ export default function AppointmentDetailsScreen() {
                     </View>
                 )}
 
-                {/* Action Buttons */}
+                {/* Info Card - Redirect to Settings for management */}
                 {isActive && (
                     <View style={styles.actionsSection}>
-                        <Text style={styles.sectionTitle}>Acciones</Text>
-                        <View style={styles.actionsGrid}>
-                            {/* Primary Actions */}
-                            <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleMessage}>
-                                <MaterialIcons name="chat-bubble" size={28} color={COLORS.white} />
-                                <Text style={styles.actionButtonPrimaryText}>Mensaje</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionButtonPrimary} onPress={handleCall}>
-                                <MaterialIcons name="call" size={28} color={COLORS.white} />
-                                <Text style={styles.actionButtonPrimaryText}>Llamar</Text>
-                            </TouchableOpacity>
-
-                            {/* Secondary Actions */}
-                            <TouchableOpacity style={styles.actionButtonSecondary} onPress={handleReschedule}>
-                                <MaterialIcons name="edit-calendar" size={24} color={COLORS.textMuted} />
-                                <Text style={styles.actionButtonSecondaryText}>Reagendar</Text>
-                            </TouchableOpacity>
+                        <View style={styles.infoCard}>
+                            <View style={styles.infoCardContent}>
+                                <MaterialIcons name="info" size={24} color={COLORS.primary} />
+                                <View style={styles.infoCardText}>
+                                    <Text style={styles.infoCardTitle}>Gestión de Citas</Text>
+                                    <Text style={styles.infoCardSubtitle}>
+                                        Puedes gestionar, cancelar o reprogramar tus citas desde "Mis Citas" en tu perfil de usuario
+                                    </Text>
+                                </View>
+                            </View>
                             <TouchableOpacity
-                                style={styles.actionButtonDanger}
-                                onPress={handleCancel}
-                                disabled={isCancelling}
+                                style={styles.goToSettingsButton}
+                                onPress={() => router.push("/(settings)/my-appointments")}
                             >
-                                {isCancelling ? (
-                                    <ActivityIndicator size="small" color={COLORS.red600} />
-                                ) : (
-                                    <MaterialIcons name="cancel" size={24} color={COLORS.red600} />
-                                )}
-                                <Text style={styles.actionButtonDangerText}>Cancelar</Text>
+                                <Text style={styles.goToSettingsButtonText}>Ir a Mis Citas</Text>
+                                <MaterialIcons name="arrow-forward" size={18} color={COLORS.primary} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -839,5 +867,66 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: COLORS.green700,
+    },
+    // Info Card Styles
+    infoCard: {
+        backgroundColor: "#f0f9ff",
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: "#bae6fd",
+    },
+    infoCardContent: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+        marginBottom: 12,
+    },
+    infoCardText: {
+        flex: 1,
+    },
+    infoCardTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#0369a1",
+    },
+    infoCardSubtitle: {
+        fontSize: 13,
+        color: "#0369a1",
+        marginTop: 4,
+        lineHeight: 18,
+    },
+    goToSettingsButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingVertical: 12,
+        backgroundColor: COLORS.white,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+    },
+    goToSettingsButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.primary,
+    },
+    optionalPayButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 12,
+        marginTop: 12,
+        backgroundColor: "#ffffff",
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+    },
+    optionalPayButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.primary,
     },
 });

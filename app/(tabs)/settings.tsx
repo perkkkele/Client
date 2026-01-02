@@ -34,6 +34,8 @@ const COLORS = {
     orange600: "#EA580C",
     red100: "#FEE2E2",
     red600: "#DC2626",
+    green100: "#DCFCE7",
+    green600: "#16A34A",
 };
 
 interface SettingsItem {
@@ -117,6 +119,24 @@ export default function SettingsScreen() {
     function handleDeleteAccount() {
         router.push("/(tabs)/delete-account");
     }
+
+    // Appointments section items
+    const appointmentItems: SettingsItem[] = [
+        {
+            icon: "event-available",
+            iconColor: COLORS.green600,
+            iconBg: COLORS.green100,
+            label: "Próximas citas",
+            onPress: () => router.push("/(settings)/my-appointments?tab=upcoming"),
+        },
+        {
+            icon: "history",
+            iconColor: COLORS.green600,
+            iconBg: COLORS.green100,
+            label: "Historial de citas",
+            onPress: () => router.push("/(settings)/my-appointments?tab=history"),
+        },
+    ];
 
     const personalizationItems: SettingsItem[] = [
         {
@@ -274,6 +294,7 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Settings Groups */}
+                {renderSettingsGroup("Mis Citas", appointmentItems)}
                 {renderSettingsGroup("Personalización", personalizationItems)}
                 {renderSettingsGroup("Ayuda y Comentarios", helpItems)}
                 {renderSettingsGroup("Gestión de Cuenta", accountItems)}

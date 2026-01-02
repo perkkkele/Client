@@ -168,6 +168,19 @@ export default function ProDashboardScreen() {
         }
     }
 
+    async function handleTogglePaymentRequired(value: boolean) {
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                requirePaymentOnBooking: value,
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error toggling payment required:", error);
+        }
+    }
+
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadAnalytics();
@@ -415,6 +428,39 @@ export default function ProDashboardScreen() {
                                 <Switch
                                     value={user?.autoConfirmAppointments !== false}
                                     onValueChange={handleToggleAutoConfirm}
+                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
+                                    thumbColor="#FFFFFF"
+                                    ios_backgroundColor="rgba(0,0,0,0.3)"
+                                />
+                            </View>
+                        )}
+
+                        {/* Payment Required Toggle - Only visible when appointments enabled */}
+                        {user?.appointmentsEnabled && (
+                            <View style={styles.appointmentsRow}>
+                                <View style={[styles.appointmentsIconBox, {
+                                    backgroundColor: user?.requirePaymentOnBooking !== false
+                                        ? COLORS.blue600
+                                        : COLORS.gray500
+                                }]}>
+                                    <MaterialIcons
+                                        name={user?.requirePaymentOnBooking !== false ? "payment" : "payments"}
+                                        size={22}
+                                        color="#FFFFFF"
+                                    />
+                                </View>
+                                <View style={styles.appointmentsInfo}>
+                                    <Text style={styles.appointmentsLabel}>Cobro anticipado presencial</Text>
+                                    <Text style={styles.appointmentsHint}>
+                                        {user?.requirePaymentOnBooking !== false
+                                            ? "Cobrar al agendar citas presenciales"
+                                            : "Cobrar in situ (el cliente paga al llegar)"
+                                        }
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={user?.requirePaymentOnBooking !== false}
+                                    onValueChange={handleTogglePaymentRequired}
                                     trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
                                     thumbColor="#FFFFFF"
                                     ios_backgroundColor="rgba(0,0,0,0.3)"
