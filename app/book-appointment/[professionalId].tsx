@@ -51,7 +51,7 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-const WEEKDAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const MONTHS = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -118,7 +118,8 @@ export default function BookAppointmentScreen() {
         setIsLoadingSlots(true);
         try {
             const dateStr = formatLocalDate(selectedDate);
-            const response = await getAvailableSlots(token, professionalId, dateStr);
+            // Pass appointment type to get correct duration-based slots
+            const response = await getAvailableSlots(token, professionalId, dateStr, appointmentType);
             setTimeSlots(response.slots);
             setSelectedTime(null);
         } catch (error) {
@@ -128,7 +129,7 @@ export default function BookAppointmentScreen() {
         } finally {
             setIsLoadingSlots(false);
         }
-    }, [token, professionalId, selectedDate]);
+    }, [token, professionalId, selectedDate, appointmentType]);
 
     useEffect(() => {
         if (selectedDate) {
@@ -153,7 +154,11 @@ export default function BookAppointmentScreen() {
     };
 
     const getFirstDayOfMonth = (date: Date) => {
-        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        // getDay() returns 0=Sunday, 1=Monday, ..., 6=Saturday
+        // We want Monday=0, Tuesday=1, ..., Sunday=6
+        const dayOfWeek = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        // Convert: Sunday (0) becomes 6, Monday (1) becomes 0, etc.
+        return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     };
 
     const isDatePast = (day: number) => {
@@ -183,7 +188,9 @@ export default function BookAppointmentScreen() {
 
     const formatSelectedDate = () => {
         if (!selectedDate) return "";
-        const dayName = WEEKDAYS[selectedDate.getDay()];
+        // getDay() returns 0=Sunday, so we need separate lookup
+        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        const dayName = dayNames[selectedDate.getDay()];
         const day = selectedDate.getDate();
         const month = MONTHS[selectedDate.getMonth()].substring(0, 3);
         return `${dayName}, ${day} ${month}`;

@@ -113,9 +113,11 @@ export async function createAppointment(
 export async function getAvailableSlots(
     token: string,
     professionalId: string,
-    date: string
+    date: string,
+    type?: AppointmentType
 ): Promise<AvailableSlotsResponse> {
-    const response = await fetch(`${API_URL}/appointment/slots/${professionalId}/${date}`, {
+    const queryParams = type ? `?type=${type}` : '';
+    const response = await fetch(`${API_URL}/appointment/slots/${professionalId}/${date}${queryParams}`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },

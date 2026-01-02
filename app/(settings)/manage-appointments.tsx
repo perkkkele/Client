@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { WebView } from "react-native-webview";
 import { useAuth } from "../../context";
 import { API_HOST, API_PORT } from "../../api";
 import * as appointmentApi from "../../api/appointment";
@@ -72,7 +73,8 @@ function formatDate(dateStr: string): string {
     }
 }
 
-function getClientInitials(client: Appointment["client"]): string {
+function getClientInitials(client: Appointment["client"] | undefined): string {
+    if (!client) return "?";
     const first = client.firstname?.charAt(0) || "";
     const last = client.lastname?.charAt(0) || "";
     return (first + last).toUpperCase() || "?";
@@ -119,6 +121,9 @@ export default function ManageAppointmentsScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState<"appointments" | "calendar">("appointments");
+
+    const calendarConnected = user?.connectedCalendar?.connected || false;
 
     const avatarUrl = getAvatarUrl(user?.avatar);
 
@@ -297,7 +302,70 @@ export default function ManageAppointmentsScreen() {
                 </View>
             </View>
 
-            {isLoading ? (
+            {/* Tab Bar */}
+            <View style={styles.tabBar}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === "appointments" && styles.tabActive]}
+                    onPress={() => setActiveTab("appointments")}
+                >
+                    <MaterialIcons
+                        name="event-note"
+                        size={20}
+                        color={activeTab === "appointments" ? COLORS.primary : COLORS.gray400}
+                    />
+                    <Text style={[styles.tabText, activeTab === "appointments" && styles.tabTextActive]}>
+                        Citas
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === "calendar" && styles.tabActive]}
+                    onPress={() => setActiveTab("calendar")}
+                >
+                    <MaterialIcons
+                        name="calendar-month"
+                        size={20}
+                        color={activeTab === "calendar" ? COLORS.primary : COLORS.gray400}
+                    />
+                    <Text style={[styles.tabText, activeTab === "calendar" && styles.tabTextActive]}>
+                        Calendario
+                    </Text>
+                    {calendarConnected && (
+                        <View style={styles.syncBadge}>
+                            <MaterialIcons name="check" size={10} color="#fff" />
+                        </View>
+                    )}
+                </TouchableOpacity>
+            </View>
+
+            {/* Tab Content */}
+            {activeTab === "calendar" ? (
+                calendarConnected ? (
+                    <View style={styles.calendarContainer}>
+                        <WebView
+                            source={{ uri: "https://calendar.google.com/calendar/u/0/r" }}
+                            style={styles.calendarWebView}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            startInLoadingState={true}
+                            scalesPageToFit={true}
+                            renderLoading={() => (
+                                <View style={styles.webViewLoading}>
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
+                                    <Text style={styles.loadingText}>Cargando calendario...</Text>
+                                </View>
+                            )}
+                        />
+                    </View>
+                ) : (
+                    <View style={styles.emptyContainer}>
+                        <MaterialIcons name="sync-disabled" size={64} color={COLORS.gray300} />
+                        <Text style={styles.emptyTitle}>Calendario no conectado</Text>
+                        <Text style={styles.emptySubtitle}>
+                            Conecta tu Google Calendar desde "Mi horario laboral" para ver tu calendario aquí
+                        </Text>
+                    </View>
+                )
+            ) : isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
                     <Text style={styles.loadingText}>Cargando citas...</Text>
@@ -322,7 +390,10 @@ export default function ManageAppointmentsScreen() {
                         <View key={date} style={styles.dateSection}>
                             <Text style={styles.dateHeader}>{formatDate(date)}</Text>
 
-                            {dateAppointments.map((appointment) => {
+                            {(dateAppointments || []).map((appointment) => {
+                                // Skip appointments with missing client data
+                                if (!appointment || !appointment.client) return null;
+
                                 const statusStyle = getStatusStyle(appointment.status);
                                 const isCancelled = appointment.status === "cancelled";
                                 const isPending = appointment.status === "pending";
@@ -720,5 +791,66 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingVertical: 12,
+    },
+    // Tab bar styles
+    tabBar: {
+        flexDirection: "row",
+        backgroundColor: COLORS.surfaceLight,
+        marginHorizontal: 16,
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 12,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    tabActive: {
+        backgroundColor: COLORS.backgroundLight,
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray400,
+    },
+    tabTextActive: {
+        color: COLORS.primary,
+        fontWeight: "600",
+    },
+    syncBadge: {
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: COLORS.green500,
+        alignItems: "center",
+        justifyContent: "center",
+        marginLeft: 2,
+    },
+    // Calendar WebView styles
+    calendarContainer: {
+        flex: 1,
+        backgroundColor: COLORS.surfaceLight,
+        marginHorizontal: 16,
+        borderRadius: 12,
+        overflow: "hidden",
+        marginBottom: 16,
+    },
+    calendarWebView: {
+        flex: 1,
+    },
+    webViewLoading: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.surfaceLight,
     },
 });

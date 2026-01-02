@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
     Alert,
     Modal,
@@ -11,11 +11,13 @@ import {
     View,
     ActivityIndicator,
     FlatList,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import * as calendarApi from "../../api/calendar";
 
 const COLORS = {
     primary: "#f9f506",
@@ -76,6 +78,64 @@ export default function WorkScheduleScreen() {
     const [isSaving, setIsSaving] = useState(false);
     const [isRecurring, setIsRecurring] = useState(true);
 
+    // Duration per appointment type
+    const [videoDuration, setVideoDuration] = useState(
+        user?.appointmentDurations?.videoconference || user?.appointmentDuration || 60
+    );
+    const [presencialDuration, setPresencialDuration] = useState(
+        user?.appointmentDurations?.presencial || user?.appointmentDuration || 60
+    );
+
+    // Calendar sync state
+    const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
+    const calendarConnected = user?.connectedCalendar?.connected || false;
+    const calendarProvider = user?.connectedCalendar?.provider || null;
+
+    const handleConnectGoogle = async () => {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getGoogleAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
+    };
+
+    const handleConnectOutlook = async () => {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getOutlookAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
+    };
+
+    const handleDisconnectCalendar = () => {
+        Alert.alert("Desconectar", "¿Desconectar calendario?", [
+            { text: "Cancelar", style: "cancel" },
+            {
+                text: "Desconectar",
+                style: "destructive",
+                onPress: async () => {
+                    if (!token) return;
+                    try {
+                        await calendarApi.disconnectCalendar(token);
+                        if (refreshUser) await refreshUser();
+                    } catch (error: any) {
+                        Alert.alert("Error", error.message);
+                    }
+                },
+            },
+        ]);
+    };
+
     // Time picker modal state
     const [timePickerVisible, setTimePickerVisible] = useState(false);
     const [editingSlot, setEditingSlot] = useState<{
@@ -87,15 +147,79 @@ export default function WorkScheduleScreen() {
     const [selectedHour, setSelectedHour] = useState("09");
     const [selectedMinute, setSelectedMinute] = useState("00");
 
-    const [schedule, setSchedule] = useState<Record<string, DaySchedule>>({
-        monday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "13:00" }, { id: "2", start: "15:00", end: "19:00" }] },
-        tuesday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
-        wednesday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
-        thursday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
-        friday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "14:00" }] },
-        saturday: { enabled: false, slots: [] },
-        sunday: { enabled: false, slots: [] },
-    });
+    // Day number to key mapping
+    const dayNumberToKey: Record<number, string> = {
+        0: "sunday",
+        1: "monday",
+        2: "tuesday",
+        3: "wednesday",
+        4: "thursday",
+        5: "friday",
+        6: "saturday",
+    };
+
+    // Initialize schedule from user's workSchedule if available
+    const getInitialSchedule = (): Record<string, DaySchedule> => {
+        const defaultSchedule: Record<string, DaySchedule> = {
+            monday: { enabled: false, slots: [] },
+            tuesday: { enabled: false, slots: [] },
+            wednesday: { enabled: false, slots: [] },
+            thursday: { enabled: false, slots: [] },
+            friday: { enabled: false, slots: [] },
+            saturday: { enabled: false, slots: [] },
+            sunday: { enabled: false, slots: [] },
+        };
+
+        const ws = user?.workSchedule;
+        if (!ws) {
+            // Default to Mon-Fri 9-18
+            return {
+                monday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
+                tuesday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
+                wednesday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
+                thursday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
+                friday: { enabled: true, slots: [{ id: "1", start: "09:00", end: "18:00" }] },
+                saturday: { enabled: false, slots: [] },
+                sunday: { enabled: false, slots: [] },
+            };
+        }
+
+        // Mark enabled days
+        for (const dayNum of ws.workDays || []) {
+            const dayKey = dayNumberToKey[dayNum];
+            if (dayKey) {
+                defaultSchedule[dayKey].enabled = true;
+                // Use dayOverride if available, otherwise use defaultHours
+                const override = ws.dayOverrides?.find((o: any) => o.day === dayNum);
+                const start = override?.start || ws.defaultHours?.start || "09:00";
+                const end = override?.end || ws.defaultHours?.end || "18:00";
+
+                // Create slots considering breaks
+                const breaks = ws.breaks || [];
+                if (breaks.length === 0) {
+                    defaultSchedule[dayKey].slots = [{ id: Date.now().toString(), start, end }];
+                } else {
+                    // Convert breaks to multiple slots
+                    const slots: TimeSlot[] = [];
+                    let currentStart = start;
+                    for (const brk of breaks.sort((a: any, b: any) => a.start.localeCompare(b.start))) {
+                        if (brk.start > currentStart && brk.start < end) {
+                            slots.push({ id: Date.now().toString() + slots.length, start: currentStart, end: brk.start });
+                            currentStart = brk.end;
+                        }
+                    }
+                    if (currentStart < end) {
+                        slots.push({ id: Date.now().toString() + slots.length, start: currentStart, end });
+                    }
+                    defaultSchedule[dayKey].slots = slots.length > 0 ? slots : [{ id: Date.now().toString(), start, end }];
+                }
+            }
+        }
+
+        return defaultSchedule;
+    };
+
+    const [schedule, setSchedule] = useState<Record<string, DaySchedule>>(getInitialSchedule());
 
     function handleBack() {
         router.back();
@@ -160,10 +284,84 @@ export default function WorkScheduleScreen() {
     }
 
     async function handleSave() {
+        if (!token) return;
+
         setIsSaving(true);
         try {
-            // TODO: Save schedule to backend
-            // await userApi.updateUser(token, { schedule: ... });
+            // Convert UI schedule format to backend workSchedule format
+            const workDays: number[] = [];
+            const dayOverrides: { day: number; enabled: boolean; start: string; end: string }[] = [];
+            const breaks: { start: string; end: string }[] = [];
+
+            // Day key to number mapping (0=Dom, 1=Lun, ...)
+            const dayKeyToNumber: Record<string, number> = {
+                sunday: 0,
+                monday: 1,
+                tuesday: 2,
+                wednesday: 3,
+                thursday: 4,
+                friday: 5,
+                saturday: 6,
+            };
+
+            // Process each day
+            for (const [key, dayData] of Object.entries(schedule)) {
+                const dayNum = dayKeyToNumber[key];
+                if (dayData.enabled) {
+                    workDays.push(dayNum);
+                    // If there are slots, use the first slot as the main hours
+                    // Additional slots become breaks (inverted)
+                    if (dayData.slots.length > 0) {
+                        const firstSlot = dayData.slots[0];
+                        const lastSlot = dayData.slots[dayData.slots.length - 1];
+
+                        dayOverrides.push({
+                            day: dayNum,
+                            enabled: true,
+                            start: firstSlot.start,
+                            end: lastSlot.end,
+                        });
+
+                        // Multiple slots = breaks in between
+                        if (dayData.slots.length > 1) {
+                            for (let i = 0; i < dayData.slots.length - 1; i++) {
+                                breaks.push({
+                                    start: dayData.slots[i].end,
+                                    end: dayData.slots[i + 1].start,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Sort workDays
+            workDays.sort((a, b) => a - b);
+
+            // Remove duplicate breaks
+            const uniqueBreaks = breaks.filter((brk, idx, arr) =>
+                arr.findIndex(b => b.start === brk.start && b.end === brk.end) === idx
+            );
+
+            // Build the workSchedule object
+            const workSchedule = {
+                workDays,
+                defaultHours: {
+                    start: "09:00",
+                    end: "18:00",
+                },
+                dayOverrides,
+                breaks: uniqueBreaks,
+            };
+
+            await userApi.updateUser(token, {
+                workSchedule,
+                appointmentDurations: {
+                    videoconference: videoDuration,
+                    presencial: presencialDuration,
+                }
+            });
+
             if (refreshUser) {
                 await refreshUser();
             }
@@ -245,6 +443,185 @@ export default function WorkScheduleScreen() {
                                 thumbColor={COLORS.white}
                             />
                         </View>
+                    </View>
+                </View>
+
+                {/* Duration Settings */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>DURACIÓN DE CITAS</Text>
+                    <View style={styles.card}>
+                        {/* Videoconference Duration */}
+                        <View style={styles.durationRow}>
+                            <View style={styles.settingsLeft}>
+                                <View style={[styles.settingsIcon, { backgroundColor: COLORS.blue50 }]}>
+                                    <MaterialIcons name="videocam" size={20} color={COLORS.blue600} />
+                                </View>
+                                <View style={styles.settingsText}>
+                                    <Text style={styles.settingsLabel}>Videollamada</Text>
+                                    <Text style={styles.settingsHint}>Duración por defecto</Text>
+                                </View>
+                            </View>
+                            <View style={styles.durationPicker}>
+                                {[30, 45, 60, 90].map((mins) => (
+                                    <TouchableOpacity
+                                        key={mins}
+                                        style={[
+                                            styles.durationOption,
+                                            videoDuration === mins && styles.durationOptionSelected,
+                                        ]}
+                                        onPress={() => setVideoDuration(mins)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.durationOptionText,
+                                                videoDuration === mins && styles.durationOptionTextSelected,
+                                            ]}
+                                        >
+                                            {mins}m
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.durationDivider} />
+
+                        {/* Presencial Duration */}
+                        <View style={styles.durationRow}>
+                            <View style={styles.settingsLeft}>
+                                <View style={[styles.settingsIcon, { backgroundColor: COLORS.green50 }]}>
+                                    <MaterialIcons name="person" size={20} color={COLORS.green600} />
+                                </View>
+                                <View style={styles.settingsText}>
+                                    <Text style={styles.settingsLabel}>Presencial</Text>
+                                    <Text style={styles.settingsHint}>Duración por defecto</Text>
+                                </View>
+                            </View>
+                            <View style={styles.durationPicker}>
+                                {[30, 45, 60, 90].map((mins) => (
+                                    <TouchableOpacity
+                                        key={mins}
+                                        style={[
+                                            styles.durationOption,
+                                            presencialDuration === mins && styles.durationOptionSelected,
+                                        ]}
+                                        onPress={() => setPresencialDuration(mins)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.durationOptionText,
+                                                presencialDuration === mins && styles.durationOptionTextSelected,
+                                            ]}
+                                        >
+                                            {mins}m
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Calendar Sync Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>SINCRONIZACIÓN DE CALENDARIO</Text>
+                    <View style={styles.card}>
+                        {calendarConnected ? (
+                            <View style={styles.calendarStatusCard}>
+                                {/* Status Header */}
+                                <View style={styles.calendarStatusHeader}>
+                                    <View style={styles.calendarStatusIndicator}>
+                                        <View style={[styles.statusDot, { backgroundColor: COLORS.green500 }]} />
+                                    </View>
+                                    <View style={styles.calendarStatusInfo}>
+                                        <Text style={styles.calendarStatusTitle}>
+                                            {calendarProvider === "google" ? "Google Calendar" : "Outlook Calendar"}
+                                        </Text>
+                                        <Text style={styles.calendarStatusSubtitle}>
+                                            ✓ Sincronizado correctamente
+                                        </Text>
+                                    </View>
+                                    <View style={[styles.settingsIcon, { backgroundColor: calendarProvider === "google" ? "#E8F5E9" : "#E3F2FD" }]}>
+                                        <MaterialIcons
+                                            name={calendarProvider === "google" ? "event" : "calendar-today"}
+                                            size={24}
+                                            color={calendarProvider === "google" ? "#4285F4" : "#0078D4"}
+                                        />
+                                    </View>
+                                </View>
+
+                                {/* Status Details */}
+                                <View style={styles.calendarStatusDetails}>
+                                    <View style={styles.statusDetailRow}>
+                                        <MaterialIcons name="check-circle" size={16} color={COLORS.green600} />
+                                        <Text style={styles.statusDetailText}>
+                                            Eventos ocupados se bloquean automáticamente
+                                        </Text>
+                                    </View>
+                                    <View style={styles.statusDetailRow}>
+                                        <MaterialIcons name="check-circle" size={16} color={COLORS.green600} />
+                                        <Text style={styles.statusDetailText}>
+                                            Citas confirmadas se añaden al calendario
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Disconnect Button */}
+                                <TouchableOpacity
+                                    style={styles.disconnectButton}
+                                    onPress={handleDisconnectCalendar}
+                                >
+                                    <MaterialIcons name="link-off" size={16} color={COLORS.red600} />
+                                    <Text style={styles.disconnectButtonText}>Desconectar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.calendarNotConnected}>
+                                {/* Not Connected Status */}
+                                <View style={styles.calendarStatusHeader}>
+                                    <View style={styles.calendarStatusIndicator}>
+                                        <View style={[styles.statusDot, { backgroundColor: COLORS.gray400 }]} />
+                                    </View>
+                                    <View style={styles.calendarStatusInfo}>
+                                        <Text style={styles.calendarStatusTitle}>Calendario no conectado</Text>
+                                        <Text style={[styles.calendarStatusSubtitle, { color: COLORS.gray500 }]}>
+                                            Conecta para sincronizar tu disponibilidad
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Benefits */}
+                                <Text style={styles.calendarHint}>
+                                    Al conectar tu calendario, los horarios ocupados se bloquearán automáticamente y las citas confirmadas aparecerán en tu calendario.
+                                </Text>
+
+                                {/* Connect Buttons */}
+                                <View style={styles.calendarButtons}>
+                                    <TouchableOpacity
+                                        style={[styles.calendarBtn, { flex: 1 }]}
+                                        onPress={handleConnectGoogle}
+                                        disabled={isConnectingCalendar}
+                                    >
+                                        {isConnectingCalendar ? (
+                                            <ActivityIndicator size="small" color="#4285F4" />
+                                        ) : (
+                                            <>
+                                                <MaterialIcons name="event" size={20} color="#4285F4" />
+                                                <Text style={styles.calendarBtnText}>Google Calendar</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.calendarBtn, { flex: 1 }]}
+                                        onPress={handleConnectOutlook}
+                                        disabled={isConnectingCalendar}
+                                    >
+                                        <MaterialIcons name="calendar-today" size={20} color="#0078D4" />
+                                        <Text style={styles.calendarBtnText}>Outlook</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -857,5 +1234,153 @@ const styles = StyleSheet.create({
     quickTimeTextActive: {
         color: COLORS.textMain,
         fontWeight: "bold",
+    },
+    // Duration configuration styles
+    durationRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 12,
+    },
+    durationPicker: {
+        flexDirection: "row",
+        gap: 6,
+    },
+    durationOption: {
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: COLORS.gray100,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    durationOptionSelected: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    durationOptionText: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.gray600,
+    },
+    durationOptionTextSelected: {
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
+    durationDivider: {
+        height: 1,
+        backgroundColor: COLORS.gray200,
+        marginVertical: 8,
+    },
+    // Calendar sync styles
+    calendarStatusCard: {
+        padding: 16,
+    },
+    calendarNotConnected: {
+        padding: 16,
+    },
+    calendarStatusHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    calendarStatusIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    statusDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+    },
+    calendarStatusInfo: {
+        flex: 1,
+    },
+    calendarStatusTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    calendarStatusSubtitle: {
+        fontSize: 13,
+        color: COLORS.green600,
+        marginTop: 2,
+    },
+    calendarStatusDetails: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+        gap: 10,
+    },
+    statusDetailRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    statusDetailText: {
+        fontSize: 13,
+        color: COLORS.gray600,
+        flex: 1,
+    },
+    disconnectButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        marginTop: 16,
+        paddingVertical: 10,
+        backgroundColor: "#FEE2E2",
+        borderRadius: 8,
+    },
+    disconnectButtonText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.red600,
+    },
+    calendarConnected: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 12,
+    },
+    calendarHint: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        textAlign: "center",
+        marginTop: 16,
+        marginBottom: 16,
+        lineHeight: 20,
+        paddingHorizontal: 8,
+    },
+    calendarButtons: {
+        flexDirection: "row",
+        gap: 12,
+        justifyContent: "center",
+    },
+    calendarBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: COLORS.gray100,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    calendarBtnText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray700,
+    },
+    disconnectBtn: {
+        padding: 8,
+        borderRadius: 8,
+        backgroundColor: "#FEE2E2",
     },
 });

@@ -699,17 +699,6 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity
-                                        style={styles.sideMenuCardItem}
-                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/work-schedule"); }}
-                                    >
-                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.purple50 }]}>
-                                            <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
-                                        </View>
-                                        <Text style={styles.sideMenuCardLabel}>Mi horario laboral</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-                                    </TouchableOpacity>
-                                    <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity style={styles.sideMenuCardItem}>
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="forum" size={20} color={COLORS.green600} />
@@ -732,6 +721,17 @@ export default function ProDashboardScreen() {
                                             <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
                                         </View>
                                         <Text style={styles.sideMenuCardLabel}>Gestión de citas</Text>
+                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/work-schedule"); }}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.purple50 }]}>
+                                            <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
+                                        </View>
+                                        <Text style={styles.sideMenuCardLabel}>Mi horario laboral</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                 </View>

@@ -143,10 +143,20 @@ export interface User {
 
     // === Configuración de Citas ===
     appointmentsEnabled?: boolean;
-    appointmentDuration?: number;
+    appointmentDuration?: number;  // LEGACY - usar appointmentDurations
+    appointmentDurations?: {
+        videoconference?: number;
+        presencial?: number;
+    };
     appointmentHours?: {
         start?: string;
         end?: string;
+    };
+    workSchedule?: {
+        workDays?: number[];
+        defaultHours?: { start?: string; end?: string };
+        dayOverrides?: Array<{ day: number; enabled: boolean; start: string; end: string }>;
+        breaks?: Array<{ start: string; end: string }>;
     };
     autoConfirmAppointments?: boolean;
     requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
@@ -191,9 +201,20 @@ export interface UserUpdateData {
 
     // Configuración de citas
     appointmentsEnabled?: boolean;
+    appointmentDuration?: number;
+    appointmentDurations?: {
+        videoconference?: number;
+        presencial?: number;
+    };
     appointmentHours?: {
         start?: string;
         end?: string;
+    };
+    workSchedule?: {
+        workDays?: number[];
+        defaultHours?: { start?: string; end?: string };
+        dayOverrides?: Array<{ day: number; enabled: boolean; start: string; end: string }>;
+        breaks?: Array<{ start: string; end: string }>;
     };
     autoConfirmAppointments?: boolean;
     requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
