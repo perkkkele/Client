@@ -6,9 +6,13 @@ import {
     Text,
     TouchableOpacity,
     View,
+    ActivityIndicator,
+    Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#FFEA00",
@@ -23,7 +27,7 @@ const COLORS = {
 };
 
 interface Language {
-    id: string;
+    id: 'es' | 'en' | 'fr' | 'de';
     name: string;
     flag: string;
 }
@@ -36,11 +40,33 @@ const LANGUAGES: Language[] = [
 ];
 
 export default function LanguageScreen() {
-    const [selectedLanguage, setSelectedLanguage] = useState("es");
+    const { token, refreshUser } = useAuth();
+    const [selectedLanguage, setSelectedLanguage] = useState<'es' | 'en' | 'fr' | 'de'>("es");
+    const [isSaving, setIsSaving] = useState(false);
 
-    function handleContinue() {
-        // TODO: Guardar idioma seleccionado
-        router.push("/onboarding/profile-type");
+    async function handleContinue() {
+        if (!token) {
+            router.push("/onboarding/profile-type");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // Guardar idioma seleccionado en el perfil del usuario
+            await userApi.updateUser(token, { language: selectedLanguage });
+
+            // Refrescar los datos del usuario en el contexto
+            if (refreshUser) {
+                await refreshUser();
+            }
+
+            router.push("/onboarding/profile-type");
+        } catch (error: any) {
+            console.error("Error saving language:", error);
+            Alert.alert("Error", "No se pudo guardar el idioma. Inténtalo de nuevo.");
+        } finally {
+            setIsSaving(false);
+        }
     }
 
     return (
@@ -96,12 +122,19 @@ export default function LanguageScreen() {
             {/* Footer */}
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={styles.continueButton}
+                    style={[styles.continueButton, isSaving && { opacity: 0.7 }]}
                     onPress={handleContinue}
                     activeOpacity={0.9}
+                    disabled={isSaving}
                 >
-                    <Text style={styles.continueButtonText}>Continuar</Text>
-                    <Ionicons name="arrow-forward" size={20} color={COLORS.gray900} />
+                    {isSaving ? (
+                        <ActivityIndicator color={COLORS.gray900} />
+                    ) : (
+                        <>
+                            <Text style={styles.continueButtonText}>Continuar</Text>
+                            <Ionicons name="arrow-forward" size={20} color={COLORS.gray900} />
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

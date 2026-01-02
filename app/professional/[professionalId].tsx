@@ -353,27 +353,51 @@ export default function ProfessionalProfileScreen() {
 
                 {/* Reviews Section */}
                 <TouchableOpacity
-                    style={styles.card}
+                    style={styles.reviewsCard}
                     onPress={() => router.push(`/reviews/${professionalId}`)}
+                    activeOpacity={0.95}
                 >
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>RESEÑAS</Text>
-                        <Text style={styles.seeAllLink}>Ver todas</Text>
+                    <View style={styles.reviewsHeader}>
+                        <View style={styles.reviewsIconContainer}>
+                            <MaterialIcons name="star" size={24} color={COLORS.amber500} />
+                        </View>
+                        <View style={styles.reviewsTitleContainer}>
+                            <Text style={styles.reviewsTitle}>Reseñas de clientes</Text>
+                            {professional.ratingCount && professional.ratingCount > 0 ? (
+                                <Text style={styles.reviewsSubtitle}>
+                                    {professional.ratingCount} {professional.ratingCount === 1 ? 'valoración' : 'valoraciones'}
+                                </Text>
+                            ) : (
+                                <Text style={styles.reviewsSubtitle}>Sé el primero en opinar</Text>
+                            )}
+                        </View>
+                        <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
                     </View>
 
-                    {professional.ratingCount && professional.ratingCount > 0 ? (
-                        <View style={styles.reviewPlaceholder}>
-                            <MaterialIcons name="rate-review" size={32} color={COLORS.gray400} />
-                            <Text style={styles.reviewPlaceholderText}>
-                                {professional.ratingCount} reseñas disponibles
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={styles.reviewPlaceholder}>
-                            <MaterialIcons name="rate-review" size={32} color={COLORS.gray400} />
-                            <Text style={styles.reviewPlaceholderText}>Aún no hay reseñas</Text>
+                    {professional.rating !== undefined && professional.rating > 0 && (
+                        <View style={styles.reviewsRatingRow}>
+                            <Text style={styles.reviewsRatingBig}>{professional.rating.toFixed(1)}</Text>
+                            <View style={styles.reviewsStarsContainer}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <MaterialIcons
+                                        key={star}
+                                        name={star <= Math.round(professional.rating || 0) ? "star" : "star-border"}
+                                        size={18}
+                                        color={COLORS.amber500}
+                                    />
+                                ))}
+                            </View>
                         </View>
                     )}
+
+                    <View style={styles.reviewsCTA}>
+                        <Text style={styles.reviewsCTAText}>
+                            {professional.ratingCount && professional.ratingCount > 0
+                                ? "Ver todas las reseñas"
+                                : "Escribir una reseña"}
+                        </Text>
+                        <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
+                    </View>
                 </TouchableOpacity>
 
                 {/* Bottom Padding for Navigation */}
@@ -729,14 +753,79 @@ const styles = StyleSheet.create({
     scheduleDayTextDisabled: {
         color: COLORS.gray400,
     },
-    reviewPlaceholder: {
-        alignItems: "center",
-        paddingVertical: 20,
+    // Reviews Card - Premium Design
+    reviewsCard: {
+        backgroundColor: COLORS.white,
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "rgba(245, 158, 11, 0.2)",
+        shadowColor: COLORS.amber500,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 3,
     },
-    reviewPlaceholderText: {
-        fontSize: 14,
+    reviewsHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    reviewsIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: "rgba(245, 158, 11, 0.1)",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    reviewsTitleContainer: {
+        flex: 1,
+    },
+    reviewsTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    reviewsSubtitle: {
+        fontSize: 12,
         color: COLORS.gray500,
-        marginTop: 8,
+        marginTop: 2,
+    },
+    reviewsRatingRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(254, 243, 199, 0.5)",
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 16,
+        gap: 12,
+    },
+    reviewsRatingBig: {
+        fontSize: 32,
+        fontWeight: "800",
+        color: COLORS.textMain,
+    },
+    reviewsStarsContainer: {
+        flexDirection: "row",
+        gap: 2,
+    },
+    reviewsCTA: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primary,
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    reviewsCTAText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
     },
     // Bottom Navigation
     bottomNav: {

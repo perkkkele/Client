@@ -80,6 +80,7 @@
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc",
       "expo-web-browser",
+      "@react-native-google-signin/google-signin",
       [
         "expo-notifications",
         {

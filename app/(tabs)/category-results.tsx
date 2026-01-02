@@ -41,12 +41,21 @@ const COLORS = {
 };
 
 const CATEGORIES = [
+    { id: "todos", label: "Todos", emoji: "✨" },
     { id: "legal", label: "Legal", emoji: "⚖️" },
     { id: "salud", label: "Salud", emoji: "🩺" },
     { id: "hogar", label: "Hogar", emoji: "🔧" },
     { id: "educacion", label: "Educación", emoji: "🎓" },
     { id: "fitness", label: "Fitness", emoji: "💪" },
     { id: "tecnologia", label: "Tecnología", emoji: "💻" },
+    { id: "diseno", label: "Diseño", emoji: "🎨" },
+    { id: "bienestar", label: "Bienestar", emoji: "🧘" },
+    { id: "inmobiliario", label: "Inmobiliario", emoji: "🏠" },
+    { id: "estetica", label: "Estética", emoji: "💅" },
+    { id: "empleo", label: "Empleo", emoji: "💼" },
+    { id: "finanzas", label: "Finanzas", emoji: "💰" },
+    { id: "energia", label: "Energía", emoji: "⚡" },
+    { id: "otros", label: "Otros", emoji: "📦" },
 ];
 
 const SORT_OPTIONS = [
@@ -183,7 +192,11 @@ export default function CategoryResultsScreen() {
     }
 
     function handleCategoryChange(newCategory: string) {
-        if (newCategory === "todos") {
+        // Toggle behavior: if clicking the same category, reset to "todos"
+        if (selectedCategory === newCategory && newCategory !== "todos") {
+            setSelectedCategory("todos");
+        } else if (newCategory === "todos") {
+            // Navigate to the all-categories screen (same as in Chats)
             router.push("/(tabs)/all-categories");
         } else {
             setSelectedCategory(newCategory);
@@ -355,7 +368,7 @@ export default function CategoryResultsScreen() {
                                 <Text style={styles.logoSubtext}>Professional Chat</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.qrButton}>
+                        <TouchableOpacity style={styles.qrButton} onPress={() => router.push("/(tabs)/qr-scanner")}>
                             <MaterialIcons name="qr-code-scanner" size={24} color={COLORS.gray400} />
                         </TouchableOpacity>
                     </View>

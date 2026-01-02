@@ -223,7 +223,7 @@ export default function FavoritesScreen() {
                                 <Text style={styles.logoSubtext}>Professional Chat</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.qrButton}>
+                        <TouchableOpacity style={styles.qrButton} onPress={() => router.push("/(tabs)/qr-scanner")}>
                             <MaterialIcons name="qr-code-scanner" size={24} color={COLORS.slate400} />
                         </TouchableOpacity>
                     </View>

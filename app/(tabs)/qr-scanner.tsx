@@ -12,6 +12,7 @@ import {
     Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../context";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -38,11 +39,13 @@ try {
 }
 
 export default function QRScannerScreen() {
+    const { user } = useAuth();
     const [hasCamera, setHasCamera] = useState(CameraView !== null);
     const [permission, setPermission] = useState<any>(null);
     const [scanned, setScanned] = useState(false);
     const [flashOn, setFlashOn] = useState(false);
     const scanLineAnim = useRef(new Animated.Value(0)).current;
+    const isProfessional = user?.userType === 'userpro';
 
     // Usar hook de permisos solo si la cámara está disponible
     const cameraPermission = useCameraPermissions ? useCameraPermissions() : [null, () => { }];
@@ -197,12 +200,14 @@ export default function QRScannerScreen() {
                             <Text style={styles.actionLabel}>Galería</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
-                            <View style={styles.actionIconContainer}>
-                                <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
-                            </View>
-                            <Text style={styles.actionLabel}>Mi Código</Text>
-                        </TouchableOpacity>
+                        {isProfessional && (
+                            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
+                                <View style={styles.actionIconContainer}>
+                                    <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
+                                </View>
+                                <Text style={styles.actionLabel}>Mi Código</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </SafeAreaView>
             </View>
@@ -318,12 +323,14 @@ export default function QRScannerScreen() {
                         <Text style={styles.actionLabel}>Galería</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
-                        <View style={styles.actionIconContainer}>
-                            <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
-                        </View>
-                        <Text style={styles.actionLabel}>Mi Código</Text>
-                    </TouchableOpacity>
+                    {isProfessional && (
+                        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
+                            <View style={styles.actionIconContainer}>
+                                <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
+                            </View>
+                            <Text style={styles.actionLabel}>Mi Código</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </SafeAreaView>
         </View>

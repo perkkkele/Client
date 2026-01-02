@@ -107,6 +107,11 @@ export default function TwinAppearanceScreen() {
     const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
     const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
     const soundRef = useRef<any>(null);
+
+    // Private/cloned voices modal state
+    const [showPrivateVoiceModal, setShowPrivateVoiceModal] = useState(false);
+    const [privateVoices, setPrivateVoices] = useState<PublicVoice[]>([]);
+    const [loadingPrivateVoices, setLoadingPrivateVoices] = useState(false);
     const previewSoundRef = useRef<any>(null);
 
     // Video upload modal state
@@ -169,6 +174,13 @@ export default function TwinAppearanceScreen() {
         }
     }, [showVoiceModal]);
 
+    // Load private voices when modal opens
+    useEffect(() => {
+        if (showPrivateVoiceModal && privateVoices.length === 0) {
+            loadPrivateVoices();
+        }
+    }, [showPrivateVoiceModal]);
+
     // Cleanup audio on unmount
     useEffect(() => {
         return () => {
@@ -204,6 +216,19 @@ export default function TwinAppearanceScreen() {
             Alert.alert("Error", "No se pudieron cargar las voces");
         } finally {
             setLoadingVoices(false);
+        }
+    }
+
+    async function loadPrivateVoices() {
+        setLoadingPrivateVoices(true);
+        try {
+            const voices = await liveAvatarApi.getPrivateVoices();
+            setPrivateVoices(voices);
+        } catch (error) {
+            console.error("Error loading private voices:", error);
+            Alert.alert("Error", "No se pudieron cargar las voces privadas");
+        } finally {
+            setLoadingPrivateVoices(false);
         }
     }
 
@@ -371,13 +396,10 @@ export default function TwinAppearanceScreen() {
         setShowVideoModal(true);
     }
 
-    // Handler for voice cloning - show out of service message
+    // Handler for voice cloning - opens private voices modal
     function handleVoiceCloning() {
-        Alert.alert(
-            "Función No Disponible",
-            "La clonación de voz está temporalmente fuera de servicio. Por favor, utiliza una voz estándar del catálogo.",
-            [{ text: "Entendido", style: "default" }]
-        );
+        setVoiceType("cloned");
+        setShowPrivateVoiceModal(true);
     }
 
     // Record video from camera
@@ -519,6 +541,18 @@ export default function TwinAppearanceScreen() {
         setShowVoiceModal(false);
     }
 
+    async function handlePrivateVoiceSelect(voice: PublicVoice) {
+        // Stop any playing audio
+        if (soundRef.current) {
+            await soundRef.current.unloadAsync();
+            soundRef.current = null;
+        }
+        setPlayingVoiceId(null);
+        setSelectedVoice(voice);
+        setVoiceType("cloned"); // Auto-set to cloned when private voice is selected
+        setShowPrivateVoiceModal(false);
+    }
+
     async function handleContinue() {
         setIsLoading(true);
         try {
@@ -543,6 +577,14 @@ export default function TwinAppearanceScreen() {
 
                 // If a standard voice is selected, save its data
                 if (selectedVoice && voiceType === "standard") {
+                    updateData.digitalTwin.appearance.liveVoiceId = selectedVoice.id;
+                    updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
+                    updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
+                    updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
+                }
+
+                // If a private/cloned voice is selected, save its data
+                if (selectedVoice && voiceType === "cloned") {
                     updateData.digitalTwin.appearance.liveVoiceId = selectedVoice.id;
                     updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
                     updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
@@ -646,6 +688,59 @@ export default function TwinAppearanceScreen() {
                     )}
                     {isSelected && (
                         <View style={styles.voiceSelectedCheck}>
+                            <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        );
+    }
+
+    function renderPrivateVoiceItem({ item }: { item: PublicVoice }) {
+        const isSelected = selectedVoice?.id === item.id;
+        const isPlaying = playingVoiceId === item.id;
+
+        return (
+            <TouchableOpacity
+                style={[styles.voiceItem, isSelected && styles.voiceItemSelected]}
+                onPress={() => handlePrivateVoiceSelect(item)}
+                activeOpacity={0.8}
+            >
+                <View style={styles.voiceItemContent}>
+                    <View style={[styles.voiceIcon, isSelected && styles.voiceIconSelected]}>
+                        <MaterialIcons
+                            name={item.gender?.toLowerCase() === 'female' ? 'person-2' : 'person'}
+                            size={24}
+                            color={isSelected ? COLORS.accentPurple : COLORS.gray500}
+                        />
+                    </View>
+                    <View style={styles.voiceItemInfo}>
+                        <Text style={[styles.voiceItemName, isSelected && styles.voiceItemNameSelected]} numberOfLines={1}>
+                            {item.name || "Voz Privada"}
+                        </Text>
+                        <Text style={styles.voiceItemMeta}>
+                            {item.gender || "Neutral"} • {item.language || "ES"} • Privada
+                        </Text>
+                    </View>
+                </View>
+                <View style={styles.voiceItemActions}>
+                    {(item.preview_url || item.sample_url) && (
+                        <TouchableOpacity
+                            style={[styles.voicePlayButton, isPlaying && styles.voicePlayButtonActive]}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                playVoicePreview(item);
+                            }}
+                        >
+                            <MaterialIcons
+                                name={isPlaying ? "stop" : "play-arrow"}
+                                size={20}
+                                color={isPlaying ? "#FFFFFF" : COLORS.gray700}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    {isSelected && (
+                        <View style={[styles.voiceSelectedCheck, { backgroundColor: COLORS.accentPurple }]}>
                             <MaterialIcons name="check" size={16} color="#FFFFFF" />
                         </View>
                     )}
@@ -813,16 +908,16 @@ export default function TwinAppearanceScreen() {
                                 ]}
                                 onPress={handleVoiceCloning}
                             >
-                                {voiceType === "cloned" && (
-                                    <View style={styles.engagementBadge}>
-                                        <Text style={styles.engagementText}>+ Engagement</Text>
-                                    </View>
+                                {voiceType === "cloned" && selectedVoice && (
+                                    <View style={styles.activeDot} />
                                 )}
                                 <View style={[styles.optionIcon, voiceType === "cloned" && styles.optionIconPurple]}>
                                     <MaterialIcons name="mic" size={18} color={voiceType === "cloned" ? COLORS.accentPurple : COLORS.gray500} />
                                 </View>
-                                <Text style={[styles.optionTitle, voiceType === "cloned" && styles.optionTitleSelected]}>Clonar mi Voz</Text>
-                                <Text style={styles.optionSubtitle}>Sube audio 2 min</Text>
+                                <Text style={[styles.optionTitle, voiceType === "cloned" && styles.optionTitleSelected]}>Voz Privada</Text>
+                                <Text style={styles.optionSubtitle}>
+                                    {voiceType === "cloned" && selectedVoice ? selectedVoice.name : "Ver voces clonadas"}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -969,6 +1064,72 @@ export default function TwinAppearanceScreen() {
                                 >
                                     <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
                                     <MaterialIcons name="check" size={20} color="#000000" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Private/Cloned Voices Modal */}
+            <Modal
+                visible={showPrivateVoiceModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowPrivateVoiceModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Voces Privadas</Text>
+                                <Text style={styles.modalSubtitle}>Voces clonadas disponibles en tu cuenta</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowPrivateVoiceModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Private Voice List */}
+                        {loadingPrivateVoices ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={COLORS.accentPurple} />
+                                <Text style={styles.loadingText}>Cargando voces privadas...</Text>
+                            </View>
+                        ) : privateVoices.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <MaterialIcons name="mic-off" size={64} color={COLORS.gray400} />
+                                <Text style={styles.emptyText}>No hay voces privadas disponibles</Text>
+                                <Text style={[styles.emptyText, { fontSize: 12, marginTop: 8 }]}>
+                                    Las voces clonadas aparecerán aquí cuando estén disponibles
+                                </Text>
+                                <TouchableOpacity style={styles.retryButton} onPress={loadPrivateVoices}>
+                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={privateVoices}
+                                renderItem={renderPrivateVoiceItem}
+                                keyExtractor={(item) => item.id}
+                                contentContainerStyle={styles.voiceList}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
+
+                        {/* Modal Footer */}
+                        {selectedVoice && voiceType === "cloned" && (
+                            <View style={styles.modalFooter}>
+                                <TouchableOpacity
+                                    style={[styles.confirmButton, { backgroundColor: COLORS.accentPurple }]}
+                                    onPress={() => setShowPrivateVoiceModal(false)}
+                                >
+                                    <Text style={[styles.confirmButtonText, { color: "#FFFFFF" }]}>Confirmar Selección</Text>
+                                    <MaterialIcons name="check" size={20} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
                         )}

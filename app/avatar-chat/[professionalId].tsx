@@ -512,11 +512,17 @@ export default function AvatarChatScreen() {
 
         try {
             // Step 1: Create session token
+            // Use the professional's profile language (set during onboarding) as primary,
+            // then fall back to voice language, then to Spanish
+            const configuredLanguage = professional?.language
+                || digitalTwin.appearance?.liveVoiceLanguage
+                || "es";
+
             const config = {
                 avatarId,
                 voiceId: voiceId || undefined,
                 contextId: contextId || undefined,
-                language: "es", // Default to Spanish
+                language: configuredLanguage,
             };
 
             console.log("Creating session token with config:", config);

@@ -221,11 +221,62 @@ export interface PublicVoice {
 }
 
 /**
- * Get list of public voices from LiveAvatar catalog
+ * Get list of private/cloned voices from LiveAvatar catalog
+ * Uses voice_type=private parameter
+ * @param language Optional language filter (e.g., "es", "en")
  */
-export async function getPublicVoices(): Promise<PublicVoice[]> {
+export async function getPrivateVoices(language?: string): Promise<PublicVoice[]> {
     try {
-        const response = await fetch(`${LIVEAVATAR_API_URL}/voices`, {
+        let url = `${LIVEAVATAR_API_URL}/voices?voice_type=private`;
+        if (language) {
+            url += `&language=${encodeURIComponent(language)}`;
+        }
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar private voices error:", error);
+            throw new Error(error.message || `Error fetching private voices: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar private voices response:", responseData);
+
+        // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
+        if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
+            return responseData.data.results;
+        }
+        // Fallback for direct array in data
+        if (responseData.data && Array.isArray(responseData.data)) {
+            return responseData.data;
+        }
+        if (Array.isArray(responseData)) {
+            return responseData;
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching private voices:", error);
+        return [];
+    }
+}
+
+/**
+ * Get list of public voices from LiveAvatar catalog
+ * @param language Optional language filter (e.g., "es", "en")
+ */
+export async function getPublicVoices(language?: string): Promise<PublicVoice[]> {
+    try {
+        let url = `${LIVEAVATAR_API_URL}/voices`;
+        if (language) {
+            url += `?language=${encodeURIComponent(language)}`;
+        }
+        const response = await fetch(url, {
             method: "GET",
             headers: {
                 "X-API-KEY": LIVEAVATAR_API_KEY,

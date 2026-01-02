@@ -17,16 +17,21 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import * as WebBrowser from "expo-web-browser";
 
-// Try to import Google OAuth - it may fail in Expo Go
-let useIdTokenAuthRequest: any = null;
+// Native Google Sign-In
+let GoogleSignin: any = null;
+let isGoogleSignInAvailable = false;
 try {
-  const Google = require("expo-auth-session/providers/google");
-  useIdTokenAuthRequest = Google.useIdTokenAuthRequest;
-  WebBrowser.maybeCompleteAuthSession();
+  const GoogleSignInModule = require("@react-native-google-signin/google-signin");
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  isGoogleSignInAvailable = true;
+
+  // Configure Google Sign-In
+  GoogleSignin.configure({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
 } catch (e) {
-  console.log("Google OAuth not available (Expo Go)");
+  console.log("Google Sign-In not available:", e);
 }
 
 const COLORS = {
@@ -50,37 +55,36 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
   const { login, loginWithGoogle } = useAuth();
 
-  // Google OAuth configuration - only if available
-  const googleAuth = useIdTokenAuthRequest ? useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-  }) : [null, null, null];
-
-  const [request, response, promptAsync] = googleAuth;
-
-  useEffect(() => {
-    setIsGoogleAvailable(!!useIdTokenAuthRequest && !!request);
-  }, [request]);
-
-  // Handle Google OAuth response
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      handleGoogleLogin(id_token);
-    } else if (response?.type === "error") {
-      Alert.alert("Error", "Error al conectar con Google");
+  // Handle native Google Sign-In
+  async function handleGoogleSignIn() {
+    if (!isGoogleSignInAvailable || !GoogleSignin) {
+      Alert.alert("Error", "Google Sign-In no está disponible en esta versión");
+      return;
     }
-  }, [response]);
 
-  async function handleGoogleLogin(idToken: string) {
     setIsGoogleLoading(true);
     try {
+      // Check if user is already signed in
+      await GoogleSignin.hasPlayServices();
+
+      // Sign in and get user info
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) {
+        throw new Error("No se pudo obtener el token de Google");
+      }
+
+      // Send to our backend
       await loginWithGoogle(idToken);
       router.replace("/(tabs)");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+      console.log("Google Sign-In error:", error);
+      if (error.code !== "SIGN_IN_CANCELLED") {
+        Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -229,9 +233,9 @@ export default function LoginScreen() {
             {/* Botones sociales */}
             <View style={styles.socialButtonsContainer}>
               <TouchableOpacity
-                style={[styles.socialButton, (isGoogleLoading || !isGoogleAvailable) && styles.buttonDisabled]}
-                onPress={() => promptAsync && promptAsync()}
-                disabled={isGoogleLoading || !isGoogleAvailable}
+                style={[styles.socialButtonFull, (isGoogleLoading || !isGoogleSignInAvailable) && styles.buttonDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={isGoogleLoading || !isGoogleSignInAvailable}
               >
                 {isGoogleLoading ? (
                   <ActivityIndicator size="small" color="#000000" />
@@ -243,14 +247,17 @@ export default function LoginScreen() {
                       }}
                       style={styles.socialIcon}
                     />
-                    <Text style={styles.socialButtonText}>Google</Text>
+                    <Text style={styles.socialButtonText}>Continuar con Google</Text>
                   </>
                 )}
               </TouchableOpacity>
+
+              {/* TODO: Implementar Apple Sign-In post-MVP
               <TouchableOpacity style={styles.socialButton}>
                 <Ionicons name="logo-apple" size={16} color="#000000" />
                 <Text style={styles.socialButtonText}>Apple</Text>
               </TouchableOpacity>
+              */}
             </View>
 
             {/* Crear cuenta */}
@@ -445,6 +452,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardLight,
+  },
+  socialButtonFull: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,

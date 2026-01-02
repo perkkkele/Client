@@ -109,6 +109,7 @@ export interface User {
     avatar?: string;
     userType: UserType;
     interests?: string[];
+    language?: 'es' | 'en' | 'fr' | 'de' | null;  // Idioma preferido del usuario
     createdAt?: string;
     lastActive?: string;
 
@@ -159,6 +160,7 @@ export interface UserUpdateData {
     firstname?: string;
     lastname?: string;
     interests?: string[];
+    language?: 'es' | 'en' | 'fr' | 'de';  // Idioma preferido del usuario
 
     // Cambio a profesional
     userType?: UserType;
