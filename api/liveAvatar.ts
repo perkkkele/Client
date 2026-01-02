@@ -207,6 +207,88 @@ export async function getPublicAvatars(): Promise<PublicAvatar[]> {
     }
 }
 
+// Extended PublicAvatar for user avatars with status
+export interface UserAvatar extends PublicAvatar {
+    status?: 'processing' | 'ready' | 'failed' | 'pending';
+    training_progress?: number;
+}
+
+/**
+ * Get list of user's own avatars (custom avatars created from video training)
+ * API: GET /v1/avatars - returns all avatars for the authenticated user
+ */
+export async function getUserAvatars(): Promise<UserAvatar[]> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/avatars`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar user avatars error:", error);
+            throw new Error(error.message || `Error fetching user avatars: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar user avatars response:", responseData);
+
+        // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
+        if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
+            return responseData.data.results;
+        }
+        // Fallback for direct array in data
+        if (responseData.data && Array.isArray(responseData.data)) {
+            return responseData.data;
+        }
+        if (Array.isArray(responseData)) {
+            return responseData;
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching user avatars:", error);
+        return [];
+    }
+}
+
+/**
+ * Get a specific avatar by ID
+ * API: GET /v1/avatars/{avatar_id}
+ */
+export async function getAvatarById(avatarId: string): Promise<UserAvatar | null> {
+    try {
+        const response = await fetch(`${LIVEAVATAR_API_URL}/avatars/${avatarId}`, {
+            method: "GET",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar get avatar error:", error);
+            return null;
+        }
+
+        const responseData = await response.json();
+        console.log("LiveAvatar avatar details:", responseData);
+
+        // API returns { code: 1000, data: {...}, message }
+        if (responseData.data) {
+            return responseData.data;
+        }
+        return responseData;
+    } catch (error) {
+        console.error("Error fetching avatar by ID:", error);
+        return null;
+    }
+}
+
+
 // Public voice from LiveAvatar catalog
 export interface PublicVoice {
     id: string;

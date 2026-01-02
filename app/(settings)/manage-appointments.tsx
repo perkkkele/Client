@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
     Image,
     ScrollView,
@@ -337,40 +337,58 @@ export default function ManageAppointmentsScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Tab Content */}
-            {activeTab === "calendar" ? (
-                calendarConnected ? (
-                    <View style={styles.calendarContainer}>
-                        <WebView
-                            source={{ uri: "https://calendar.google.com/calendar/u/0/r" }}
-                            style={styles.calendarWebView}
-                            javaScriptEnabled={true}
-                            domStorageEnabled={true}
-                            startInLoadingState={true}
-                            scalesPageToFit={true}
-                            renderLoading={() => (
-                                <View style={styles.webViewLoading}>
-                                    <ActivityIndicator size="large" color={COLORS.primary} />
-                                    <Text style={styles.loadingText}>Cargando calendario...</Text>
-                                </View>
-                            )}
-                        />
-                    </View>
-                ) : (
-                    <View style={styles.emptyContainer}>
-                        <MaterialIcons name="sync-disabled" size={64} color={COLORS.gray300} />
-                        <Text style={styles.emptyTitle}>Calendario no conectado</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Conecta tu Google Calendar desde "Mi horario laboral" para ver tu calendario aquí
-                        </Text>
-                    </View>
-                )
-            ) : isLoading ? (
+            {/* Calendar WebView - Always mounted to preserve session */}
+            {calendarConnected && (
+                <View style={[
+                    styles.calendarContainer,
+                    activeTab !== "calendar" && {
+                        position: "absolute",
+                        left: -9999,
+                        opacity: 0,
+                        zIndex: -1,
+                    }
+                ]}>
+                    <WebView
+                        source={{ uri: "https://calendar.google.com/calendar/u/0/r" }}
+                        style={styles.calendarWebView}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        startInLoadingState={true}
+                        scalesPageToFit={true}
+                        // Session persistence
+                        sharedCookiesEnabled={true}
+                        thirdPartyCookiesEnabled={true}
+                        incognito={false}
+                        cacheEnabled={true}
+                        cacheMode="LOAD_DEFAULT"
+                        renderLoading={() => (
+                            <View style={styles.webViewLoading}>
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <Text style={styles.loadingText}>Cargando calendario...</Text>
+                            </View>
+                        )}
+                    />
+                </View>
+            )}
+
+            {/* Calendar not connected message */}
+            {activeTab === "calendar" && !calendarConnected && (
+                <View style={styles.emptyContainer}>
+                    <MaterialIcons name="sync-disabled" size={64} color={COLORS.gray300} />
+                    <Text style={styles.emptyTitle}>Calendario no conectado</Text>
+                    <Text style={styles.emptySubtitle}>
+                        Conecta tu Google Calendar desde "Mi horario laboral" para ver tu calendario aquí
+                    </Text>
+                </View>
+            )}
+
+            {/* Appointments Tab Content */}
+            {activeTab === "appointments" && isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
                     <Text style={styles.loadingText}>Cargando citas...</Text>
                 </View>
-            ) : appointments.length === 0 ? (
+            ) : activeTab === "appointments" && appointments.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="event-available" size={64} color={COLORS.gray300} />
                     <Text style={styles.emptyTitle}>No tienes citas</Text>
@@ -378,7 +396,7 @@ export default function ManageAppointmentsScreen() {
                         Cuando los clientes reserven contigo, aparecerán aquí
                     </Text>
                 </View>
-            ) : (
+            ) : activeTab === "appointments" ? (
                 <ScrollView
                     style={styles.scrollView}
                     showsVerticalScrollIndicator={false}
@@ -523,7 +541,7 @@ export default function ManageAppointmentsScreen() {
 
                     <View style={{ height: 40 }} />
                 </ScrollView>
-            )}
+            ) : null}
         </SafeAreaView>
     );
 }
@@ -826,20 +844,196 @@ const styles = StyleSheet.create({
         width: 14,
         height: 14,
         borderRadius: 7,
-        backgroundColor: COLORS.green500,
+        backgroundColor: "#0F9D58",
         alignItems: "center",
         justifyContent: "center",
         marginLeft: 2,
     },
-    // Calendar WebView styles
+    // Calendar styles - Google Calendar inspired
     calendarContainer: {
         flex: 1,
-        backgroundColor: COLORS.surfaceLight,
-        marginHorizontal: 16,
-        borderRadius: 12,
-        overflow: "hidden",
-        marginBottom: 16,
+        backgroundColor: "#F8F9FA",
     },
+    calendar: {
+        backgroundColor: "#fff",
+        marginHorizontal: 16,
+        marginTop: 8,
+        borderRadius: 8,
+        overflow: "hidden",
+        elevation: 2,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+    },
+    calendarLoadingOverlay: {
+        padding: 12,
+        alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.8)",
+    },
+    // Events list styles - Google Calendar inspired
+    eventsList: {
+        marginHorizontal: 16,
+        marginTop: 20,
+        marginBottom: 32,
+    },
+    eventsHeader: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#5F6368",
+        marginBottom: 12,
+        textTransform: "capitalize",
+        letterSpacing: 0.25,
+    },
+    eventItem: {
+        flexDirection: "row",
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 8,
+        alignItems: "flex-start",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    eventTwinpro: {
+        borderLeftWidth: 4,
+        borderLeftColor: "#0F9D58", // Google Green
+    },
+    eventGoogle: {
+        borderLeftWidth: 4,
+        borderLeftColor: "#4285F4", // Google Blue
+    },
+    eventDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 12,
+        marginTop: 2,
+    },
+    eventContent: {
+        flex: 1,
+    },
+    eventTime: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#1A73E8",
+        marginBottom: 4,
+    },
+    eventTitle: {
+        fontSize: 15,
+        fontWeight: "500",
+        color: "#202124",
+        marginBottom: 4,
+        lineHeight: 20,
+    },
+    eventLocation: {
+        fontSize: 13,
+        color: "#5F6368",
+        marginBottom: 4,
+    },
+    eventSource: {
+        fontSize: 11,
+        color: "#9AA0A6",
+        fontWeight: "500",
+    },
+    noEvents: {
+        alignItems: "center",
+        padding: 32,
+        backgroundColor: "#fff",
+        borderRadius: 8,
+    },
+    noEventsText: {
+        fontSize: 14,
+        color: "#5F6368",
+        marginTop: 12,
+    },
+    // Custom calendar styles - Google Calendar inspired
+    calendarHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 16,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E8EAED",
+    },
+    calendarArrow: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#F8F9FA",
+    },
+    calendarMonth: {
+        fontSize: 20,
+        fontWeight: "500",
+        color: "#3C4043",
+        letterSpacing: 0.25,
+    },
+    dayNamesRow: {
+        flexDirection: "row",
+        paddingVertical: 12,
+        backgroundColor: "#F8F9FA",
+    },
+    dayName: {
+        flex: 1,
+        textAlign: "center",
+        fontSize: 11,
+        fontWeight: "500",
+        color: "#70757A",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    calendarGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        paddingVertical: 4,
+        paddingHorizontal: 4,
+    },
+    dayCell: {
+        width: "14.28%",
+        aspectRatio: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 2,
+    },
+    dayCellSelected: {
+        backgroundColor: "#1A73E8",
+        borderRadius: 999,
+    },
+    dayCellToday: {
+        backgroundColor: "#E8F0FE",
+        borderRadius: 999,
+    },
+    dayText: {
+        fontSize: 14,
+        fontWeight: "400",
+        color: "#3C4043",
+    },
+    dayTextSelected: {
+        color: "#fff",
+        fontWeight: "500",
+    },
+    dayTextToday: {
+        color: "#1A73E8",
+        fontWeight: "600",
+    },
+    eventDotsRow: {
+        flexDirection: "row",
+        gap: 3,
+        marginTop: 3,
+        height: 6,
+    },
+    eventDotSmall: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+    },
+    // Legacy styles (kept for compatibility)
     calendarWebView: {
         flex: 1,
     },

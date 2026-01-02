@@ -18,7 +18,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
-import { PublicAvatar, PublicVoice, CreateAvatarResponse } from "../../api/liveAvatar";
+import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar } from "../../api/liveAvatar";
 
 // Video requirements constants
 const VIDEO_REQUIREMENTS = {
@@ -120,6 +120,11 @@ export default function TwinAppearanceScreen() {
     const [uploadProgress, setUploadProgress] = useState<string>("");
     const [customAvatarStatus, setCustomAvatarStatus] = useState<CreateAvatarResponse | null>(null);
 
+    // Custom/trained avatars modal state
+    const [showCustomAvatarModal, setShowCustomAvatarModal] = useState(false);
+    const [customAvatars, setCustomAvatars] = useState<UserAvatar[]>([]);
+    const [loadingCustomAvatars, setLoadingCustomAvatars] = useState(false);
+
     // Help modal state
     const [showHelpModal, setShowHelpModal] = useState(false);
 
@@ -181,6 +186,13 @@ export default function TwinAppearanceScreen() {
         }
     }, [showPrivateVoiceModal]);
 
+    // Load custom avatars when modal opens
+    useEffect(() => {
+        if (showCustomAvatarModal && customAvatars.length === 0) {
+            loadCustomAvatars();
+        }
+    }, [showCustomAvatarModal]);
+
     // Cleanup audio on unmount
     useEffect(() => {
         return () => {
@@ -203,6 +215,19 @@ export default function TwinAppearanceScreen() {
             Alert.alert("Error", "No se pudieron cargar los avatares");
         } finally {
             setLoadingAvatars(false);
+        }
+    }
+
+    async function loadCustomAvatars() {
+        setLoadingCustomAvatars(true);
+        try {
+            const avatars = await liveAvatarApi.getUserAvatars();
+            setCustomAvatars(avatars);
+        } catch (error) {
+            console.error("Error loading custom avatars:", error);
+            Alert.alert("Error", "No se pudieron cargar los avatares personalizados");
+        } finally {
+            setLoadingCustomAvatars(false);
         }
     }
 
@@ -390,10 +415,44 @@ export default function TwinAppearanceScreen() {
         setShowVoiceModal(true);
     }
 
-    // Handler for "Entrenar con Video" button - opens video upload modal
+    // Handler for "Entrenar con Video" button - shows custom avatars modal
+    // User can select an existing trained avatar or create a new one
     function handleSelectTrainedVideo() {
         setVideoType("trained");
+        setShowCustomAvatarModal(true);
+    }
+
+    // Handler to open video upload modal from within custom avatars modal
+    function handleCreateNewAvatar() {
+        setShowCustomAvatarModal(false);
         setShowVideoModal(true);
+    }
+
+    // Handler for selecting a custom/trained avatar
+    function handleCustomAvatarSelect(avatar: UserAvatar) {
+        if (avatar.status === 'processing' || avatar.status === 'pending') {
+            Alert.alert(
+                "Avatar en Proceso",
+                "Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.",
+                [{ text: "Entendido" }]
+            );
+            return;
+        }
+        if (avatar.status === 'failed') {
+            Alert.alert(
+                "Avatar Fallido",
+                "Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.",
+                [{ text: "Entendido" }]
+            );
+            return;
+        }
+        setSelectedAvatar({
+            id: avatar.id,
+            name: avatar.name,
+            preview_url: avatar.preview_url,
+        });
+        setVideoType("trained");
+        setShowCustomAvatarModal(false);
     }
 
     // Handler for voice cloning - opens private voices modal
@@ -575,6 +634,13 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveAvatarPreview = selectedAvatar.preview_url;
                 }
 
+                // If a trained/custom avatar is selected, save its data
+                if (selectedAvatar && videoType === "trained") {
+                    updateData.digitalTwin.appearance.liveAvatarId = selectedAvatar.id;
+                    updateData.digitalTwin.appearance.liveAvatarName = selectedAvatar.name;
+                    updateData.digitalTwin.appearance.liveAvatarPreview = selectedAvatar.preview_url;
+                }
+
                 // If a standard voice is selected, save its data
                 if (selectedVoice && voiceType === "standard") {
                     updateData.digitalTwin.appearance.liveVoiceId = selectedVoice.id;
@@ -639,6 +705,72 @@ export default function TwinAppearanceScreen() {
                 {item.gender && (
                     <Text style={styles.avatarGender}>{item.gender}</Text>
                 )}
+            </TouchableOpacity>
+        );
+    }
+
+    function renderCustomAvatarItem({ item }: { item: UserAvatar }) {
+        const isSelected = selectedAvatar?.id === item.id;
+        const isProcessing = item.status === 'processing' || item.status === 'pending';
+        const isFailed = item.status === 'failed';
+
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.avatarItem,
+                    isSelected && styles.avatarItemSelected,
+                    isProcessing && styles.avatarItemProcessing,
+                    isFailed && styles.avatarItemFailed,
+                ]}
+                onPress={() => handleCustomAvatarSelect(item)}
+                activeOpacity={0.8}
+            >
+                <View style={[
+                    styles.avatarImageContainer,
+                    isSelected && styles.avatarImageContainerSelected,
+                    isProcessing && { opacity: 0.6 },
+                ]}>
+                    {item.preview_url ? (
+                        <Image
+                            source={{ uri: item.preview_url }}
+                            style={styles.avatarImage}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <View style={styles.avatarPlaceholder}>
+                            <MaterialIcons
+                                name={isProcessing ? "hourglass-empty" : isFailed ? "error" : "person"}
+                                size={40}
+                                color={isFailed ? "#EF4444" : COLORS.gray400}
+                            />
+                        </View>
+                    )}
+                    {isSelected && (
+                        <View style={styles.selectedBadge}>
+                            <MaterialIcons name="check" size={16} color="#FFFFFF" />
+                        </View>
+                    )}
+                    {isProcessing && (
+                        <View style={[styles.selectedBadge, { backgroundColor: COLORS.accentBlue }]}>
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        </View>
+                    )}
+                    {isFailed && (
+                        <View style={[styles.selectedBadge, { backgroundColor: "#EF4444" }]}>
+                            <MaterialIcons name="error" size={16} color="#FFFFFF" />
+                        </View>
+                    )}
+                </View>
+                <Text style={[
+                    styles.avatarName,
+                    isSelected && styles.avatarNameSelected,
+                    isFailed && { color: "#EF4444" },
+                ]} numberOfLines={2}>
+                    {item.name || "Avatar Personalizado"}
+                </Text>
+                <Text style={[styles.avatarGender, { fontSize: 10 }]}>
+                    {isProcessing ? "⏳ Procesando..." : isFailed ? "❌ Fallido" : "✓ Listo"}
+                </Text>
             </TouchableOpacity>
         );
     }
@@ -1325,6 +1457,75 @@ export default function TwinAppearanceScreen() {
                         >
                             <Text style={styles.continueButtonText}>Entendido</Text>
                         </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Custom Avatar Selection Modal */}
+            <Modal
+                visible={showCustomAvatarModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowCustomAvatarModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {/* Modal Header */}
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Mis Avatares Personalizados</Text>
+                                <Text style={styles.modalSubtitle}>Selecciona o crea un nuevo avatar</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.modalCloseButton}
+                                onPress={() => setShowCustomAvatarModal(false)}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Create New Avatar Button */}
+                        <TouchableOpacity
+                            style={[styles.continueButton, { marginBottom: 16, backgroundColor: COLORS.accentBlue }]}
+                            onPress={handleCreateNewAvatar}
+                        >
+                            <MaterialIcons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                            <Text style={styles.continueButtonText}>Crear Nuevo Avatar con Video</Text>
+                        </TouchableOpacity>
+
+                        {/* Info Banner */}
+                        <View style={styles.infoBanner}>
+                            <MaterialIcons name="info" size={20} color={COLORS.accentBlue} />
+                            <Text style={styles.infoBannerText}>
+                                Los avatares pueden tardar hasta 24 horas en procesarse después de subir el video.
+                            </Text>
+                        </View>
+
+                        {/* Custom Avatar Grid */}
+                        {loadingCustomAvatars ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <Text style={styles.loadingText}>Cargando avatares...</Text>
+                            </View>
+                        ) : customAvatars.length === 0 ? (
+                            <View style={styles.emptyContainer}>
+                                <MaterialIcons name="videocam" size={64} color={COLORS.gray400} />
+                                <Text style={styles.emptyText}>No tienes avatares personalizados</Text>
+                                <Text style={[styles.emptyText, { fontSize: 12, marginTop: 4 }]}>
+                                    Crea uno subiendo un video de al menos 2 minutos
+                                </Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={customAvatars}
+                                renderItem={renderCustomAvatarItem}
+                                keyExtractor={(item) => item.id}
+                                numColumns={2}
+                                contentContainerStyle={styles.avatarGrid}
+                                columnWrapperStyle={styles.avatarRow}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -2097,6 +2298,32 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.gray700,
         lineHeight: 20,
+    },
+    // Custom avatar modal styles
+    avatarItemProcessing: {
+        opacity: 0.7,
+        borderColor: COLORS.accentBlue,
+        borderWidth: 2,
+    },
+    avatarItemFailed: {
+        opacity: 0.6,
+        borderColor: "#EF4444",
+        borderWidth: 2,
+    },
+    infoBanner: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#EBF5FF",
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        gap: 10,
+    },
+    infoBannerText: {
+        flex: 1,
+        fontSize: 12,
+        color: COLORS.gray700,
+        lineHeight: 18,
     },
 });
 

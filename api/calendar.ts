@@ -90,3 +90,42 @@ export async function syncCalendar(token: string): Promise<{ lastSync: string }>
 
     return response.json();
 }
+
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+    description?: string;
+    location?: string;
+    source: "google" | "outlook" | "twinpro";
+}
+
+/**
+ * Get calendar events for a date range
+ */
+export async function getCalendarEvents(
+    token: string,
+    startDate: string,
+    endDate: string
+): Promise<{
+    events: CalendarEvent[];
+    connected: boolean;
+    provider?: "google" | "outlook";
+}> {
+    const response = await fetch(
+        `${API_URL}/events?startDate=${startDate}&endDate=${endDate}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("Failed to get calendar events");
+    }
+
+    return response.json();
+}
