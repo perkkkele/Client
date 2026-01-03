@@ -174,6 +174,8 @@ export default function MyQRCodeScreen() {
                             Escanea este código para conectar conmigo directamente en{" "}
                             <Text style={styles.helperTextBrand}>TwinPro</Text>
                         </Text>
+                        {/* URL discreta para escribir en navegador */}
+                        <Text style={styles.urlText}>{qrData.replace('https://', '')}</Text>
                     </View>
                 </View>
 
@@ -354,6 +356,14 @@ const styles = StyleSheet.create({
     helperTextBrand: {
         fontWeight: "bold",
         color: COLORS.textDark,
+    },
+    urlText: {
+        fontSize: 12,
+        color: COLORS.gray400,
+        textAlign: "center",
+        marginTop: 8,
+        fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+        letterSpacing: 0.5,
     },
 
     // Botones de acción

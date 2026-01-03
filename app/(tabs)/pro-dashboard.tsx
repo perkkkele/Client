@@ -15,8 +15,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { API_HOST, API_PORT, userApi, analyticsApi } from "../../api";
+import { ProfileBlock, TwinBlock, StatsBlock, AlertsBlock } from "../../components/dashboard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -112,6 +114,92 @@ export default function ProDashboardScreen() {
     useEffect(() => {
         loadAnalytics();
     }, [loadAnalytics]);
+
+    // ===== DASHBOARD CUSTOMIZATION =====
+    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'stats', 'alerts'];
+    const DASHBOARD_LAYOUT_KEY = `dashboard_layout_${user?._id}`;
+
+    const [editMode, setEditMode] = useState(false);
+    const [blockOrder, setBlockOrder] = useState<string[]>(DEFAULT_BLOCK_ORDER);
+
+    // Load saved block order on mount
+    useEffect(() => {
+        const loadBlockOrder = async () => {
+            if (!user?._id) return;
+            try {
+                const saved = await SecureStore.getItemAsync(DASHBOARD_LAYOUT_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length === DEFAULT_BLOCK_ORDER.length) {
+                        setBlockOrder(parsed);
+                    }
+                }
+            } catch (error) {
+                console.log("Error loading dashboard layout:", error);
+            }
+        };
+        loadBlockOrder();
+    }, [user?._id]);
+
+    // Toggle edit mode and save on exit
+    const handleToggleEditMode = async () => {
+        if (editMode) {
+            try {
+                await SecureStore.setItemAsync(DASHBOARD_LAYOUT_KEY, JSON.stringify(blockOrder));
+            } catch (error) {
+                console.log("Error saving dashboard layout:", error);
+            }
+        }
+        setEditMode(!editMode);
+    };
+
+    // Move block up or down
+    const moveBlock = (blockId: string, direction: 'up' | 'down') => {
+        const currentIndex = blockOrder.indexOf(blockId);
+        if (currentIndex === -1) return;
+
+        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (newIndex < 0 || newIndex >= blockOrder.length) return;
+
+        const newOrder = [...blockOrder];
+        [newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]];
+        setBlockOrder(newOrder);
+    };
+
+    // Wrapper function for block with edit controls
+    const renderBlockWithControls = (blockId: string, content: React.ReactNode) => {
+        const blockIndex = blockOrder.indexOf(blockId);
+        const isFirst = blockIndex === 0;
+        const isLast = blockIndex === blockOrder.length - 1;
+
+        return (
+            <View key={blockId} style={styles.blockWrapper}>
+                {editMode && (
+                    <>
+                        <View style={styles.editModeOverlay} pointerEvents="none" />
+                        <View style={styles.blockEditControls}>
+                            <TouchableOpacity
+                                style={[styles.blockEditButton, isFirst && styles.blockEditButtonDisabled]}
+                                onPress={() => !isFirst && moveBlock(blockId, 'up')}
+                                disabled={isFirst}
+                            >
+                                <MaterialIcons name="keyboard-arrow-up" size={20} color="#FFFFFF" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.blockEditButton, isLast && styles.blockEditButtonDisabled]}
+                                onPress={() => !isLast && moveBlock(blockId, 'down')}
+                                disabled={isLast}
+                            >
+                                <MaterialIcons name="keyboard-arrow-down" size={20} color="#FFFFFF" />
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
+                {content}
+            </View>
+        );
+    };
+    // ===== END DASHBOARD CUSTOMIZATION =====
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname || user?.email?.split("@")[0] || "Profesional";
@@ -303,265 +391,46 @@ export default function ProDashboardScreen() {
                     </View>
                 </View>
 
-                {/* Profile Preview Card */}
-                <TouchableOpacity
-                    style={styles.profilePreviewCard}
-                    onPress={() => {
-                        if (user?._id) {
-                            router.push(`/professional/${user._id}` as any);
-                        }
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <View style={styles.profilePreviewGlow} />
-                    <View style={styles.profilePreviewContent}>
-                        <View style={styles.profilePreviewLeft}>
-                            <View style={styles.profilePreviewIcon}>
-                                <MaterialIcons name="visibility" size={22} color="#FFFFFF" />
-                            </View>
-                            <View style={styles.profilePreviewText}>
-                                <Text style={styles.profilePreviewTitle}>Ver mi perfil público</Text>
-                                <Text style={styles.profilePreviewSubtitle}>Así te ven tus clientes</Text>
-                            </View>
-                        </View>
-                        <View style={styles.profilePreviewArrow}>
-                            <MaterialIcons name="arrow-forward-ios" size={16} color="#FFFFFF" />
-                        </View>
+                {/* Edit Mode Banner */}
+                {editMode && (
+                    <View style={styles.editModeBanner}>
+                        <Text style={styles.editModeBannerText}>
+                            📐 Modo edición: usa las flechas para reordenar
+                        </Text>
                     </View>
-                </TouchableOpacity>
+                )}
 
-                {/* Digital Twin Card */}
-                <View style={styles.twinCard}>
-                    <View style={styles.twinCardGlow1} />
-                    <View style={styles.twinCardGlow2} />
-                    <View style={styles.twinCardContent}>
-                        <View style={styles.twinHeader}>
-                            <TouchableOpacity
-                                style={styles.twinHeaderTouchable}
-                                onPress={() => {
-                                    // Navigate to avatar chat with own profile for testing
-                                    if (user?._id) {
-                                        router.push(`/avatar-chat/${user._id}` as any);
-                                    }
-                                }}
-                            >
-                                <View style={styles.twinIconContainer}>
-                                    <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
-                                </View>
-                                <View style={styles.twinInfo}>
-                                    <Text style={styles.twinTitle}>Gemelo Digital</Text>
-                                    <View style={styles.twinStatus}>
-                                        <View style={[
-                                            styles.statusDot,
-                                            !geminiActive && styles.statusDotInactive
-                                        ]} />
-                                        <Text style={styles.statusText}>
-                                            {geminiActive ? "Activo y público" : "Inactivo"}
-                                        </Text>
-                                    </View>
-                                    <Text style={styles.testHint}>Toca para probar tu gemelo</Text>
-                                </View>
-                            </TouchableOpacity>
-                            <Switch
-                                value={geminiActive}
-                                onValueChange={setGeminiActive}
-                                trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                                thumbColor="#FFFFFF"
-                                ios_backgroundColor="rgba(0,0,0,0.3)"
-                            />
-                        </View>
-                        <TouchableOpacity style={styles.configureButton} onPress={handleConfigureGemini}>
-                            <View style={styles.configureButtonContent}>
-                                <MaterialIcons name="tune" size={20} color={COLORS.primary} />
-                                <Text style={styles.configureButtonText}>Configurar Gemelo</Text>
-                            </View>
-                            <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
-                        </TouchableOpacity>
-
-                        {/* Appointments Toggle - Inside Twin Card */}
-                        <View style={styles.appointmentsDivider} />
-                        <View style={styles.appointmentsRow}>
-                            <View style={styles.appointmentsIconBox}>
-                                <MaterialIcons name="event" size={22} color="#FFFFFF" />
-                            </View>
-                            <View style={styles.appointmentsInfo}>
-                                <Text style={styles.appointmentsLabel}>Agendar Citas</Text>
-                                <Text style={styles.appointmentsHint}>
-                                    {user?.appointmentsEnabled
-                                        ? "Los clientes pueden reservar citas contigo"
-                                        : "Activa para que los clientes reserven citas"
-                                    }
-                                </Text>
-                            </View>
-                            <Switch
-                                value={user?.appointmentsEnabled || false}
-                                onValueChange={handleToggleAppointments}
-                                trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                                thumbColor="#FFFFFF"
-                                ios_backgroundColor="rgba(0,0,0,0.3)"
-                            />
-                        </View>
-
-                        {/* Auto-Confirm Toggle - Only visible when appointments enabled */}
-                        {user?.appointmentsEnabled && (
-                            <View style={styles.appointmentsRow}>
-                                <View style={[styles.appointmentsIconBox, {
-                                    backgroundColor: user?.autoConfirmAppointments !== false
-                                        ? COLORS.green500
-                                        : COLORS.orange600
-                                }]}>
-                                    <MaterialIcons
-                                        name={user?.autoConfirmAppointments !== false ? "check-circle" : "schedule"}
-                                        size={22}
-                                        color="#FFFFFF"
-                                    />
-                                </View>
-                                <View style={styles.appointmentsInfo}>
-                                    <Text style={styles.appointmentsLabel}>Confirmación automática</Text>
-                                    <Text style={styles.appointmentsHint}>
-                                        {user?.autoConfirmAppointments !== false
-                                            ? "Citas se confirman al instante"
-                                            : "Requiere confirmación manual"
-                                        }
-                                    </Text>
-                                </View>
-                                <Switch
-                                    value={user?.autoConfirmAppointments !== false}
-                                    onValueChange={handleToggleAutoConfirm}
-                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                                    thumbColor="#FFFFFF"
-                                    ios_backgroundColor="rgba(0,0,0,0.3)"
+                {/* Dynamically Rendered Blocks */}
+                {blockOrder.map((blockId) => {
+                    switch (blockId) {
+                        case 'profile':
+                            return renderBlockWithControls('profile',
+                                <ProfileBlock userId={user?._id} />
+                            );
+                        case 'twin':
+                            return renderBlockWithControls('twin',
+                                <TwinBlock
+                                    user={user || undefined}
+                                    geminiActive={geminiActive}
+                                    onGeminiChange={setGeminiActive}
+                                    onConfigureGemini={handleConfigureGemini}
+                                    onToggleAppointments={handleToggleAppointments}
+                                    onToggleAutoConfirm={handleToggleAutoConfirm}
+                                    onTogglePaymentRequired={handleTogglePaymentRequired}
                                 />
-                            </View>
-                        )}
-
-                        {/* Payment Required Toggle - Only visible when appointments enabled */}
-                        {user?.appointmentsEnabled && (
-                            <View style={styles.appointmentsRow}>
-                                <View style={[styles.appointmentsIconBox, {
-                                    backgroundColor: user?.requirePaymentOnBooking !== false
-                                        ? COLORS.blue600
-                                        : COLORS.gray500
-                                }]}>
-                                    <MaterialIcons
-                                        name={user?.requirePaymentOnBooking !== false ? "payment" : "payments"}
-                                        size={22}
-                                        color="#FFFFFF"
-                                    />
-                                </View>
-                                <View style={styles.appointmentsInfo}>
-                                    <Text style={styles.appointmentsLabel}>Cobro anticipado presencial</Text>
-                                    <Text style={styles.appointmentsHint}>
-                                        {user?.requirePaymentOnBooking !== false
-                                            ? "Cobrar al agendar citas presenciales"
-                                            : "Cobrar in situ (el cliente paga al llegar)"
-                                        }
-                                    </Text>
-                                </View>
-                                <Switch
-                                    value={user?.requirePaymentOnBooking !== false}
-                                    onValueChange={handleTogglePaymentRequired}
-                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                                    thumbColor="#FFFFFF"
-                                    ios_backgroundColor="rgba(0,0,0,0.3)"
-                                />
-                            </View>
-                        )}
-                    </View>
-                </View>
-
-                {/* Activity Summary */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Resumen de Actividad</Text>
-                        <TouchableOpacity style={styles.sectionLink}>
-                            <Text style={styles.sectionLinkText}>Configuración</Text>
-                            <MaterialIcons name="settings" size={16} color={COLORS.primary} />
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.statsGrid}>
-                        <View style={styles.statCard}>
-                            <View style={styles.statHeader}>
-                                <View style={[styles.statIcon, { backgroundColor: COLORS.blue50 }]}>
-                                    <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
-                                </View>
-                                <View style={styles.statBadge}>
-                                    <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
-                                    <Text style={styles.statBadgeText}>+12%</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.statLabel}>Visitas Perfil</Text>
-                            <Text style={styles.statValue}>{analytics.profileViews.toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={styles.statHeader}>
-                                <View style={[styles.statIcon, { backgroundColor: COLORS.purple50 }]}>
-                                    <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
-                                </View>
-                            </View>
-                            <Text style={styles.statLabel}>Duración Chats</Text>
-                            <Text style={styles.statValue}>{analyticsApi.formatDuration(analytics.totalConversationSeconds)}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={styles.statHeader}>
-                                <View style={[styles.statIcon, { backgroundColor: COLORS.orange50 }]}>
-                                    <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
-                                </View>
-                            </View>
-                            <Text style={styles.statLabel}>Citas Agendadas</Text>
-                            <Text style={styles.statValue}>{analytics.appointmentsBooked}</Text>
-                        </View>
-                        <View style={styles.statCard}>
-                            <View style={styles.statHeader}>
-                                <View style={[styles.statIcon, { backgroundColor: COLORS.green50 }]}>
-                                    <MaterialIcons name="call" size={20} color={COLORS.green600} />
-                                </View>
-                                <View style={styles.statBadge}>
-                                    <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
-                                    <Text style={styles.statBadgeText}>+5%</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.statLabel}>Llamadas recibidas</Text>
-                            <Text style={styles.statValue}>{analytics.phoneCalls}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Important Alerts */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Alertas Importantes</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.sectionLinkText}>Ver todo</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.alertsList}>
-                        <View style={[styles.alertCard, { borderLeftColor: COLORS.primary }]}>
-                            <MaterialIcons name="check-circle" size={20} color={COLORS.primary} />
-                            <View style={styles.alertContent}>
-                                <Text style={styles.alertTitle}>Cita completada</Text>
-                                <Text style={styles.alertDescription}>Tu avatar ha completado una cita con Juan P. exitosamente.</Text>
-                                <Text style={styles.alertTime}>Hace 15 min</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.alertCard, { borderLeftColor: "#f59e0b" }]}>
-                            <MaterialIcons name="receipt-long" size={20} color="#f59e0b" />
-                            <View style={styles.alertContent}>
-                                <Text style={styles.alertTitle}>Factura Disponible</Text>
-                                <Text style={styles.alertDescription}>Tu factura del mes de Mayo está lista para descargar.</Text>
-                                <Text style={styles.alertTime}>Hace 2 horas</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.alertCard, { borderLeftColor: COLORS.gray300 }]}>
-                            <MaterialIcons name="update" size={20} color={COLORS.gray400} />
-                            <View style={styles.alertContent}>
-                                <Text style={styles.alertTitle}>Recordatorio de Horario</Text>
-                                <Text style={styles.alertDescription}>Recuerda actualizar tu disponibilidad para la próxima semana.</Text>
-                                <Text style={styles.alertTime}>Ayer</Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
+                            );
+                        case 'stats':
+                            return renderBlockWithControls('stats',
+                                <StatsBlock analytics={analytics} />
+                            );
+                        case 'alerts':
+                            return renderBlockWithControls('alerts',
+                                <AlertsBlock />
+                            );
+                        default:
+                            return null;
+                    }
+                })}
             </ScrollView>
 
             {/* Bottom Navigation */}
@@ -586,9 +455,16 @@ export default function ProDashboardScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* FAB */}
-            <TouchableOpacity style={styles.fab}>
-                <MaterialIcons name="edit-calendar" size={28} color="#FFFFFF" />
+            {/* FAB - Toggle Edit Mode */}
+            <TouchableOpacity
+                style={[styles.fab, editMode && styles.fabEditMode]}
+                onPress={handleToggleEditMode}
+            >
+                <MaterialIcons
+                    name={editMode ? "check" : "dashboard-customize"}
+                    size={28}
+                    color="#FFFFFF"
+                />
             </TouchableOpacity>
 
             {/* Side Menu Modal */}
@@ -1763,5 +1639,65 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: "rgba(255, 255, 255, 0.6)",
         marginTop: 2,
+    },
+
+    // Dashboard customization styles
+    blockWrapper: {
+        position: "relative",
+    },
+    editModeOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(19, 127, 236, 0.08)",
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: COLORS.primary,
+        borderStyle: "dashed",
+        zIndex: 1,
+    },
+    blockEditControls: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        flexDirection: "row",
+        gap: 4,
+        zIndex: 10,
+    },
+    blockEditButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    blockEditButtonDisabled: {
+        backgroundColor: COLORS.gray300,
+        opacity: 0.6,
+    },
+    editModeBanner: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        borderRadius: 10,
+    },
+    editModeBannerText: {
+        color: "#FFFFFF",
+        fontSize: 14,
+        fontWeight: "600",
+        textAlign: "center",
+    },
+    fabEditMode: {
+        backgroundColor: COLORS.green500,
     },
 });
