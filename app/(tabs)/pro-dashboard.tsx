@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useCallback, useState, useEffect } from "react";;
 import {
+    Alert,
     Image,
     Modal,
     ScrollView,
@@ -281,23 +282,23 @@ export default function ProDashboardScreen() {
             title: "Mi Negocio",
             items: [
                 { icon: "dashboard", label: "Área personal Pro", iconBg: COLORS.primary, iconColor: COLORS.textMain, isActive: true, onPress: () => { setMenuVisible(false); } },
-                { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600 },
+                { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push(`/professional/${user?._id}`); } },
                 { icon: "reviews", label: "Gestión de reseñas", iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
-                { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600 },
-                { icon: "forum", label: "Mis chats Pro", iconBg: COLORS.green50, iconColor: COLORS.green600 },
+                { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600, onPress: () => { setMenuVisible(false); router.push("/(settings)/work-schedule"); } },
+                { icon: "forum", label: "Mis chats Pro", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
             ],
         },
         {
             title: "Agenda",
             items: [
-                { icon: "calendar-month", label: "Gestión de citas", iconBg: COLORS.orange50, iconColor: COLORS.orange600 },
+                { icon: "calendar-month", label: "Gestión de citas", iconBg: COLORS.orange50, iconColor: COLORS.orange600, onPress: () => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); } },
             ],
         },
         {
             title: "Tu Gemelo Digital IA",
             items: [
                 { icon: "chat-bubble", label: "Respuestas del gemelo", iconBg: COLORS.indigo50, iconColor: COLORS.indigo600 },
-                { icon: "history", label: "Historial de conversaciones", iconBg: COLORS.teal50, iconColor: COLORS.teal600 },
+                { icon: "history", label: "Historial de conversaciones", iconBg: COLORS.teal50, iconColor: COLORS.teal600, onPress: () => { setMenuVisible(false); router.push("/(settings)/twin-history"); } },
                 { icon: "analytics", label: "Rendimiento del gemelo", iconBg: COLORS.rose50, iconColor: COLORS.rose600 },
                 { icon: "tune", label: "Alcance y límites", iconBg: COLORS.cyan50, iconColor: COLORS.cyan600 },
             ],
@@ -575,7 +576,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/pro-chats"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="forum" size={20} color={COLORS.green600} />
                                         </View>

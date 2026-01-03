@@ -7,7 +7,9 @@ export interface ChatMessage {
     message?: string;
     type: "TEXT" | "IMAGE";
     isFromBot?: boolean;
+    isFromProfessional?: boolean;
     createdAt: string;
+    updatedAt: string;
 }
 
 interface SendMessageResponse {

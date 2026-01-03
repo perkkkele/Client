@@ -128,3 +128,137 @@ export async function deleteChat(token: string, chatId: string): Promise<void> {
     }
 }
 
+// Interface for avatar conversation history
+export interface AvatarConversation {
+    _id: string;
+    client: {
+        _id: string;
+        name: string;
+        initials: string;
+        avatar?: string;
+        email?: string;
+    };
+    messageCount: number;
+    lastMessage: string | null;
+    lastMessageDate: string;
+    preview: string;
+    status: "resolved" | "escalated";
+    createdAt: string;
+    updatedAt: string;
+    title?: string;
+}
+
+interface GetAvatarChatsResponse {
+    conversations: AvatarConversation[];
+}
+
+// Get all avatar chat conversations for a professional's digital twin
+export async function getAvatarChats(
+    token: string,
+    professionalId: string
+): Promise<AvatarConversation[]> {
+    const response = await fetch(`${API_URL}/avatar-chats/${professionalId}`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al obtener historial de conversaciones");
+    }
+
+    const data: GetAvatarChatsResponse = await response.json();
+    return data.conversations || [];
+}
+
+// Interface for professional chat list
+export interface ProChat {
+    _id: string;
+    client: {
+        _id: string;
+        name: string;
+        initials: string;
+        avatar?: string;
+        email?: string;
+    };
+    messageCount: number;
+    unreadCount: number;
+    lastMessage: string | null;
+    lastMessageDate: string;
+    isEscalated: boolean;
+    escalatedAt?: string;
+    escalatedReason?: string;
+    videoCallActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    title?: string;
+}
+
+interface GetProChatsResponse {
+    chats: ProChat[];
+}
+
+// Get all chats for a professional (including escalated)
+export async function getProChats(
+    token: string,
+    professionalId: string
+): Promise<ProChat[]> {
+    const response = await fetch(`${API_URL}/pro-chats/${professionalId}`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al obtener chats");
+    }
+
+    const data: GetProChatsResponse = await response.json();
+    return data.chats || [];
+}
+
+// Escalate a chat for professional intervention
+export async function escalateChat(
+    token: string,
+    chatId: string,
+    reason?: string
+): Promise<void> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/escalate`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al escalar chat");
+    }
+}
+
+// Professional sends a reply to a chat
+export async function proReply(
+    token: string,
+    chatId: string,
+    message: string
+): Promise<void> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/reply`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al enviar mensaje");
+    }
+}

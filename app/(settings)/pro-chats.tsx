@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { getAvatarChats, AvatarConversation } from "../../api/chat";
+import { getProChats, ProChat } from "../../api/chat";
 
 const COLORS = {
     primary: "#137fec",
@@ -28,6 +28,8 @@ const COLORS = {
     green500: "#22c55e",
     orange400: "#fb923c",
     orange500: "#f97316",
+    red400: "#f87171",
+    red500: "#ef4444",
     purple400: "#c084fc",
     indigo400: "#818cf8",
     pink400: "#f472b6",
@@ -36,9 +38,7 @@ const COLORS = {
     teal400: "#2dd4bf",
 };
 
-const FILTERS = ["Hoy", "Últimos 7 días", "Último mes", "Todos"];
-
-// Helper to get gradient color based on index
+// Helper to get avatar color based on index
 const getAvatarColor = (index: number) => {
     const colors = [
         COLORS.purple400,
@@ -70,47 +70,22 @@ const formatDate = (dateString: string) => {
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
 };
 
-// Helper to filter by date range
-const filterByDateRange = (conversations: AvatarConversation[], filterIndex: number) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    return conversations.filter(conv => {
-        const convDate = new Date(conv.lastMessageDate);
-
-        switch (filterIndex) {
-            case 0: // Hoy
-                return convDate >= today;
-            case 1: // Últimos 7 días
-                const weekAgo = new Date(today);
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                return convDate >= weekAgo;
-            case 2: // Último mes
-                const monthAgo = new Date(today);
-                monthAgo.setMonth(monthAgo.getMonth() - 1);
-                return convDate >= monthAgo;
-            default: // Todos
-                return true;
-        }
-    });
-};
-
-export default function TwinHistoryScreen() {
+export default function ProChatsScreen() {
     const { user, token } = useAuth();
-    const [activeFilter, setActiveFilter] = useState(3); // "Todos" by default
     const [searchQuery, setSearchQuery] = useState("");
-    const [conversations, setConversations] = useState<AvatarConversation[]>([]);
+    const [chats, setChats] = useState<ProChat[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [filterEscalated, setFilterEscalated] = useState(false);
 
-    const loadConversations = useCallback(async () => {
+    const loadChats = useCallback(async () => {
         if (!token || !user?._id) return;
 
         try {
-            const data = await getAvatarChats(token, user._id);
-            setConversations(data);
+            const data = await getProChats(token, user._id);
+            setChats(data);
         } catch (error) {
-            console.error("Error loading avatar conversations:", error);
+            console.error("Error loading pro chats:", error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -118,28 +93,31 @@ export default function TwinHistoryScreen() {
     }, [token, user?._id]);
 
     useEffect(() => {
-        loadConversations();
-    }, [loadConversations]);
+        loadChats();
+    }, [loadChats]);
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        loadConversations();
-    }, [loadConversations]);
+        loadChats();
+    }, [loadChats]);
 
     function handleBack() {
         router.back();
     }
 
-    // Filter and search conversations
-    const filteredConversations = filterByDateRange(conversations, activeFilter)
-        .filter(conv => {
+    // Filter and search chats
+    const filteredChats = chats
+        .filter(chat => {
+            if (filterEscalated && !chat.isEscalated) return false;
             if (!searchQuery) return true;
             const query = searchQuery.toLowerCase();
             return (
-                conv.client.name.toLowerCase().includes(query) ||
-                conv.preview.toLowerCase().includes(query)
+                chat.client.name.toLowerCase().includes(query) ||
+                (chat.lastMessage?.toLowerCase().includes(query))
             );
         });
+
+    const escalatedCount = chats.filter(c => c.isEscalated).length;
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
@@ -148,65 +126,62 @@ export default function TwinHistoryScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Historial de Conversaciones</Text>
+                <Text style={styles.headerTitle}>Mis Chats Pro</Text>
                 <View style={styles.headerButton} />
             </View>
 
-            {/* Search and Filters */}
+            {/* Stats Bar */}
+            <View style={styles.statsBar}>
+                <View style={styles.statItem}>
+                    <MaterialIcons name="chat" size={18} color={COLORS.primary} />
+                    <Text style={styles.statValue}>{chats.length}</Text>
+                    <Text style={styles.statLabel}>Total</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <TouchableOpacity
+                    style={[styles.statItem, filterEscalated && styles.statItemActive]}
+                    onPress={() => setFilterEscalated(!filterEscalated)}
+                >
+                    <MaterialIcons name="warning" size={18} color={COLORS.orange400} />
+                    <Text style={[styles.statValue, { color: COLORS.orange400 }]}>{escalatedCount}</Text>
+                    <Text style={styles.statLabel}>Escalados</Text>
+                </TouchableOpacity>
+            </View>
+
+            {/* Search */}
             <View style={styles.searchSection}>
                 <View style={styles.searchContainer}>
                     <MaterialIcons name="search" size={20} color={COLORS.gray400} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar por usuario o palabra clave..."
+                        placeholder="Buscar por cliente..."
                         placeholderTextColor={COLORS.gray500}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />
                 </View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filtersContent}
-                >
-                    {FILTERS.map((filter, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[
-                                styles.filterButton,
-                                activeFilter === index && styles.filterButtonActive
-                            ]}
-                            onPress={() => setActiveFilter(index)}
-                        >
-                            <Text style={[
-                                styles.filterText,
-                                activeFilter === index && styles.filterTextActive
-                            ]}>
-                                {filter}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
             </View>
 
-            {/* Conversations List */}
+            {/* Chats List */}
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Cargando conversaciones...</Text>
+                    <Text style={styles.loadingText}>Cargando chats...</Text>
                 </View>
-            ) : filteredConversations.length === 0 ? (
+            ) : filteredChats.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="chat-bubble-outline" size={64} color={COLORS.gray500} />
                     <Text style={styles.emptyTitle}>
-                        {conversations.length === 0
+                        {chats.length === 0
                             ? "Sin conversaciones"
                             : "No hay resultados"}
                     </Text>
                     <Text style={styles.emptySubtitle}>
-                        {conversations.length === 0
-                            ? "Tu gemelo digital aún no ha tenido conversaciones"
-                            : "Prueba con otros filtros o palabras clave"}
+                        {chats.length === 0
+                            ? "Las conversaciones con tu gemelo digital aparecerán aquí"
+                            : filterEscalated
+                                ? "No hay chats escalados"
+                                : "Prueba con otra búsqueda"}
                     </Text>
                 </View>
             ) : (
@@ -221,48 +196,52 @@ export default function TwinHistoryScreen() {
                         />
                     }
                 >
-                    {filteredConversations.map((conversation, index) => (
+                    {filteredChats.map((chat, index) => (
                         <TouchableOpacity
-                            key={conversation._id}
-                            style={styles.conversationCard}
+                            key={chat._id}
+                            style={[
+                                styles.chatCard,
+                                chat.isEscalated && styles.chatCardEscalated
+                            ]}
                             onPress={() => {
-                                // Navigate to chat detail - could be implemented
-                                console.log("View conversation:", conversation._id);
+                                router.push(`/pro-chat/${chat._id}` as any);
                             }}
                         >
                             <View style={[styles.avatar, { backgroundColor: getAvatarColor(index) }]}>
-                                <Text style={styles.avatarText}>{conversation.client.initials}</Text>
+                                <Text style={styles.avatarText}>{chat.client.initials}</Text>
+                                {chat.isEscalated && (
+                                    <View style={styles.escalatedBadge}>
+                                        <MaterialIcons name="warning" size={10} color="#FFFFFF" />
+                                    </View>
+                                )}
                             </View>
-                            <View style={styles.conversationContent}>
-                                <View style={styles.conversationHeader}>
-                                    <Text style={styles.conversationName}>{conversation.client.name}</Text>
-                                    <Text style={styles.conversationTime}>
-                                        {formatDate(conversation.lastMessageDate)}
+                            <View style={styles.chatContent}>
+                                <View style={styles.chatHeader}>
+                                    <Text style={styles.chatName}>{chat.client.name}</Text>
+                                    <Text style={styles.chatTime}>
+                                        {formatDate(chat.lastMessageDate)}
                                     </Text>
                                 </View>
-                                <Text style={styles.conversationPreview} numberOfLines={2}>
-                                    {conversation.preview}
+                                <Text style={styles.chatPreview} numberOfLines={1}>
+                                    {chat.lastMessage || "Sin mensajes"}
                                 </Text>
-                                <View style={styles.conversationFooter}>
-                                    <View style={[
-                                        styles.statusBadge,
-                                        conversation.status === "resolved" ? styles.statusResolved : styles.statusEscalated
-                                    ]}>
-                                        <MaterialIcons
-                                            name={conversation.status === "resolved" ? "smart-toy" : "warning"}
-                                            size={12}
-                                            color={conversation.status === "resolved" ? COLORS.green400 : COLORS.orange400}
-                                        />
-                                        <Text style={[
-                                            styles.statusText,
-                                            { color: conversation.status === "resolved" ? COLORS.green400 : COLORS.orange400 }
-                                        ]}>
-                                            {conversation.status === "resolved" ? "Resuelto por IA" : "Escalado"}
-                                        </Text>
-                                    </View>
-                                    <Text style={styles.messageCount}>
-                                        {conversation.messageCount} mensajes
-                                    </Text>
+                                <View style={styles.chatFooter}>
+                                    {chat.isEscalated ? (
+                                        <View style={styles.escalatedTag}>
+                                            <MaterialIcons name="priority-high" size={12} color={COLORS.orange400} />
+                                            <Text style={styles.escalatedTagText}>Requiere atención</Text>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.normalTag}>
+                                            <MaterialIcons name="smart-toy" size={12} color={COLORS.green400} />
+                                            <Text style={styles.normalTagText}>Gestionado por IA</Text>
+                                        </View>
+                                    )}
+                                    {chat.unreadCount > 0 && (
+                                        <View style={styles.unreadBadge}>
+                                            <Text style={styles.unreadText}>{chat.unreadCount}</Text>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
                             <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
@@ -301,19 +280,53 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: "center",
     },
-    searchSection: {
-        backgroundColor: COLORS.backgroundDark,
+    statsBar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+        backgroundColor: COLORS.surfaceDark,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.borderDark,
-        paddingBottom: 12,
+    },
+    statItem: {
+        flex: 1,
+        alignItems: "center",
+        gap: 4,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    statItemActive: {
+        backgroundColor: "rgba(251, 146, 60, 0.1)",
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: COLORS.textMain,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: COLORS.textSecondary,
+    },
+    statDivider: {
+        width: 1,
+        height: 40,
+        backgroundColor: COLORS.borderDark,
+        marginHorizontal: 24,
+    },
+    searchSection: {
+        backgroundColor: COLORS.backgroundDark,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.borderDark,
     },
     searchContainer: {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: COLORS.surfaceDark,
         borderRadius: 12,
-        marginHorizontal: 16,
-        marginVertical: 12,
         borderWidth: 1,
         borderColor: COLORS.borderDark,
     },
@@ -325,30 +338,6 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 12,
         fontSize: 14,
-        color: COLORS.textMain,
-    },
-    filtersContent: {
-        paddingHorizontal: 16,
-        gap: 8,
-    },
-    filterButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 999,
-        backgroundColor: COLORS.surfaceDark,
-        borderWidth: 1,
-        borderColor: COLORS.borderDark,
-    },
-    filterButtonActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    filterText: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: COLORS.textSecondary,
-    },
-    filterTextActive: {
         color: COLORS.textMain,
     },
     scrollView: {
@@ -382,13 +371,18 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         textAlign: "center",
     },
-    conversationCard: {
+    chatCard: {
         flexDirection: "row",
         alignItems: "center",
         padding: 16,
-        gap: 16,
+        gap: 14,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.borderDark,
+    },
+    chatCardEscalated: {
+        backgroundColor: "rgba(251, 146, 60, 0.05)",
+        borderLeftWidth: 3,
+        borderLeftColor: COLORS.orange400,
     },
     avatar: {
         width: 48,
@@ -398,65 +392,94 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.1)",
+        position: "relative",
     },
     avatarText: {
         fontSize: 14,
         fontWeight: "bold",
         color: COLORS.textMain,
     },
-    conversationContent: {
+    escalatedBadge: {
+        position: "absolute",
+        top: -2,
+        right: -2,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: COLORS.orange500,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: COLORS.backgroundDark,
+    },
+    chatContent: {
         flex: 1,
     },
-    conversationHeader: {
+    chatHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: 4,
     },
-    conversationName: {
+    chatName: {
         fontSize: 14,
         fontWeight: "600",
         color: COLORS.textMain,
     },
-    conversationTime: {
+    chatTime: {
         fontSize: 12,
         color: COLORS.textSecondary,
     },
-    conversationPreview: {
-        fontSize: 14,
+    chatPreview: {
+        fontSize: 13,
         color: COLORS.textSecondary,
-        lineHeight: 20,
-        marginBottom: 8,
+        marginBottom: 6,
     },
-    conversationFooter: {
+    chatFooter: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
     },
-    statusBadge: {
+    escalatedTag: {
         flexDirection: "row",
         alignItems: "center",
-        alignSelf: "flex-start",
         gap: 4,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,
-        borderWidth: 1,
+        backgroundColor: "rgba(251, 146, 60, 0.15)",
     },
-    statusResolved: {
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
-        borderColor: "rgba(34, 197, 94, 0.2)",
-    },
-    statusEscalated: {
-        backgroundColor: "rgba(249, 115, 22, 0.1)",
-        borderColor: "rgba(249, 115, 22, 0.2)",
-    },
-    statusText: {
+    escalatedTagText: {
         fontSize: 10,
         fontWeight: "500",
+        color: COLORS.orange400,
     },
-    messageCount: {
+    normalTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        backgroundColor: "rgba(74, 222, 128, 0.1)",
+    },
+    normalTagText: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.green400,
+    },
+    unreadBadge: {
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 6,
+    },
+    unreadText: {
         fontSize: 11,
-        color: COLORS.gray500,
+        fontWeight: "700",
+        color: COLORS.textMain,
     },
 });

@@ -3,7 +3,7 @@ import { Redirect, Stack, useSegments, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, View, Linking } from "react-native";
-import { AuthProvider, useAuth } from "../context";
+import { AuthProvider, useAuth, IncomingCallProvider } from "../context";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
@@ -113,6 +113,15 @@ function RootLayoutNav() {
       // Navigate based on notification type
       if (data.type === "appointment" && data.appointmentId) {
         router.push(`/appointment-details/${data.appointmentId}` as any);
+      } else if (data.type === "video_call" && data.chatId) {
+        // Navigate to incoming call screen
+        router.push({
+          pathname: `/incoming-call/${data.chatId}`,
+          params: {
+            callerName: data.callerName || "Profesional",
+            callerAvatar: data.callerAvatar || "",
+          },
+        } as any);
       }
     });
 
@@ -216,6 +225,9 @@ function RootLayoutNav() {
         <Stack.Screen name="write-review/[professionalId]" />
         <Stack.Screen name="review-success/[professionalId]" />
         <Stack.Screen name="delete-account-success" />
+        <Stack.Screen name="pro-chat" />
+        <Stack.Screen name="video-call" />
+        <Stack.Screen name="incoming-call" />
       </Stack>
     </>
   );
@@ -224,7 +236,9 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <IncomingCallProvider>
+        <RootLayoutNav />
+      </IncomingCallProvider>
     </AuthProvider>
   );
 }

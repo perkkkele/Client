@@ -10,4 +10,5 @@ export * as placesApi from "./placesAutocomplete";
 export * as appointmentApi from "./appointment";
 export * as usernameApi from "./username";
 export * as analyticsApi from "./analytics";
+export * as videoCallApi from "./videoCall";
 
