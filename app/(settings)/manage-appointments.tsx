@@ -124,6 +124,7 @@ export default function ManageAppointmentsScreen() {
     const [activeTab, setActiveTab] = useState<"appointments" | "calendar">("appointments");
 
     const calendarConnected = user?.connectedCalendar?.connected || false;
+    const calendarProvider = user?.connectedCalendar?.provider || null;
 
     const avatarUrl = getAvatarUrl(user?.avatar);
 
@@ -349,7 +350,12 @@ export default function ManageAppointmentsScreen() {
                     }
                 ]}>
                     <WebView
-                        source={{ uri: "https://calendar.google.com/calendar/u/0/r" }}
+                        key={`calendar-webview-${calendarProvider}`}
+                        source={{
+                            uri: calendarProvider === "outlook"
+                                ? "https://outlook.live.com/calendar/0/view/day"
+                                : "https://calendar.google.com/calendar/u/0/r"
+                        }}
                         style={styles.calendarWebView}
                         javaScriptEnabled={true}
                         domStorageEnabled={true}
@@ -377,7 +383,7 @@ export default function ManageAppointmentsScreen() {
                     <MaterialIcons name="sync-disabled" size={64} color={COLORS.gray300} />
                     <Text style={styles.emptyTitle}>Calendario no conectado</Text>
                     <Text style={styles.emptySubtitle}>
-                        Conecta tu Google Calendar desde "Mi horario laboral" para ver tu calendario aquí
+                        Conecta tu Google Calendar o Outlook desde "Mi horario laboral" para ver tu calendario aquí
                     </Text>
                 </View>
             )}
