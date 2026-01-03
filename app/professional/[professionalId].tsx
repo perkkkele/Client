@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
     ActivityIndicator,
@@ -65,9 +65,12 @@ export default function ProfessionalProfileScreen() {
         }
     }, [token, professionalId]);
 
-    useEffect(() => {
-        loadProfessional();
-    }, [loadProfessional]);
+    // Reload data when screen gains focus (e.g., after editing settings)
+    useFocusEffect(
+        useCallback(() => {
+            loadProfessional();
+        }, [loadProfessional])
+    );
 
     const toggleFavorite = async () => {
         if (!token || !professionalId) return;
@@ -325,28 +328,72 @@ export default function ProfessionalProfileScreen() {
                 </View>
 
                 {/* Schedule Section */}
-                {professional.schedule && (
+                {professional.workSchedule && professional.workSchedule.workDays && professional.workSchedule.workDays.length > 0 && (
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>HORARIO LABORAL</Text>
                         <View style={styles.scheduleGrid}>
-                            {Object.entries(professional.schedule).map(([day, data]) => (
-                                <View key={day} style={styles.scheduleDay}>
-                                    <Text style={styles.scheduleDayName}>
-                                        {day.charAt(0).toUpperCase() + day.slice(1, 3)}
-                                    </Text>
-                                    <View style={[
-                                        styles.scheduleDayBox,
-                                        data.enabled ? styles.scheduleDayEnabled : styles.scheduleDayDisabled
+                            {[
+                                { key: 1, label: "Lun" },
+                                { key: 2, label: "Mar" },
+                                { key: 3, label: "Mié" },
+                                { key: 4, label: "Jue" },
+                                { key: 5, label: "Vie" },
+                                { key: 6, label: "Sáb" },
+                                { key: 0, label: "Dom" },
+                            ].map((day) => {
+                                const isEnabled = professional.workSchedule?.workDays?.includes(day.key);
+                                const dayOverride = professional.workSchedule?.dayOverrides?.find(
+                                    (d: any) => d.day === day.key
+                                );
+                                const breaks = professional.workSchedule?.breaks || [];
+
+                                // Build actual time slots by subtracting breaks
+                                let slots: string[] = [];
+                                if (isEnabled && dayOverride) {
+                                    const dayStart = dayOverride.start;
+                                    const dayEnd = dayOverride.end;
+
+                                    // Check if any break overlaps with this day's hours
+                                    const relevantBreaks = breaks.filter((b: any) =>
+                                        b.start >= dayStart && b.end <= dayEnd
+                                    );
+
+                                    if (relevantBreaks.length > 0) {
+                                        // First slot: from day start to first break
+                                        slots.push(`${dayStart.replace(':00', '')}-${relevantBreaks[0].start.replace(':00', '')}`);
+                                        // Additional slots: between breaks and after last break
+                                        for (let i = 0; i < relevantBreaks.length; i++) {
+                                            const breakEnd = relevantBreaks[i].end;
+                                            const nextBreakStart = relevantBreaks[i + 1]?.start || dayEnd;
+                                            if (breakEnd < nextBreakStart) {
+                                                slots.push(`${breakEnd.replace(':00', '')}-${nextBreakStart.replace(':00', '')}`);
+                                            }
+                                        }
+                                    } else {
+                                        slots.push(`${dayStart.replace(':00', '')}-${dayEnd.replace(':00', '')}`);
+                                    }
+                                } else if (isEnabled && professional.workSchedule?.defaultHours) {
+                                    const dh = professional.workSchedule.defaultHours;
+                                    if (dh.start && dh.end) {
+                                        slots.push(`${dh.start.replace(':00', '')}-${dh.end.replace(':00', '')}`);
+                                    }
+                                }
+
+                                return (
+                                    <View key={day.key} style={[
+                                        styles.scheduleDayCard,
+                                        isEnabled && styles.scheduleDayCardActive
                                     ]}>
                                         <Text style={[
-                                            styles.scheduleDayText,
-                                            data.enabled ? styles.scheduleDayTextEnabled : styles.scheduleDayTextDisabled
-                                        ]}>
-                                            {data.enabled ? "✓" : "✗"}
-                                        </Text>
+                                            styles.scheduleDayCardLabel,
+                                            isEnabled && styles.scheduleDayCardLabelActive
+                                        ]}>{day.label}</Text>
+                                        {isEnabled && slots.map((slot, idx) => (
+                                            <Text key={idx} style={styles.scheduleDayCardTime}>{slot}</Text>
+                                        ))}
                                     </View>
-                                </View>
-                            ))}
+                                );
+                            })}
                         </View>
                     </View>
                 )}
@@ -752,6 +799,75 @@ const styles = StyleSheet.create({
     },
     scheduleDayTextDisabled: {
         color: COLORS.gray400,
+    },
+    // New schedule list styles
+    scheduleList: {
+        gap: 8,
+    },
+    scheduleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    scheduleDayInfo: {
+        flex: 1,
+        gap: 2,
+    },
+    scheduleDayDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    scheduleDayLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    scheduleTimeSlot: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: COLORS.white,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    scheduleTimeText: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: COLORS.green500,
+    },
+    // Day Card Grid Styles
+    scheduleDayCard: {
+        width: "13%",
+        aspectRatio: 0.8,
+        borderRadius: 8,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 4,
+    },
+    scheduleDayCardActive: {
+        backgroundColor: COLORS.primary,
+    },
+    scheduleDayCardLabel: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.gray400,
+    },
+    scheduleDayCardLabelActive: {
+        color: COLORS.textMain,
+    },
+    scheduleDayCardTime: {
+        fontSize: 8,
+        fontWeight: "500",
+        color: COLORS.textMain,
+        marginTop: 2,
+        textAlign: "center",
     },
     // Reviews Card - Premium Design
     reviewsCard: {

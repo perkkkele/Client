@@ -39,42 +39,23 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
     return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
 }
 
-// TwinPro Logo component for QR center
+// TwinPro Logo component for QR center - matches main app logo
 const TwinProLogo = () => (
-    <Svg width={70} height={70} viewBox="0 0 70 70">
-        {/* Yellow background */}
-        <Rect x="0" y="0" width="70" height="70" rx="12" fill={COLORS.primary} />
-
-        {/* Chat bubble with two heads */}
-        <G transform="translate(10, 8)">
-            {/* Speech bubble outline */}
-            <Path
-                d="M25 5 C10 5 2 15 2 25 C2 35 10 42 20 44 L18 52 L28 44 C42 42 48 35 48 25 C48 15 40 5 25 5 Z"
-                fill={COLORS.black}
-            />
-            {/* Two heads/avatars inside */}
-            <Circle cx="17" cy="22" r="8" fill={COLORS.primary} />
-            <Circle cx="33" cy="22" r="8" fill={COLORS.primary} />
-            {/* Eyes for left head */}
-            <Circle cx="15" cy="20" r="2" fill={COLORS.black} />
-            <Circle cx="19" cy="20" r="2" fill={COLORS.black} />
-            {/* Eyes for right head */}
-            <Circle cx="31" cy="20" r="2" fill={COLORS.black} />
-            <Circle cx="35" cy="20" r="2" fill={COLORS.black} />
-        </G>
-
-        {/* TwinPro text */}
-        <SvgText
-            x="35"
-            y="62"
-            fontSize="10"
-            fontWeight="bold"
-            fill={COLORS.black}
-            textAnchor="middle"
-        >
-            TwinPro
-        </SvgText>
-    </Svg>
+    <View style={{
+        width: 56,
+        height: 56,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        borderBottomLeftRadius: 4,
+        backgroundColor: COLORS.black,
+        borderWidth: 3,
+        borderColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+    }}>
+        <MaterialIcons name="group" size={28} color={COLORS.primary} />
+    </View>
 );
 
 export default function MyQRCodeScreen() {
@@ -216,11 +197,7 @@ export default function MyQRCodeScreen() {
                     </View>
                 </View>
 
-                {/* Enlace de actualización */}
-                <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-                    <MaterialIcons name="refresh" size={18} color={COLORS.gray500} />
-                    <Text style={styles.refreshButtonText}>Actualizar mi código QR</Text>
-                </TouchableOpacity>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -356,22 +333,12 @@ const styles = StyleSheet.create({
     },
     logoOverlay: {
         position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: [{ translateX: -35 }, { translateY: -35 }],
-        backgroundColor: COLORS.primary,
-        borderRadius: 12,
-        ...Platform.select({
-            ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: "center",
+        justifyContent: "center",
     },
 
     // Texto de ayuda

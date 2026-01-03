@@ -1,6 +1,6 @@
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,7 +12,10 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  Modal,
+  Alert,
 } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API_HOST, API_PORT, chatApi, professionalApi } from "../../api";
 import type { Chat } from "../../api/chat";
@@ -107,6 +110,29 @@ export default function TwinProHomeScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Context menu state
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [selectedChatForMenu, setSelectedChatForMenu] = useState<Chat | null>(null);
+  const [hiddenChatPartners, setHiddenChatPartners] = useState<string[]>([]);
+
+  const HIDDEN_CHATS_KEY = `hidden_chats_${user?._id}`;
+
+  // Load hidden chats from storage
+  useEffect(() => {
+    const loadHiddenChats = async () => {
+      if (!user?._id) return;
+      try {
+        const stored = await SecureStore.getItemAsync(HIDDEN_CHATS_KEY);
+        if (stored) {
+          setHiddenChatPartners(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.log("Error loading hidden chats:", error);
+      }
+    };
+    loadHiddenChats();
+  }, [user?._id]);
+
   const loadData = useCallback(async () => {
     if (!token || !user) return;
     try {
@@ -173,6 +199,47 @@ export default function TwinProHomeScreen() {
     setSearchResults([]);
     setHasSearched(false);
   }, []);
+
+  // Context menu handlers
+  const handleLongPressChat = (chat: Chat) => {
+    setSelectedChatForMenu(chat);
+    setContextMenuVisible(true);
+  };
+
+  const handleHideChat = async () => {
+    if (!selectedChatForMenu) return;
+
+    const partner = getChatPartner(selectedChatForMenu);
+    if (!partner?._id) return;
+
+    const newHiddenList = [...hiddenChatPartners, partner._id];
+    setHiddenChatPartners(newHiddenList);
+
+    try {
+      await SecureStore.setItemAsync(HIDDEN_CHATS_KEY, JSON.stringify(newHiddenList));
+    } catch (error) {
+      console.log("Error saving hidden chats:", error);
+    }
+
+    setContextMenuVisible(false);
+    setSelectedChatForMenu(null);
+  };
+
+  const handleViewProfile = () => {
+    if (!selectedChatForMenu) return;
+
+    const partner = getChatPartner(selectedChatForMenu);
+    if (partner?._id) {
+      setContextMenuVisible(false);
+      setSelectedChatForMenu(null);
+      router.push(`/professional/${partner._id}`);
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuVisible(false);
+    setSelectedChatForMenu(null);
+  };
 
   function getChatPartner(chat: Chat) {
     const p1 = chat.participant_one;
@@ -255,6 +322,8 @@ export default function TwinProHomeScreen() {
             router.push(`/avatar-chat/${partner._id}`);
           }
         }}
+        onLongPress={() => handleLongPressChat(item)}
+        delayLongPress={500}
         activeOpacity={0.95}
       >
         <View style={styles.chatAvatarContainer}>
@@ -560,15 +629,30 @@ export default function TwinProHomeScreen() {
               ) : (
                 /* Mostrar lista de chats recientes cuando hay chats */
                 (() => {
-                  const professionalChats = chats.filter((chat) => {
+                  // Filter out hidden chats first
+                  const visibleChats = chats.filter((chat) => {
+                    const partner = getChatPartner(chat);
+                    return partner?._id && !hiddenChatPartners.includes(partner._id);
+                  });
+
+                  const professionalChats = visibleChats.filter((chat) => {
                     const partner = getChatPartner(chat);
                     return partner?.userType === 'userpro';
                   });
 
                   return professionalChats.length > 0 ? (
                     professionalChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+                  ) : visibleChats.length > 0 ? (
+                    visibleChats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
                   ) : (
-                    chats.map((chat) => <View key={chat._id}>{renderRecentChat({ item: chat })}</View>)
+                    <View style={styles.emptyStateContainer}>
+                      <View style={styles.welcomeContainer}>
+                        <Text style={styles.welcomeTitle}>No hay chats visibles</Text>
+                        <Text style={styles.welcomeSubtitle}>
+                          Has ocultado todos los chats. Explora profesionales para iniciar nuevas conversaciones.
+                        </Text>
+                      </View>
+                    </View>
                   );
                 })()
               )}
@@ -605,6 +689,43 @@ export default function TwinProHomeScreen() {
           <Text style={styles.navLabel}>Perfil Pro</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Context Menu Modal */}
+      <Modal
+        visible={contextMenuVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseContextMenu}
+      >
+        <TouchableOpacity
+          style={styles.contextMenuOverlay}
+          activeOpacity={1}
+          onPress={handleCloseContextMenu}
+        >
+          <View style={styles.contextMenuContainer}>
+            <View style={styles.contextMenuHeader}>
+              <Text style={styles.contextMenuTitle}>Opciones del chat</Text>
+            </View>
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleViewProfile}>
+              <MaterialIcons name="person" size={22} color={COLORS.black} />
+              <Text style={styles.contextMenuItemText}>Ver perfil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleHideChat}>
+              <MaterialIcons name="visibility-off" size={22} color="#ef4444" />
+              <Text style={[styles.contextMenuItemText, { color: "#ef4444" }]}>Ocultar chat</Text>
+            </TouchableOpacity>
+
+            <View style={styles.contextMenuDivider} />
+
+            <TouchableOpacity style={styles.contextMenuItem} onPress={handleCloseContextMenu}>
+              <MaterialIcons name="close" size={22} color={COLORS.gray} />
+              <Text style={[styles.contextMenuItemText, { color: COLORS.gray }]}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1228,5 +1349,55 @@ const styles = StyleSheet.create({
   searchResultCategoryText: {
     fontSize: 11,
     fontWeight: "600",
+  },
+
+  // Context Menu Styles
+  contextMenuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  contextMenuContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    width: SCREEN_WIDTH * 0.8,
+    maxWidth: 300,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  contextMenuHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#f8fafc",
+  },
+  contextMenuTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.black,
+    textAlign: "center",
+  },
+  contextMenuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  contextMenuItemText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: COLORS.black,
+  },
+  contextMenuDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginHorizontal: 20,
   },
 });
