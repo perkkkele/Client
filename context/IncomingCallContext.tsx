@@ -12,16 +12,35 @@ interface IncomingCallData {
     roomName: string;
 }
 
+interface NewMessageData {
+    chatId: string;
+    message: {
+        _id: string;
+        chat: string;
+        user: string;
+        message: string;
+        type: string;
+        isFromBot: boolean;
+        isFromProfessional: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+}
+
+type MessageCallback = (data: NewMessageData) => void;
+
 interface IncomingCallContextType {
     incomingCall: IncomingCallData | null;
     isConnected: boolean;
     dismissCall: () => void;
+    subscribeToMessages: (chatId: string, callback: MessageCallback) => () => void;
 }
 
 const IncomingCallContext = createContext<IncomingCallContextType>({
     incomingCall: null,
     isConnected: false,
     dismissCall: () => { },
+    subscribeToMessages: () => () => { },
 });
 
 export function useIncomingCall() {
@@ -107,6 +126,16 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
             console.log("[IncomingCall] Call accepted:", data);
         });
 
+        // Listen for new chat messages
+        socket.on("new-message", (data: NewMessageData) => {
+            console.log("[Socket] New message received:", data.chatId);
+            // Notify all registered callbacks for this chat
+            const callbacks = messageCallbacksRef.current.get(data.chatId);
+            if (callbacks) {
+                callbacks.forEach(callback => callback(data));
+            }
+        });
+
         socketRef.current = socket;
 
         return () => {
@@ -126,8 +155,31 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
         setIncomingCall(null);
     }, []);
 
+    // Subscribe to messages for a specific chat
+    const messageCallbacksRef = useRef<Map<string, Set<MessageCallback>>>(new Map());
+
+    const subscribeToMessages = useCallback((chatId: string, callback: MessageCallback) => {
+        if (!messageCallbacksRef.current.has(chatId)) {
+            messageCallbacksRef.current.set(chatId, new Set());
+        }
+        messageCallbacksRef.current.get(chatId)!.add(callback);
+        console.log("[Socket] Subscribed to messages for chat:", chatId);
+
+        // Return unsubscribe function
+        return () => {
+            const callbacks = messageCallbacksRef.current.get(chatId);
+            if (callbacks) {
+                callbacks.delete(callback);
+                if (callbacks.size === 0) {
+                    messageCallbacksRef.current.delete(chatId);
+                }
+            }
+            console.log("[Socket] Unsubscribed from messages for chat:", chatId);
+        };
+    }, []);
+
     return (
-        <IncomingCallContext.Provider value={{ incomingCall, isConnected, dismissCall }}>
+        <IncomingCallContext.Provider value={{ incomingCall, isConnected, dismissCall, subscribeToMessages }}>
             {children}
         </IncomingCallContext.Provider>
     );

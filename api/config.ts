@@ -1,7 +1,7 @@
 // API Configuration
-// Your local IP: 192.168.1.139 (use this for mobile testing)
+// Your local IP: 172.20.10.4 (use this for mobile testing)
 // Use "localhost" for web/emulator testing only
-export const API_HOST = "192.168.1.139";
+export const API_HOST = "172.20.10.4";
 export const API_PORT = 3977;
 export const API_URL = `http://${API_HOST}:${API_PORT}/api`;
 export const SOCKET_URL = `http://${API_HOST}:${API_PORT}`;

@@ -17,12 +17,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../context";
+import { useAuth, useIncomingCall } from "../../context";
 import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, API_HOST, API_PORT, analyticsApi } from "../../api";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
+import HumanVideoCall from "../../components/HumanVideoCall";
 import { WebView } from "react-native-webview";
+import { getVideoCallToken } from "../../api/videoCall";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -70,6 +72,7 @@ interface Message {
     type: "text" | "audio" | "typing";
     content?: string;
     isUser: boolean;
+    isFromProfessional?: boolean; // Added for real professional messages
     timestamp: string;
     duration?: string;
 }
@@ -172,7 +175,14 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
 
 export default function AvatarChatScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
+    const params = useLocalSearchParams();
+
+    // Video call params (when navigating from incoming-call)
+    const isVideoCallMode = params.videoCall === "true";
+    const videoCallChatId = params.chatId as string | undefined;
+
     const { token, user: currentUser } = useAuth();
+    const { subscribeToMessages } = useIncomingCall();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -208,6 +218,12 @@ export default function AvatarChatScreen() {
     const [livekitToken, setLivekitToken] = useState<string | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
+
+    // Human Video Call State (when in live call with real professional)
+    const [isHumanSession, setIsHumanSession] = useState(isVideoCallMode);
+    const [humanCallLivekitUrl, setHumanCallLivekitUrl] = useState<string | null>(null);
+    const [humanCallToken, setHumanCallToken] = useState<string | null>(null);
+    const [humanCallConnected, setHumanCallConnected] = useState(false);
 
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
@@ -324,7 +340,8 @@ export default function AvatarChatScreen() {
                 id: msg._id,
                 type: 'text' as const, // Local Message type only supports text/audio/typing
                 content: msg.message || '',
-                isUser: !msg.isFromBot,
+                isUser: !msg.isFromBot && !msg.isFromProfessional, // User is neither bot nor pro
+                isFromProfessional: msg.isFromProfessional || false,
                 timestamp: new Date(msg.createdAt).toLocaleTimeString('es-ES', {
                     hour: '2-digit',
                     minute: '2-digit'
@@ -480,7 +497,30 @@ export default function AvatarChatScreen() {
         loadConversations();
     }, [loadProfessional, loadConversations]);
 
-    // Initialize LiveAvatar session when professional is loaded
+    // Initialize human video call when in video call mode
+    useEffect(() => {
+        const initHumanVideoCall = async () => {
+            if (!isVideoCallMode || !videoCallChatId || !token) return;
+
+            console.log('[AvatarChat] Initializing human video call for chat:', videoCallChatId);
+
+            try {
+                const callData = await getVideoCallToken(token, videoCallChatId);
+                console.log('[AvatarChat] Got video call token, connecting to:', callData.livekitUrl);
+
+                setHumanCallLivekitUrl(callData.livekitUrl);
+                setHumanCallToken(callData.token);
+                setIsHumanSession(true);
+            } catch (error) {
+                console.error('[AvatarChat] Error getting video call token:', error);
+                setIsHumanSession(false);
+            }
+        };
+
+        initHumanVideoCall();
+    }, [isVideoCallMode, videoCallChatId, token]);
+
+    // Initialize LiveAvatar session when professional is loaded (skip if in human session)
     const initializeLiveAvatarSession = useCallback(async () => {
         if (!professional?.digitalTwin?.isActive) {
             console.log("Digital twin not active, skipping session initialization");
@@ -568,6 +608,37 @@ export default function AvatarChatScreen() {
     // Transcription is now handled via LiveKit hooks in LiveAvatarVideo component
     // If you need to enable API polling in the future, the sessionId is available
     // and liveAvatarApi.getSessionTranscript(sessionId) can be called
+
+    // Subscribe to real-time messages from professional
+    useEffect(() => {
+        if (!currentChatId || !subscribeToMessages) return;
+
+        const unsubscribe = subscribeToMessages(currentChatId, (data) => {
+            // Add the new message to the UI
+            if (data.message.isFromProfessional) {
+                const newMessage: Message = {
+                    id: data.message._id,
+                    type: 'text',
+                    content: data.message.message,
+                    isUser: false,
+                    isFromProfessional: true,
+                    timestamp: new Date(data.message.createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                };
+                setMessages(prev => [...prev, newMessage]);
+                console.log('[AvatarChat] Added professional message via socket');
+
+                // Scroll to bottom
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        });
+
+        return unsubscribe;
+    }, [currentChatId, subscribeToMessages]);
 
     useEffect(() => {
         // Animate wave bars
@@ -871,6 +942,8 @@ export default function AvatarChatScreen() {
     }
 
     const avatarUrl = getAvatarUrl(professional?.avatar);
+    // URL for the digital twin avatar (from LiveAvatar preview)
+    const twinAvatarUrl = professional?.digitalTwin?.appearance?.liveAvatarPreview || null;
     const displayName = professional?.publicName ||
         `${professional?.firstname || ""} ${professional?.lastname || ""}`.trim() ||
         professional?.email?.split("@")[0] || "Profesional";
@@ -884,7 +957,13 @@ export default function AvatarChatScreen() {
                         <TouchableOpacity style={styles.menuButton} onPress={openDrawer}>
                             <MaterialIcons name="menu" size={20} color={COLORS.gray600} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.professionalChip} onPress={handleViewProfile}>
+                        <TouchableOpacity
+                            style={[
+                                styles.professionalChip,
+                                isHumanSession && { borderColor: '#F59E0B', borderWidth: 2 }
+                            ]}
+                            onPress={handleViewProfile}
+                        >
                             <View style={styles.avatarSmallContainer}>
                                 {avatarUrl ? (
                                     <Image source={{ uri: avatarUrl }} style={styles.avatarSmall} />
@@ -893,12 +972,18 @@ export default function AvatarChatScreen() {
                                         <MaterialIcons name="person" size={20} color={COLORS.gray400} />
                                     </View>
                                 )}
-                                <View style={styles.onlineIndicatorSmall} />
+                                <View style={[
+                                    styles.onlineIndicatorSmall,
+                                    isHumanSession && { backgroundColor: '#F59E0B' }
+                                ]} />
                             </View>
                             <View style={styles.professionalChipText}>
                                 <Text style={styles.professionalChipName}>{displayName}</Text>
-                                <Text style={styles.professionalChipRole}>
-                                    {professional?.profession || "Profesional"} AI
+                                <Text style={[
+                                    styles.professionalChipRole,
+                                    isHumanSession && { color: '#F59E0B', fontWeight: '600' }
+                                ]}>
+                                    {isHumanSession ? "👤 EN VIVO" : `${professional?.profession || "Profesional"} AI`}
                                 </Text>
                             </View>
                         </TouchableOpacity>
@@ -984,8 +1069,26 @@ export default function AvatarChatScreen() {
                         </View>
                     )}
 
-                    {/* LiveKit Video when session is active */}
-                    {sessionStatus === 'active' && livekitUrl && livekitToken ? (
+                    {/* Human Video Call when in live session with professional */}
+                    {isHumanSession && humanCallLivekitUrl && humanCallToken ? (
+                        <HumanVideoCall
+                            livekitUrl={humanCallLivekitUrl}
+                            token={humanCallToken}
+                            style={styles.videoImage}
+                            onConnectionChange={(connected) => {
+                                console.log('[HumanCall] Connection:', connected);
+                                setHumanCallConnected(connected);
+                            }}
+                            onDisconnect={() => {
+                                console.log('[HumanCall] Disconnected, returning to AI mode');
+                                setIsHumanSession(false);
+                                setHumanCallLivekitUrl(null);
+                                setHumanCallToken(null);
+                                setHumanCallConnected(false);
+                            }}
+                        />
+                    ) : sessionStatus === 'active' && livekitUrl && livekitToken ? (
+                        /* LiveKit AI Avatar when session is active */
                         <LiveAvatarVideo
                             livekitUrl={livekitUrl}
                             livekitToken={livekitToken}
@@ -1740,13 +1843,39 @@ export default function AvatarChatScreen() {
                         ]}
                     >
                         {!message.isUser && (
-                            <View style={styles.messageAvatar}>
-                                {avatarUrl ? (
-                                    <Image source={{ uri: avatarUrl }} style={styles.messageAvatarImage} />
+                            <View style={[
+                                styles.messageAvatar,
+                                message.isFromProfessional && styles.messageAvatarPro
+                            ]}>
+                                {message.isFromProfessional ? (
+                                    /* Professional human message - show profile photo */
+                                    <>
+                                        {avatarUrl ? (
+                                            <Image source={{ uri: avatarUrl }} style={styles.messageAvatarImage} />
+                                        ) : (
+                                            <View style={[styles.messageAvatarPlaceholder, styles.messageAvatarPlaceholderPro]}>
+                                                <MaterialIcons name="person" size={16} color={COLORS.white} />
+                                            </View>
+                                        )}
+                                    </>
                                 ) : (
-                                    <View style={styles.messageAvatarPlaceholder}>
-                                        <MaterialIcons name="person" size={16} color={COLORS.gray400} />
-                                    </View>
+                                    /* Digital twin message - show digital avatar with robot badge */
+                                    <>
+                                        {twinAvatarUrl ? (
+                                            <Image source={{ uri: twinAvatarUrl }} style={styles.messageAvatarImage} />
+                                        ) : avatarUrl ? (
+                                            /* Fallback to profile photo if no twin avatar */
+                                            <Image source={{ uri: avatarUrl }} style={styles.messageAvatarImage} />
+                                        ) : (
+                                            <View style={styles.messageAvatarPlaceholder}>
+                                                <MaterialIcons name="smart-toy" size={16} color={COLORS.gray400} />
+                                            </View>
+                                        )}
+                                        {/* Robot badge for digital twin */}
+                                        <View style={styles.twinBadge}>
+                                            <MaterialIcons name="smart-toy" size={10} color={COLORS.white} />
+                                        </View>
+                                    </>
                                 )}
                             </View>
                         )}
@@ -1757,11 +1886,23 @@ export default function AvatarChatScreen() {
                             {message.type === "text" && (
                                 <View style={[
                                     styles.messageBubble,
-                                    message.isUser ? styles.messageBubbleUser : styles.messageBubbleBot
+                                    message.isUser
+                                        ? styles.messageBubbleUser
+                                        : message.isFromProfessional
+                                            ? styles.messageBubblePro
+                                            : styles.messageBubbleBot
                                 ]}>
+                                    {/* Professional label for human messages */}
+                                    {message.isFromProfessional && (
+                                        <View style={styles.proBadgeInMessage}>
+                                            <View style={styles.proBadgeDot} />
+                                            <Text style={styles.proBadgeText}>EN VIVO</Text>
+                                        </View>
+                                    )}
                                     <Text style={[
                                         styles.messageText,
-                                        message.isUser && styles.messageTextUser
+                                        message.isUser && styles.messageTextUser,
+                                        message.isFromProfessional && styles.messageTextPro
                                     ]}>
                                         {message.content}
                                     </Text>
@@ -1805,13 +1946,19 @@ export default function AvatarChatScreen() {
                 {isTyping && (
                     <View style={styles.messageRow}>
                         <View style={styles.messageAvatar}>
-                            {avatarUrl ? (
+                            {twinAvatarUrl ? (
+                                <Image source={{ uri: twinAvatarUrl }} style={styles.messageAvatarImage} />
+                            ) : avatarUrl ? (
                                 <Image source={{ uri: avatarUrl }} style={styles.messageAvatarImage} />
                             ) : (
                                 <View style={styles.messageAvatarPlaceholder}>
-                                    <MaterialIcons name="person" size={16} color={COLORS.gray400} />
+                                    <MaterialIcons name="smart-toy" size={16} color={COLORS.gray400} />
                                 </View>
                             )}
+                            {/* Robot badge for digital twin */}
+                            <View style={styles.twinBadge}>
+                                <MaterialIcons name="smart-toy" size={10} color={COLORS.white} />
+                            </View>
                         </View>
                         <View style={styles.typingIndicator}>
                             <View style={styles.typingDot} />
@@ -2356,11 +2503,18 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
+        overflow: "visible", // Allow badge to overflow
+        position: "relative",
+    },
+    messageAvatarPro: {
+        borderWidth: 2,
+        borderColor: "#F59E0B", // Gold border for professional
         overflow: "hidden",
     },
     messageAvatarImage: {
         width: "100%",
         height: "100%",
+        borderRadius: 14,
     },
     messageAvatarPlaceholder: {
         width: "100%",
@@ -2368,6 +2522,23 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.gray100,
         alignItems: "center",
         justifyContent: "center",
+        borderRadius: 14,
+    },
+    messageAvatarPlaceholderPro: {
+        backgroundColor: "#F59E0B", // Gold background for pro placeholder
+    },
+    twinBadge: {
+        position: "absolute",
+        bottom: -2,
+        right: -2,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: "#8B5CF6", // Purple for AI
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1.5,
+        borderColor: COLORS.white,
     },
     messageBubbleContainer: {
         maxWidth: "75%",
@@ -2397,6 +2568,34 @@ const styles = StyleSheet.create({
     },
     messageTextUser: {
         color: COLORS.textMain,
+    },
+    // Professional message styles (real human pro, not AI twin)
+    messageBubblePro: {
+        backgroundColor: "#FFFBEB", // Amber-50
+        borderBottomLeftRadius: 4,
+        borderWidth: 2,
+        borderColor: "#F59E0B", // Amber-500 (gold)
+    },
+    messageTextPro: {
+        color: COLORS.textMain,
+    },
+    proBadgeInMessage: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+        gap: 4,
+    },
+    proBadgeDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#EF4444", // Red for "live"
+    },
+    proBadgeText: {
+        fontSize: 9,
+        fontWeight: "bold",
+        color: "#F59E0B",
+        letterSpacing: 0.5,
     },
     messageTime: {
         fontSize: 10,

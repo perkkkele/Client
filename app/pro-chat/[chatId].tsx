@@ -11,28 +11,39 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
+    Dimensions,
+    Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useAuth } from "../../context";
+import { useAuth, useIncomingCall } from "../../context";
 import { getChat, proReply } from "../../api/chat";
 import { getMessages, ChatMessage } from "../../api/chatMessage";
-import { createVideoCall } from "../../api/videoCall";
+import { createVideoCall, getVideoCallToken } from "../../api/videoCall";
+import { API_HOST, API_PORT } from "../../api";
+import HumanVideoCall from "../../components/HumanVideoCall";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const COLORS = {
-    primary: "#137fec",
-    backgroundDark: "#101922",
-    surfaceDark: "#182430",
-    borderDark: "#2a3642",
-    textMain: "#FFFFFF",
-    textSecondary: "#9CA3AF",
+    primary: "#f9f506",
+    backgroundLight: "#f8f8f5",
+    backgroundDark: "#23220f",
+    surfaceLight: "#FFFFFF",
+    surfaceDark: "#2c2c24",
+    textMain: "#181811",
+    textMuted: "#9CA3AF",
+    textLight: "#FFFFFF",
+    gray100: "#F1F5F9",
+    gray200: "#E2E8F0",
+    gray300: "#CBD5E1",
     gray400: "#9CA3AF",
     gray500: "#6B7280",
-    green400: "#4ade80",
+    gray600: "#4B5563",
+    gray800: "#1E293B",
     green500: "#22c55e",
-    orange400: "#fb923c",
-    purple400: "#c084fc",
-    indigo400: "#818cf8",
+    red500: "#EF4444",
+    black: "#000000",
 };
 
 // Helper to format time
@@ -57,19 +68,27 @@ export default function ProChatScreen() {
     const { user, token } = useAuth();
     const scrollViewRef = useRef<ScrollView>(null);
 
+    // Chat state
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [clientName, setClientName] = useState("Cliente");
+    const [clientAvatar, setClientAvatar] = useState<string | null>(null);
+    const [clientInitials, setClientInitials] = useState("CL");
     const [isEscalated, setIsEscalated] = useState(false);
+    const [escalatedReason, setEscalatedReason] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [inputText, setInputText] = useState("");
+
+    // Video call state
+    const [isInCall, setIsInCall] = useState(false);
     const [startingCall, setStartingCall] = useState(false);
+    const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
+    const [livekitToken, setLivekitToken] = useState<string | null>(null);
 
     const loadChatData = useCallback(async () => {
         if (!token || !chatId) return;
 
         try {
-            // Load chat info
             const chat = await getChat(token, chatId);
             const client = chat.participant_one as any;
             if (client) {
@@ -77,10 +96,23 @@ export default function ProChatScreen() {
                     ? `${client.firstname} ${client.lastname}`
                     : client.firstname || client.email?.split('@')[0] || 'Cliente';
                 setClientName(name);
-            }
-            setIsEscalated(!!(chat as any).escalatedAt);
 
-            // Load messages
+                const initials = client.firstname && client.lastname
+                    ? `${client.firstname[0]}${client.lastname[0]}`.toUpperCase()
+                    : client.firstname?.[0]?.toUpperCase() || 'CL';
+                setClientInitials(initials);
+
+                if (client.avatar) {
+                    const avatarUrl = client.avatar.startsWith("http")
+                        ? client.avatar
+                        : `http://${API_HOST}:${API_PORT}/${client.avatar}`;
+                    setClientAvatar(avatarUrl);
+                }
+            }
+
+            setIsEscalated(!!(chat as any).escalatedAt);
+            setEscalatedReason((chat as any).escalatedReason || null);
+
             const msgs = await getMessages(token, chatId);
             setMessages(msgs);
         } catch (error) {
@@ -96,11 +128,38 @@ export default function ProChatScreen() {
     }, [loadChatData]);
 
     useEffect(() => {
-        // Scroll to bottom when messages change
         setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
     }, [messages]);
+
+    // Subscribe to real-time messages from client/twin
+    const { subscribeToMessages } = useIncomingCall();
+
+    useEffect(() => {
+        if (!chatId || !subscribeToMessages) return;
+
+        const unsubscribe = subscribeToMessages(chatId, (data) => {
+            // Add new messages from client or twin (not from pro)
+            if (!data.message.isFromProfessional) {
+                const newMsg: ChatMessage = {
+                    _id: data.message._id,
+                    chat: data.message.chat,
+                    user: data.message.user,
+                    message: data.message.message,
+                    type: (data.message.type || "TEXT") as "TEXT" | "IMAGE",
+                    isFromBot: data.message.isFromBot,
+                    isFromProfessional: false,
+                    createdAt: data.message.createdAt,
+                    updatedAt: data.message.updatedAt,
+                };
+                setMessages(prev => [...prev, newMsg]);
+                console.log('[ProChat] Added client/twin message via socket');
+            }
+        });
+
+        return unsubscribe;
+    }, [chatId, subscribeToMessages]);
 
     const handleSend = async () => {
         if (!inputText.trim() || !token || !chatId || sending) return;
@@ -112,7 +171,6 @@ export default function ProChatScreen() {
         try {
             await proReply(token, chatId, messageText);
 
-            // Optimistically add message to UI
             const newMessage: ChatMessage = {
                 _id: Date.now().toString(),
                 chat: chatId,
@@ -128,14 +186,30 @@ export default function ProChatScreen() {
         } catch (error) {
             console.error("Error sending message:", error);
             Alert.alert("Error", "No se pudo enviar el mensaje");
-            setInputText(messageText); // Restore text
+            setInputText(messageText);
         } finally {
             setSending(false);
         }
     };
 
     function handleBack() {
-        router.back();
+        if (isInCall) {
+            Alert.alert(
+                "Llamada en curso",
+                "¿Deseas colgar la llamada y salir?",
+                [
+                    { text: "Cancelar", style: "cancel" },
+                    {
+                        text: "Colgar", style: "destructive", onPress: () => {
+                            setIsInCall(false);
+                            router.back();
+                        }
+                    }
+                ]
+            );
+        } else {
+            router.back();
+        }
     }
 
     const handleStartVideoCall = async () => {
@@ -152,7 +226,10 @@ export default function ProChatScreen() {
                         setStartingCall(true);
                         try {
                             await createVideoCall(token, chatId);
-                            router.push(`/video-call/${chatId}` as any);
+                            const callData = await getVideoCallToken(token, chatId);
+                            setLivekitUrl(callData.livekitUrl);
+                            setLivekitToken(callData.token);
+                            setIsInCall(true);
                         } catch (error: any) {
                             console.error("Error starting call:", error);
                             Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
@@ -163,6 +240,12 @@ export default function ProChatScreen() {
                 }
             ]
         );
+    };
+
+    const handleEndCall = () => {
+        setIsInCall(false);
+        setLivekitUrl(null);
+        setLivekitToken(null);
     };
 
     // Group messages by date
@@ -178,133 +261,230 @@ export default function ProChatScreen() {
         }
     });
 
+    // Get avatar for message sender
+    const getMessageAvatar = (msg: ChatMessage) => {
+        if (msg.isFromProfessional) {
+            // Professional's own avatar
+            if (user?.avatar) {
+                const avatarUrl = user.avatar.startsWith("http")
+                    ? user.avatar
+                    : `http://${API_HOST}:${API_PORT}/${user.avatar}`;
+                return avatarUrl;
+            }
+            return null;
+        } else if (msg.isFromBot) {
+            // Digital twin - use professional avatar with robot indicator
+            return null; // Will show robot icon
+        } else {
+            // Client avatar
+            return clientAvatar;
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-                    <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
-                </TouchableOpacity>
-                <View style={styles.headerInfo}>
-                    <Text style={styles.headerTitle} numberOfLines={1}>{clientName}</Text>
-                    {isEscalated && (
-                        <View style={styles.escalatedBadge}>
-                            <MaterialIcons name="warning" size={12} color={COLORS.orange400} />
-                            <Text style={styles.escalatedBadgeText}>Escalado</Text>
-                        </View>
-                    )}
-                </View>
-                <TouchableOpacity
-                    style={styles.headerButton}
-                    onPress={handleStartVideoCall}
-                    disabled={startingCall}
-                >
-                    {startingCall ? (
-                        <ActivityIndicator size="small" color={COLORS.primary} />
-                    ) : (
-                        <MaterialIcons name="videocam" size={24} color={COLORS.primary} />
-                    )}
-                </TouchableOpacity>
-            </View>
+            {/* Floating Header */}
+            <View style={styles.headerOverlay}>
+                <View style={styles.headerContent}>
+                    {/* Back button */}
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                        <MaterialIcons name="arrow-back" size={20} color={COLORS.gray600} />
+                    </TouchableOpacity>
 
-            {/* Messages */}
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
-            ) : (
-                <KeyboardAvoidingView
-                    style={styles.chatContainer}
-                    behavior={Platform.OS === "ios" ? "padding" : undefined}
-                    keyboardVerticalOffset={100}
-                >
-                    <ScrollView
-                        ref={scrollViewRef}
-                        style={styles.messagesContainer}
-                        contentContainerStyle={styles.messagesContent}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        {groupedMessages.map((group, groupIndex) => (
-                            <View key={groupIndex}>
-                                <View style={styles.dateHeader}>
-                                    <Text style={styles.dateHeaderText}>
-                                        {formatDateHeader(group.date)}
-                                    </Text>
-                                </View>
-                                {group.messages.map((msg) => (
-                                    <View
-                                        key={msg._id}
-                                        style={[
-                                            styles.messageBubble,
-                                            msg.isFromProfessional
-                                                ? styles.proMessage
-                                                : msg.isFromBot
-                                                    ? styles.botMessage
-                                                    : styles.clientMessage
-                                        ]}
-                                    >
-                                        {!msg.isFromProfessional && (
-                                            <View style={styles.messageLabel}>
-                                                <MaterialIcons
-                                                    name={msg.isFromBot ? "smart-toy" : "person"}
-                                                    size={12}
-                                                    color={msg.isFromBot ? COLORS.purple400 : COLORS.indigo400}
-                                                />
-                                                <Text style={[
-                                                    styles.messageLabelText,
-                                                    { color: msg.isFromBot ? COLORS.purple400 : COLORS.indigo400 }
-                                                ]}>
-                                                    {msg.isFromBot ? "Gemelo Digital" : clientName}
-                                                </Text>
-                                            </View>
-                                        )}
-                                        <Text style={[
-                                            styles.messageText,
-                                            msg.isFromProfessional && styles.proMessageText
-                                        ]}>
-                                            {msg.message}
-                                        </Text>
-                                        <Text style={[
-                                            styles.messageTime,
-                                            msg.isFromProfessional && styles.proMessageTime
-                                        ]}>
-                                            {formatTime(msg.createdAt)}
-                                            {msg.isFromProfessional && " • Tú"}
-                                        </Text>
-                                    </View>
-                                ))}
-                            </View>
-                        ))}
-                    </ScrollView>
-
-                    {/* Input Area */}
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.textInput}
-                            placeholder="Escribe tu respuesta..."
-                            placeholderTextColor={COLORS.gray500}
-                            value={inputText}
-                            onChangeText={setInputText}
-                            multiline
-                            maxLength={2000}
-                        />
-                        <TouchableOpacity
-                            style={[
-                                styles.sendButton,
-                                (!inputText.trim() || sending) && styles.sendButtonDisabled
-                            ]}
-                            onPress={handleSend}
-                            disabled={!inputText.trim() || sending}
-                        >
-                            {sending ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
+                    {/* Client info bubble */}
+                    <View style={styles.clientBubble}>
+                        <View style={styles.avatarContainer}>
+                            {clientAvatar ? (
+                                <Image source={{ uri: clientAvatar }} style={styles.avatar} />
                             ) : (
-                                <MaterialIcons name="send" size={22} color="#FFFFFF" />
+                                <View style={styles.avatarPlaceholder}>
+                                    <Text style={styles.avatarText}>{clientInitials}</Text>
+                                </View>
+                            )}
+                            <View style={styles.onlineIndicator} />
+                        </View>
+                        <View style={styles.clientInfo}>
+                            <Text style={styles.clientName} numberOfLines={1}>{clientName}</Text>
+                            <Text style={styles.clientSubtitle}>
+                                {isEscalated ? "Chat escalado" : "En conversación"}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Video call button */}
+                    {!isInCall && (
+                        <TouchableOpacity
+                            style={styles.videoCallButton}
+                            onPress={handleStartVideoCall}
+                            disabled={startingCall}
+                        >
+                            {startingCall ? (
+                                <ActivityIndicator size="small" color={COLORS.textMain} />
+                            ) : (
+                                <MaterialIcons name="videocam" size={20} color={COLORS.textMain} />
                             )}
                         </TouchableOpacity>
+                    )}
+                </View>
+            </View>
+
+            {/* Main Content */}
+            <View style={styles.mainContent}>
+                {/* Video Call Area (when active) */}
+                {isInCall && livekitUrl && livekitToken && (
+                    <View style={styles.videoSection}>
+                        <View style={styles.videoContainer}>
+                            <HumanVideoCall
+                                livekitUrl={livekitUrl}
+                                token={livekitToken}
+                                onDisconnect={handleEndCall}
+                                style={styles.videoCall}
+                            />
+                        </View>
                     </View>
-                </KeyboardAvoidingView>
-            )}
+                )}
+
+                {/* Chat Messages */}
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={COLORS.primary} />
+                    </View>
+                ) : (
+                    <KeyboardAvoidingView
+                        style={styles.chatContainer}
+                        behavior={Platform.OS === "ios" ? "padding" : undefined}
+                        keyboardVerticalOffset={100}
+                    >
+                        <ScrollView
+                            ref={scrollViewRef}
+                            style={styles.messagesScroll}
+                            contentContainerStyle={styles.messagesContent}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {/* Spacer for header */}
+                            <View style={{ height: isInCall ? 16 : 80 }} />
+
+                            {groupedMessages.length === 0 ? (
+                                <View style={styles.emptyContainer}>
+                                    <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.gray300} />
+                                    <Text style={styles.emptyText}>No hay mensajes</Text>
+                                </View>
+                            ) : (
+                                groupedMessages.map((group, groupIndex) => (
+                                    <View key={groupIndex}>
+                                        {/* Date header */}
+                                        <View style={styles.dateHeader}>
+                                            <Text style={styles.dateHeaderText}>
+                                                {formatDateHeader(group.date)}
+                                            </Text>
+                                        </View>
+
+                                        {group.messages.map((msg) => {
+                                            const isFromPro = msg.isFromProfessional;
+                                            const msgAvatar = getMessageAvatar(msg);
+
+                                            return (
+                                                <View
+                                                    key={msg._id}
+                                                    style={[
+                                                        styles.messageRow,
+                                                        isFromPro && styles.messageRowRight
+                                                    ]}
+                                                >
+                                                    {/* Avatar (left side for received) */}
+                                                    {!isFromPro && (
+                                                        <View style={styles.messageAvatarContainer}>
+                                                            {msg.isFromBot ? (
+                                                                <View style={styles.botAvatarPlaceholder}>
+                                                                    <MaterialIcons name="smart-toy" size={16} color={COLORS.textLight} />
+                                                                </View>
+                                                            ) : msgAvatar ? (
+                                                                <Image source={{ uri: msgAvatar }} style={styles.messageAvatar} />
+                                                            ) : (
+                                                                <View style={styles.messageAvatarPlaceholder}>
+                                                                    <Text style={styles.messageAvatarText}>{clientInitials}</Text>
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                    )}
+
+                                                    {/* Message bubble */}
+                                                    <View style={styles.messageBubbleContainer}>
+                                                        <View style={[
+                                                            styles.messageBubble,
+                                                            isFromPro ? styles.sentBubble : styles.receivedBubble,
+                                                            msg.isFromBot && styles.botBubble
+                                                        ]}>
+                                                            <Text style={[
+                                                                styles.messageText,
+                                                                isFromPro && styles.sentMessageText
+                                                            ]}>
+                                                                {msg.message}
+                                                            </Text>
+                                                        </View>
+                                                        <Text style={[
+                                                            styles.messageTime,
+                                                            isFromPro && styles.messageTimeRight
+                                                        ]}>
+                                                            {formatTime(msg.createdAt)}
+                                                            {msg.isFromBot && " • Gemelo"}
+                                                            {isFromPro && " • Tú"}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                ))
+                            )}
+
+                            <View style={{ height: 16 }} />
+                        </ScrollView>
+
+                        {/* Input Area */}
+                        <View style={styles.inputArea}>
+                            <View style={styles.inputRow}>
+                                {/* Add button */}
+                                <TouchableOpacity style={styles.addButton}>
+                                    <MaterialIcons name="add" size={22} color={COLORS.gray600} />
+                                </TouchableOpacity>
+
+                                {/* Text input */}
+                                <View style={styles.inputContainer}>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        placeholder="Escribe un mensaje..."
+                                        placeholderTextColor={COLORS.gray400}
+                                        value={inputText}
+                                        onChangeText={setInputText}
+                                        multiline
+                                        maxLength={2000}
+                                    />
+                                    <TouchableOpacity style={styles.micButton}>
+                                        <MaterialIcons name="mic" size={20} color={COLORS.gray500} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Send button */}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.sendButton,
+                                        (!inputText.trim() || sending) && styles.sendButtonDisabled
+                                    ]}
+                                    onPress={handleSend}
+                                    disabled={!inputText.trim() || sending}
+                                >
+                                    {sending ? (
+                                        <ActivityIndicator size="small" color={COLORS.primary} />
+                                    ) : (
+                                        <MaterialIcons name="send" size={26} color={COLORS.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                )}
+            </View>
         </SafeAreaView>
     );
 }
@@ -312,151 +492,340 @@ export default function ProChatScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.backgroundDark,
+        backgroundColor: COLORS.backgroundLight,
     },
-    header: {
+    // Floating Header
+    headerOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        paddingTop: 50,
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+    },
+    headerContent: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 8,
-        paddingVertical: 12,
-        backgroundColor: COLORS.surfaceDark,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderDark,
+        gap: 8,
     },
-    headerButton: {
-        padding: 8,
-        width: 44,
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.surfaceLight,
         alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: "rgba(0,0,0,0.05)",
     },
-    headerInfo: {
+    clientBubble: {
         flex: 1,
+        flexDirection: "row",
         alignItems: "center",
+        backgroundColor: "rgba(255,255,255,0.9)",
+        borderRadius: 24,
+        paddingLeft: 8,
+        paddingRight: 16,
+        paddingVertical: 8,
+        gap: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: "rgba(0,0,0,0.05)",
     },
-    headerTitle: {
-        fontSize: 16,
+    avatarContainer: {
+        position: "relative",
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: COLORS.primary,
+    },
+    avatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.gray400,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: COLORS.primary,
+    },
+    avatarText: {
+        color: COLORS.textLight,
+        fontSize: 14,
         fontWeight: "600",
+    },
+    onlineIndicator: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: COLORS.green500,
+        borderWidth: 2,
+        borderColor: COLORS.surfaceLight,
+    },
+    clientInfo: {
+        flex: 1,
+    },
+    clientName: {
+        fontSize: 14,
+        fontWeight: "bold",
         color: COLORS.textMain,
     },
-    escalatedBadge: {
-        flexDirection: "row",
+    clientSubtitle: {
+        fontSize: 12,
+        color: COLORS.gray500,
+    },
+    videoCallButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.primary,
         alignItems: "center",
-        gap: 4,
-        marginTop: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-        backgroundColor: "rgba(251, 146, 60, 0.15)",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
-    escalatedBadgeText: {
-        fontSize: 11,
-        fontWeight: "500",
-        color: COLORS.orange400,
+    // Main Content
+    mainContent: {
+        flex: 1,
     },
+    // Video Section
+    videoSection: {
+        paddingHorizontal: 16,
+        paddingTop: 100,
+        paddingBottom: 0,
+    },
+    videoContainer: {
+        aspectRatio: 4 / 3,
+        borderRadius: 16,
+        overflow: "hidden",
+        backgroundColor: COLORS.textMain,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    videoCall: {
+        flex: 1,
+    },
+    // Loading
     loadingContainer: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
     },
+    // Chat
     chatContainer: {
         flex: 1,
     },
-    messagesContainer: {
+    messagesScroll: {
         flex: 1,
     },
     messagesContent: {
-        padding: 16,
-        paddingBottom: 8,
+        paddingHorizontal: 16,
     },
+    emptyContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 60,
+        gap: 8,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: COLORS.gray400,
+    },
+    // Date Header
     dateHeader: {
         alignItems: "center",
         marginVertical: 16,
     },
     dateHeaderText: {
-        fontSize: 12,
-        color: COLORS.textSecondary,
-        backgroundColor: COLORS.surfaceDark,
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.gray400,
+        backgroundColor: COLORS.gray100,
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 12,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    // Messages
+    messageRow: {
+        flexDirection: "row",
+        alignItems: "flex-end",
+        marginBottom: 16,
+        gap: 12,
+    },
+    messageRowRight: {
+        flexDirection: "row-reverse",
+    },
+    messageAvatarContainer: {
+        width: 32,
+        height: 32,
+    },
+    messageAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
+    },
+    messageAvatarPlaceholder: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.gray300,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
+    },
+    messageAvatarText: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.textLight,
+    },
+    botAvatarPlaceholder: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "#8B5CF6",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
+    },
+    messageBubbleContainer: {
+        maxWidth: "80%",
+        gap: 4,
     },
     messageBubble: {
-        maxWidth: "85%",
-        padding: 12,
+        padding: 16,
         borderRadius: 16,
-        marginBottom: 8,
     },
-    clientMessage: {
-        alignSelf: "flex-start",
-        backgroundColor: COLORS.surfaceDark,
+    receivedBubble: {
+        backgroundColor: COLORS.surfaceLight,
         borderTopLeftRadius: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
     },
-    botMessage: {
-        alignSelf: "flex-start",
-        backgroundColor: "#2a2540",
-        borderTopLeftRadius: 4,
-    },
-    proMessage: {
-        alignSelf: "flex-end",
+    sentBubble: {
         backgroundColor: COLORS.primary,
         borderTopRightRadius: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 1,
     },
-    messageLabel: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        marginBottom: 4,
-    },
-    messageLabelText: {
-        fontSize: 11,
-        fontWeight: "500",
+    botBubble: {
+        backgroundColor: "#F3E8FF",
+        borderWidth: 1,
+        borderColor: "#E9D5FF",
     },
     messageText: {
-        fontSize: 15,
+        fontSize: 14,
         color: COLORS.textMain,
         lineHeight: 20,
     },
-    proMessageText: {
-        color: "#FFFFFF",
+    sentMessageText: {
+        color: COLORS.textMain,
     },
     messageTime: {
-        fontSize: 11,
-        color: COLORS.textSecondary,
-        marginTop: 4,
-        alignSelf: "flex-end",
+        fontSize: 10,
+        color: COLORS.gray400,
+        paddingLeft: 4,
     },
-    proMessageTime: {
-        color: "rgba(255, 255, 255, 0.7)",
+    messageTimeRight: {
+        textAlign: "right",
+        paddingRight: 4,
     },
-    inputContainer: {
+    // Input Area
+    inputArea: {
+        backgroundColor: COLORS.backgroundLight,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+        paddingTop: 8,
+        paddingBottom: 24,
+        paddingHorizontal: 16,
+    },
+    inputRow: {
         flexDirection: "row",
         alignItems: "flex-end",
-        padding: 12,
-        backgroundColor: COLORS.surfaceDark,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.borderDark,
-        gap: 10,
+        gap: 12,
     },
-    textInput: {
-        flex: 1,
-        backgroundColor: COLORS.backgroundDark,
+    addButton: {
+        width: 40,
+        height: 40,
         borderRadius: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        fontSize: 15,
-        color: COLORS.textMain,
-        maxHeight: 100,
-        borderWidth: 1,
-        borderColor: COLORS.borderDark,
-    },
-    sendButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: COLORS.primary,
+        backgroundColor: COLORS.gray200,
         alignItems: "center",
         justifyContent: "center",
     },
+    inputContainer: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "flex-end",
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        minHeight: 48,
+        paddingRight: 4,
+    },
+    textInput: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.textMain,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        maxHeight: 100,
+    },
+    micButton: {
+        padding: 8,
+    },
+    sendButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: COLORS.black,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
     sendButtonDisabled: {
-        backgroundColor: COLORS.gray500,
+        backgroundColor: COLORS.gray400,
+        shadowOpacity: 0.1,
     },
 });

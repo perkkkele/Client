@@ -90,8 +90,15 @@ export default function IncomingCallScreen() {
         setIsAnswering(true);
         Vibration.cancel();
 
-        // Navigate to video call screen
-        router.replace(`/video-call/${chatId}` as any);
+        // Navigate to avatar-chat with video call mode
+        // callerId is the professional's ID
+        router.replace({
+            pathname: `/avatar-chat/${callerId}`,
+            params: {
+                videoCall: "true",
+                chatId: chatId,
+            },
+        } as any);
     };
 
     const handleReject = async () => {
