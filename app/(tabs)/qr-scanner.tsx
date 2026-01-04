@@ -85,12 +85,14 @@ export default function QRScannerScreen() {
         outputRange: [0, 280],
     });
 
-    const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
+    const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
         if (scanned) return;
 
         setScanned(true);
 
-        // Check if it's a TwinPro QR code
+        let username: string | null = null;
+
+        // Check for deep link format: twinpro://user/{userId}
         if (data.startsWith("twinpro://user/")) {
             const professionalId = data.replace("twinpro://user/", "");
             Alert.alert(
@@ -110,6 +112,52 @@ export default function QRScannerScreen() {
                     },
                 ]
             );
+            return;
+        }
+
+        // Check for web URL format: https://twinpro.app/@username or twinpro.app/@username
+        const webUrlMatch = data.match(/(?:https?:\/\/)?twinpro\.app\/@([a-zA-Z0-9_]+)/);
+        if (webUrlMatch && webUrlMatch[1]) {
+            username = webUrlMatch[1];
+        }
+
+        if (username) {
+            // Fetch the professional ID by username
+            try {
+                const response = await fetch(`http://${require("../../api").API_HOST}:${require("../../api").API_PORT}/api/users/by-username/${username}`);
+                if (response.ok) {
+                    const professional = await response.json();
+                    Alert.alert(
+                        "Código Escaneado",
+                        `¿Deseas iniciar un chat con ${professional.publicName || username}?`,
+                        [
+                            {
+                                text: "Cancelar",
+                                onPress: () => setScanned(false),
+                                style: "cancel",
+                            },
+                            {
+                                text: "Iniciar Chat",
+                                onPress: () => {
+                                    router.replace(`/avatar-chat/${professional._id}`);
+                                },
+                            },
+                        ]
+                    );
+                } else {
+                    Alert.alert(
+                        "Profesional No Encontrado",
+                        `No se encontró un profesional con el usuario @${username}.`,
+                        [{ text: "OK", onPress: () => setScanned(false) }]
+                    );
+                }
+            } catch (error) {
+                Alert.alert(
+                    "Error de Conexión",
+                    "No se pudo verificar el profesional. Comprueba tu conexión.",
+                    [{ text: "OK", onPress: () => setScanned(false) }]
+                );
+            }
         } else {
             Alert.alert(
                 "Código No Válido",

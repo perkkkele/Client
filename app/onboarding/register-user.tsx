@@ -36,7 +36,7 @@ const COLORS = {
 
 export default function RegisterUserScreen() {
     const { login } = useAuth();
-    const [username, setUsername] = useState("");
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,11 +45,11 @@ export default function RegisterUserScreen() {
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const isUsernameValid = username.length >= 3 && username.length <= 15 && !/\s/.test(username);
+    const isNameValid = name.trim().length >= 2;
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isPasswordValid = password.length >= 6;
     const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
-    const canSubmit = isUsernameValid && isEmailValid && isPasswordValid && passwordsMatch && acceptedTerms;
+    const canSubmit = isNameValid && isEmailValid && isPasswordValid && passwordsMatch && acceptedTerms;
 
     async function handleRegister() {
         if (!canSubmit) {
@@ -115,9 +115,9 @@ export default function RegisterUserScreen() {
 
                     {/* Card de Formulario */}
                     <View style={styles.formCard}>
-                        {/* Username */}
+                        {/* Nombre */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>NOMBRE DE USUARIO</Text>
+                            <Text style={styles.inputLabel}>NOMBRE</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="person"
@@ -127,24 +127,20 @@ export default function RegisterUserScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="JavierLópez"
+                                    placeholder="Ej. Javier López"
                                     placeholderTextColor={COLORS.gray400}
-                                    value={username}
-                                    onChangeText={setUsername}
-                                    autoCapitalize="none"
+                                    value={name}
+                                    onChangeText={setName}
                                     editable={!isLoading}
                                 />
-                                {username.length > 0 && (
+                                {name.length > 0 && (
                                     <Ionicons
-                                        name={isUsernameValid ? "checkmark-circle" : "close-circle"}
+                                        name={isNameValid ? "checkmark-circle" : "close-circle"}
                                         size={18}
-                                        color={isUsernameValid ? COLORS.success : "#EF4444"}
+                                        color={isNameValid ? COLORS.success : "#EF4444"}
                                     />
                                 )}
                             </View>
-                            <Text style={styles.inputHint}>
-                                3-15 caracteres, sin espacios ni símbolos.
-                            </Text>
                         </View>
 
                         {/* Email */}

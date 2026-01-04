@@ -39,6 +39,14 @@ export interface PublicAvatar {
     gender?: string;
     style?: string;
     created_at?: string;
+    default_voice_id?: string;
+    default_voice?: {
+        id: string;
+        name: string;
+        gender?: string;
+        language?: string;
+        preview_url?: string;
+    };
 }
 
 // ========================

@@ -68,23 +68,54 @@ export default function EditProfileScreen() {
         router.back();
     }
 
-    async function pickImage() {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-            Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para cambiar tu foto.");
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-            handleChangeAvatar(result.assets[0].uri);
-        }
+    function pickImage() {
+        Alert.alert(
+            "Cambiar foto de perfil",
+            "¿Cómo quieres añadir tu foto?",
+            [
+                {
+                    text: "Cámara",
+                    onPress: async () => {
+                        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                        if (status !== "granted") {
+                            Alert.alert("Permiso denegado", "Necesitamos acceso a la cámara");
+                            return;
+                        }
+                        const result = await ImagePicker.launchCameraAsync({
+                            allowsEditing: true,
+                            aspect: [1, 1],
+                            quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                            handleChangeAvatar(result.assets[0].uri);
+                        }
+                    },
+                },
+                {
+                    text: "Galería",
+                    onPress: async () => {
+                        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        if (status !== "granted") {
+                            Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería.");
+                            return;
+                        }
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ["images"],
+                            allowsEditing: true,
+                            aspect: [1, 1],
+                            quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                            handleChangeAvatar(result.assets[0].uri);
+                        }
+                    },
+                },
+                {
+                    text: "Cancelar",
+                    style: "cancel",
+                },
+            ]
+        );
     }
 
     async function handleChangeAvatar(imageUri: string) {

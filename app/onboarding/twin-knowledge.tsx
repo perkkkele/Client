@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -47,14 +50,15 @@ interface KnowledgeCategory {
     bgColor: string;
     count: number;
     url: string;
+    manualContent: string;
 }
 
 const INITIAL_CATEGORIES: KnowledgeCategory[] = [
-    { id: "faq", title: "Preguntas Frecuentes", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0, url: "" },
-    { id: "services", title: "Servicios y Productos", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0, url: "" },
-    { id: "pricing", title: "Tarifa de Precios", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0, url: "" },
-    { id: "policy", title: "Política de Empresa", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0, url: "" },
-    { id: "troubleshooting", title: "Resolución de Problemas", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0, url: "" },
+    { id: "faq", title: "Preguntas Frecuentes", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "services", title: "Servicios y Productos", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "pricing", title: "Tarifa de Precios", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "policy", title: "Política de Empresa", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "troubleshooting", title: "Resolución de Problemas", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0, url: "", manualContent: "" },
 ];
 
 // Helper to build prompt from user data
@@ -137,22 +141,30 @@ export default function TwinKnowledgeScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
+    // Manual entry modal state
+    const [manualModalVisible, setManualModalVisible] = useState(false);
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [editingContent, setEditingContent] = useState("");
+
     // Load previous knowledge configuration from user data on mount
     useEffect(() => {
         const knowledgeLinks = user?.digitalTwin?.knowledge?.links;
+        const knowledgeManual = user?.digitalTwin?.knowledge?.manualContent;
 
-        if (knowledgeLinks) {
-            // Update categories with saved URLs
+        if (knowledgeLinks || knowledgeManual) {
+            // Update categories with saved URLs and manual content
             setCategories(prev => prev.map(cat => {
-                const savedUrl = (knowledgeLinks as any)[cat.id];
-                if (savedUrl) {
-                    return { ...cat, url: savedUrl };
-                }
-                return cat;
+                const savedUrl = knowledgeLinks ? (knowledgeLinks as any)[cat.id] : "";
+                const savedManual = knowledgeManual ? (knowledgeManual as any)[cat.id] : "";
+                return {
+                    ...cat,
+                    url: savedUrl || cat.url,
+                    manualContent: savedManual || cat.manualContent
+                };
             }));
 
             // Load "other" URL if present
-            if (knowledgeLinks.other) {
+            if (knowledgeLinks?.other) {
                 setOtherUrl(knowledgeLinks.other);
             }
         }
@@ -169,9 +181,29 @@ export default function TwinKnowledgeScreen() {
     }
 
     function handleManualAdd(categoryId: string) {
-        // TODO: Implementar añadir manual
-        Alert.alert("Próximamente", "La entrada manual estará disponible próximamente.");
-        console.log("Manual add for category:", categoryId);
+        const category = categories.find(c => c.id === categoryId);
+        setEditingCategoryId(categoryId);
+        setEditingContent(category?.manualContent || "");
+        setManualModalVisible(true);
+    }
+
+    function handleSaveManualContent() {
+        if (editingCategoryId) {
+            setCategories(prev => prev.map(cat =>
+                cat.id === editingCategoryId
+                    ? { ...cat, manualContent: editingContent.trim() }
+                    : cat
+            ));
+        }
+        setManualModalVisible(false);
+        setEditingCategoryId(null);
+        setEditingContent("");
+    }
+
+    function handleCancelManualEdit() {
+        setManualModalVisible(false);
+        setEditingCategoryId(null);
+        setEditingContent("");
     }
 
     function toggleUrlInput(categoryId: string) {
@@ -184,8 +216,11 @@ export default function TwinKnowledgeScreen() {
         ));
     }
 
-    // Count filled URLs
-    const filledUrlCount = categories.filter(c => c.url.trim() !== "").length + (otherUrl.trim() !== "" ? 1 : 0);
+    // Count filled entries (URLs or manual content)
+    const filledCount = categories.filter(c => c.url.trim() !== "" || c.manualContent.trim() !== "").length + (otherUrl.trim() !== "" ? 1 : 0);
+
+    // Get editing category info for modal
+    const editingCategory = categories.find(c => c.id === editingCategoryId);
 
     async function handleActivate() {
         setIsLoading(true);
@@ -289,11 +324,20 @@ export default function TwinKnowledgeScreen() {
 
             console.log("Final context ID:", contextId);
 
+            // Build manual content object for storage
+            const manualContentToStore: Record<string, string> = {};
+            for (const cat of categories) {
+                if (cat.manualContent.trim()) {
+                    manualContentToStore[cat.id] = cat.manualContent;
+                }
+            }
+
             // Activar gemelo digital
             await userApi.updateUser(token, {
                 digitalTwin: {
                     knowledge: {
                         links: linksToStore,
+                        manualContent: manualContentToStore,
                         contextPrompt: contextPrompt,
                         trainingProgress: trainingProgress,
                         trainingStatus: 'ready'
@@ -365,10 +409,10 @@ export default function TwinKnowledgeScreen() {
                     </View>
                     <View style={styles.progressFooter}>
                         <Text style={styles.progressFooterText}>
-                            {filledUrlCount > 0 ? `${filledUrlCount} URLs configuradas` : "0/5 Categorías completadas"}
+                            {filledCount > 0 ? `${filledCount} Categorías completadas` : "0/5 Categorías completadas"}
                         </Text>
                         <Text style={styles.progressFooterHint}>
-                            {filledUrlCount > 0 ? "URLs añadidas" : "Falta información clave"}
+                            {filledCount > 0 ? "Información añadida" : "Falta información clave"}
                         </Text>
                     </View>
                 </View>
@@ -522,6 +566,70 @@ export default function TwinKnowledgeScreen() {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Manual Entry Modal */}
+            <Modal
+                visible={manualModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={handleCancelManualEdit}
+            >
+                <KeyboardAvoidingView
+                    style={styles.modalOverlay}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={[styles.modalIcon, { backgroundColor: editingCategory?.bgColor || COLORS.gray100 }]}>
+                                <MaterialIcons
+                                    name={(editingCategory?.icon || "edit") as any}
+                                    size={20}
+                                    color={editingCategory?.color || COLORS.gray500}
+                                />
+                            </View>
+                            <Text style={styles.modalTitle}>{editingCategory?.title || "Añadir Contenido"}</Text>
+                            <TouchableOpacity onPress={handleCancelManualEdit} style={styles.modalCloseButton}>
+                                <MaterialIcons name="close" size={24} color={COLORS.gray400} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.modalHint}>
+                            {editingCategory?.id === "faq" && "Escribe preguntas frecuentes y sus respuestas. Ej:\n\n¿Cuál es tu horario? De 9:00 a 18:00 de lunes a viernes."}
+                            {editingCategory?.id === "services" && "Lista tus servicios o productos con descripciones. Ej:\n\n- Consulta inicial: Evaluación completa de 60 min.\n- Seguimiento: Sesión de 30 min."}
+                            {editingCategory?.id === "pricing" && "Indica tus tarifas y precios. Ej:\n\n- Consulta: 50€\n- Sesión completa: 80€\n- Pack 5 sesiones: 350€"}
+                            {editingCategory?.id === "policy" && "Describe las políticas de tu empresa. Ej:\n\nCancelaciones: Con 24h de antelación sin cargo.\nFormas de pago: Efectivo, tarjeta, transferencia."}
+                            {editingCategory?.id === "troubleshooting" && "Añade soluciones a problemas comunes. Ej:\n\nSi tienes problemas para reservar, contacta por WhatsApp.\nSi no recibes confirmación, revisa tu carpeta de spam."}
+                        </Text>
+
+                        <TextInput
+                            style={styles.modalTextInput}
+                            multiline
+                            numberOfLines={8}
+                            placeholder="Escribe aquí el contenido..."
+                            placeholderTextColor={COLORS.gray400}
+                            value={editingContent}
+                            onChangeText={setEditingContent}
+                            textAlignVertical="top"
+                        />
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={styles.modalCancelButton}
+                                onPress={handleCancelManualEdit}
+                            >
+                                <Text style={styles.modalCancelText}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.modalSaveButton}
+                                onPress={handleSaveManualContent}
+                            >
+                                <MaterialIcons name="check" size={18} color="#000000" />
+                                <Text style={styles.modalSaveText}>Guardar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -867,6 +975,96 @@ const styles = StyleSheet.create({
     },
     activateButtonText: {
         fontSize: 16,
+        fontWeight: "bold",
+        color: "#000000",
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: COLORS.surfaceLight,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 32,
+        maxHeight: "80%",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 16,
+        gap: 12,
+    },
+    modalIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    modalTitle: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    modalCloseButton: {
+        padding: 4,
+    },
+    modalHint: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        lineHeight: 18,
+        marginBottom: 16,
+        backgroundColor: COLORS.gray50,
+        padding: 12,
+        borderRadius: 10,
+    },
+    modalTextInput: {
+        backgroundColor: COLORS.gray50,
+        borderRadius: 12,
+        padding: 14,
+        fontSize: 14,
+        color: COLORS.textMain,
+        minHeight: 150,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        marginBottom: 16,
+    },
+    modalFooter: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    modalCancelButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    modalCancelText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray500,
+    },
+    modalSaveButton: {
+        flex: 1,
+        flexDirection: "row",
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+    },
+    modalSaveText: {
+        fontSize: 14,
         fontWeight: "bold",
         color: "#000000",
     },

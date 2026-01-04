@@ -320,6 +320,24 @@ export default function TwinAppearanceScreen() {
 
     // Play preview in the main card (selected voice sample)
     async function playPreview() {
+        // If already playing, stop it
+        if (isPreviewPlaying) {
+            try {
+                if (previewSoundRef.current) {
+                    await previewSoundRef.current.stopAsync();
+                    await previewSoundRef.current.unloadAsync();
+                    previewSoundRef.current = null;
+                }
+                if (Speech) {
+                    Speech.stop();
+                }
+            } catch (e) {
+                console.log("Error stopping playback:", e);
+            }
+            setIsPreviewPlaying(false);
+            return;
+        }
+
         if (!Audio) {
             Alert.alert("No disponible", "La reproducción de audio requiere un build de desarrollo");
             return;
@@ -330,58 +348,62 @@ export default function TwinAppearanceScreen() {
             return;
         }
 
-        let previewUrl = selectedVoice.preview_url || selectedVoice.sample_url;
-
-        // If no preview URL, try to fetch voice details from API
-        if (!previewUrl) {
-            try {
-                setIsPreviewPlaying(true); // Show loading state
-                const voiceDetails = await liveAvatarApi.getVoiceById(selectedVoice.id);
-                if (voiceDetails) {
-                    previewUrl = voiceDetails.preview_url || voiceDetails.sample_url;
-                    // Update selectedVoice with the new preview URL for future plays
-                    if (previewUrl) {
-                        setSelectedVoice({ ...selectedVoice, preview_url: previewUrl });
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching voice details:", error);
-            }
-        }
-
-        // If still no preview URL, use TTS fallback
-        if (!previewUrl) {
-            if (!Speech) {
-                Alert.alert("No disponible", "La síntesis de voz requiere un build de desarrollo");
-                return;
-            }
-            setIsPreviewPlaying(true);
-            const language = selectedVoice.language?.toLowerCase().includes('en') ? 'en' : 'es';
-            const voiceGender = selectedVoice.gender?.toLowerCase();
-
-            Speech.speak(VOICE_PREVIEW_TEXT, {
-                language: language === 'en' ? 'en-US' : 'es-ES',
-                pitch: voiceGender === 'female' ? 1.1 : 0.9,
-                rate: 0.9,
-                onDone: () => setIsPreviewPlaying(false),
-                onError: () => setIsPreviewPlaying(false),
-            });
-            return;
-        }
-
+        // Stop any existing audio first
         try {
-            // Stop if already playing
             if (previewSoundRef.current) {
                 await previewSoundRef.current.unloadAsync();
                 previewSoundRef.current = null;
             }
-
-            if (isPreviewPlaying) {
-                setIsPreviewPlaying(false);
-                return;
+            if (Speech) {
+                Speech.stop();
             }
+        } catch (e) {
+            console.log("Error stopping previous audio:", e);
+        }
 
-            setIsPreviewPlaying(true);
+        setIsPreviewPlaying(true);
+        console.log("=== PLAYING VOICE PREVIEW ===");
+        console.log("Selected voice name:", selectedVoice.name);
+        console.log("Selected voice ID:", selectedVoice.id);
+        console.log("Cached preview_url:", selectedVoice.preview_url);
+
+        // ALWAYS fetch fresh voice details from API to get the correct preview URL
+        // This prevents issues with cached/stale URLs
+        let previewUrl: string | undefined;
+        try {
+            console.log("Fetching fresh voice details from API for ID:", selectedVoice.id);
+            const voiceDetails = await liveAvatarApi.getVoiceById(selectedVoice.id);
+            console.log("API returned voice details:", JSON.stringify(voiceDetails, null, 2));
+
+            if (voiceDetails) {
+                previewUrl = voiceDetails.preview_url || voiceDetails.sample_url;
+                console.log("Fresh preview URL from API:", previewUrl);
+            }
+        } catch (error) {
+            console.error("Error fetching voice details:", error);
+            setIsPreviewPlaying(false);
+            Alert.alert("Error", "No se pudo obtener la muestra de voz");
+            return;
+        }
+
+        // If no preview URL available from API, show informative alert
+        // LiveAvatar API doesn't provide sample audio for voices
+        if (!previewUrl) {
+            setIsPreviewPlaying(false);
+            Alert.alert(
+                "Vista Previa No Disponible",
+                `La voz "${selectedVoice.name}" no tiene una muestra de audio disponible.\n\n` +
+                `Información de la voz:\n` +
+                `• Género: ${selectedVoice.gender === 'male' ? 'Masculino' : selectedVoice.gender === 'female' ? 'Femenino' : 'No especificado'}\n` +
+                `• Idioma: ${selectedVoice.language === 'es' ? 'Español' : selectedVoice.language === 'en' ? 'Inglés' : selectedVoice.language || 'No especificado'}\n\n` +
+                `Esta voz se usará cuando tu Gemelo Digital responda a los clientes.`,
+                [{ text: "Entendido" }]
+            );
+            return;
+        }
+
+        try {
+            console.log("Playing audio from URL:", previewUrl);
 
             const { sound } = await Audio.Sound.createAsync(
                 { uri: previewUrl },
@@ -392,6 +414,7 @@ export default function TwinAppearanceScreen() {
             sound.setOnPlaybackStatusUpdate((status: any) => {
                 if (status.isLoaded && status.didJustFinish) {
                     setIsPreviewPlaying(false);
+                    previewSoundRef.current = null;
                 }
             });
         } catch (error) {
@@ -585,6 +608,32 @@ export default function TwinAppearanceScreen() {
         setVideoType("predefined"); // Auto-set to predefined when avatar is selected
         // Auto-set voice to standard since predefined avatars come with standard voices
         setVoiceType("standard");
+
+        // Auto-select the avatar's default voice if available
+        if (avatar.default_voice) {
+            setSelectedVoice({
+                id: avatar.default_voice.id,
+                name: avatar.default_voice.name,
+                gender: avatar.default_voice.gender,
+                language: avatar.default_voice.language,
+                preview_url: avatar.default_voice.preview_url,
+            });
+        } else if (avatar.default_voice_id && publicVoices.length > 0) {
+            // Try to find the voice in the loaded voices
+            const defaultVoice = publicVoices.find(v => v.id === avatar.default_voice_id);
+            if (defaultVoice) {
+                setSelectedVoice(defaultVoice);
+            }
+        } else if (avatar.gender && publicVoices.length > 0) {
+            // Fallback: Match voice by avatar gender
+            const matchingVoice = publicVoices.find(v =>
+                v.gender?.toLowerCase() === avatar.gender?.toLowerCase()
+            );
+            if (matchingVoice) {
+                setSelectedVoice(matchingVoice);
+            }
+        }
+
         setShowAvatarModal(false);
     }
 

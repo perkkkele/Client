@@ -71,11 +71,6 @@ export default function EditProProfileScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-    // Appointment settings
-    const [appointmentsEnabled, setAppointmentsEnabled] = useState(false);
-    const [appointmentStartTime, setAppointmentStartTime] = useState("09:00");
-    const [appointmentEndTime, setAppointmentEndTime] = useState("18:00");
-
     const bioMaxLength = 300;
 
     // Load fresh data from API on mount
@@ -110,9 +105,6 @@ export default function EditProProfileScreen() {
             setCategory(user.category || "");
             setSpecialties(user.specialties || []);
             setBio(user.bio || "");
-            setAppointmentsEnabled(user.appointmentsEnabled || false);
-            setAppointmentStartTime(user.appointmentHours?.start || "09:00");
-            setAppointmentEndTime(user.appointmentHours?.end || "18:00");
         }
     }, [user]);
 
@@ -120,17 +112,49 @@ export default function EditProProfileScreen() {
         router.back();
     }
 
-    async function handlePickImage() {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-            setAvatarUri(result.assets[0].uri);
-        }
+    function handlePickImage() {
+        Alert.alert(
+            "Cambiar foto de perfil",
+            "¿Cómo quieres añadir tu foto?",
+            [
+                {
+                    text: "Cámara",
+                    onPress: async () => {
+                        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                        if (status !== "granted") {
+                            Alert.alert("Permiso denegado", "Necesitamos acceso a la cámara");
+                            return;
+                        }
+                        const result = await ImagePicker.launchCameraAsync({
+                            allowsEditing: true,
+                            aspect: [1, 1],
+                            quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                            setAvatarUri(result.assets[0].uri);
+                        }
+                    },
+                },
+                {
+                    text: "Galería",
+                    onPress: async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            allowsEditing: true,
+                            aspect: [1, 1],
+                            quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                            setAvatarUri(result.assets[0].uri);
+                        }
+                    },
+                },
+                {
+                    text: "Cancelar",
+                    style: "cancel",
+                },
+            ]
+        );
     }
 
     function addSpecialty() {
@@ -164,11 +188,6 @@ export default function EditProProfileScreen() {
                     category: category as any,
                     specialties: specialties,
                     bio: bio.trim() || undefined,
-                    appointmentsEnabled,
-                    appointmentHours: {
-                        start: appointmentStartTime,
-                        end: appointmentEndTime,
-                    },
                 });
 
                 // Upload avatar if changed
@@ -368,86 +387,6 @@ export default function EditProProfileScreen() {
                                 numberOfLines={5}
                                 textAlignVertical="top"
                             />
-                        </View>
-                    </View>
-
-                    {/* Appointments Section - Premium Card */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>AGENDA DE CITAS</Text>
-
-                        <View style={styles.appointmentsCard}>
-                            {/* Gradient Header */}
-                            <View style={styles.appointmentsHeader}>
-                                <View style={styles.appointmentsIconContainer}>
-                                    <MaterialIcons name="event" size={24} color={COLORS.white} />
-                                </View>
-                                <View style={styles.appointmentsHeaderText}>
-                                    <Text style={styles.appointmentsTitle}>Citas desde la app</Text>
-                                    <Text style={styles.appointmentsSubtitle}>
-                                        Permite que los clientes agenden contigo
-                                    </Text>
-                                </View>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.appointmentsToggle,
-                                        appointmentsEnabled && styles.appointmentsToggleActive
-                                    ]}
-                                    onPress={() => setAppointmentsEnabled(!appointmentsEnabled)}
-                                >
-                                    <View style={[
-                                        styles.appointmentsToggleDot,
-                                        appointmentsEnabled && styles.appointmentsToggleDotActive
-                                    ]} />
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Time Settings - Only show when enabled */}
-                            {appointmentsEnabled && (
-                                <View style={styles.appointmentsTimeSection}>
-                                    <View style={styles.appointmentsTimeHeader}>
-                                        <MaterialIcons name="schedule" size={16} color={COLORS.gray500} />
-                                        <Text style={styles.appointmentsTimeLabel}>Horario de atención</Text>
-                                    </View>
-
-                                    <View style={styles.appointmentsTimeRow}>
-                                        <View style={styles.appointmentsTimeInput}>
-                                            <Text style={styles.appointmentsTimeInputLabel}>Desde</Text>
-                                            <TextInput
-                                                style={styles.appointmentsTimeInputField}
-                                                value={appointmentStartTime}
-                                                onChangeText={setAppointmentStartTime}
-                                                placeholder="09:00"
-                                                placeholderTextColor={COLORS.gray400}
-                                                keyboardType="numbers-and-punctuation"
-                                            />
-                                        </View>
-
-                                        <View style={styles.appointmentsTimeSeparator}>
-                                            <MaterialIcons name="arrow-forward" size={20} color={COLORS.gray400} />
-                                        </View>
-
-                                        <View style={styles.appointmentsTimeInput}>
-                                            <Text style={styles.appointmentsTimeInputLabel}>Hasta</Text>
-                                            <TextInput
-                                                style={styles.appointmentsTimeInputField}
-                                                value={appointmentEndTime}
-                                                onChangeText={setAppointmentEndTime}
-                                                placeholder="18:00"
-                                                placeholderTextColor={COLORS.gray400}
-                                                keyboardType="numbers-and-punctuation"
-                                            />
-                                        </View>
-                                    </View>
-
-                                    {/* Info Badge */}
-                                    <View style={styles.appointmentsInfoBadge}>
-                                        <MaterialIcons name="info-outline" size={14} color={COLORS.indigo600} />
-                                        <Text style={styles.appointmentsInfoText}>
-                                            Los clientes podrán ver un icono de calendario en tu sala de chat
-                                        </Text>
-                                    </View>
-                                </View>
-                            )}
                         </View>
                     </View>
                 </ScrollView>

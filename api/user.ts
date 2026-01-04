@@ -182,6 +182,7 @@ export interface UserUpdateData {
     category?: CategoryType;
     specialties?: string[];
     bio?: string;
+    username?: string;  // Alias único para URL: twinpro.app/@username
 
     // Contacto
     professionalEmail?: string;
@@ -190,6 +191,11 @@ export interface UserUpdateData {
     location?: Location;
     schedule?: Schedule;
     socialLinks?: SocialLinks;
+    contactVisibility?: {
+        email?: boolean;
+        phone?: boolean;
+        website?: boolean;
+    };
     connectedCalendar?: {
         provider?: 'google' | 'outlook' | 'apple' | null;
         connected?: boolean;

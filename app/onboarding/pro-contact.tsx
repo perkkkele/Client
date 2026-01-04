@@ -3,7 +3,10 @@ import { useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    FlatList,
     KeyboardAvoidingView,
+    Linking,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -16,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import * as calendarApi from "../../api/calendar";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
 
 const COLORS = {
@@ -50,8 +54,17 @@ const DAYS = [
     { id: "D", label: "D", key: "sunday" },
 ];
 
+const TIME_OPTIONS = [
+    "06:00", "06:30", "07:00", "07:30", "08:00", "08:30",
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+    "18:00", "18:30", "19:00", "19:30", "20:00", "20:30",
+    "21:00", "21:30", "22:00", "22:30", "23:00", "23:30",
+];
+
 export default function ProContactScreen() {
-    const { token, refreshUser } = useAuth();
+    const { token, user, refreshUser } = useAuth();
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
     const [website, setWebsite] = useState("");
@@ -72,9 +85,26 @@ export default function ProContactScreen() {
     const [youtube, setYoutube] = useState("");
     const [twitter, setTwitter] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
+
+    // Visibility toggles
+    const [emailVisible, setEmailVisible] = useState(true);
+    const [phoneVisible, setPhoneVisible] = useState(true);
+    const [websiteVisible, setWebsiteVisible] = useState(true);
+
+    // Time picker modal
+    const [timePickerVisible, setTimePickerVisible] = useState(false);
+    const [timePickerType, setTimePickerType] = useState<"start" | "end">("start");
+
+    const calendarConnected = user?.connectedCalendar?.connected || false;
+    const calendarProvider = user?.connectedCalendar?.provider || null;
 
     function handleBack() {
         router.back();
+    }
+
+    function handleSkip() {
+        router.push("/onboarding/pro-complete");
     }
 
     function toggleDay(dayId: string) {
@@ -83,6 +113,46 @@ export default function ProContactScreen() {
                 ? prev.filter(d => d !== dayId)
                 : [...prev, dayId]
         );
+    }
+
+    function openTimePicker(type: "start" | "end") {
+        setTimePickerType(type);
+        setTimePickerVisible(true);
+    }
+
+    function selectTime(time: string) {
+        if (timePickerType === "start") {
+            setWorkStart(time);
+        } else {
+            setWorkEnd(time);
+        }
+        setTimePickerVisible(false);
+    }
+
+    async function handleConnectGoogle() {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getGoogleAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
+    }
+
+    async function handleConnectOutlook() {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getOutlookAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
     }
 
     async function handleContinue() {
@@ -120,6 +190,11 @@ export default function ProContactScreen() {
                         instagram: instagram.trim() || null,
                         twitter: twitter.trim() || null,
                         facebook: facebook.trim() || null
+                    },
+                    contactVisibility: {
+                        email: emailVisible,
+                        phone: phoneVisible,
+                        website: websiteVisible
                     }
                 });
 
@@ -152,8 +227,8 @@ export default function ProContactScreen() {
                             <View style={[styles.stepDot, styles.stepDotActive]} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton}>
-                        <Text style={styles.helpText}>Ayuda</Text>
+                    <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                        <Text style={styles.skipText}>Omitir</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
@@ -192,8 +267,8 @@ export default function ProContactScreen() {
                                 autoCapitalize="none"
                             />
                         </View>
-                        <TouchableOpacity style={styles.visibilityButton}>
-                            <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
+                        <TouchableOpacity style={styles.visibilityButton} onPress={() => setEmailVisible(!emailVisible)}>
+                            <MaterialIcons name={emailVisible ? "visibility" : "visibility-off"} size={20} color={emailVisible ? COLORS.primary : COLORS.gray400} />
                         </TouchableOpacity>
                     </View>
 
@@ -213,8 +288,8 @@ export default function ProContactScreen() {
                                 keyboardType="phone-pad"
                             />
                         </View>
-                        <TouchableOpacity style={styles.visibilityButton}>
-                            <MaterialIcons name="visibility-off" size={20} color={COLORS.gray400} />
+                        <TouchableOpacity style={styles.visibilityButton} onPress={() => setPhoneVisible(!phoneVisible)}>
+                            <MaterialIcons name={phoneVisible ? "visibility" : "visibility-off"} size={20} color={phoneVisible ? COLORS.primary : COLORS.gray400} />
                         </TouchableOpacity>
                     </View>
 
@@ -235,13 +310,13 @@ export default function ProContactScreen() {
                                 autoCapitalize="none"
                             />
                         </View>
-                        <TouchableOpacity style={styles.visibilityButton}>
-                            <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
+                        <TouchableOpacity style={styles.visibilityButton} onPress={() => setWebsiteVisible(!websiteVisible)}>
+                            <MaterialIcons name={websiteVisible ? "visibility" : "visibility-off"} size={20} color={websiteVisible ? COLORS.primary : COLORS.gray400} />
                         </TouchableOpacity>
                     </View>
 
                     {/* Ubicación con autocompletado */}
-                    <View style={[styles.contactCard, { flexDirection: 'column', alignItems: 'stretch' }]}>
+                    <View style={[styles.contactCard, { flexDirection: 'column', alignItems: 'stretch', zIndex: 100 }]}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                             <View style={styles.contactIcon}>
                                 <MaterialIcons name="location-on" size={20} color={COLORS.gray400} />
@@ -290,25 +365,21 @@ export default function ProContactScreen() {
 
                         <Text style={[styles.scheduleLabel, { marginTop: 16 }]}>Franja Horaria</Text>
                         <View style={styles.timeRow}>
-                            <View style={styles.timeBox}>
+                            <TouchableOpacity style={styles.timeBox} onPress={() => openTimePicker("start")}>
                                 <Text style={styles.timeLabel}>Inicio</Text>
-                                <TextInput
-                                    style={styles.timeInput}
-                                    value={workStart}
-                                    onChangeText={setWorkStart}
-                                    placeholder="09:00"
-                                />
-                            </View>
+                                <View style={styles.timePickerRow}>
+                                    <Text style={styles.timeInput}>{workStart}</Text>
+                                    <MaterialIcons name="arrow-drop-down" size={20} color={COLORS.gray400} />
+                                </View>
+                            </TouchableOpacity>
                             <Text style={styles.timeSeparator}>-</Text>
-                            <View style={styles.timeBox}>
+                            <TouchableOpacity style={styles.timeBox} onPress={() => openTimePicker("end")}>
                                 <Text style={styles.timeLabel}>Fin</Text>
-                                <TextInput
-                                    style={styles.timeInput}
-                                    value={workEnd}
-                                    onChangeText={setWorkEnd}
-                                    placeholder="18:00"
-                                />
-                            </View>
+                                <View style={styles.timePickerRow}>
+                                    <Text style={styles.timeInput}>{workEnd}</Text>
+                                    <MaterialIcons name="arrow-drop-down" size={20} color={COLORS.gray400} />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -327,18 +398,30 @@ export default function ProContactScreen() {
                             </View>
                         </View>
                         <View style={styles.calendarButtons}>
-                            <TouchableOpacity style={styles.calendarButton}>
-                                <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                <Text style={styles.calendarButtonText}>Google</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.calendarButton}>
-                                <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                <Text style={styles.calendarButtonText}>Outlook</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.calendarButton}>
-                                <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                <Text style={styles.calendarButtonText}>Apple</Text>
-                            </TouchableOpacity>
+                            {calendarConnected ? (
+                                <View style={styles.calendarConnectedBadge}>
+                                    <MaterialIcons name="check-circle" size={16} color="#059669" />
+                                    <Text style={styles.calendarConnectedText}>
+                                        {calendarProvider === "google" ? "Google Calendar" : "Outlook"} conectado
+                                    </Text>
+                                </View>
+                            ) : isConnectingCalendar ? (
+                                <View style={styles.calendarConnectedBadge}>
+                                    <ActivityIndicator size="small" color={COLORS.textMain} />
+                                    <Text style={styles.calendarConnectedText}>Conectando...</Text>
+                                </View>
+                            ) : (
+                                <>
+                                    <TouchableOpacity style={styles.calendarButton} onPress={handleConnectGoogle}>
+                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
+                                        <Text style={styles.calendarButtonText}>Google</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.calendarButton} onPress={handleConnectOutlook}>
+                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
+                                        <Text style={styles.calendarButtonText}>Outlook</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </View>
                     </View>
 
@@ -439,6 +522,56 @@ export default function ProContactScreen() {
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* Time Picker Modal */}
+            <Modal
+                visible={timePickerVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setTimePickerVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setTimePickerVisible(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>
+                                Seleccionar {timePickerType === "start" ? "hora de inicio" : "hora de fin"}
+                            </Text>
+                            <TouchableOpacity onPress={() => setTimePickerVisible(false)}>
+                                <MaterialIcons name="close" size={24} color={COLORS.gray400} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={TIME_OPTIONS}
+                            keyExtractor={(item) => item}
+                            showsVerticalScrollIndicator={false}
+                            style={{ maxHeight: 300 }}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.timeOption,
+                                        (timePickerType === "start" ? workStart : workEnd) === item && styles.timeOptionSelected
+                                    ]}
+                                    onPress={() => selectTime(item)}
+                                >
+                                    <Text style={[
+                                        styles.timeOptionText,
+                                        (timePickerType === "start" ? workStart : workEnd) === item && styles.timeOptionTextSelected
+                                    ]}>
+                                        {item}
+                                    </Text>
+                                    {(timePickerType === "start" ? workStart : workEnd) === item && (
+                                        <MaterialIcons name="check" size={20} color={COLORS.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -510,6 +643,30 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "600",
         color: COLORS.primary,
+    },
+    skipButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    skipText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.primary,
+    },
+    calendarConnectedBadge: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        gap: 8,
+    },
+    calendarConnectedText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#059669",
     },
     headerContent: {
         alignItems: "center",
@@ -657,6 +814,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: COLORS.gray400,
     },
+    timePickerRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
     calendarCard: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
@@ -789,5 +951,52 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: "#000000",
+    },
+    // Modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: COLORS.surfaceLight,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingTop: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+        maxHeight: "60%",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    modalTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    timeOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        marginBottom: 4,
+    },
+    timeOptionSelected: {
+        backgroundColor: "rgba(253, 224, 71, 0.2)",
+    },
+    timeOptionText: {
+        fontSize: 16,
+        fontWeight: "500",
+        color: COLORS.textMain,
+    },
+    timeOptionTextSelected: {
+        fontWeight: "bold",
+        color: COLORS.textMain,
     },
 });

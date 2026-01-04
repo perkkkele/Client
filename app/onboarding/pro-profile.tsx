@@ -1,9 +1,8 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     ActivityIndicator,
     Alert,
-    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,9 +14,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
-import { userApi } from "../../api";
+import { userApi, API_HOST, API_PORT } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -35,6 +33,10 @@ const COLORS = {
     gray800: "#1F2937",
     zinc800: "#27272a",
     zinc900: "#18181b",
+    green500: "#22c55e",
+    green600: "#16a34a",
+    red500: "#ef4444",
+    red600: "#dc2626",
 };
 
 const CATEGORIES = [
@@ -49,9 +51,21 @@ const CATEGORIES = [
     { id: "otros", label: "Otros" },
 ];
 
+// Alias validation rules
+const ALIAS_MIN_LENGTH = 3;
+const ALIAS_MAX_LENGTH = 20;
+const ALIAS_REGEX = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+type AliasStatus = "idle" | "checking" | "valid" | "invalid" | "taken";
+
 export default function ProProfileScreen() {
     const { token, refreshUser } = useAuth();
-    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+    // Alias state
+    const [alias, setAlias] = useState("");
+    const [aliasStatus, setAliasStatus] = useState<AliasStatus>("idle");
+    const [aliasError, setAliasError] = useState<string>("");
+
     const [publicName, setPublicName] = useState("");
     const [profession, setProfession] = useState("");
     const [category, setCategory] = useState("");
@@ -63,21 +77,87 @@ export default function ProProfileScreen() {
 
     const bioMaxLength = 160;
 
+    // Validate alias format
+    const validateAliasFormat = (value: string): { valid: boolean; error: string } => {
+        if (!value) {
+            return { valid: false, error: "" };
+        }
+        if (value.length < ALIAS_MIN_LENGTH) {
+            return { valid: false, error: `Mínimo ${ALIAS_MIN_LENGTH} caracteres` };
+        }
+        if (value.length > ALIAS_MAX_LENGTH) {
+            return { valid: false, error: `Máximo ${ALIAS_MAX_LENGTH} caracteres` };
+        }
+        if (!ALIAS_REGEX.test(value)) {
+            if (/^[0-9]/.test(value)) {
+                return { valid: false, error: "Debe comenzar con una letra" };
+            }
+            if (/[^a-zA-Z0-9_]/.test(value)) {
+                return { valid: false, error: "Solo letras, números y guiones bajos" };
+            }
+            return { valid: false, error: "Formato inválido" };
+        }
+        return { valid: true, error: "" };
+    };
+
+    // Check alias availability
+    const checkAliasAvailability = useCallback(async (aliasToCheck: string) => {
+        if (!aliasToCheck || aliasToCheck.length < ALIAS_MIN_LENGTH) {
+            return;
+        }
+
+        const formatValidation = validateAliasFormat(aliasToCheck);
+        if (!formatValidation.valid) {
+            setAliasStatus("invalid");
+            setAliasError(formatValidation.error);
+            return;
+        }
+
+        setAliasStatus("checking");
+        setAliasError("");
+
+        try {
+            const response = await fetch(
+                `http://${API_HOST}:${API_PORT}/api/users/check-username/${aliasToCheck.toLowerCase()}`
+            );
+            const data = await response.json();
+
+            if (data.available) {
+                setAliasStatus("valid");
+                setAliasError("");
+            } else {
+                setAliasStatus("taken");
+                setAliasError("Este alias ya está en uso");
+            }
+        } catch (error) {
+            setAliasStatus("invalid");
+            setAliasError("Error al verificar disponibilidad");
+        }
+    }, []);
+
+    // Debounced alias check
+    useEffect(() => {
+        const formatValidation = validateAliasFormat(alias);
+        if (!formatValidation.valid) {
+            if (alias.length > 0) {
+                setAliasStatus("invalid");
+                setAliasError(formatValidation.error);
+            } else {
+                setAliasStatus("idle");
+                setAliasError("");
+            }
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            checkAliasAvailability(alias);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [alias, checkAliasAvailability]);
+
     function handleBack() {
         router.back();
-    }
-
-    async function handlePickImage() {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-            setAvatarUri(result.assets[0].uri);
-        }
     }
 
     function addSpecialty() {
@@ -92,6 +172,14 @@ export default function ProProfileScreen() {
     }
 
     async function handleContinue() {
+        if (!alias.trim()) {
+            Alert.alert("Error", "Por favor ingresa un alias para tu perfil");
+            return;
+        }
+        if (aliasStatus !== "valid") {
+            Alert.alert("Error", "El alias no es válido o ya está en uso");
+            return;
+        }
         if (!publicName.trim()) {
             Alert.alert("Error", "Por favor ingresa tu nombre público");
             return;
@@ -107,17 +195,15 @@ export default function ProProfileScreen() {
 
         setIsLoading(true);
         try {
-            // Parsear nombre en firstname y lastname
             const nameParts = publicName.trim().split(" ");
             const firstname = nameParts[0] || "";
             const lastname = nameParts.slice(1).join(" ") || "";
 
-            // Guardar datos profesionales
             if (token) {
                 await userApi.updateUser(token, {
                     firstname,
                     lastname,
-                    // Campos profesionales
+                    username: alias.toLowerCase(),
                     publicName: publicName.trim(),
                     profession: profession.trim(),
                     category: category as any,
@@ -125,17 +211,11 @@ export default function ProProfileScreen() {
                     bio: bio.trim() || undefined,
                 });
 
-                // Subir avatar si se seleccionó uno
-                if (avatarUri) {
-                    await userApi.updateAvatar(token, avatarUri);
-                }
-
                 if (refreshUser) {
                     await refreshUser();
                 }
             }
 
-            // Navegar al siguiente paso
             router.push("/onboarding/pro-contact");
         } catch (error: any) {
             Alert.alert("Error", error.message || "Error al guardar el perfil");
@@ -144,14 +224,33 @@ export default function ProProfileScreen() {
         }
     }
 
+    const getAliasIcon = () => {
+        switch (aliasStatus) {
+            case "checking":
+                return <ActivityIndicator size="small" color={COLORS.gray400} />;
+            case "valid":
+                return <MaterialIcons name="check-circle" size={20} color={COLORS.green500} />;
+            case "invalid":
+            case "taken":
+                return <MaterialIcons name="error" size={20} color={COLORS.red500} />;
+            default:
+                return null;
+        }
+    };
+
+    const getAliasInputStyle = () => {
+        if (aliasStatus === "valid") return styles.inputValid;
+        if (aliasStatus === "invalid" || aliasStatus === "taken") return styles.inputError;
+        return {};
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={["bottom"]}>
             {/* Header negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                        <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    {/* Spacer izquierdo para centrar */}
+                    <View style={styles.headerSpacer} />
                     <View style={styles.stepIndicator}>
                         <Text style={styles.stepText}>Paso 1 de 2</Text>
                         <View style={styles.stepDots}>
@@ -160,7 +259,7 @@ export default function ProProfileScreen() {
                         </View>
                     </View>
                     <TouchableOpacity style={styles.helpButton}>
-                        <Text style={styles.helpText}>Ayuda</Text>
+                        <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
@@ -179,23 +278,71 @@ export default function ProProfileScreen() {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Avatar picker */}
-                    <View style={styles.avatarSection}>
-                        <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
-                            {avatarUri ? (
-                                <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                            ) : (
-                                <View style={styles.avatarPlaceholder}>
-                                    <MaterialIcons name="person" size={40} color={COLORS.gray400} />
-                                </View>
-                            )}
-                            <View style={styles.cameraButton}>
-                                <MaterialIcons name="add-a-photo" size={16} color="#000000" />
+                    {/* Alias - Campo principal */}
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Alias</Text>
+                        <View style={[styles.inputContainer, getAliasInputStyle()]}>
+                            <Text style={styles.aliasPrefix}>@</Text>
+                            <TextInput
+                                style={styles.aliasInput}
+                                placeholder="Ej. DrJuanPerez"
+                                placeholderTextColor={COLORS.gray400}
+                                value={alias}
+                                onChangeText={setAlias}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                maxLength={ALIAS_MAX_LENGTH}
+                            />
+                            <View style={styles.aliasStatusIcon}>
+                                {getAliasIcon()}
                             </View>
-                        </TouchableOpacity>
-                        <View style={styles.avatarHint}>
-                            <Text style={styles.avatarHintText}>💡 Se recomienda foto real</Text>
                         </View>
+                        <Text style={styles.aliasHelpText}>
+                            Tu alias será tu identidad única y permanente en TwinPro. Se usará en tu URL: twinpro.app/@{alias || "alias"}
+                        </Text>
+
+                        {/* Reglas del alias */}
+                        <View style={styles.aliasRules}>
+                            <View style={styles.aliasRule}>
+                                <MaterialIcons
+                                    name={alias.length >= ALIAS_MIN_LENGTH ? "check-circle" : "radio-button-unchecked"}
+                                    size={14}
+                                    color={alias.length >= ALIAS_MIN_LENGTH ? COLORS.green500 : COLORS.gray400}
+                                />
+                                <Text style={[styles.aliasRuleText, alias.length >= ALIAS_MIN_LENGTH && styles.aliasRuleValid]}>
+                                    Mínimo {ALIAS_MIN_LENGTH} caracteres
+                                </Text>
+                            </View>
+                            <View style={styles.aliasRule}>
+                                <MaterialIcons
+                                    name={!alias ? "radio-button-unchecked" : (/^[a-zA-Z]/.test(alias) ? "check-circle" : "error")}
+                                    size={14}
+                                    color={!alias ? COLORS.gray400 : (/^[a-zA-Z]/.test(alias) ? COLORS.green500 : COLORS.red500)}
+                                />
+                                <Text style={[styles.aliasRuleText, /^[a-zA-Z]/.test(alias) && styles.aliasRuleValid]}>
+                                    Comenzar con una letra
+                                </Text>
+                            </View>
+                            <View style={styles.aliasRule}>
+                                <MaterialIcons
+                                    name={!alias ? "radio-button-unchecked" : (ALIAS_REGEX.test(alias) ? "check-circle" : "error")}
+                                    size={14}
+                                    color={!alias ? COLORS.gray400 : (ALIAS_REGEX.test(alias) ? COLORS.green500 : COLORS.red500)}
+                                />
+                                <Text style={[styles.aliasRuleText, ALIAS_REGEX.test(alias) && styles.aliasRuleValid]}>
+                                    Solo letras, números y guiones bajos (_)
+                                </Text>
+                            </View>
+                        </View>
+
+                        {aliasError ? (
+                            <View style={styles.aliasErrorContainer}>
+                                <MaterialIcons name="info" size={14} color={COLORS.red500} />
+                                <Text style={styles.aliasErrorText}>{aliasError}</Text>
+                            </View>
+                        ) : null}
+
+
                     </View>
 
                     {/* Nombre público */}
@@ -317,9 +464,9 @@ export default function ProProfileScreen() {
             {/* Footer */}
             <View style={styles.footer}>
                 <TouchableOpacity
-                    style={styles.continueButton}
+                    style={[styles.continueButton, (aliasStatus !== "valid" || isLoading) && styles.continueButtonDisabled]}
                     onPress={handleContinue}
-                    disabled={isLoading}
+                    disabled={isLoading || aliasStatus !== "valid"}
                     activeOpacity={0.9}
                 >
                     {isLoading ? (
@@ -348,6 +495,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
+        zIndex: 1,
     },
     headerTop: {
         flexDirection: "row",
@@ -393,7 +541,19 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
     },
+    headerSpacer: {
+        width: 36,
+    },
     helpText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.primary,
+    },
+    skipButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    skipText: {
         fontSize: 12,
         fontWeight: "600",
         color: COLORS.primary,
@@ -421,59 +581,11 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
+        paddingTop: 48,
         paddingBottom: 100,
     },
-    avatarSection: {
-        alignItems: "center",
-        marginBottom: 16,
-    },
-    avatarContainer: {
-        position: "relative",
-    },
-    avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 4,
-        borderColor: COLORS.backgroundLight,
-    },
-    avatarPlaceholder: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: COLORS.gray200,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 4,
-        borderColor: COLORS.backgroundLight,
-    },
-    cameraButton: {
-        position: "absolute",
-        bottom: 0,
-        right: 0,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: COLORS.primary,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 3,
-        borderColor: COLORS.backgroundLight,
-    },
-    avatarHint: {
-        marginTop: 8,
-        backgroundColor: COLORS.surfaceLight,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 16,
-    },
-    avatarHintText: {
-        fontSize: 10,
-        fontWeight: "500",
-        color: COLORS.textMuted,
-    },
     inputGroup: {
-        marginBottom: 12,
+        marginBottom: 16,
     },
     inputLabel: {
         fontSize: 10,
@@ -490,19 +602,97 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 12,
         paddingHorizontal: 12,
-        height: 44,
+        height: 48,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    inputValid: {
+        borderColor: COLORS.green500,
+    },
+    inputError: {
+        borderColor: COLORS.red500,
     },
     inputIcon: {
         marginRight: 8,
     },
     input: {
         flex: 1,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "500",
         color: COLORS.textMain,
     },
     placeholder: {
         color: COLORS.gray400,
+    },
+    // Alias specific styles
+    aliasPrefix: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.gray500,
+        marginRight: 2,
+    },
+    aliasInput: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    aliasStatusIcon: {
+        width: 24,
+        alignItems: "center",
+    },
+    aliasHelpText: {
+        fontSize: 11,
+        color: COLORS.gray500,
+        marginTop: 8,
+        marginLeft: 4,
+        lineHeight: 16,
+    },
+    aliasRules: {
+        marginTop: 12,
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 10,
+        padding: 12,
+        gap: 8,
+    },
+    aliasRule: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    aliasRuleText: {
+        fontSize: 11,
+        color: COLORS.gray500,
+    },
+    aliasRuleValid: {
+        color: COLORS.green600,
+    },
+    aliasErrorContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 8,
+        marginLeft: 4,
+    },
+    aliasErrorText: {
+        fontSize: 11,
+        color: COLORS.red500,
+        fontWeight: "500",
+    },
+    aliasWarning: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 10,
+        backgroundColor: COLORS.gray200,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    aliasWarningText: {
+        fontSize: 11,
+        color: COLORS.gray500,
+        fontWeight: "500",
     },
     categoryPicker: {
         backgroundColor: COLORS.surfaceLight,
@@ -532,16 +722,6 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 12,
         padding: 12,
-    },
-    specialtiesContainer: {
-        backgroundColor: COLORS.surfaceLight,
-        borderRadius: 12,
-        padding: 8,
-        flexDirection: "row",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 6,
-        minHeight: 44,
     },
     specialtiesTags: {
         flexDirection: "row",
@@ -633,6 +813,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
+    },
+    continueButtonDisabled: {
+        opacity: 0.5,
     },
     continueButtonText: {
         fontSize: 14,
