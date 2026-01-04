@@ -49,6 +49,7 @@ export interface Appointment {
     completedAt?: string | null;
     paidAt?: string | null;
     refundedAt?: string | null;
+    chat?: string;  // Associated chat ID for video call navigation
 }
 
 export interface TimeSlot {

@@ -18,6 +18,7 @@ import { useAuth } from "../../context";
 import { API_HOST, API_PORT } from "../../api";
 import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
+import { createChat } from "../../api/chat";
 
 const COLORS = {
     primary: "#137fec",
@@ -421,6 +422,9 @@ export default function ManageAppointmentsScreen() {
                                 const statusStyle = getStatusStyle(appointment.status);
                                 const isCancelled = appointment.status === "cancelled";
                                 const isPending = appointment.status === "pending";
+                                const isConfirmed = appointment.status === "confirmed";
+                                const isVideoconference = appointment.type === "videoconference";
+                                const canStartVideoCall = isVideoconference && isConfirmed;
                                 const isActionLoading = actionLoading === appointment._id;
 
                                 return (
@@ -442,9 +446,27 @@ export default function ManageAppointmentsScreen() {
                                                     ]}>
                                                         {appointment.time}
                                                     </Text>
-                                                    <Text style={styles.appointmentDuration}>
-                                                        {appointment.serviceType === "30min" ? "30 min" : "60 min"} • {appointment.type === "videoconference" ? "Online" : "Presencial"}
-                                                    </Text>
+                                                    <View style={styles.appointmentTypeRow}>
+                                                        <Text style={styles.appointmentDuration}>
+                                                            {appointment.serviceType === "30min" ? "30 min" : "60 min"}
+                                                        </Text>
+                                                        <View style={[
+                                                            styles.typeBadge,
+                                                            isVideoconference ? styles.typeBadgeVideo : styles.typeBadgePresencial
+                                                        ]}>
+                                                            <MaterialIcons
+                                                                name={isVideoconference ? "videocam" : "location-on"}
+                                                                size={12}
+                                                                color={isVideoconference ? "#7c3aed" : COLORS.green700}
+                                                            />
+                                                            <Text style={[
+                                                                styles.typeBadgeText,
+                                                                isVideoconference ? styles.typeBadgeTextVideo : styles.typeBadgeTextPresencial
+                                                            ]}>
+                                                                {isVideoconference ? "Videollamada" : "Presencial"}
+                                                            </Text>
+                                                        </View>
+                                                    </View>
                                                 </View>
                                                 <View style={{ alignItems: "flex-end" }}>
                                                     <View style={[
@@ -455,7 +477,8 @@ export default function ManageAppointmentsScreen() {
                                                             {getStatusLabel(appointment.status)}
                                                         </Text>
                                                     </View>
-                                                    {appointment.paymentStatus && (
+                                                    {/* Only show payment status for presencial - videoconference is always pre-paid */}
+                                                    {appointment.paymentStatus && appointment.type === "presencial" && (
                                                         <Text style={[
                                                             styles.paymentStatus,
                                                             { color: appointment.paymentStatus === "paid" ? COLORS.green700 : COLORS.orange700 }
@@ -493,6 +516,51 @@ export default function ManageAppointmentsScreen() {
                                                     {(appointment.price / 100).toFixed(0)}€
                                                 </Text>
                                             </View>
+
+                                            {/* Video Call Button for confirmed videoconference appointments */}
+                                            {canStartVideoCall && (
+                                                <TouchableOpacity
+                                                    style={styles.videoCallButton}
+                                                    onPress={() => {
+                                                        Alert.alert(
+                                                            "Iniciar Videollamada",
+                                                            `¿Estás listo para iniciar la videollamada con ${appointment.client.firstname}?`,
+                                                            [
+                                                                { text: "Cancelar", style: "cancel" },
+                                                                {
+                                                                    text: "Iniciar",
+                                                                    onPress: async () => {
+                                                                        try {
+                                                                            // Create or find existing chat with client
+                                                                            const chat = await createChat(
+                                                                                token!,
+                                                                                user!._id,
+                                                                                appointment.client._id
+                                                                            );
+                                                                            // Navigate to pro-chat with startVideoCall param
+                                                                            router.push(`/pro-chat/${chat._id}?startVideoCall=true` as any);
+                                                                        } catch (error: any) {
+                                                                            console.error("Error starting video call:", error);
+                                                                            Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
+                                                                        }
+                                                                    },
+                                                                },
+                                                            ]
+                                                        );
+                                                    }}
+                                                >
+                                                    <View style={styles.videoCallButtonContent}>
+                                                        <View style={styles.videoCallIconContainer}>
+                                                            <MaterialIcons name="videocam" size={24} color="#fff" />
+                                                        </View>
+                                                        <View style={styles.videoCallTextContainer}>
+                                                            <Text style={styles.videoCallButtonText}>Iniciar Videollamada</Text>
+                                                            <Text style={styles.videoCallButtonSubtext}>Pulsa aquí para comenzar la cita</Text>
+                                                        </View>
+                                                        <MaterialIcons name="arrow-forward" size={20} color="#7c3aed" />
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )}
 
                                             {/* Actions */}
                                             <View style={styles.appointmentActions}>
@@ -718,7 +786,36 @@ const styles = StyleSheet.create({
     appointmentDuration: {
         fontSize: 12,
         color: COLORS.gray500,
-        marginTop: 2,
+    },
+    appointmentTypeRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 4,
+    },
+    typeBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+    },
+    typeBadgeVideo: {
+        backgroundColor: "#f3e8ff",
+    },
+    typeBadgePresencial: {
+        backgroundColor: COLORS.green50,
+    },
+    typeBadgeText: {
+        fontSize: 11,
+        fontWeight: "600",
+    },
+    typeBadgeTextVideo: {
+        color: "#7c3aed",
+    },
+    typeBadgeTextPresencial: {
+        color: COLORS.green700,
     },
     statusBadge: {
         paddingHorizontal: 10,
@@ -773,6 +870,41 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: COLORS.textMain,
+    },
+    videoCallButton: {
+        backgroundColor: "#faf5ff",
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "#e9d5ff",
+        marginBottom: 12,
+        overflow: "hidden",
+    },
+    videoCallButtonContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 12,
+        gap: 12,
+    },
+    videoCallIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "#7c3aed",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    videoCallTextContainer: {
+        flex: 1,
+    },
+    videoCallButtonText: {
+        fontSize: 15,
+        fontWeight: "bold",
+        color: "#7c3aed",
+    },
+    videoCallButtonSubtext: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        marginTop: 2,
     },
     appointmentActions: {
         flexDirection: "row",

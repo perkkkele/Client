@@ -64,9 +64,10 @@ const formatDateHeader = (dateString: string) => {
 };
 
 export default function ProChatScreen() {
-    const { chatId } = useLocalSearchParams<{ chatId: string }>();
+    const { chatId, startVideoCall } = useLocalSearchParams<{ chatId: string; startVideoCall?: string }>();
     const { user, token } = useAuth();
     const scrollViewRef = useRef<ScrollView>(null);
+    const autoStartAttempted = useRef(false);
 
     // Chat state
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -126,6 +127,29 @@ export default function ProChatScreen() {
     useEffect(() => {
         loadChatData();
     }, [loadChatData]);
+
+    // Auto-start video call when navigating from appointment card
+    useEffect(() => {
+        if (startVideoCall === 'true' && !loading && !autoStartAttempted.current && token && chatId) {
+            autoStartAttempted.current = true;
+            // Start video call automatically without confirmation dialog
+            (async () => {
+                setStartingCall(true);
+                try {
+                    await createVideoCall(token, chatId);
+                    const callData = await getVideoCallToken(token, chatId);
+                    setLivekitUrl(callData.livekitUrl);
+                    setLivekitToken(callData.token);
+                    setIsInCall(true);
+                } catch (error: any) {
+                    console.error("Error auto-starting video call:", error);
+                    Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
+                } finally {
+                    setStartingCall(false);
+                }
+            })();
+        }
+    }, [startVideoCall, loading, token, chatId]);
 
     useEffect(() => {
         setTimeout(() => {

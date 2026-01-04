@@ -76,7 +76,6 @@ const MINUTES = ["00", "15", "30", "45"];
 export default function WorkScheduleScreen() {
     const { token, user, refreshUser } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
-    const [isRecurring, setIsRecurring] = useState(true);
 
     // Duration per appointment type
     const [videoDuration, setVideoDuration] = useState(
@@ -399,124 +398,55 @@ export default function WorkScheduleScreen() {
             </View>
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                {/* Summary Card */}
-                <View style={styles.summaryCard}>
-                    <View style={styles.summaryItem}>
-                        <View style={[styles.summaryIcon, { backgroundColor: COLORS.blue50 }]}>
-                            <MaterialIcons name="calendar-today" size={20} color={COLORS.blue600} />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryValue}>{activeDays} días</Text>
-                            <Text style={styles.summaryLabel}>Activos</Text>
-                        </View>
-                    </View>
-                    <View style={styles.summaryDivider} />
-                    <View style={styles.summaryItem}>
-                        <View style={[styles.summaryIcon, { backgroundColor: COLORS.green50 }]}>
-                            <MaterialIcons name="schedule" size={20} color={COLORS.green600} />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryValue}>{totalSlots} franjas</Text>
-                            <Text style={styles.summaryLabel}>Horarias</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* General Settings */}
+                {/* Schedule Preview Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONFIGURACIÓN</Text>
-                    <View style={styles.card}>
-                        <View style={styles.settingsRow}>
-                            <View style={styles.settingsLeft}>
-                                <View style={[styles.settingsIcon, { backgroundColor: COLORS.orange50 }]}>
-                                    <MaterialIcons name="repeat" size={20} color={COLORS.orange600} />
-                                </View>
-                                <View style={styles.settingsText}>
-                                    <Text style={styles.settingsLabel}>Horario recurrente</Text>
-                                    <Text style={styles.settingsHint}>Aplicar el mismo horario cada semana</Text>
-                                </View>
-                            </View>
-                            <Switch
-                                value={isRecurring}
-                                onValueChange={setIsRecurring}
-                                trackColor={{ false: COLORS.gray300, true: COLORS.green500 }}
-                                thumbColor={COLORS.white}
-                            />
+                    <Text style={styles.sectionTitle}>MI HORARIO LABORAL</Text>
+                    <View style={styles.schedulePreviewCard}>
+                        {/* Week Days Grid */}
+                        <View style={styles.weekGrid}>
+                            {DAYS.map((day) => {
+                                const dayData = schedule[day.key];
+                                const isActive = dayData.enabled && dayData.slots.length > 0;
+                                const firstSlot = isActive ? dayData.slots[0] : null;
+                                return (
+                                    <View key={day.key} style={styles.dayColumn}>
+                                        <View style={[
+                                            styles.dayBubble,
+                                            isActive ? styles.dayBubbleActive : styles.dayBubbleInactive
+                                        ]}>
+                                            <Text style={[
+                                                styles.dayBubbleText,
+                                                isActive ? styles.dayBubbleTextActive : styles.dayBubbleTextInactive
+                                            ]}>
+                                                {day.short}
+                                            </Text>
+                                        </View>
+                                        {isActive ? (
+                                            <View style={styles.hoursContainer}>
+                                                {dayData.slots.map((slot, idx) => (
+                                                    <View key={idx} style={styles.slotBadge}>
+                                                        <Text style={styles.hourText}>
+                                                            {slot.start.split(':')[0]}-{slot.end.split(':')[0]}
+                                                        </Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        ) : (
+                                            <Text style={styles.closedText}>—</Text>
+                                        )}
+                                    </View>
+                                );
+                            })}
                         </View>
-                    </View>
-                </View>
-
-                {/* Duration Settings */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>DURACIÓN DE CITAS</Text>
-                    <View style={styles.card}>
-                        {/* Videoconference Duration */}
-                        <View style={styles.durationRow}>
-                            <View style={styles.settingsLeft}>
-                                <View style={[styles.settingsIcon, { backgroundColor: COLORS.blue50 }]}>
-                                    <MaterialIcons name="videocam" size={20} color={COLORS.blue600} />
-                                </View>
-                                <View style={styles.settingsText}>
-                                    <Text style={styles.settingsLabel}>Videollamada</Text>
-                                    <Text style={styles.settingsHint}>Duración por defecto</Text>
-                                </View>
+                        {/* Summary Footer */}
+                        <View style={styles.scheduleSummary}>
+                            <View style={styles.summaryChip}>
+                                <MaterialIcons name="event-available" size={14} color={COLORS.green600} />
+                                <Text style={styles.summaryChipText}>{activeDays} días activos</Text>
                             </View>
-                            <View style={styles.durationPicker}>
-                                {[30, 45, 60, 90].map((mins) => (
-                                    <TouchableOpacity
-                                        key={mins}
-                                        style={[
-                                            styles.durationOption,
-                                            videoDuration === mins && styles.durationOptionSelected,
-                                        ]}
-                                        onPress={() => setVideoDuration(mins)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.durationOptionText,
-                                                videoDuration === mins && styles.durationOptionTextSelected,
-                                            ]}
-                                        >
-                                            {mins}m
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        <View style={styles.durationDivider} />
-
-                        {/* Presencial Duration */}
-                        <View style={styles.durationRow}>
-                            <View style={styles.settingsLeft}>
-                                <View style={[styles.settingsIcon, { backgroundColor: COLORS.green50 }]}>
-                                    <MaterialIcons name="person" size={20} color={COLORS.green600} />
-                                </View>
-                                <View style={styles.settingsText}>
-                                    <Text style={styles.settingsLabel}>Presencial</Text>
-                                    <Text style={styles.settingsHint}>Duración por defecto</Text>
-                                </View>
-                            </View>
-                            <View style={styles.durationPicker}>
-                                {[30, 45, 60, 90].map((mins) => (
-                                    <TouchableOpacity
-                                        key={mins}
-                                        style={[
-                                            styles.durationOption,
-                                            presencialDuration === mins && styles.durationOptionSelected,
-                                        ]}
-                                        onPress={() => setPresencialDuration(mins)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.durationOptionText,
-                                                presencialDuration === mins && styles.durationOptionTextSelected,
-                                            ]}
-                                        >
-                                            {mins}m
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                            <View style={styles.summaryChip}>
+                                <MaterialIcons name="schedule" size={14} color={COLORS.blue600} />
+                                <Text style={styles.summaryChipText}>{totalSlots} franjas</Text>
                             </View>
                         </View>
                     </View>
@@ -525,80 +455,39 @@ export default function WorkScheduleScreen() {
                 {/* Calendar Sync Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>SINCRONIZACIÓN DE CALENDARIO</Text>
-                    <View style={styles.card}>
+                    <View style={styles.calendarCard}>
                         {calendarConnected ? (
-                            <View style={styles.calendarStatusCard}>
-                                {/* Status Header */}
-                                <View style={styles.calendarStatusHeader}>
-                                    <View style={styles.calendarStatusIndicator}>
-                                        <View style={[styles.statusDot, { backgroundColor: COLORS.green500 }]} />
-                                    </View>
-                                    <View style={styles.calendarStatusInfo}>
-                                        <Text style={styles.calendarStatusTitle}>
-                                            {calendarProvider === "google" ? "Google Calendar" : "Outlook Calendar"}
-                                        </Text>
-                                        <Text style={styles.calendarStatusSubtitle}>
-                                            ✓ Sincronizado correctamente
-                                        </Text>
-                                    </View>
-                                    <View style={[styles.settingsIcon, { backgroundColor: calendarProvider === "google" ? "#E8F5E9" : "#E3F2FD" }]}>
+                            <View style={styles.calendarConnectedContent}>
+                                <View style={styles.calendarConnectedRow}>
+                                    <View style={styles.calendarProviderIcon}>
                                         <MaterialIcons
                                             name={calendarProvider === "google" ? "event" : "calendar-today"}
-                                            size={24}
+                                            size={20}
                                             color={calendarProvider === "google" ? "#4285F4" : "#0078D4"}
                                         />
                                     </View>
-                                </View>
-
-                                {/* Status Details */}
-                                <View style={styles.calendarStatusDetails}>
-                                    <View style={styles.statusDetailRow}>
-                                        <MaterialIcons name="check-circle" size={16} color={COLORS.green600} />
-                                        <Text style={styles.statusDetailText}>
-                                            Eventos ocupados se bloquean automáticamente
+                                    <View style={styles.calendarConnectedInfo}>
+                                        <Text style={styles.calendarConnectedTitle}>
+                                            {calendarProvider === "google" ? "Google Calendar" : "Outlook"}
                                         </Text>
+                                        <Text style={styles.calendarConnectedStatus}>✓ Conectado</Text>
                                     </View>
-                                    <View style={styles.statusDetailRow}>
-                                        <MaterialIcons name="check-circle" size={16} color={COLORS.green600} />
-                                        <Text style={styles.statusDetailText}>
-                                            Citas confirmadas se añaden al calendario
-                                        </Text>
-                                    </View>
+                                    <TouchableOpacity
+                                        style={styles.disconnectBtn}
+                                        onPress={handleDisconnectCalendar}
+                                    >
+                                        <MaterialIcons name="link-off" size={16} color={COLORS.red600} />
+                                    </TouchableOpacity>
                                 </View>
-
-                                {/* Disconnect Button */}
-                                <TouchableOpacity
-                                    style={styles.disconnectButton}
-                                    onPress={handleDisconnectCalendar}
-                                >
-                                    <MaterialIcons name="link-off" size={16} color={COLORS.red600} />
-                                    <Text style={styles.disconnectButtonText}>Desconectar</Text>
-                                </TouchableOpacity>
                             </View>
                         ) : (
-                            <View style={styles.calendarNotConnected}>
-                                {/* Not Connected Status */}
-                                <View style={styles.calendarStatusHeader}>
-                                    <View style={styles.calendarStatusIndicator}>
-                                        <View style={[styles.statusDot, { backgroundColor: COLORS.gray400 }]} />
-                                    </View>
-                                    <View style={styles.calendarStatusInfo}>
-                                        <Text style={styles.calendarStatusTitle}>Calendario no conectado</Text>
-                                        <Text style={[styles.calendarStatusSubtitle, { color: COLORS.gray500 }]}>
-                                            Conecta para sincronizar tu disponibilidad
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                {/* Benefits */}
-                                <Text style={styles.calendarHint}>
-                                    Al conectar tu calendario, los horarios ocupados se bloquearán automáticamente y las citas confirmadas aparecerán en tu calendario.
+                            <View style={styles.calendarNotConnectedContent}>
+                                <Text style={styles.calendarHintCompact}>
+                                    Sincroniza tu disponibilidad y añade citas automáticamente
                                 </Text>
-
-                                {/* Connect Buttons */}
-                                <View style={styles.calendarButtons}>
+                                <View style={styles.calendarButtonsRow}>
                                     <TouchableOpacity
-                                        style={[styles.calendarBtn, { flex: 1 }]}
+                                        style={styles.calendarConnectBtn}
                                         onPress={handleConnectGoogle}
                                         disabled={isConnectingCalendar}
                                     >
@@ -606,18 +495,18 @@ export default function WorkScheduleScreen() {
                                             <ActivityIndicator size="small" color="#4285F4" />
                                         ) : (
                                             <>
-                                                <MaterialIcons name="event" size={20} color="#4285F4" />
-                                                <Text style={styles.calendarBtnText}>Google Calendar</Text>
+                                                <MaterialIcons name="event" size={18} color="#4285F4" />
+                                                <Text style={styles.calendarConnectBtnText}>Google</Text>
                                             </>
                                         )}
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.calendarBtn, { flex: 1 }]}
+                                        style={styles.calendarConnectBtn}
                                         onPress={handleConnectOutlook}
                                         disabled={isConnectingCalendar}
                                     >
-                                        <MaterialIcons name="calendar-today" size={20} color="#0078D4" />
-                                        <Text style={styles.calendarBtnText}>Outlook</Text>
+                                        <MaterialIcons name="calendar-today" size={18} color="#0078D4" />
+                                        <Text style={styles.calendarConnectBtnText}>Outlook</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -849,7 +738,7 @@ export default function WorkScheduleScreen() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 
@@ -937,7 +826,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
     },
     section: {
-        marginBottom: 24,
+        marginBottom: 16,
     },
     sectionTitle: {
         fontSize: 12,
@@ -954,13 +843,13 @@ const styles = StyleSheet.create({
     },
     card: {
         backgroundColor: COLORS.surfaceLight,
-        borderRadius: 16,
-        padding: 16,
+        borderRadius: 12,
+        padding: 12,
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+        elevation: 1,
     },
     settingsRow: {
         flexDirection: "row",
@@ -971,12 +860,12 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        gap: 10,
     },
     settingsIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -984,7 +873,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     settingsLabel: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: "600",
         color: COLORS.textMain,
     },
@@ -992,6 +881,47 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: COLORS.textMuted,
         marginTop: 2,
+    },
+    // Compact Duration Styles
+    durationCompactRow: {
+        flexDirection: "column",
+        gap: 12,
+    },
+    durationCompactItem: {
+    },
+    durationLabelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 8,
+    },
+    durationCompactLabel: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    durationPicker: {
+        flexDirection: "row",
+        gap: 4,
+    },
+    durationOption: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    durationOptionSelected: {
+        backgroundColor: COLORS.primary,
+    },
+    durationOptionText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.gray600,
+    },
+    durationOptionTextSelected: {
+        color: COLORS.textMain,
     },
     dayCard: {
         backgroundColor: COLORS.surfaceLight,
@@ -1235,44 +1165,71 @@ const styles = StyleSheet.create({
         color: COLORS.textMain,
         fontWeight: "bold",
     },
-    // Duration configuration styles
-    durationRow: {
+    // Compact Calendar sync styles
+    calendarCard: {
+        backgroundColor: "#F0F9FF",
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: "#BAE6FD",
+    },
+    calendarConnectedContent: {
+    },
+    calendarConnectedRow: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: 12,
+        gap: 10,
     },
-    durationPicker: {
-        flexDirection: "row",
-        gap: 6,
-    },
-    durationOption: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
+    calendarProviderIcon: {
+        width: 32,
+        height: 32,
         borderRadius: 8,
-        backgroundColor: COLORS.gray100,
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    calendarConnectedInfo: {
+        flex: 1,
+    },
+    calendarConnectedTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    calendarConnectedStatus: {
+        fontSize: 12,
+        color: COLORS.green600,
+    },
+    calendarNotConnectedContent: {
+    },
+    calendarHintCompact: {
+        fontSize: 12,
+        color: COLORS.gray600,
+        marginBottom: 10,
+        textAlign: "center",
+    },
+    calendarButtonsRow: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    calendarConnectBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: "#FFFFFF",
         borderWidth: 1,
         borderColor: COLORS.gray200,
     },
-    durationOptionSelected: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
-    },
-    durationOptionText: {
+    calendarConnectBtnText: {
         fontSize: 13,
-        fontWeight: "500",
-        color: COLORS.gray600,
+        fontWeight: "600",
+        color: COLORS.gray700,
     },
-    durationOptionTextSelected: {
-        color: COLORS.textMain,
-        fontWeight: "bold",
-    },
-    durationDivider: {
-        height: 1,
-        backgroundColor: COLORS.gray200,
-        marginVertical: 8,
-    },
-    // Calendar sync styles
+    // Legacy Calendar sync styles
     calendarStatusCard: {
         padding: 16,
     },
@@ -1382,5 +1339,106 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 8,
         backgroundColor: "#FEE2E2",
+    },
+    // Schedule Preview Card Styles
+    schedulePreviewCard: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    weekGrid: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 16,
+    },
+    dayColumn: {
+        alignItems: "center",
+        flex: 1,
+        paddingHorizontal: 2,
+    },
+    dayBubble: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 6,
+    },
+    dayBubbleActive: {
+        backgroundColor: COLORS.primary,
+    },
+    dayBubbleInactive: {
+        backgroundColor: COLORS.gray200,
+    },
+    dayBubbleText: {
+        fontSize: 13,
+        fontWeight: "700",
+    },
+    dayBubbleTextActive: {
+        color: COLORS.textMain,
+    },
+    dayBubbleTextInactive: {
+        color: COLORS.gray400,
+    },
+    hoursContainer: {
+        alignItems: "center",
+        gap: 3,
+    },
+    slotBadge: {
+        backgroundColor: COLORS.green50,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    hourText: {
+        fontSize: 9,
+        fontWeight: "700",
+        color: COLORS.green600,
+    },
+    hourLine: {
+        width: 1,
+        height: 6,
+        backgroundColor: COLORS.gray300,
+        marginVertical: 2,
+    },
+    moreSlots: {
+        fontSize: 9,
+        color: COLORS.blue600,
+        fontWeight: "500",
+        marginTop: 2,
+    },
+    closedText: {
+        fontSize: 11,
+        color: COLORS.gray400,
+        marginTop: 4,
+    },
+    scheduleSummary: {
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray100,
+    },
+    summaryChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    summaryChipText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: COLORS.gray600,
     },
 });

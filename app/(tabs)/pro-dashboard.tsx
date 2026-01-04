@@ -606,6 +606,17 @@ export default function ProDashboardScreen() {
                                     <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/appointment-pricing"); }}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.yellow50 }]}>
+                                            <MaterialIcons name="euro" size={20} color={COLORS.yellow600} />
+                                        </View>
+                                        <Text style={styles.sideMenuCardLabel}>Tarifas de citas</Text>
+                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
                                         onPress={() => { setMenuVisible(false); router.push("/(settings)/work-schedule"); }}
                                     >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.purple50 }]}>
