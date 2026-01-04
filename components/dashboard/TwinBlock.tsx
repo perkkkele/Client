@@ -6,9 +6,6 @@ import { COLORS } from "./constants";
 
 interface User {
     _id?: string;
-    appointmentsEnabled?: boolean;
-    autoConfirmAppointments?: boolean;
-    requirePaymentOnBooking?: boolean;
 }
 
 interface TwinBlockProps {
@@ -16,9 +13,6 @@ interface TwinBlockProps {
     geminiActive: boolean;
     onGeminiChange: (value: boolean) => void;
     onConfigureGemini: () => void;
-    onToggleAppointments: (value: boolean) => void;
-    onToggleAutoConfirm: (value: boolean) => void;
-    onTogglePaymentRequired: (value: boolean) => void;
 }
 
 export default function TwinBlock({
@@ -26,9 +20,6 @@ export default function TwinBlock({
     geminiActive,
     onGeminiChange,
     onConfigureGemini,
-    onToggleAppointments,
-    onToggleAutoConfirm,
-    onTogglePaymentRequired,
 }: TwinBlockProps) {
     const handleTestGemini = () => {
         if (user?._id) {
@@ -78,96 +69,6 @@ export default function TwinBlock({
                     </View>
                     <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
                 </TouchableOpacity>
-
-                {/* Appointments Toggle */}
-                <View style={styles.appointmentsDivider} />
-                <View style={styles.appointmentsRow}>
-                    <View style={styles.appointmentsIconBox}>
-                        <MaterialIcons name="event" size={22} color="#FFFFFF" />
-                    </View>
-                    <View style={styles.appointmentsInfo}>
-                        <Text style={styles.appointmentsLabel}>Agendar Citas</Text>
-                        <Text style={styles.appointmentsHint}>
-                            {user?.appointmentsEnabled
-                                ? "Los clientes pueden reservar citas contigo"
-                                : "Activa para que los clientes reserven citas"
-                            }
-                        </Text>
-                    </View>
-                    <Switch
-                        value={user?.appointmentsEnabled || false}
-                        onValueChange={onToggleAppointments}
-                        trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                        thumbColor="#FFFFFF"
-                        ios_backgroundColor="rgba(0,0,0,0.3)"
-                    />
-                </View>
-
-                {/* Auto-Confirm Toggle */}
-                {user?.appointmentsEnabled && (
-                    <View style={styles.appointmentsRow}>
-                        <View style={[styles.appointmentsIconBox, {
-                            backgroundColor: user?.autoConfirmAppointments !== false
-                                ? COLORS.green500
-                                : COLORS.orange600
-                        }]}>
-                            <MaterialIcons
-                                name={user?.autoConfirmAppointments !== false ? "check-circle" : "schedule"}
-                                size={22}
-                                color="#FFFFFF"
-                            />
-                        </View>
-                        <View style={styles.appointmentsInfo}>
-                            <Text style={styles.appointmentsLabel}>Confirmación automática</Text>
-                            <Text style={styles.appointmentsHint}>
-                                {user?.autoConfirmAppointments !== false
-                                    ? "Citas se confirman al instante"
-                                    : "Requiere confirmación manual"
-                                }
-                            </Text>
-                        </View>
-                        <Switch
-                            value={user?.autoConfirmAppointments !== false}
-                            onValueChange={onToggleAutoConfirm}
-                            trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                            thumbColor="#FFFFFF"
-                            ios_backgroundColor="rgba(0,0,0,0.3)"
-                        />
-                    </View>
-                )}
-
-                {/* Payment Required Toggle */}
-                {user?.appointmentsEnabled && (
-                    <View style={styles.appointmentsRow}>
-                        <View style={[styles.appointmentsIconBox, {
-                            backgroundColor: user?.requirePaymentOnBooking !== false
-                                ? COLORS.blue600
-                                : COLORS.gray500
-                        }]}>
-                            <MaterialIcons
-                                name={user?.requirePaymentOnBooking !== false ? "payment" : "payments"}
-                                size={22}
-                                color="#FFFFFF"
-                            />
-                        </View>
-                        <View style={styles.appointmentsInfo}>
-                            <Text style={styles.appointmentsLabel}>Cobro anticipado presencial</Text>
-                            <Text style={styles.appointmentsHint}>
-                                {user?.requirePaymentOnBooking !== false
-                                    ? "Cobrar al agendar citas presenciales"
-                                    : "Cobrar in situ (el cliente paga al llegar)"
-                                }
-                            </Text>
-                        </View>
-                        <Switch
-                            value={user?.requirePaymentOnBooking !== false}
-                            onValueChange={onTogglePaymentRequired}
-                            trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
-                            thumbColor="#FFFFFF"
-                            ios_backgroundColor="rgba(0,0,0,0.3)"
-                        />
-                    </View>
-                )}
             </View>
         </View>
     );

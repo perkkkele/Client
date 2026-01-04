@@ -19,7 +19,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { API_HOST, API_PORT, userApi, analyticsApi } from "../../api";
-import { ProfileBlock, TwinBlock, StatsBlock, AlertsBlock } from "../../components/dashboard";
+import { ProfileBlock, TwinBlock, StatsBlock, AppointmentsBlock } from "../../components/dashboard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -117,7 +117,7 @@ export default function ProDashboardScreen() {
     }, [loadAnalytics]);
 
     // ===== DASHBOARD CUSTOMIZATION =====
-    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'stats', 'alerts'];
+    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'appointments', 'stats'];
     const DASHBOARD_LAYOUT_KEY = `dashboard_layout_${user?._id}`;
 
     const [editMode, setEditMode] = useState(false);
@@ -131,8 +131,16 @@ export default function ProDashboardScreen() {
                 const saved = await SecureStore.getItemAsync(DASHBOARD_LAYOUT_KEY);
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length === DEFAULT_BLOCK_ORDER.length) {
-                        setBlockOrder(parsed);
+                    if (Array.isArray(parsed)) {
+                        // Include any new blocks that weren't in the saved order
+                        const newBlocks = DEFAULT_BLOCK_ORDER.filter(b => !parsed.includes(b));
+                        // Filter out any blocks that no longer exist
+                        const validSaved = parsed.filter((b: string) => DEFAULT_BLOCK_ORDER.includes(b));
+                        // Merge: saved order + new blocks at the end
+                        const mergedOrder = [...validSaved, ...newBlocks];
+                        if (mergedOrder.length === DEFAULT_BLOCK_ORDER.length) {
+                            setBlockOrder(mergedOrder);
+                        }
                     }
                 }
             } catch (error) {
@@ -415,6 +423,12 @@ export default function ProDashboardScreen() {
                                     geminiActive={geminiActive}
                                     onGeminiChange={setGeminiActive}
                                     onConfigureGemini={handleConfigureGemini}
+                                />
+                            );
+                        case 'appointments':
+                            return renderBlockWithControls('appointments',
+                                <AppointmentsBlock
+                                    user={user || undefined}
                                     onToggleAppointments={handleToggleAppointments}
                                     onToggleAutoConfirm={handleToggleAutoConfirm}
                                     onTogglePaymentRequired={handleTogglePaymentRequired}
@@ -423,10 +437,6 @@ export default function ProDashboardScreen() {
                         case 'stats':
                             return renderBlockWithControls('stats',
                                 <StatsBlock analytics={analytics} />
-                            );
-                        case 'alerts':
-                            return renderBlockWithControls('alerts',
-                                <AlertsBlock />
                             );
                         default:
                             return null;
