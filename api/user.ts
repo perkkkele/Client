@@ -63,13 +63,15 @@ export interface DigitalTwinKnowledgeLinks {
 
 export interface DigitalTwinKnowledge {
     links?: DigitalTwinKnowledgeLinks;
+    manualContent?: {
+        faq?: string | null;
+        services?: string | null;
+        pricing?: string | null;
+        policy?: string | null;
+        troubleshooting?: string | null;
+    };
     contextPrompt?: string | null;
-    documents?: Array<{
-        name: string;
-        type: 'servicios' | 'precios' | 'faqs' | 'otro';
-        url: string;
-        uploadedAt?: string;
-    }>;
+    documents?: KnowledgeDocument[];
     trainingProgress?: number;
     trainingStatus?: 'pending' | 'training' | 'ready' | null;
 }
@@ -152,6 +154,14 @@ export interface User {
         start?: string;
         end?: string;
     };
+    appointmentTypesEnabled?: {
+        videoconference?: boolean;
+        presencial?: boolean;
+    };
+    appointmentPrices?: {
+        videoconference?: number | null;
+        presencial?: number | null;
+    };
     workSchedule?: {
         workDays?: number[];
         defaultHours?: { start?: string; end?: string };
@@ -215,6 +225,14 @@ export interface UserUpdateData {
     appointmentHours?: {
         start?: string;
         end?: string;
+    };
+    appointmentTypesEnabled?: {
+        videoconference?: boolean;
+        presencial?: boolean;
+    };
+    appointmentPrices?: {
+        videoconference?: number | null;
+        presencial?: number | null;
     };
     workSchedule?: {
         workDays?: number[];
@@ -416,6 +434,72 @@ export async function removeFavorite(token: string, professionalId: string): Pro
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.msg || "Error al eliminar de favoritos");
+    }
+
+    return response.json();
+}
+
+// === Funciones de Documentos para Base de Conocimientos ===
+
+export interface KnowledgeDocument {
+    id: string;
+    name: string;
+    category: 'faq' | 'services' | 'pricing' | 'policy' | 'troubleshooting' | 'other';
+    filename: string;
+    mimeType?: string;
+    size?: number;
+    uploadedAt?: string;
+}
+
+/**
+ * Subir documento para la base de conocimientos
+ */
+export async function uploadKnowledgeDocument(
+    token: string,
+    category: string,
+    file: { uri: string; name: string; type: string }
+): Promise<{ msg: string; document: KnowledgeDocument; documents: KnowledgeDocument[] }> {
+    const formData = new FormData();
+    formData.append('category', category);
+    formData.append('document', {
+        uri: file.uri,
+        name: file.name,
+        type: file.type,
+    } as any);
+
+    const response = await fetch(`${API_URL}/user/knowledge-document`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al subir el documento");
+    }
+
+    return response.json();
+}
+
+/**
+ * Eliminar documento de la base de conocimientos
+ */
+export async function deleteKnowledgeDocument(
+    token: string,
+    documentId: string
+): Promise<{ msg: string; documents: KnowledgeDocument[] }> {
+    const response = await fetch(`${API_URL}/user/knowledge-document/${documentId}`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.msg || "Error al eliminar el documento");
     }
 
     return response.json();

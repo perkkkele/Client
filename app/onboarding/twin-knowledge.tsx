@@ -15,8 +15,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi } from "../../api";
+import { KnowledgeDocument } from "../../api/user";
 
 const COLORS = {
     primary: "#FDE047",
@@ -174,10 +176,117 @@ export default function TwinKnowledgeScreen() {
         router.back();
     }
 
-    function handleUpload(categoryId: string) {
-        // TODO: Implementar subida de documentos
-        Alert.alert("Próximamente", "La subida de documentos estará disponible próximamente.");
-        console.log("Upload for category:", categoryId);
+    // State for uploaded documents
+    const [uploadedDocuments, setUploadedDocuments] = useState<KnowledgeDocument[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+
+    // Load documents from user data on mount
+    useEffect(() => {
+        const docs = user?.digitalTwin?.knowledge?.documents as KnowledgeDocument[] | undefined;
+        if (docs && Array.isArray(docs)) {
+            setUploadedDocuments(docs);
+            // Update category counts
+            setCategories(prev => prev.map(cat => ({
+                ...cat,
+                count: docs.filter(d => d.category === cat.id).length
+            })));
+        }
+    }, [user]);
+
+    async function handleUpload(categoryId: string) {
+        if (!token) {
+            Alert.alert("Error", "Debes estar autenticado para subir documentos");
+            return;
+        }
+
+        try {
+            // Open document picker
+            const result = await DocumentPicker.getDocumentAsync({
+                type: [
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "text/plain"
+                ],
+                copyToCacheDirectory: true,
+            });
+
+            if (result.canceled || !result.assets || result.assets.length === 0) {
+                console.log("Document picker cancelled");
+                return;
+            }
+
+            const file = result.assets[0];
+            console.log("Selected file:", file);
+
+            // Validate file size (10MB max)
+            if (file.size && file.size > 10 * 1024 * 1024) {
+                Alert.alert("Archivo muy grande", "El tamaño máximo es 10MB");
+                return;
+            }
+
+            setIsUploading(true);
+
+            // Upload to server
+            const response = await userApi.uploadKnowledgeDocument(
+                token,
+                categoryId,
+                {
+                    uri: file.uri,
+                    name: file.name,
+                    type: file.mimeType || "application/octet-stream",
+                }
+            );
+
+            console.log("Upload response:", response);
+
+            // Update local state
+            setUploadedDocuments(response.documents);
+
+            // Update category count
+            setCategories(prev => prev.map(cat => ({
+                ...cat,
+                count: response.documents.filter(d => d.category === cat.id).length
+            })));
+
+            Alert.alert("Éxito", `Documento "${file.name}" subido correctamente`);
+
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            Alert.alert("Error", error.message || "No se pudo subir el documento");
+        } finally {
+            setIsUploading(false);
+        }
+    }
+
+    async function handleDeleteDocument(documentId: string) {
+        if (!token) return;
+
+        Alert.alert(
+            "Eliminar documento",
+            "¿Estás seguro de que quieres eliminar este documento?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const response = await userApi.deleteKnowledgeDocument(token, documentId);
+                            setUploadedDocuments(response.documents);
+                            // Update category counts
+                            setCategories(prev => prev.map(cat => ({
+                                ...cat,
+                                count: response.documents.filter(d => d.category === cat.id).length
+                            })));
+                            Alert.alert("Éxito", "Documento eliminado");
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message || "No se pudo eliminar el documento");
+                        }
+                    }
+                }
+            ]
+        );
     }
 
     function handleManualAdd(categoryId: string) {
@@ -437,8 +546,13 @@ export default function TwinKnowledgeScreen() {
                             <TouchableOpacity
                                 style={styles.categoryButton}
                                 onPress={() => handleUpload(category.id)}
+                                disabled={isUploading}
                             >
-                                <MaterialIcons name="upload-file" size={20} color={COLORS.gray400} />
+                                {isUploading ? (
+                                    <ActivityIndicator size="small" color={COLORS.gray400} />
+                                ) : (
+                                    <MaterialIcons name="upload-file" size={20} color={COLORS.gray400} />
+                                )}
                                 <Text style={styles.categoryButtonText}>
                                     {category.id === "pricing" ? "Subir Tarifas" :
                                         category.id === "services" ? "Subir Catálogo" :
@@ -461,6 +575,30 @@ export default function TwinKnowledgeScreen() {
                                 </Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* Uploaded Documents List */}
+                        {uploadedDocuments.filter(d => d.category === category.id).length > 0 && (
+                            <View style={styles.uploadedDocsContainer}>
+                                {uploadedDocuments.filter(d => d.category === category.id).map((doc) => (
+                                    <View key={doc.id} style={styles.uploadedDocItem}>
+                                        <MaterialIcons
+                                            name={doc.mimeType?.includes('pdf') ? 'picture-as-pdf' : 'description'}
+                                            size={16}
+                                            color={COLORS.gray500}
+                                        />
+                                        <Text style={styles.uploadedDocName} numberOfLines={1}>
+                                            {doc.name}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => handleDeleteDocument(doc.id)}
+                                            style={styles.deleteDocButton}
+                                        >
+                                            <MaterialIcons name="close" size={16} color={COLORS.accentRed} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
 
                         {/* URL Input Toggle */}
                         <TouchableOpacity
@@ -1067,5 +1205,31 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: "#000000",
+    },
+    // Uploaded documents list styles
+    uploadedDocsContainer: {
+        marginTop: 8,
+        marginBottom: 4,
+        backgroundColor: COLORS.gray50,
+        borderRadius: 8,
+        padding: 8,
+    },
+    uploadedDocItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 6,
+        paddingHorizontal: 8,
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 6,
+        marginBottom: 4,
+        gap: 8,
+    },
+    uploadedDocName: {
+        flex: 1,
+        fontSize: 13,
+        color: COLORS.textMain,
+    },
+    deleteDocButton: {
+        padding: 4,
     },
 });
