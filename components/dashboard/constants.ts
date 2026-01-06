@@ -1,6 +1,6 @@
 // Shared constants for Pro Dashboard components
 import { Dimensions } from "react-native";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 
 export const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -42,7 +42,6 @@ export const COLORS = {
 };
 
 export function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
+

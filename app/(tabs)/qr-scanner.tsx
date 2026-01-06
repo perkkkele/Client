@@ -124,7 +124,8 @@ export default function QRScannerScreen() {
         if (username) {
             // Fetch the professional ID by username
             try {
-                const response = await fetch(`http://${require("../../api").API_HOST}:${require("../../api").API_PORT}/api/users/by-username/${username}`);
+                const { API_URL } = require("../../api");
+                const response = await fetch(`${API_URL}/users/by-username/${username}`);
                 if (response.ok) {
                     const professional = await response.json();
                     Alert.alert(

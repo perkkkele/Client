@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
-import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, API_HOST, API_PORT, analyticsApi } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi } from "../../api";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
@@ -703,9 +703,7 @@ export default function AvatarChatScreen() {
     }, [activeInfoBubble]);
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar);
     };
 
     const handleBack = () => {

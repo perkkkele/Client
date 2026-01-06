@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT, chatApi, analyticsApi } from "../../api";
+import { userApi, getAssetUrl, chatApi, analyticsApi } from "../../api";
 import { User } from "../../api/user";
 
 const COLORS = {
@@ -113,9 +113,7 @@ export default function ProfessionalProfileScreen() {
     };
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar);
     };
 
     const handleBack = () => {

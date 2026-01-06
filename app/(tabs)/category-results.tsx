@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { professionalApi, userApi, API_HOST, API_PORT } from "../../api";
+import { professionalApi, userApi, getAssetUrl } from "../../api";
 import { Professional } from "../../api/professional";
 
 const COLORS = {
@@ -208,9 +208,7 @@ export default function CategoryResultsScreen() {
     }
 
     function getAvatarUrl(avatar: string | null | undefined) {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar);
     }
 
     function renderFeaturedProfessional(item: Professional) {

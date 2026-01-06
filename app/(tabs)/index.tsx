@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { API_HOST, API_PORT, chatApi, professionalApi } from "../../api";
+import { getAssetUrl, chatApi, professionalApi } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
 import { useAuth } from "../../context";
@@ -69,9 +69,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 
 // Helper to build avatar URL from server path
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-  if (!avatarPath) return null;
-  if (avatarPath.startsWith("http")) return avatarPath;
-  return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+  return getAssetUrl(avatarPath);
 }
 
 // Helper to format relative time
