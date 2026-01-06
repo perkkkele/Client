@@ -510,7 +510,7 @@ export default function AvatarChatScreen() {
                 console.log('[AvatarChat] Got video call token, connecting to:', callData.livekitUrl);
 
                 setHumanCallLivekitUrl(callData.livekitUrl);
-                setHumanCallToken(callData.token);
+                setHumanCallToken(callData.token ?? null);
                 setIsHumanSession(true);
             } catch (error) {
                 console.error('[AvatarChat] Error getting video call token:', error);

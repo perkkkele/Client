@@ -1,6 +1,4 @@
-import { API_HOST, API_PORT } from "./config";
-
-const BASE_URL = `http://${API_HOST}:${API_PORT}/api`;
+import { API_URL } from "./config";
 
 export type AnalyticsEventType = "profileView" | "conversationStart" | "conversationEnd" | "phoneCall";
 
@@ -27,7 +25,7 @@ export async function recordEvent(
     metadata?: AnalyticsEventMetadata
 ): Promise<{ eventId?: string }> {
     try {
-        const response = await fetch(`${BASE_URL}/analytics/event`, {
+        const response = await fetch(`${API_URL}/analytics/event`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -63,7 +61,7 @@ export async function getSummary(
 ): Promise<AnalyticsSummary | null> {
     try {
         const response = await fetch(
-            `${BASE_URL}/analytics/summary/${professionalId}`,
+            `${API_URL}/analytics/summary/${professionalId}`,
             {
                 method: "GET",
                 headers: {

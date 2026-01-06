@@ -139,7 +139,7 @@ export default function ProChatScreen() {
                     await createVideoCall(token, chatId);
                     const callData = await getVideoCallToken(token, chatId);
                     setLivekitUrl(callData.livekitUrl);
-                    setLivekitToken(callData.token);
+                    setLivekitToken(callData.token ?? null);
                     setIsInCall(true);
                 } catch (error: any) {
                     console.error("Error auto-starting video call:", error);
@@ -252,7 +252,7 @@ export default function ProChatScreen() {
                             await createVideoCall(token, chatId);
                             const callData = await getVideoCallToken(token, chatId);
                             setLivekitUrl(callData.livekitUrl);
-                            setLivekitToken(callData.token);
+                            setLivekitToken(callData.token ?? null);
                             setIsInCall(true);
                         } catch (error: any) {
                             console.error("Error starting call:", error);

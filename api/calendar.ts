@@ -1,6 +1,6 @@
-import { API_HOST, API_PORT } from "./index";
+import { API_URL } from "./config";
 
-const API_URL = `http://${API_HOST}:${API_PORT}/api/calendar`;
+const CALENDAR_API_URL = `${API_URL}/calendar`;
 
 /**
  * Get calendar connection status
@@ -10,7 +10,7 @@ export async function getCalendarStatus(token: string): Promise<{
     provider: "google" | "outlook" | null;
     lastSync: string | null;
 }> {
-    const response = await fetch(`${API_URL}/status`, {
+    const response = await fetch(`${CALENDAR_API_URL}/status`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -27,7 +27,7 @@ export async function getCalendarStatus(token: string): Promise<{
  * Get Google Calendar auth URL
  */
 export async function getGoogleAuthUrl(token: string): Promise<{ url: string }> {
-    const response = await fetch(`${API_URL}/google/auth`, {
+    const response = await fetch(`${CALENDAR_API_URL}/google/auth`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -44,7 +44,7 @@ export async function getGoogleAuthUrl(token: string): Promise<{ url: string }> 
  * Get Outlook Calendar auth URL
  */
 export async function getOutlookAuthUrl(token: string): Promise<{ url: string }> {
-    const response = await fetch(`${API_URL}/outlook/auth`, {
+    const response = await fetch(`${CALENDAR_API_URL}/outlook/auth`, {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -61,7 +61,7 @@ export async function getOutlookAuthUrl(token: string): Promise<{ url: string }>
  * Disconnect calendar
  */
 export async function disconnectCalendar(token: string): Promise<void> {
-    const response = await fetch(`${API_URL}/disconnect`, {
+    const response = await fetch(`${CALENDAR_API_URL}/disconnect`, {
         method: "DELETE",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -77,7 +77,7 @@ export async function disconnectCalendar(token: string): Promise<void> {
  * Sync calendar manually
  */
 export async function syncCalendar(token: string): Promise<{ lastSync: string }> {
-    const response = await fetch(`${API_URL}/sync`, {
+    const response = await fetch(`${CALENDAR_API_URL}/sync`, {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -115,7 +115,7 @@ export async function getCalendarEvents(
     provider?: "google" | "outlook";
 }> {
     const response = await fetch(
-        `${API_URL}/events?startDate=${startDate}&endDate=${endDate}`,
+        `${CALENDAR_API_URL}/events?startDate=${startDate}&endDate=${endDate}`,
         {
             headers: {
                 Authorization: `Bearer ${token}`,

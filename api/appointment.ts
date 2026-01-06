@@ -1,7 +1,5 @@
-import { API_HOST, API_PORT } from "./config";
+import { API_URL } from "./config";
 import { Location } from "./user";
-
-const API_URL = `http://${API_HOST}:${API_PORT}/api`;
 
 // Tipos de cita
 export type AppointmentType = "presencial" | "videoconference";
