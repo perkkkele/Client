@@ -25,6 +25,8 @@ export interface SocialLinks {
     instagram?: string | null;
     twitter?: string | null;
     facebook?: string | null;
+    tiktok?: string | null;
+    youtube?: string | null;
 }
 
 export interface Location {
@@ -130,6 +132,11 @@ export interface User {
     location?: Location;
     schedule?: Schedule;
     socialLinks?: SocialLinks;
+    contactVisibility?: {
+        email?: boolean;
+        phone?: boolean;
+        website?: boolean;
+    };
     connectedCalendar?: {
         provider?: 'google' | 'outlook' | 'apple' | null;
         connected?: boolean;
@@ -159,8 +166,8 @@ export interface User {
         presencial?: boolean;
     };
     appointmentPrices?: {
-        videoconference?: number | null;
-        presencial?: number | null;
+        videoconference?: Record<number, number>;
+        presencial?: Record<number, number>;
     };
     workSchedule?: {
         workDays?: number[];
@@ -231,8 +238,8 @@ export interface UserUpdateData {
         presencial?: boolean;
     };
     appointmentPrices?: {
-        videoconference?: number | null;
-        presencial?: number | null;
+        videoconference?: Record<number, number>;
+        presencial?: Record<number, number>;
     };
     workSchedule?: {
         workDays?: number[];

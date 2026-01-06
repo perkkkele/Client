@@ -210,6 +210,7 @@ export default function AvatarChatScreen() {
 
     // Pause/Resume Avatar State
     const [isPaused, setIsPaused] = useState(false);
+    const [showMuteReminder, setShowMuteReminder] = useState(false);
 
     // LiveAvatar Session State
     const [sessionStatus, setSessionStatus] = useState<'idle' | 'connecting' | 'active' | 'error'>('idle');
@@ -759,6 +760,15 @@ export default function AvatarChatScreen() {
         // Hide info bubble when user sends a message
         setActiveInfoBubble(null);
 
+        // Show mute reminder if avatar is muted
+        if (isMuted && sessionStatus === 'active') {
+            setShowMuteReminder(true);
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                setShowMuteReminder(false);
+            }, 3000);
+        }
+
         // Scroll to bottom
         setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -1093,6 +1103,7 @@ export default function AvatarChatScreen() {
                             livekitUrl={livekitUrl}
                             livekitToken={livekitToken}
                             style={styles.videoImage}
+                            muted={isMuted}
                             onConnectionChange={(connected) => {
                                 console.log('LiveKit connection:', connected);
                             }}
@@ -1232,6 +1243,22 @@ export default function AvatarChatScreen() {
                                 size={20}
                                 color={COLORS.white}
                             />
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Mute Reminder Toast */}
+                    {showMuteReminder && (
+                        <TouchableOpacity
+                            style={styles.muteReminderToast}
+                            onPress={() => {
+                                setIsMuted(false);
+                                setShowMuteReminder(false);
+                            }}
+                            activeOpacity={0.9}
+                        >
+                            <MaterialIcons name="volume-off" size={14} color={COLORS.white} />
+                            <Text style={styles.muteReminderText}>Audio silenciado</Text>
+                            <Text style={styles.muteReminderAction}>Tocar para activar</Text>
                         </TouchableOpacity>
                     )}
 
@@ -1395,8 +1422,8 @@ export default function AvatarChatScreen() {
                         {/* Special Contact Content */}
                         {activeInfoBubble === "contact" && professional ? (
                             <View style={styles.contactContent}>
-                                {/* Phone - Primary CTA */}
-                                {professional.phone && (
+                                {/* Phone - Primary CTA (only if visible) */}
+                                {professional.phone && (professional.contactVisibility?.phone !== false) && (
                                     <TouchableOpacity
                                         style={styles.contactItemPrimary}
                                         onPress={() => Linking.openURL(`tel:${professional.phone}`)}
@@ -1417,8 +1444,8 @@ export default function AvatarChatScreen() {
                                     </TouchableOpacity>
                                 )}
 
-                                {/* Email */}
-                                {professional.professionalEmail && (
+                                {/* Email (only if visible) */}
+                                {professional.professionalEmail && (professional.contactVisibility?.email !== false) && (
                                     <TouchableOpacity
                                         style={styles.contactItem}
                                         onPress={() => Linking.openURL(`mailto:${professional.professionalEmail}`)}
@@ -1433,8 +1460,8 @@ export default function AvatarChatScreen() {
                                     </TouchableOpacity>
                                 )}
 
-                                {/* Website */}
-                                {professional.website && (
+                                {/* Website (only if visible) */}
+                                {professional.website && (professional.contactVisibility?.website !== false) && (
                                     <TouchableOpacity
                                         style={styles.contactItem}
                                         onPress={() => {
@@ -1461,34 +1488,34 @@ export default function AvatarChatScreen() {
                                         <View style={styles.socialLinks}>
                                             {professional.socialLinks.instagram && (
                                                 <TouchableOpacity
-                                                    style={styles.socialButton}
+                                                    style={[styles.socialButton, { backgroundColor: "#FCE7F3" }]}
                                                     onPress={() => Linking.openURL(professional.socialLinks!.instagram!)}
                                                 >
-                                                    <Text style={[styles.socialIcon, { color: "#E4405F" }]}>📷</Text>
+                                                    <FontAwesome5 name="instagram" size={18} color="#E4405F" />
                                                 </TouchableOpacity>
                                             )}
                                             {professional.socialLinks.facebook && (
                                                 <TouchableOpacity
-                                                    style={styles.socialButton}
+                                                    style={[styles.socialButton, { backgroundColor: "#DBEAFE" }]}
                                                     onPress={() => Linking.openURL(professional.socialLinks!.facebook!)}
                                                 >
-                                                    <Text style={[styles.socialIcon, { color: "#1877F2" }]}>📘</Text>
+                                                    <FontAwesome5 name="facebook-f" size={18} color="#1877F2" />
                                                 </TouchableOpacity>
                                             )}
                                             {professional.socialLinks.twitter && (
                                                 <TouchableOpacity
-                                                    style={styles.socialButton}
+                                                    style={[styles.socialButton, { backgroundColor: "#F3F4F6" }]}
                                                     onPress={() => Linking.openURL(professional.socialLinks!.twitter!)}
                                                 >
-                                                    <Text style={[styles.socialIcon, { color: "#1DA1F2" }]}>🐦</Text>
+                                                    <Text style={{ fontSize: 16, fontWeight: "900", color: "#000000" }}>𝕏</Text>
                                                 </TouchableOpacity>
                                             )}
                                             {professional.socialLinks.linkedin && (
                                                 <TouchableOpacity
-                                                    style={styles.socialButton}
+                                                    style={[styles.socialButton, { backgroundColor: "#E0F2FE" }]}
                                                     onPress={() => Linking.openURL(professional.socialLinks!.linkedin!)}
                                                 >
-                                                    <Text style={[styles.socialIcon, { color: "#0A66C2" }]}>💼</Text>
+                                                    <FontAwesome5 name="linkedin-in" size={18} color="#0A66C2" />
                                                 </TouchableOpacity>
                                             )}
                                         </View>
@@ -1588,7 +1615,7 @@ export default function AvatarChatScreen() {
                                             <Text style={styles.directionsButtonText}>Cómo llegar</Text>
                                         </TouchableOpacity>
 
-                                        {professional.phone && (
+                                        {professional.phone && (professional.contactVisibility?.phone !== false) && (
                                             <TouchableOpacity
                                                 style={styles.callLocationButton}
                                                 onPress={() => Linking.openURL(`tel:${professional.phone}`)}
@@ -1653,7 +1680,7 @@ export default function AvatarChatScreen() {
                                         }}
                                     >
                                         <View style={[styles.shareIconContainer, { backgroundColor: COLORS.black }]}>
-                                            <FontAwesome5 name="x-twitter" size={22} color={COLORS.white} />
+                                            <Text style={{ fontSize: 20, fontWeight: "900", color: COLORS.white }}>𝕏</Text>
                                         </View>
                                         <Text style={styles.shareLabel}>X</Text>
                                     </TouchableOpacity>
@@ -2365,6 +2392,28 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.4)",
         alignItems: "center",
         justifyContent: "center",
+    },
+    muteReminderToast: {
+        position: "absolute",
+        top: 12,
+        left: 56,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: "rgba(0,0,0,0.75)",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    muteReminderText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: COLORS.white,
+    },
+    muteReminderAction: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.primary,
     },
     videoActions: {
         position: "absolute",

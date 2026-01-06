@@ -11,7 +11,7 @@ import {
     Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, API_HOST, API_PORT, chatApi, analyticsApi } from "../../api";
 import { User } from "../../api/user";
@@ -258,7 +258,7 @@ export default function ProfessionalProfileScreen() {
                 <View style={styles.card}>
                     <Text style={styles.sectionTitle}>DATOS DE CONTACTO</Text>
 
-                    {professional.phone && (
+                    {professional.phone && (professional.contactVisibility?.phone !== false) && (
                         <TouchableOpacity style={styles.contactRow} onPress={() => callPhone(professional.phone)}>
                             <View style={styles.contactIcon}>
                                 <MaterialIcons name="call" size={16} color={COLORS.gray500} />
@@ -267,7 +267,7 @@ export default function ProfessionalProfileScreen() {
                         </TouchableOpacity>
                     )}
 
-                    {professional.professionalEmail && (
+                    {professional.professionalEmail && (professional.contactVisibility?.email !== false) && (
                         <TouchableOpacity style={styles.contactRow} onPress={() => sendEmail(professional.professionalEmail)}>
                             <View style={styles.contactIcon}>
                                 <MaterialIcons name="mail" size={16} color={COLORS.gray500} />
@@ -276,7 +276,7 @@ export default function ProfessionalProfileScreen() {
                         </TouchableOpacity>
                     )}
 
-                    {professional.website && (
+                    {professional.website && (professional.contactVisibility?.website !== false) && (
                         <TouchableOpacity style={styles.contactRow} onPress={() => openLink(professional.website)}>
                             <View style={styles.contactIcon}>
                                 <MaterialIcons name="language" size={16} color={COLORS.gray500} />
@@ -295,7 +295,7 @@ export default function ProfessionalProfileScreen() {
                                         style={[styles.socialButton, { backgroundColor: "#E0F2FE" }]}
                                         onPress={() => openLink(professional.socialLinks?.linkedin)}
                                     >
-                                        <MaterialIcons name="public" size={20} color="#0369A1" />
+                                        <FontAwesome5 name="linkedin-in" size={18} color="#0A66C2" />
                                     </TouchableOpacity>
                                 )}
                                 {professional.socialLinks.instagram && (
@@ -303,15 +303,15 @@ export default function ProfessionalProfileScreen() {
                                         style={[styles.socialButton, { backgroundColor: "#FCE7F3" }]}
                                         onPress={() => openLink(professional.socialLinks?.instagram)}
                                     >
-                                        <MaterialIcons name="camera-alt" size={20} color="#BE185D" />
+                                        <FontAwesome5 name="instagram" size={18} color="#E4405F" />
                                     </TouchableOpacity>
                                 )}
                                 {professional.socialLinks.twitter && (
                                     <TouchableOpacity
-                                        style={[styles.socialButton, { backgroundColor: "#DBEAFE" }]}
+                                        style={[styles.socialButton, { backgroundColor: "#F3F4F6" }]}
                                         onPress={() => openLink(professional.socialLinks?.twitter)}
                                     >
-                                        <MaterialIcons name="tag" size={20} color="#1D4ED8" />
+                                        <Text style={{ fontSize: 16, fontWeight: "900", color: "#000000" }}>𝕏</Text>
                                     </TouchableOpacity>
                                 )}
                                 {professional.socialLinks.facebook && (
@@ -319,7 +319,7 @@ export default function ProfessionalProfileScreen() {
                                         style={[styles.socialButton, { backgroundColor: "#DBEAFE" }]}
                                         onPress={() => openLink(professional.socialLinks?.facebook)}
                                     >
-                                        <MaterialIcons name="facebook" size={20} color="#1D4ED8" />
+                                        <FontAwesome5 name="facebook-f" size={18} color="#1877F2" />
                                     </TouchableOpacity>
                                 )}
                             </View>

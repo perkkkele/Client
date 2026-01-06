@@ -11,7 +11,7 @@ import {
     ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
@@ -72,12 +72,19 @@ export default function ContactInfoScreen() {
         lng: user?.location?.lng || null,
     });
 
+    // Visibility toggles
+    const [phoneVisible, setPhoneVisible] = useState(user?.contactVisibility?.phone ?? true);
+    const [emailVisible, setEmailVisible] = useState(user?.contactVisibility?.email ?? true);
+    const [websiteVisible, setWebsiteVisible] = useState(user?.contactVisibility?.website ?? true);
+
     // Social links state
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([
         { id: "linkedin", platform: "LinkedIn", icon: "public", placeholder: "linkedin.com/in/usuario", value: user?.socialLinks?.linkedin || "", color: "#0077B5", bgColor: "#E0F2FE" },
         { id: "instagram", platform: "Instagram", icon: "camera-alt", placeholder: "@usuario", value: user?.socialLinks?.instagram || "", color: "#E4405F", bgColor: "#FCE7F3" },
-        { id: "twitter", platform: "X (Twitter)", icon: "tag", placeholder: "@usuario", value: user?.socialLinks?.twitter || "", color: "#1DA1F2", bgColor: "#DBEAFE" },
         { id: "facebook", platform: "Facebook", icon: "facebook", placeholder: "facebook.com/usuario", value: user?.socialLinks?.facebook || "", color: "#1877F2", bgColor: "#DBEAFE" },
+        { id: "tiktok", platform: "TikTok", icon: "music-note", placeholder: "@usuario", value: user?.socialLinks?.tiktok || "", color: "#000000", bgColor: "#F3F4F6" },
+        { id: "youtube", platform: "YouTube", icon: "play-arrow", placeholder: "youtube.com/@canal", value: user?.socialLinks?.youtube || "", color: "#FF0000", bgColor: "#FEE2E2" },
+        { id: "twitter", platform: "X (Twitter)", icon: "tag", placeholder: "@usuario", value: user?.socialLinks?.twitter || "", color: "#000000", bgColor: "#F3F4F6" },
     ]);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -114,6 +121,11 @@ export default function ContactInfoScreen() {
                     website: website.trim() || undefined,
                     location: finalLocationData,
                     socialLinks: Object.keys(socialLinksObj).length > 0 ? socialLinksObj : undefined,
+                    contactVisibility: {
+                        phone: phoneVisible,
+                        email: emailVisible,
+                        website: websiteVisible,
+                    },
                 } as any);
 
                 if (refreshUser) {
@@ -175,14 +187,26 @@ export default function ContactInfoScreen() {
                                 </View>
                                 <Text style={styles.inputLabelText}>Teléfono profesional</Text>
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                value={phone}
-                                onChangeText={setPhone}
-                                placeholder="+34 600 000 000"
-                                placeholderTextColor={COLORS.gray400}
-                                keyboardType="phone-pad"
-                            />
+                            <View style={styles.inputWithVisibility}>
+                                <TextInput
+                                    style={styles.inputFlex}
+                                    value={phone}
+                                    onChangeText={setPhone}
+                                    placeholder="+34 600 000 000"
+                                    placeholderTextColor={COLORS.gray400}
+                                    keyboardType="phone-pad"
+                                />
+                                <TouchableOpacity
+                                    style={styles.visibilityButton}
+                                    onPress={() => setPhoneVisible(!phoneVisible)}
+                                >
+                                    <MaterialIcons
+                                        name={phoneVisible ? "visibility" : "visibility-off"}
+                                        size={20}
+                                        color={phoneVisible ? COLORS.primary : COLORS.gray400}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <View style={styles.divider} />
@@ -195,15 +219,27 @@ export default function ContactInfoScreen() {
                                 </View>
                                 <Text style={styles.inputLabelText}>Email profesional</Text>
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                value={professionalEmail}
-                                onChangeText={setProfessionalEmail}
-                                placeholder="contacto@tuprofesion.com"
-                                placeholderTextColor={COLORS.gray400}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                            />
+                            <View style={styles.inputWithVisibility}>
+                                <TextInput
+                                    style={styles.inputFlex}
+                                    value={professionalEmail}
+                                    onChangeText={setProfessionalEmail}
+                                    placeholder="contacto@tuprofesion.com"
+                                    placeholderTextColor={COLORS.gray400}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                />
+                                <TouchableOpacity
+                                    style={styles.visibilityButton}
+                                    onPress={() => setEmailVisible(!emailVisible)}
+                                >
+                                    <MaterialIcons
+                                        name={emailVisible ? "visibility" : "visibility-off"}
+                                        size={20}
+                                        color={emailVisible ? COLORS.primary : COLORS.gray400}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <View style={styles.divider} />
@@ -216,15 +252,27 @@ export default function ContactInfoScreen() {
                                 </View>
                                 <Text style={styles.inputLabelText}>Sitio web</Text>
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                value={website}
-                                onChangeText={setWebsite}
-                                placeholder="www.tusitio.com"
-                                placeholderTextColor={COLORS.gray400}
-                                keyboardType="url"
-                                autoCapitalize="none"
-                            />
+                            <View style={styles.inputWithVisibility}>
+                                <TextInput
+                                    style={styles.inputFlex}
+                                    value={website}
+                                    onChangeText={setWebsite}
+                                    placeholder="www.tusitio.com"
+                                    placeholderTextColor={COLORS.gray400}
+                                    keyboardType="url"
+                                    autoCapitalize="none"
+                                />
+                                <TouchableOpacity
+                                    style={styles.visibilityButton}
+                                    onPress={() => setWebsiteVisible(!websiteVisible)}
+                                >
+                                    <MaterialIcons
+                                        name={websiteVisible ? "visibility" : "visibility-off"}
+                                        size={20}
+                                        color={websiteVisible ? COLORS.primary : COLORS.gray400}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 </View>
@@ -279,11 +327,21 @@ export default function ContactInfoScreen() {
                                 <View style={styles.inputGroup}>
                                     <View style={styles.inputLabel}>
                                         <View style={[styles.inputIcon, { backgroundColor: social.bgColor }]}>
-                                            <MaterialIcons
-                                                name={social.icon as any}
-                                                size={18}
-                                                color={social.color}
-                                            />
+                                            {social.id === "linkedin" ? (
+                                                <FontAwesome5 name="linkedin-in" size={16} color={social.color} />
+                                            ) : social.id === "instagram" ? (
+                                                <FontAwesome5 name="instagram" size={16} color={social.color} />
+                                            ) : social.id === "twitter" ? (
+                                                <Text style={{ fontSize: 14, fontWeight: "900", color: "#000000" }}>𝕏</Text>
+                                            ) : social.id === "facebook" ? (
+                                                <FontAwesome5 name="facebook-f" size={16} color={social.color} />
+                                            ) : social.id === "tiktok" ? (
+                                                <FontAwesome5 name="tiktok" size={16} color={social.color} />
+                                            ) : social.id === "youtube" ? (
+                                                <FontAwesome5 name="youtube" size={16} color={social.color} />
+                                            ) : (
+                                                <MaterialIcons name={social.icon as any} size={18} color={social.color} />
+                                            )}
                                         </View>
                                         <Text style={styles.inputLabelText}>{social.platform}</Text>
                                     </View>
@@ -412,6 +470,23 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         fontSize: 15,
         color: COLORS.textMain,
+    },
+    inputWithVisibility: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray100,
+        borderRadius: 10,
+    },
+    inputFlex: {
+        flex: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 15,
+        color: COLORS.textMain,
+    },
+    visibilityButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 12,
     },
     divider: {
         height: 1,

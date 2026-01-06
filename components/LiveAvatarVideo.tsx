@@ -15,6 +15,7 @@ interface LiveAvatarVideoProps {
     onTranscription?: (text: string, isFinal: boolean) => void;
     onUserTranscription?: (text: string, isFinal: boolean) => void;
     onSendTextReady?: (sendText: (text: string) => void) => void;
+    muted?: boolean;
     style?: any;
 }
 
@@ -199,17 +200,52 @@ function TextSender({
     return null;
 }
 
+// Component to control audio mute state
+function AudioMuter({ muted }: { muted?: boolean }) {
+    const { useRemoteParticipants } = LiveKitModule;
+
+    // Get remote participants
+    const participants = useRemoteParticipants ? useRemoteParticipants() : [];
+
+    useEffect(() => {
+        // Find heygen participant and control audio
+        const heygenParticipant = participants?.find((p: any) => p.identity === 'heygen');
+        if (heygenParticipant) {
+            // Get audio tracks
+            const audioTracks = heygenParticipant.audioTrackPublications;
+            if (audioTracks) {
+                audioTracks.forEach((pub: any) => {
+                    if (pub?.track) {
+                        // Set the audio element volume to 0 when muted
+                        if (pub.track.mediaStreamTrack) {
+                            pub.track.mediaStreamTrack.enabled = !muted;
+                        }
+                        // Also try to set volume on any audio element
+                        if (pub.track.setVolume) {
+                            pub.track.setVolume(muted ? 0 : 1);
+                        }
+                    }
+                });
+            }
+        }
+    }, [muted, participants]);
+
+    return null;
+}
+
 // Inner component that uses LiveKit hooks (must be inside LiveKitRoom)
 function VideoRenderer({
     style,
     onTranscription,
     onUserTranscription,
-    onSendTextReady
+    onSendTextReady,
+    muted
 }: {
     style?: any;
     onTranscription?: (text: string, isFinal: boolean) => void;
     onUserTranscription?: (text: string, isFinal: boolean) => void;
     onSendTextReady?: (sendText: (text: string) => void) => void;
+    muted?: boolean;
 }) {
     const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
 
@@ -244,6 +280,7 @@ function VideoRenderer({
                 onUserTranscription={onUserTranscription}
             />
             <TextSender onSendTextReady={onSendTextReady} />
+            <AudioMuter muted={muted} />
         </View>
     );
 }
@@ -257,6 +294,7 @@ function LiveKitVideoPlayer({
     onTranscription,
     onUserTranscription,
     onSendTextReady,
+    muted,
     style
 }: LiveAvatarVideoProps) {
     const [isConnected, setIsConnected] = useState(false);
@@ -303,6 +341,7 @@ function LiveKitVideoPlayer({
                     onTranscription={onTranscription}
                     onUserTranscription={onUserTranscription}
                     onSendTextReady={onSendTextReady}
+                    muted={muted}
                 />
             )}
         </LiveKitRoom>

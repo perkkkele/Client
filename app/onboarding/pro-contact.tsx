@@ -16,7 +16,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import * as calendarApi from "../../api/calendar";
@@ -159,15 +159,42 @@ export default function ProContactScreen() {
         setIsLoading(true);
         try {
             if (token) {
-                // Construir el schedule basado en los días seleccionados
-                const schedule: any = {};
-                DAYS.forEach(day => {
-                    schedule[day.key] = {
-                        from: workStart,
-                        to: workEnd,
-                        enabled: workDays.includes(day.id)
-                    };
-                });
+                // Day ID to number mapping (0=Dom, 1=Lun, ...)
+                const dayIdToNumber: Record<string, number> = {
+                    "D": 0, // Domingo
+                    "L": 1, // Lunes
+                    "M": 2, // Martes
+                    "X": 3, // Miércoles
+                    "J": 4, // Jueves
+                    "V": 5, // Viernes
+                    "S": 6, // Sábado
+                };
+
+                // Construir workSchedule compatible con work-schedule.tsx
+                // Convert selected day IDs (L, M, X, J, V, S, D) to day numbers (0-6)
+                const selectedDayNumbers: number[] = workDays
+                    .map(dayId => dayIdToNumber[dayId])
+                    .filter((n): n is number => n !== undefined)
+                    .sort((a, b) => a - b);
+
+                const dayOverrides: { day: number; enabled: boolean; start: string; end: string }[] =
+                    selectedDayNumbers.map(dayNum => ({
+                        day: dayNum,
+                        enabled: true,
+                        start: workStart,
+                        end: workEnd,
+                    }));
+
+                // Build workSchedule object (same format as work-schedule.tsx)
+                const workSchedule = {
+                    workDays: selectedDayNumbers,
+                    defaultHours: {
+                        start: workStart,
+                        end: workEnd,
+                    },
+                    dayOverrides,
+                    breaks: [],
+                };
 
                 // Usar locationData del autocompletado o dirección sin validar
                 const finalLocationData = locationData.lat && locationData.lng
@@ -184,12 +211,14 @@ export default function ProContactScreen() {
                     phone: contactPhone.trim() || undefined,
                     website: website.trim() || undefined,
                     location: finalLocationData,
-                    schedule,
+                    workSchedule,
                     socialLinks: {
                         linkedin: linkedin.trim() || null,
                         instagram: instagram.trim() || null,
                         twitter: twitter.trim() || null,
-                        facebook: facebook.trim() || null
+                        facebook: facebook.trim() || null,
+                        tiktok: tiktok.trim() || null,
+                        youtube: youtube.trim() || null,
                     },
                     contactVisibility: {
                         email: emailVisible,
@@ -430,7 +459,7 @@ export default function ProContactScreen() {
                     <View style={styles.socialCard}>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#0077b5" }]}>
-                                <Text style={styles.socialIconText}>in</Text>
+                                <FontAwesome5 name="linkedin-in" size={12} color="#FFFFFF" />
                             </View>
                             <TextInput
                                 style={styles.socialInput}
@@ -442,7 +471,7 @@ export default function ProContactScreen() {
                         </View>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#E1306C" }]}>
-                                <MaterialIcons name="camera-alt" size={14} color="#FFFFFF" />
+                                <FontAwesome5 name="instagram" size={12} color="#FFFFFF" />
                             </View>
                             <TextInput
                                 style={styles.socialInput}
@@ -454,7 +483,7 @@ export default function ProContactScreen() {
                         </View>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#1877F2" }]}>
-                                <Text style={styles.socialIconText}>f</Text>
+                                <FontAwesome5 name="facebook-f" size={12} color="#FFFFFF" />
                             </View>
                             <TextInput
                                 style={styles.socialInput}
@@ -466,7 +495,7 @@ export default function ProContactScreen() {
                         </View>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#000000" }]}>
-                                <Text style={styles.socialIconText}>♪</Text>
+                                <FontAwesome5 name="tiktok" size={12} color="#FFFFFF" />
                             </View>
                             <TextInput
                                 style={styles.socialInput}
@@ -478,7 +507,7 @@ export default function ProContactScreen() {
                         </View>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#FF0000" }]}>
-                                <MaterialIcons name="play-arrow" size={14} color="#FFFFFF" />
+                                <FontAwesome5 name="youtube" size={12} color="#FFFFFF" />
                             </View>
                             <TextInput
                                 style={styles.socialInput}
@@ -571,8 +600,8 @@ export default function ProContactScreen() {
                         />
                     </View>
                 </TouchableOpacity>
-            </Modal>
-        </SafeAreaView>
+            </Modal >
+        </SafeAreaView >
     );
 }
 

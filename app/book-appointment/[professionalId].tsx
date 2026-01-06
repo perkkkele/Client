@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     ScrollView,
@@ -73,10 +73,14 @@ interface ServiceOption {
     description: string;
 }
 
-const SERVICE_OPTIONS: ServiceOption[] = [
-    { id: "30min", label: "Consulta 30 min", duration: 30, price: 5000, description: "Videollamada básica" },
-    { id: "60min", label: "Consulta 60 min", duration: 60, price: 9000, description: "Revisión completa" },
-];
+// Default prices (in cents) - used if professional hasn't configured pricing
+const DEFAULT_PRICES: Record<number, number> = {
+    15: 2500,
+    30: 5000,
+    45: 7500,
+    60: 9000,
+    90: 12000,
+};
 
 export default function BookAppointmentScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
@@ -92,7 +96,71 @@ export default function BookAppointmentScreen() {
 
     // Nuevos estados para tipo de cita y servicio
     const [appointmentType, setAppointmentType] = useState<AppointmentType>("videoconference");
-    const [selectedService, setSelectedService] = useState<ServiceType>("30min");
+    const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+
+    // Build service options dynamically from professional's pricing
+    const SERVICE_OPTIONS = useMemo((): ServiceOption[] => {
+        console.log('[BookAppointment] Building service options, professional:', professional?._id, 'prices:', professional?.appointmentPrices);
+
+        if (!professional) {
+            console.log('[BookAppointment] No professional data yet, using defaults');
+            return [
+                { id: "30min", label: "Consulta 30 min", duration: 30, price: DEFAULT_PRICES[30], description: "Consulta básica" },
+                { id: "60min", label: "Consulta 60 min", duration: 60, price: DEFAULT_PRICES[60], description: "Consulta completa" },
+            ];
+        }
+
+        const priceData = professional.appointmentPrices;
+        const durations = professional.appointmentDurations;
+
+        // Get relevant prices based on appointment type
+        const typePrices = appointmentType === "videoconference"
+            ? priceData?.videoconference
+            : priceData?.presencial;
+
+        console.log('[BookAppointment] Type prices for', appointmentType, ':', typePrices);
+
+        // Default duration for current type
+        const defaultDuration = appointmentType === "videoconference"
+            ? (durations?.videoconference || 60)
+            : (durations?.presencial || 60);
+
+        // Build options for available durations with configured prices
+        const options: ServiceOption[] = [];
+        const availableDurations = [15, 30, 45, 60, 90]; // All possible durations
+
+        for (const duration of availableDurations) {
+            // Price from professional's config (already in euros)
+            const priceInEuros = typePrices?.[duration] ?? 0;
+
+            // Only include durations that have a configured price > 0
+            if (priceInEuros > 0) {
+                const priceInCents = priceInEuros * 100;
+                const durationLabel = duration < 60 ? `${duration}min` : `${duration}min`;
+
+                options.push({
+                    id: duration <= 30 ? "30min" : "60min", // Map to ServiceType
+                    label: `Consulta ${duration} min`,
+                    duration,
+                    price: priceInCents,
+                    description: duration === defaultDuration ? "Duración por defecto" :
+                        (duration < 45 ? "Consulta breve" : "Consulta completa"),
+                });
+            }
+        }
+
+        // If no prices configured, show defaults
+        if (options.length === 0) {
+            console.log('[BookAppointment] No configured prices, using defaults');
+            return [
+                { id: "30min", label: "Consulta 30 min", duration: 30, price: DEFAULT_PRICES[30], description: "Consulta básica" },
+                { id: "60min", label: "Consulta 60 min", duration: 60, price: DEFAULT_PRICES[60], description: "Consulta completa" },
+            ];
+        }
+
+        console.log('[BookAppointment] Built options:', options);
+        return options;
+    }, [professional, appointmentType]);
 
     const loadProfessional = useCallback(async () => {
         if (!token || !professionalId) return;
@@ -196,8 +264,9 @@ export default function BookAppointmentScreen() {
         return `${dayName}, ${day} ${month}`;
     };
 
-    const getSelectedServiceOption = (): ServiceOption => {
-        return SERVICE_OPTIONS.find(s => s.id === selectedService) || SERVICE_OPTIONS[0];
+    const getSelectedServiceOption = (): ServiceOption | null => {
+        if (selectedDuration === null) return null;
+        return SERVICE_OPTIONS.find(s => s.duration === selectedDuration) || null;
     };
 
     const formatPrice = (cents: number): string => {
@@ -214,14 +283,15 @@ export default function BookAppointmentScreen() {
         try {
             const dateStr = formatLocalDate(selectedDate);
             const serviceOption = getSelectedServiceOption();
+            const price = serviceOption?.price || 0;
 
             const appointment = await createAppointment(token, {
                 professionalId,
                 date: dateStr,
                 time: selectedTime,
                 type: appointmentType,
-                serviceType: selectedService,
-                price: serviceOption.price,
+                serviceType: selectedDuration && selectedDuration <= 30 ? "30min" : "60min",
+                price,
             });
 
             // Payment logic:
@@ -239,7 +309,7 @@ export default function BookAppointmentScreen() {
                     if (canOpen) {
                         Alert.alert(
                             "¡Cita Agendada!",
-                            `Se abrirá la página de pago (${formatPrice(serviceOption.price)}) para confirmar tu cita.`,
+                            `Se abrirá la página de pago (${formatPrice(price)}) para confirmar tu cita.`,
                             [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
                         );
                     } else {
@@ -477,24 +547,24 @@ export default function BookAppointmentScreen() {
                     <View style={styles.ratesContainer}>
                         {SERVICE_OPTIONS.map((service) => (
                             <TouchableOpacity
-                                key={service.id}
+                                key={service.duration}
                                 style={[
                                     styles.rateItem,
-                                    selectedService === service.id && styles.rateItemSelected,
+                                    selectedDuration === service.duration && styles.rateItemSelected,
                                 ]}
-                                onPress={() => setSelectedService(service.id)}
+                                onPress={() => setSelectedDuration(service.duration)}
                             >
                                 <View style={styles.rateLeft}>
                                     <View style={[
                                         styles.rateIcon,
                                         {
-                                            backgroundColor: service.id === "30min" ? COLORS.blue100 : COLORS.purple100,
+                                            backgroundColor: service.duration <= 30 ? COLORS.blue100 : COLORS.purple100,
                                         },
                                     ]}>
                                         <MaterialIcons
-                                            name={service.id === "30min" ? "timer" : "history-edu"}
+                                            name={service.duration <= 30 ? "timer" : "history-edu"}
                                             size={22}
-                                            color={service.id === "30min" ? COLORS.blue600 : COLORS.purple600}
+                                            color={service.duration <= 30 ? COLORS.blue600 : COLORS.purple600}
                                         />
                                     </View>
                                     <View>
@@ -504,7 +574,7 @@ export default function BookAppointmentScreen() {
                                 </View>
                                 <View style={styles.rateRight}>
                                     <Text style={styles.ratePrice}>{formatPrice(service.price)}</Text>
-                                    {selectedService === service.id && (
+                                    {selectedDuration === service.duration && (
                                         <MaterialIcons name="check-circle" size={20} color={COLORS.green600} />
                                     )}
                                 </View>
