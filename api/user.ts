@@ -147,6 +147,7 @@ export interface User {
     ratingCount?: number;
     isOnline?: boolean;
     isFeatured?: boolean;
+    isVerified?: boolean;  // Professional verified by TwinPro
     priceRange?: 1 | 2 | 3 | null;
     tags?: string[];
 

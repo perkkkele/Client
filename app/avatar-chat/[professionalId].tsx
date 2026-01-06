@@ -900,47 +900,26 @@ export default function AvatarChatScreen() {
         await loadAvailableSlots(date);
     };
 
-    // Confirm appointment booking
-    const handleConfirmAppointment = async () => {
-        if (!token || !professionalId || !selectedDate || !selectedTime) return;
+    // Navigate to appointment booking screen with pre-filled date and time
+    const handleConfirmAppointment = () => {
+        if (!professionalId || !selectedDate || !selectedTime) return;
 
-        setBookingAppointment(true);
-        try {
-            await appointmentApi.createAppointment(token, {
-                professionalId,
-                date: selectedDate,
-                time: selectedTime,
-                type: 'presencial',
-                serviceType: '30min',
-                price: 0, // Default price, can be configured in professional settings
-            });
-            // Show success and close bubble
-            setActiveInfoBubble(null);
-            setSelectedDate("");
-            setSelectedTime(null);
-            setAvailableSlots([]);
-            // Could add a success message to chat here
-            const successMessage: Message = {
-                id: `system-${Date.now()}`,
-                type: "text",
-                content: `✅ Cita confirmada para el ${selectedDate} a las ${selectedTime}. El profesional recibirá la notificación.`,
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-            };
-            setMessages(prev => [...prev, successMessage]);
-        } catch (error: any) {
-            console.error("Error booking appointment:", error);
-            const errorMessage: Message = {
-                id: `error-${Date.now()}`,
-                type: "text",
-                content: `❌ No se pudo agendar la cita: ${error.message || "Error desconocido"}`,
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
-            };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setBookingAppointment(false);
-        }
+        // Close the bubble and reset state
+        setActiveInfoBubble(null);
+
+        // Navigate to book-appointment with pre-filled data
+        router.push({
+            pathname: `/book-appointment/${professionalId}`,
+            params: {
+                prefilledDate: selectedDate,
+                prefilledTime: selectedTime,
+            }
+        } as any);
+
+        // Reset local state
+        setSelectedDate("");
+        setSelectedTime(null);
+        setAvailableSlots([]);
     };
 
     if (isLoading) {
@@ -1300,8 +1279,8 @@ export default function AvatarChatScreen() {
                         >
                             <MaterialIcons name="ios-share" size={18} color={activeInfoBubble === "share" ? COLORS.black : COLORS.white} />
                         </TouchableOpacity>
-                        {/* Calendar icon for appointments - DEBUG: showing always */}
-                        {(professional?.appointmentsEnabled || true) && (
+                        {/* Calendar icon for appointments - only visible if professional accepts appointments */}
+                        {professional?.appointmentsEnabled && (
                             <TouchableOpacity
                                 style={[
                                     styles.videoActionButton,
@@ -1801,28 +1780,22 @@ export default function AvatarChatScreen() {
                                     )}
                                 </View>
 
-                                {/* Confirm Button */}
+                                {/* Continue to Booking Button */}
                                 <TouchableOpacity
                                     style={[
                                         styles.appointmentConfirmButton,
-                                        (!selectedDate || !selectedTime || bookingAppointment) && styles.appointmentConfirmButtonDisabled
+                                        (!selectedDate || !selectedTime) && styles.appointmentConfirmButtonDisabled
                                     ]}
-                                    disabled={!selectedDate || !selectedTime || bookingAppointment}
+                                    disabled={!selectedDate || !selectedTime}
                                     onPress={handleConfirmAppointment}
                                 >
-                                    {bookingAppointment ? (
-                                        <ActivityIndicator size="small" color={COLORS.black} />
-                                    ) : (
-                                        <>
-                                            <Text style={styles.appointmentConfirmText}>CONFIRMAR CITA</Text>
-                                            <MaterialIcons name="check-circle" size={16} color={COLORS.black} />
-                                        </>
-                                    )}
+                                    <Text style={styles.appointmentConfirmText}>CONTINUAR</Text>
+                                    <MaterialIcons name="arrow-forward" size={16} color={COLORS.black} />
                                 </TouchableOpacity>
 
-                                {/* Terms */}
+                                {/* Info */}
                                 <Text style={styles.appointmentTerms}>
-                                    Al confirmar la cita aceptas los términos y condiciones del servicio.
+                                    Selecciona el tipo de cita y duración en la siguiente pantalla.
                                 </Text>
                             </View>
                         ) : (

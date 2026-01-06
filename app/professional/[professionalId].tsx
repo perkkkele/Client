@@ -2,6 +2,7 @@ import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -93,6 +94,22 @@ export default function ProfessionalProfileScreen() {
     const handleStartChat = () => {
         if (!professionalId) return;
         router.push(`/avatar-chat/${professionalId}`);
+    };
+
+    const handleBookAppointment = () => {
+        if (!professionalId || !professional) return;
+
+        // Check if professional accepts appointments
+        if (!professional.appointmentsEnabled) {
+            Alert.alert(
+                "Citas no disponibles",
+                `${professional.publicName || professional.firstname || "Este profesional"} actualmente no acepta citas online. Puedes contactarle directamente a través del chat o sus datos de contacto.`,
+                [{ text: "Entendido", style: "default" }]
+            );
+            return;
+        }
+
+        router.push(`/book-appointment/${professionalId}` as any);
     };
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
@@ -214,10 +231,19 @@ export default function ProfessionalProfileScreen() {
                                 <Text style={styles.ratingCount}>({professional.ratingCount || 0} reseñas)</Text>
                             </TouchableOpacity>
                         )}
-                        <View style={styles.verifiedBadge}>
-                            <MaterialIcons name="verified" size={16} color={COLORS.gray500} />
-                            <Text style={styles.verifiedText}>Verificado</Text>
-                        </View>
+                        {professional.isVerified && (
+                            <TouchableOpacity
+                                style={styles.verifiedBadge}
+                                onPress={() => Alert.alert(
+                                    "✓ Perfil Verificado",
+                                    "Este perfil ha sido validado por TwinPro.\n\nSu identidad y actividad profesional han sido comprobadas para ofrecerte una experiencia segura y fiable.",
+                                    [{ text: "Entendido", style: "default" }]
+                                )}
+                            >
+                                <MaterialIcons name="verified" size={16} color={COLORS.blue500} />
+                                <Text style={styles.verifiedText}>Verificado</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Action Buttons */}
@@ -226,7 +252,7 @@ export default function ProfessionalProfileScreen() {
                             <MaterialIcons name="chat-bubble" size={20} color={COLORS.textMain} />
                             <Text style={styles.primaryButtonText}>Iniciar Chat</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push(`/book-appointment/${professionalId}` as any)}>
+                        <TouchableOpacity style={styles.secondaryButton} onPress={handleBookAppointment}>
                             <MaterialIcons name="calendar-month" size={20} color={COLORS.textMain} />
                             <Text style={styles.secondaryButtonText}>Agendar Cita</Text>
                         </TouchableOpacity>

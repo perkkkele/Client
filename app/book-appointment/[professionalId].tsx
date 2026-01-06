@@ -83,13 +83,25 @@ const DEFAULT_PRICES: Record<number, number> = {
 };
 
 export default function BookAppointmentScreen() {
-    const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
+    const { professionalId, prefilledDate, prefilledTime } = useLocalSearchParams<{
+        professionalId: string;
+        prefilledDate?: string;  // Format: YYYY-MM-DD from chat bubble
+        prefilledTime?: string;  // Format: HH:MM from chat bubble
+    }>();
     const { token, user } = useAuth();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const [selectedTime, setSelectedTime] = useState<string | null>(null);
+    // Initialize selectedDate from prefilledDate if provided
+    const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+        if (prefilledDate) {
+            const [year, month, day] = prefilledDate.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return null;
+    });
+    // Initialize selectedTime from prefilledTime if provided
+    const [selectedTime, setSelectedTime] = useState<string | null>(prefilledTime || null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -189,7 +201,8 @@ export default function BookAppointmentScreen() {
             // Pass appointment type to get correct duration-based slots
             const response = await getAvailableSlots(token, professionalId, dateStr, appointmentType);
             setTimeSlots(response.slots);
-            setSelectedTime(null);
+            // Don't reset time if we have a prefilled value and this is initial load
+            // Only reset if user manually changed the date
         } catch (error) {
             console.error("Error loading slots:", error);
             // Fallback a slots simulados si falla la API
@@ -199,11 +212,18 @@ export default function BookAppointmentScreen() {
         }
     }, [token, professionalId, selectedDate, appointmentType]);
 
+    // Track if it's the first load with prefilled data
+    const [hasAppliedPrefill, setHasAppliedPrefill] = useState(false);
+
     useEffect(() => {
         if (selectedDate) {
             loadAvailableSlots();
+            // After first load, mark prefill as applied
+            if (prefilledDate && !hasAppliedPrefill) {
+                setHasAppliedPrefill(true);
+            }
         }
-    }, [selectedDate, loadAvailableSlots]);
+    }, [selectedDate, loadAvailableSlots, prefilledDate, hasAppliedPrefill]);
 
     const handleBack = () => {
         router.back();
