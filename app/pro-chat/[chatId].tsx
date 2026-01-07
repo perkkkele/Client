@@ -20,7 +20,7 @@ import { useAuth, useIncomingCall } from "../../context";
 import { getChat, proReply } from "../../api/chat";
 import { getMessages, ChatMessage } from "../../api/chatMessage";
 import { createVideoCall, getVideoCallToken } from "../../api/videoCall";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 import HumanVideoCall from "../../components/HumanVideoCall";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -104,10 +104,8 @@ export default function ProChatScreen() {
                 setClientInitials(initials);
 
                 if (client.avatar) {
-                    const avatarUrl = client.avatar.startsWith("http")
-                        ? client.avatar
-                        : `http://${API_HOST}:${API_PORT}/${client.avatar}`;
-                    setClientAvatar(avatarUrl);
+                    const avatarUrl = getAssetUrl(client.avatar);
+                    if (avatarUrl) setClientAvatar(avatarUrl);
                 }
             }
 
@@ -290,10 +288,7 @@ export default function ProChatScreen() {
         if (msg.isFromProfessional) {
             // Professional's own avatar
             if (user?.avatar) {
-                const avatarUrl = user.avatar.startsWith("http")
-                    ? user.avatar
-                    : `http://${API_HOST}:${API_PORT}/${user.avatar}`;
-                return avatarUrl;
+                return getAssetUrl(user.avatar);
             }
             return null;
         } else if (msg.isFromBot) {

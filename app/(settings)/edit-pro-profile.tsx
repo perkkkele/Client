@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT } from "../../api";
+import { userApi, getAssetUrl } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -56,9 +56,7 @@ export default function EditProProfileScreen() {
 
     // Initialize with existing user data
     const getAvatarUrl = (avatar: string | null | undefined) => {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar ?? undefined);
     };
 
     const [avatarUri, setAvatarUri] = useState<string | null>(null);

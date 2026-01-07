@@ -3,7 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { API_HOST, API_PORT, userApi } from "../../api";
+import { userApi, getAssetUrl } from "../../api";
 import { useAuth } from "../../context";
 
 export default function ProfileScreen() {
@@ -12,11 +12,7 @@ export default function ProfileScreen() {
 
   // Build full URL for avatar from server path
   function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    // If it's already a full URL, return as-is
-    if (avatarPath.startsWith("http")) return avatarPath;
-    // Otherwise, build URL from server
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
   }
 
   async function handleLogout() {

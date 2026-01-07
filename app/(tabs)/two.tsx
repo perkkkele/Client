@@ -12,15 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { API_HOST, API_PORT, chatApi, userApi } from "../../api";
+import { chatApi, userApi, getAssetUrl } from "../../api";
 import type { User } from "../../api/user";
 import { useAuth } from "../../context";
 
 // Helper to build avatar URL from server path
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-  if (!avatarPath) return null;
-  if (avatarPath.startsWith("http")) return avatarPath;
-  return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+  return getAssetUrl(avatarPath);
 }
 
 export default function ExploreScreen() {

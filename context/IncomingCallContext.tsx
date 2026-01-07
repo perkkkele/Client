@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
 import { router } from "expo-router";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
-import { API_HOST, API_PORT } from "../api/config";
+import { SOCKET_URL } from "../api/config";
 
 interface IncomingCallData {
     chatId: string;
@@ -66,10 +66,9 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
             return;
         }
 
-        const socketUrl = `http://${API_HOST}:${API_PORT}`;
-        console.log("[IncomingCall] Connecting to socket:", socketUrl);
+        console.log("[IncomingCall] Connecting to socket:", SOCKET_URL);
 
-        const socket = io(socketUrl, {
+        const socket = io(SOCKET_URL, {
             transports: ["websocket"],
             autoConnect: true,
         });

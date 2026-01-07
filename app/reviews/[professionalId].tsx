@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT } from "../../api";
+import { userApi, getAssetUrl } from "../../api";
 import { User } from "../../api/user";
 
 const COLORS = {
@@ -120,9 +120,7 @@ export default function ProfessionalReviewsScreen() {
     }, [loadProfessional]);
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar ?? undefined);
     };
 
     const handleBack = () => {

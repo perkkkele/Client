@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 import {
     getAppointmentById,
     cancelAppointment,
@@ -54,9 +54,7 @@ const MONTHS = [
 ];
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 function formatDate(dateStr: string): string {

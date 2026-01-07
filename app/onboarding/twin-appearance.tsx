@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
-import { userApi, liveAvatarApi, API_HOST, API_PORT } from "../../api";
+import { userApi, liveAvatarApi, getAssetUrl } from "../../api";
 import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar } from "../../api/liveAvatar";
 
 // Video requirements constants
@@ -77,9 +77,7 @@ const COLORS = {
 };
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 export default function TwinAppearanceScreen() {

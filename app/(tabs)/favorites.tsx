@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import * as userApi from "../../api/user";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -91,9 +91,7 @@ export default function FavoritesScreen() {
     };
 
     const getAvatarUrl = (avatar?: string): string | undefined => {
-        if (!avatar) return undefined;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar) ?? undefined;
     };
 
     const getDisplayName = (professional: Favorite) => {

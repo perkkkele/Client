@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, API_HOST, API_PORT } from "../../api";
+import { userApi, STATIC_URL } from "../../api";
 
 const COLORS = {
     primary: "#FDE047",
@@ -118,7 +118,7 @@ export default function ProProfileScreen() {
 
         try {
             const response = await fetch(
-                `http://${API_HOST}:${API_PORT}/api/users/check-username/${aliasToCheck.toLowerCase()}`
+                `${STATIC_URL}/api/users/check-username/${aliasToCheck.toLowerCase()}`
             );
             const data = await response.json();
 

@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { getProChats, ProChat } from "../../api/chat";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -214,9 +214,7 @@ export default function ProChatsScreen() {
     const escalatedClients = clientGroups.filter(g => g.hasEscalated).length;
 
     const getAvatarUrl = (avatar: string | undefined) => {
-        if (!avatar) return null;
-        if (avatar.startsWith("http")) return avatar;
-        return `http://${API_HOST}:${API_PORT}/${avatar}`;
+        return getAssetUrl(avatar);
     };
 
     return (

@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
 import { createChat } from "../../api/chat";
@@ -50,9 +50,7 @@ const COLORS = {
 };
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 function formatDate(dateStr: string): string {

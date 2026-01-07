@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 
 const COLORS = {
     primary: "#f9f506",
@@ -53,9 +53,7 @@ const ALL_CATEGORIES: Category[] = [
 ];
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 export default function AllCategoriesScreen() {

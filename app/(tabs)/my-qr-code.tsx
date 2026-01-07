@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT } from "../../api";
+import { getAssetUrl } from "../../api";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -34,9 +34,7 @@ const COLORS = {
 
 // Helper to build avatar URL from server path
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 // TwinPro Logo component for QR center - matches main app logo

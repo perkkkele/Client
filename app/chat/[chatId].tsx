@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { io, Socket } from "socket.io-client";
-import { API_HOST, API_PORT, chatApi, chatMessageApi, liveAvatarApi, SOCKET_URL } from "../../api";
+import { chatApi, chatMessageApi, liveAvatarApi, SOCKET_URL, getAssetUrl } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { ChatMessage } from "../../api/chatMessage";
 import { useAuth } from "../../context";
@@ -189,7 +189,7 @@ export default function ChatScreen() {
     const isImage = item.type === "IMAGE";
 
     // Build image URL from server path
-    const imageUrl = isImage ? `http://${API_HOST}:${API_PORT}/${item.message}` : null;
+    const imageUrl = isImage ? getAssetUrl(item.message) : null;
 
     return (
       <View

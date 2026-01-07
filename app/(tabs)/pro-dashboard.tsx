@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
-import { API_HOST, API_PORT, userApi, analyticsApi } from "../../api";
+import { userApi, analyticsApi, getAssetUrl } from "../../api";
 import { ProfileBlock, TwinBlock, StatsBlock, AppointmentsBlock } from "../../components/dashboard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -61,9 +61,7 @@ const COLORS = {
 };
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
-    if (!avatarPath) return null;
-    if (avatarPath.startsWith("http")) return avatarPath;
-    return `http://${API_HOST}:${API_PORT}/${avatarPath}`;
+    return getAssetUrl(avatarPath);
 }
 
 interface MenuItem {
