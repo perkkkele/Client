@@ -51,7 +51,7 @@ export default function TwinBlock({
                                     {geminiActive ? "Activo y público" : "Inactivo"}
                                 </Text>
                             </View>
-                            <Text style={styles.testHint}>Toca para probar tu gemelo</Text>
+                            <Text style={styles.testHint}>Toca aquí para probar tu gemelo digital</Text>
                         </View>
                     </TouchableOpacity>
                     <Switch

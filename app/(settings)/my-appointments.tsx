@@ -69,6 +69,17 @@ function getStatusConfig(
     // Determine if this is an in-situ payment case (presencial + professional allows in-situ)
     const isInSituPayment = appointmentType === 'presencial' && requirePaymentOnBooking === false;
 
+    // Handle pre-authorized payment (funds held, pending professional confirmation)
+    if (paymentStatus === 'authorized') {
+        return {
+            label: "Pago reservado",
+            icon: "hourglass-top",
+            bgColor: "#eff6ff", // blue-50
+            textColor: "#1d4ed8", // blue-700
+            borderColor: "#dbeafe", // blue-100
+        };
+    }
+
     // Only show "Pago pendiente" if payment is actually required before appointment
     // For in-situ payments, show the actual appointment status instead
     if (paymentStatus === 'pending' && (status === 'pending' || status === 'confirmed') && !isInSituPayment) {

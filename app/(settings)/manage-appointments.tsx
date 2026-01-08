@@ -1,5 +1,12 @@
+/**
+ * Manage Appointments Screen - Professional
+ * 
+ * Redesigned appointment management interface with search, tabs,
+ * pending confirmations banner, and new appointment cards.
+ */
+
 import { router, useFocusEffect } from "expo-router";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
     Image,
     ScrollView,
@@ -10,45 +17,69 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
+    TextInput,
+    Modal,
+    Platform,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
+// Note: DateTimePicker not installed - using TextInput for date selection
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
 import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
 import { createChat } from "../../api/chat";
+import * as calendarApi from "../../api/calendar";
 
+// =============================================================================
+// COLORS
+// =============================================================================
 const COLORS = {
-    primary: "#137fec",
-    backgroundLight: "#f6f7f8",
+    primary: "#4F46E5",        // Indigo
+    primaryLight: "#EEF2FF",
+    backgroundLight: "#f3f4f6",
     surfaceLight: "#FFFFFF",
-    textMain: "#111418",
+    textMain: "#1F2937",
     textMuted: "#6B7280",
+    gray50: "#f9fafb",
     gray100: "#f3f4f6",
     gray200: "#E5E7EB",
     gray300: "#D1D5DB",
     gray400: "#9CA3AF",
     gray500: "#6B7280",
+    gray600: "#4B5563",
+    gray700: "#374151",
     green50: "#f0fdf4",
     green100: "#dcfce7",
     green500: "#22c55e",
+    green600: "#16a34a",
     green700: "#15803d",
     orange50: "#fff7ed",
     orange100: "#ffedd5",
     orange400: "#fb923c",
     orange500: "#f97316",
-    orange700: "#c2410c",
+    orange600: "#ea580c",
+    purple50: "#faf5ff",
     purple100: "#f3e8ff",
     purple600: "#9333ea",
+    purple700: "#7c3aed",
+    blue50: "#eff6ff",
     blue100: "#dbeafe",
     blue600: "#2563eb",
     red50: "#fef2f2",
     red500: "#ef4444",
+    red600: "#dc2626",
     red700: "#b91c1c",
+    yellow50: "#fefce8",
+    yellow600: "#ca8a04",
+    yellow700: "#a16207",
 };
 
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
 function getAvatarUrl(avatarPath: string | undefined): string | null {
     return getAssetUrl(avatarPath);
 }
@@ -72,6 +103,15 @@ function formatDate(dateStr: string): string {
     }
 }
 
+function formatDateFull(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+    });
+}
+
 function getClientInitials(client: Appointment["client"] | undefined): string {
     if (!client) return "?";
     const first = client.firstname?.charAt(0) || "";
@@ -84,7 +124,7 @@ function getStatusStyle(status: Appointment["status"]) {
         case "confirmed":
             return { bg: COLORS.green50, text: COLORS.green700, border: COLORS.green100, indicator: COLORS.green500 };
         case "pending":
-            return { bg: COLORS.orange50, text: COLORS.orange700, border: COLORS.orange100, indicator: COLORS.orange400 };
+            return { bg: COLORS.yellow50, text: COLORS.yellow700, border: COLORS.orange100, indicator: COLORS.orange400 };
         case "cancelled":
             return { bg: COLORS.gray200, text: COLORS.gray500, border: COLORS.gray300, indicator: COLORS.gray400 };
         case "completed":
@@ -104,35 +144,115 @@ function getStatusLabel(status: Appointment["status"]) {
     }
 }
 
-function getPaymentStatusLabel(status: string | undefined) {
+function getPaymentStatusStyle(status: string | undefined) {
     switch (status) {
-        case "paid": return "Pagada";
-        case "pending": return "Pago pendiente";
-        case "failed": return "Pago fallido";
-        case "refunded": return "Reembolsada";
-        default: return "";
+        case "paid":
+            return { bg: COLORS.green50, text: COLORS.green600, label: "Pagado" };
+        case "authorized":
+            return { bg: "#e0f2fe", text: "#0369a1", label: "Pago reservado" };
+        case "pending":
+            return { bg: COLORS.orange50, text: COLORS.orange600, label: "Pendiente de pago" };
+        case "failed":
+            return { bg: COLORS.red50, text: COLORS.red600, label: "Pago fallido" };
+        case "cancelled":
+            return { bg: COLORS.gray100, text: COLORS.gray500, label: "Pago cancelado" };
+        default:
+            return null;
     }
 }
 
+type TabType = "past" | "today" | "upcoming";
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 export default function ManageAppointmentsScreen() {
     const { user, token } = useAuth();
+
+    // Data states
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"appointments" | "calendar">("appointments");
+
+    // UI states
+    const [activeTab, setActiveTab] = useState<TabType>("today");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showCalendarModal, setShowCalendarModal] = useState(false);
+
+    // Reschedule modal states
+    const [rescheduleModal, setRescheduleModal] = useState<{
+        visible: boolean;
+        appointment: Appointment | null;
+        newDateStr: string; // Format: YYYY-MM-DD
+        newTime: string;
+        comments: string;
+    }>({
+        visible: false,
+        appointment: null,
+        newDateStr: "",
+        newTime: "",
+        comments: "",
+    });
 
     const calendarConnected = user?.connectedCalendar?.connected || false;
     const calendarProvider = user?.connectedCalendar?.provider || null;
+    const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
 
-    const avatarUrl = getAvatarUrl(user?.avatar);
+    // Calendar connection handlers
+    const handleConnectGoogle = async () => {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getGoogleAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
+    };
 
+    const handleConnectOutlook = async () => {
+        if (!token) return;
+        setIsConnectingCalendar(true);
+        try {
+            const { url } = await calendarApi.getOutlookAuthUrl(token);
+            await Linking.openURL(url);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+        } finally {
+            setIsConnectingCalendar(false);
+        }
+    };
+
+    const handleDisconnectCalendar = () => {
+        Alert.alert("Desconectar", "¿Desconectar calendario?", [
+            { text: "Cancelar", style: "cancel" },
+            {
+                text: "Desconectar",
+                style: "destructive",
+                onPress: async () => {
+                    if (!token) return;
+                    try {
+                        await calendarApi.disconnectCalendar(token);
+                        // User context will be refreshed on focus
+                    } catch (error: any) {
+                        Alert.alert("Error", error.message);
+                    }
+                },
+            },
+        ]);
+    };
+
+    // =========================================================================
+    // DATA LOADING
+    // =========================================================================
     const loadAppointments = useCallback(async () => {
         if (!token) return;
 
         try {
             const data = await appointmentApi.getAppointments(token, "professional");
-            // Sort by date and time (upcoming first)
             const sorted = data.sort((a, b) => {
                 const dateA = new Date(`${a.date}T${a.time}`);
                 const dateB = new Date(`${b.date}T${b.time}`);
@@ -159,6 +279,86 @@ export default function ManageAppointmentsScreen() {
         loadAppointments();
     };
 
+    // =========================================================================
+    // COMPUTED VALUES
+    // =========================================================================
+    const today = new Date().toISOString().split("T")[0];
+
+    const filteredAppointments = useMemo(() => {
+        let filtered = appointments.filter(apt => apt.status !== "cancelled");
+
+        // Filter by tab
+        switch (activeTab) {
+            case "past":
+                filtered = appointments.filter(apt =>
+                    apt.date < today || (apt.date === today && apt.status === "completed")
+                );
+                break;
+            case "today":
+                filtered = appointments.filter(apt =>
+                    apt.date === today && apt.status !== "cancelled"
+                );
+                break;
+            case "upcoming":
+                filtered = appointments.filter(apt =>
+                    apt.date > today && apt.status !== "cancelled"
+                );
+                break;
+        }
+
+        // Filter by search
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(apt => {
+                const clientName = `${apt.client?.firstname} ${apt.client?.lastname}`.toLowerCase();
+                const dateStr = formatDate(apt.date).toLowerCase();
+                const serviceType = apt.type === "videoconference" ? "videollamada" : "presencial";
+                return (
+                    clientName.includes(query) ||
+                    dateStr.includes(query) ||
+                    serviceType.includes(query) ||
+                    apt.date.includes(query)
+                );
+            });
+        }
+
+        return filtered;
+    }, [appointments, activeTab, searchQuery, today]);
+
+    // Count for each tab
+    const pastCount = appointments.filter(apt => apt.date < today).length;
+    const todayCount = appointments.filter(apt => apt.date === today && apt.status !== "cancelled").length;
+    const upcomingCount = appointments.filter(apt => apt.date > today && apt.status !== "cancelled").length;
+    const pendingConfirmationCount = appointments.filter(apt => apt.status === "pending").length;
+
+    // Group filtered appointments by date
+    const groupedAppointments = useMemo(() => {
+        return filteredAppointments.reduce((acc, apt) => {
+            const dateKey = apt.date;
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
+            }
+            acc[dateKey].push(apt);
+            return acc;
+        }, {} as Record<string, Appointment[]>);
+    }, [filteredAppointments]);
+
+    // Upcoming appointments preview (for "today" tab - shows next 5 appointments after today)
+    const upcomingAppointmentsPreview = useMemo(() => {
+        if (activeTab !== "today") return [];
+        return appointments
+            .filter(apt => apt.date > today && apt.status !== "cancelled")
+            .sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.time}`);
+                const dateB = new Date(`${b.date}T${b.time}`);
+                return dateA.getTime() - dateB.getTime();
+            })
+            .slice(0, 5); // Show max 5 upcoming appointments
+    }, [appointments, activeTab, today]);
+
+    // =========================================================================
+    // HANDLERS
+    // =========================================================================
     const handleConfirm = async (appointmentId: string) => {
         if (!token) return;
 
@@ -173,7 +373,6 @@ export default function ManageAppointmentsScreen() {
                         setActionLoading(appointmentId);
                         try {
                             await appointmentApi.confirmAppointment(token, appointmentId);
-                            // Update local state
                             setAppointments(prev =>
                                 prev.map(apt =>
                                     apt._id === appointmentId
@@ -198,7 +397,7 @@ export default function ManageAppointmentsScreen() {
 
         Alert.alert(
             "Cancelar Cita",
-            "¿Estás seguro de que quieres cancelar esta cita? Esta acción no se puede deshacer.",
+            "¿Estás seguro de que quieres cancelar esta cita? Se notificará al cliente y se eliminará del calendario.",
             [
                 { text: "No", style: "cancel" },
                 {
@@ -215,7 +414,7 @@ export default function ManageAppointmentsScreen() {
                                         : apt
                                 )
                             );
-                            Alert.alert("Cita cancelada", "La cita ha sido cancelada");
+                            Alert.alert("Cita cancelada", "La cita ha sido cancelada y el cliente ha sido notificado");
                         } catch (error: any) {
                             Alert.alert("Error", error.message || "No se pudo cancelar la cita");
                         } finally {
@@ -231,398 +430,690 @@ export default function ManageAppointmentsScreen() {
         router.push(`/appointment-details/${appointmentId}` as any);
     };
 
-    function handleBack() {
-        router.back();
-    }
+    const handleStartVideoCall = async (appointment: Appointment) => {
+        if (!token || !user) return;
 
-    // Group appointments by date
-    const groupedAppointments = appointments.reduce((acc, apt) => {
-        const dateKey = apt.date;
-        if (!acc[dateKey]) {
-            acc[dateKey] = [];
+        try {
+            const chat = await createChat(token, user._id, appointment.client._id);
+            router.push(`/pro-chat/${chat._id}?startVideoCall=true` as any);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
         }
-        acc[dateKey].push(apt);
-        return acc;
-    }, {} as Record<string, Appointment[]>);
+    };
 
-    const pendingCount = appointments.filter(a => a.status === "pending").length;
-    const todayCount = appointments.filter(a => {
-        const today = new Date().toISOString().split("T")[0];
-        return a.date === today && a.status !== "cancelled";
-    }).length;
+    const handleViewClientChats = (clientId: string) => {
+        router.push(`/client-chat-history/${clientId}` as any);
+    };
 
+    const handleViewClientHistory = (clientId: string) => {
+        router.push(`/client-appointments/${clientId}` as any);
+    };
+
+    const handleOpenReschedule = (appointment: Appointment) => {
+        setRescheduleModal({
+            visible: true,
+            appointment,
+            newDateStr: appointment.date, // Format: YYYY-MM-DD
+            newTime: appointment.time,
+            comments: "",
+        });
+    };
+
+    const handleReschedule = async () => {
+        if (!token || !rescheduleModal.appointment) return;
+
+        const { appointment, newDateStr, newTime, comments } = rescheduleModal;
+
+        if (!newDateStr || !newTime) {
+            Alert.alert("Datos incompletos", "Por favor introduce la fecha y hora");
+            return;
+        }
+
+        if (newDateStr === appointment.date && newTime === appointment.time) {
+            Alert.alert("Sin cambios", "Selecciona una nueva fecha u hora diferente");
+            return;
+        }
+
+        setActionLoading(appointment._id);
+        setRescheduleModal(prev => ({ ...prev, visible: false }));
+
+        try {
+            // Call reschedule API
+            await appointmentApi.rescheduleAppointment(token, appointment._id, newDateStr, newTime, comments || undefined);
+
+            // Update local state
+            setAppointments(prev =>
+                prev.map(apt =>
+                    apt._id === appointment._id
+                        ? { ...apt, date: newDateStr, time: newTime }
+                        : apt
+                )
+            );
+            Alert.alert("Cita reprogramada", `La cita ha sido movida al ${formatDateFull(newDateStr)} a las ${newTime}. El cliente será notificado.`);
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo reprogramar la cita");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleCalendarPress = () => {
+        setShowCalendarModal(true);
+    };
+
+    // =========================================================================
+    // RENDER HELPERS
+    // =========================================================================
+    const renderAppointmentCard = (appointment: Appointment) => {
+        if (!appointment?.client) return null;
+
+        const statusStyle = getStatusStyle(appointment.status);
+        const paymentStyle = getPaymentStatusStyle(appointment.paymentStatus);
+        const isCancelled = appointment.status === "cancelled";
+        const isPending = appointment.status === "pending";
+        const isConfirmed = appointment.status === "confirmed";
+        const isVideoconference = appointment.type === "videoconference";
+        const canStartVideoCall = isVideoconference && isConfirmed;
+        const isActionLoading = actionLoading === appointment._id;
+        const isToday = appointment.date === today;
+
+        return (
+            <View
+                key={appointment._id}
+                style={[
+                    styles.appointmentCard,
+                    isToday && isConfirmed && styles.appointmentCardHighlight,
+                    isCancelled && styles.appointmentCardCancelled,
+                ]}
+            >
+                {/* Status indicator bar */}
+                <View style={[styles.statusIndicator, { backgroundColor: statusStyle.indicator }]} />
+
+                <View style={styles.cardContent}>
+                    {/* Header: Time + Status */}
+                    <View style={styles.cardHeader}>
+                        <View style={styles.timeContainer}>
+                            <Text style={[styles.timeText, isCancelled && styles.textCancelled]}>
+                                {appointment.time}
+                            </Text>
+                            <Text style={styles.durationText}>
+                                {appointment.serviceType === "30min" ? "30 min" : "60 min"}
+                            </Text>
+                        </View>
+                        <View style={styles.statusContainer}>
+                            <View style={[
+                                styles.statusBadge,
+                                { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }
+                            ]}>
+                                {isConfirmed && (
+                                    <View style={[styles.statusDot, { backgroundColor: COLORS.green500 }]} />
+                                )}
+                                <Text style={[styles.statusText, { color: statusStyle.text }]}>
+                                    {getStatusLabel(appointment.status)}
+                                </Text>
+                            </View>
+                            {!isCancelled && (
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={() => handleCancel(appointment._id)}
+                                >
+                                    <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Client Info Row */}
+                    <TouchableOpacity
+                        style={styles.clientRow}
+                        onPress={() => handleViewDetails(appointment._id)}
+                        activeOpacity={0.7}
+                    >
+                        {appointment.client.avatar ? (
+                            <Image
+                                source={{ uri: getAvatarUrl(appointment.client.avatar) || undefined }}
+                                style={styles.clientAvatar}
+                            />
+                        ) : (
+                            <View style={[styles.clientAvatar, styles.clientInitialsContainer]}>
+                                <Text style={styles.clientInitials}>
+                                    {getClientInitials(appointment.client)}
+                                </Text>
+                            </View>
+                        )}
+                        <View style={styles.clientInfo}>
+                            <Text style={[styles.clientName, isCancelled && styles.textCancelled]}>
+                                {appointment.client.firstname} {appointment.client.lastname}
+                            </Text>
+                            <View style={styles.clientLinks}>
+                                <TouchableOpacity onPress={() => handleViewClientChats(appointment.client._id)}>
+                                    <Text style={styles.clientLink}>Chats</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.linkSeparator}>•</Text>
+                                <TouchableOpacity onPress={() => handleViewClientHistory(appointment.client._id)}>
+                                    <Text style={styles.clientLink}>Ver historial de citas</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.typeBadgeContainer}>
+                                <View style={[
+                                    styles.typeBadge,
+                                    isVideoconference ? styles.typeBadgeVideo : styles.typeBadgePresencial
+                                ]}>
+                                    <MaterialIcons
+                                        name={isVideoconference ? "videocam" : "store"}
+                                        size={12}
+                                        color={isVideoconference ? COLORS.purple700 : COLORS.gray600}
+                                    />
+                                    <Text style={[
+                                        styles.typeBadgeText,
+                                        isVideoconference ? styles.typeBadgeTextVideo : styles.typeBadgeTextPresencial
+                                    ]}>
+                                        {isVideoconference ? "Videollamada" : "Cita presencial"}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.priceText}>
+                                {(appointment.price / 100).toFixed(0)}€
+                            </Text>
+                            {paymentStyle && (
+                                <View style={[styles.paymentBadge, { backgroundColor: paymentStyle.bg }]}>
+                                    <Text style={[styles.paymentBadgeText, { color: paymentStyle.text }]}>
+                                        {paymentStyle.label}
+                                    </Text>
+                                </View>
+                            )}
+                            {!appointment.paymentStatus && appointment.type === "presencial" && (
+                                <View style={[styles.paymentBadge, { backgroundColor: COLORS.gray100 }]}>
+                                    <Text style={[styles.paymentBadgeText, { color: COLORS.gray500 }]}>
+                                        Pago presencial
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+
+                    {/* Video Call Button */}
+                    {canStartVideoCall && (
+                        <TouchableOpacity
+                            style={styles.videoCallButton}
+                            onPress={() => handleStartVideoCall(appointment)}
+                        >
+                            <MaterialIcons name="video-camera-front" size={18} color="#fff" />
+                            <Text style={styles.videoCallButtonText}>Iniciar videollamada</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Action Buttons */}
+                    {isActionLoading ? (
+                        <View style={styles.loadingActions}>
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                        </View>
+                    ) : !isCancelled && (
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                                style={styles.actionButton}
+                                onPress={() => handleOpenReschedule(appointment)}
+                            >
+                                <Text style={styles.actionButtonText}>Reprogramar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.actionButton, styles.actionButtonDanger]}
+                                onPress={() => handleCancel(appointment._id)}
+                            >
+                                <Text style={[styles.actionButtonText, styles.actionButtonTextDanger]}>
+                                    Cancelar
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.actionButton}
+                                onPress={() => handleViewDetails(appointment._id)}
+                            >
+                                <Text style={styles.actionButtonText}>Detalles</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+            </View>
+        );
+    };
+
+    // =========================================================================
+    // MAIN RENDER
+    // =========================================================================
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-                    <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mis Citas</Text>
-                <View style={styles.avatarContainer}>
-                    {avatarUrl ? (
-                        <Image source={{ uri: avatarUrl }} style={styles.headerAvatar} />
-                    ) : (
-                        <View style={[styles.headerAvatar, styles.avatarPlaceholder]}>
-                            <MaterialIcons name="person" size={20} color={COLORS.gray400} />
-                        </View>
-                    )}
-                    <View style={styles.onlineDot} />
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity
+                        style={styles.headerButton}
+                        onPress={() => router.back()}
+                    >
+                        <MaterialIcons name="arrow-back" size={24} color={COLORS.gray600} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Mis Citas</Text>
                 </View>
-            </View>
-
-            {/* Stats Summary */}
-            <View style={styles.statsContainer}>
-                <View style={styles.statCard}>
-                    <View style={[styles.statIcon, { backgroundColor: COLORS.orange50 }]}>
-                        <MaterialIcons name="pending-actions" size={24} color={COLORS.orange500} />
-                    </View>
-                    <View>
-                        <Text style={styles.statNumber}>{pendingCount}</Text>
-                        <Text style={styles.statLabel}>Pendientes</Text>
-                    </View>
-                </View>
-                <View style={styles.statCard}>
-                    <View style={[styles.statIcon, { backgroundColor: COLORS.green50 }]}>
-                        <MaterialIcons name="today" size={24} color={COLORS.green500} />
-                    </View>
-                    <View>
-                        <Text style={styles.statNumber}>{todayCount}</Text>
-                        <Text style={styles.statLabel}>Hoy</Text>
-                    </View>
-                </View>
-                <View style={styles.statCard}>
-                    <View style={[styles.statIcon, { backgroundColor: COLORS.blue100 }]}>
-                        <MaterialIcons name="event" size={24} color={COLORS.blue600} />
-                    </View>
-                    <View>
-                        <Text style={styles.statNumber}>{appointments.length}</Text>
-                        <Text style={styles.statLabel}>Total</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Tab Bar */}
-            <View style={styles.tabBar}>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === "appointments" && styles.tabActive]}
-                    onPress={() => setActiveTab("appointments")}
+                    style={styles.calendarButton}
+                    onPress={handleCalendarPress}
                 >
-                    <MaterialIcons
-                        name="event-note"
-                        size={20}
-                        color={activeTab === "appointments" ? COLORS.primary : COLORS.gray400}
-                    />
-                    <Text style={[styles.tabText, activeTab === "appointments" && styles.tabTextActive]}>
-                        Citas
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === "calendar" && styles.tabActive]}
-                    onPress={() => setActiveTab("calendar")}
-                >
-                    <MaterialIcons
-                        name="calendar-month"
-                        size={20}
-                        color={activeTab === "calendar" ? COLORS.primary : COLORS.gray400}
-                    />
-                    <Text style={[styles.tabText, activeTab === "calendar" && styles.tabTextActive]}>
-                        Calendario
-                    </Text>
-                    {calendarConnected && (
-                        <View style={styles.syncBadge}>
-                            <MaterialIcons name="check" size={10} color="#fff" />
-                        </View>
-                    )}
+                    <MaterialIcons name="calendar-month" size={24} color={COLORS.primary} />
+                    {calendarConnected && <View style={styles.calendarDot} />}
                 </TouchableOpacity>
             </View>
 
-            {/* Calendar WebView - Always mounted to preserve session */}
-            {calendarConnected && (
-                <View style={[
-                    styles.calendarContainer,
-                    activeTab !== "calendar" && {
-                        position: "absolute",
-                        left: -9999,
-                        opacity: 0,
-                        zIndex: -1,
-                    }
-                ]}>
-                    <WebView
-                        key={`calendar-webview-${calendarProvider}`}
-                        source={{
-                            uri: calendarProvider === "outlook"
-                                ? "https://outlook.live.com/calendar/0/view/day"
-                                : "https://calendar.google.com/calendar/u/0/r"
-                        }}
-                        style={styles.calendarWebView}
-                        javaScriptEnabled={true}
-                        domStorageEnabled={true}
-                        startInLoadingState={true}
-                        scalesPageToFit={true}
-                        // Session persistence
-                        sharedCookiesEnabled={true}
-                        thirdPartyCookiesEnabled={true}
-                        incognito={false}
-                        cacheEnabled={true}
-                        cacheMode="LOAD_DEFAULT"
-                        renderLoading={() => (
-                            <View style={styles.webViewLoading}>
-                                <ActivityIndicator size="large" color={COLORS.primary} />
-                                <Text style={styles.loadingText}>Cargando calendario...</Text>
-                            </View>
-                        )}
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchInputContainer}>
+                    <MaterialIcons name="search" size={20} color={COLORS.gray400} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Buscar cliente, fecha o servicio..."
+                        placeholderTextColor={COLORS.gray500}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
                     />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery("")}>
+                            <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                        </TouchableOpacity>
+                    )}
                 </View>
-            )}
+            </View>
 
-            {/* Calendar not connected message */}
-            {activeTab === "calendar" && !calendarConnected && (
-                <View style={styles.emptyContainer}>
-                    <MaterialIcons name="sync-disabled" size={64} color={COLORS.gray300} />
-                    <Text style={styles.emptyTitle}>Calendario no conectado</Text>
-                    <Text style={styles.emptySubtitle}>
-                        Conecta tu Google Calendar o Outlook desde "Mi horario laboral" para ver tu calendario aquí
+            {/* Tabs */}
+            <View style={styles.tabsContainer}>
+                <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => setActiveTab("past")}
+                >
+                    <Text style={[
+                        styles.tabText,
+                        activeTab === "past" && styles.tabTextActive
+                    ]}>
+                        Pasadas
                     </Text>
-                </View>
-            )}
+                    <View style={[
+                        styles.tabBadge,
+                        activeTab === "past" && styles.tabBadgeActive
+                    ]}>
+                        <Text style={[
+                            styles.tabBadgeText,
+                            activeTab === "past" && styles.tabBadgeTextActive
+                        ]}>
+                            {pastCount}
+                        </Text>
+                    </View>
+                    {activeTab === "past" && <View style={styles.tabIndicator} />}
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => setActiveTab("today")}
+                >
+                    <Text style={[
+                        styles.tabText,
+                        activeTab === "today" && styles.tabTextActive
+                    ]}>
+                        Hoy
+                    </Text>
+                    <View style={[
+                        styles.tabBadge,
+                        activeTab === "today" && styles.tabBadgeActive
+                    ]}>
+                        <Text style={[
+                            styles.tabBadgeText,
+                            activeTab === "today" && styles.tabBadgeTextActive
+                        ]}>
+                            {todayCount}
+                        </Text>
+                    </View>
+                    {activeTab === "today" && <View style={styles.tabIndicator} />}
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.tab}
+                    onPress={() => setActiveTab("upcoming")}
+                >
+                    <Text style={[
+                        styles.tabText,
+                        activeTab === "upcoming" && styles.tabTextActive
+                    ]}>
+                        Próximas
+                    </Text>
+                    <View style={[
+                        styles.tabBadge,
+                        activeTab === "upcoming" && styles.tabBadgeActive
+                    ]}>
+                        <Text style={[
+                            styles.tabBadgeText,
+                            activeTab === "upcoming" && styles.tabBadgeTextActive
+                        ]}>
+                            {upcomingCount}
+                        </Text>
+                    </View>
+                    {activeTab === "upcoming" && <View style={styles.tabIndicator} />}
+                </TouchableOpacity>
+            </View>
 
-            {/* Appointments Tab Content */}
-            {activeTab === "appointments" && isLoading ? (
+            {/* Main Content */}
+            {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
                     <Text style={styles.loadingText}>Cargando citas...</Text>
                 </View>
-            ) : activeTab === "appointments" && appointments.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <MaterialIcons name="event-available" size={64} color={COLORS.gray300} />
-                    <Text style={styles.emptyTitle}>No tienes citas</Text>
-                    <Text style={styles.emptySubtitle}>
-                        Cuando los clientes reserven contigo, aparecerán aquí
-                    </Text>
-                </View>
-            ) : activeTab === "appointments" ? (
+            ) : (
                 <ScrollView
                     style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
                     }
                 >
-                    {Object.entries(groupedAppointments).map(([date, dateAppointments]) => (
-                        <View key={date} style={styles.dateSection}>
-                            <Text style={styles.dateHeader}>{formatDate(date)}</Text>
+                    {/* Pending Confirmations Banner */}
+                    {pendingConfirmationCount > 0 && (
+                        <TouchableOpacity
+                            style={styles.pendingBanner}
+                            onPress={() => router.push("/(settings)/pending-confirmations" as any)}
+                        >
+                            <View style={styles.pendingBannerIcon}>
+                                <MaterialIcons name="pending-actions" size={18} color={COLORS.orange600} />
+                            </View>
+                            <View style={styles.pendingBannerContent}>
+                                <Text style={styles.pendingBannerTitle}>Solicitudes pendientes</Text>
+                                <Text style={styles.pendingBannerSubtitle}>
+                                    {pendingConfirmationCount} cita{pendingConfirmationCount > 1 ? "s" : ""} requiere{pendingConfirmationCount > 1 ? "n" : ""} tu aprobación
+                                </Text>
+                            </View>
+                            <View style={styles.pendingBannerRight}>
+                                <View style={styles.pulseDot}>
+                                    <View style={styles.pulseDotInner} />
+                                </View>
+                                <MaterialIcons name="chevron-right" size={20} color={COLORS.gray300} />
+                            </View>
+                        </TouchableOpacity>
+                    )}
 
-                            {(dateAppointments || []).map((appointment) => {
-                                // Skip appointments with missing client data
-                                if (!appointment || !appointment.client) return null;
+                    {/* Appointments List */}
+                    {filteredAppointments.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <MaterialIcons name="event-available" size={64} color={COLORS.gray300} />
+                            <Text style={styles.emptyTitle}>
+                                {searchQuery ? "Sin resultados" : "No hay citas"}
+                            </Text>
+                            <Text style={styles.emptySubtitle}>
+                                {searchQuery
+                                    ? `No se encontraron citas para "${searchQuery}"`
+                                    : activeTab === "past"
+                                        ? "No tienes citas pasadas"
+                                        : activeTab === "today"
+                                            ? "No tienes citas programadas para hoy"
+                                            : "No tienes citas próximas"
+                                }
+                            </Text>
+                        </View>
+                    ) : (
+                        Object.entries(groupedAppointments).map(([date, dateAppointments]) => (
+                            <View key={date} style={styles.dateSection}>
+                                <View style={styles.dateHeaderRow}>
+                                    <Text style={styles.dateHeader}>
+                                        {date === today ? `Hoy, ${formatDateFull(date).split(",")[1]}` : formatDateFull(date)}
+                                    </Text>
+                                </View>
+                                {dateAppointments.map(renderAppointmentCard)}
+                            </View>
+                        ))
+                    )}
 
-                                const statusStyle = getStatusStyle(appointment.status);
-                                const isCancelled = appointment.status === "cancelled";
-                                const isPending = appointment.status === "pending";
-                                const isConfirmed = appointment.status === "confirmed";
-                                const isVideoconference = appointment.type === "videoconference";
-                                const canStartVideoCall = isVideoconference && isConfirmed;
-                                const isActionLoading = actionLoading === appointment._id;
+                    {/* Upcoming Appointments Preview Section - Only in "Today" tab */}
+                    {activeTab === "today" && upcomingAppointmentsPreview.length > 0 && (
+                        <View style={styles.upcomingPreviewSection}>
+                            <View style={styles.upcomingPreviewHeader}>
+                                <View style={styles.upcomingPreviewTitleRow}>
+                                    <MaterialIcons name="event-note" size={20} color={COLORS.blue600} />
+                                    <Text style={styles.upcomingPreviewTitle}>Próximas Citas</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.viewAllButton}
+                                    onPress={() => setActiveTab("upcoming")}
+                                >
+                                    <Text style={styles.viewAllText}>Ver todas</Text>
+                                    <MaterialIcons name="chevron-right" size={18} color={COLORS.primary} />
+                                </TouchableOpacity>
+                            </View>
 
-                                return (
-                                    <View
-                                        key={appointment._id}
-                                        style={[
-                                            styles.appointmentCard,
-                                            isCancelled && styles.appointmentCardCancelled
-                                        ]}
-                                    >
-                                        <View style={[styles.statusIndicator, { backgroundColor: statusStyle.indicator }]} />
-                                        <View style={styles.appointmentContent}>
-                                            {/* Time and Status */}
-                                            <View style={styles.appointmentHeader}>
-                                                <View>
-                                                    <Text style={[
-                                                        styles.appointmentTime,
-                                                        isCancelled && styles.appointmentTimeCancelled
-                                                    ]}>
-                                                        {appointment.time}
-                                                    </Text>
-                                                    <View style={styles.appointmentTypeRow}>
-                                                        <Text style={styles.appointmentDuration}>
-                                                            {appointment.serviceType === "30min" ? "30 min" : "60 min"}
-                                                        </Text>
-                                                        <View style={[
-                                                            styles.typeBadge,
-                                                            isVideoconference ? styles.typeBadgeVideo : styles.typeBadgePresencial
-                                                        ]}>
-                                                            <MaterialIcons
-                                                                name={isVideoconference ? "videocam" : "location-on"}
-                                                                size={12}
-                                                                color={isVideoconference ? "#7c3aed" : COLORS.green700}
-                                                            />
-                                                            <Text style={[
-                                                                styles.typeBadgeText,
-                                                                isVideoconference ? styles.typeBadgeTextVideo : styles.typeBadgeTextPresencial
-                                                            ]}>
-                                                                {isVideoconference ? "Videollamada" : "Presencial"}
-                                                            </Text>
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                                <View style={{ alignItems: "flex-end" }}>
-                                                    <View style={[
-                                                        styles.statusBadge,
-                                                        { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }
-                                                    ]}>
-                                                        <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                                                            {getStatusLabel(appointment.status)}
-                                                        </Text>
-                                                    </View>
-                                                    {/* Only show payment status for presencial - videoconference is always pre-paid */}
-                                                    {appointment.paymentStatus && appointment.type === "presencial" && (
-                                                        <Text style={[
-                                                            styles.paymentStatus,
-                                                            { color: appointment.paymentStatus === "paid" ? COLORS.green700 : COLORS.orange700 }
-                                                        ]}>
-                                                            {getPaymentStatusLabel(appointment.paymentStatus)}
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                            </View>
-
-                                            {/* Client Info */}
-                                            <View style={styles.clientInfo}>
-                                                {appointment.client.avatar ? (
-                                                    <Image
-                                                        source={{ uri: getAvatarUrl(appointment.client.avatar) || undefined }}
-                                                        style={styles.clientAvatar}
-                                                    />
-                                                ) : (
-                                                    <View style={[styles.clientAvatar, styles.clientInitialsContainer]}>
-                                                        <Text style={styles.clientInitials}>
-                                                            {getClientInitials(appointment.client)}
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={[
-                                                        styles.clientName,
-                                                        isCancelled && styles.clientNameCancelled
-                                                    ]}>
-                                                        {appointment.client.firstname} {appointment.client.lastname}
-                                                    </Text>
-                                                    <Text style={styles.clientEmail}>{appointment.client.email}</Text>
-                                                </View>
-                                                <Text style={styles.priceText}>
-                                                    {(appointment.price / 100).toFixed(0)}€
-                                                </Text>
-                                            </View>
-
-                                            {/* Video Call Button for confirmed videoconference appointments */}
-                                            {canStartVideoCall && (
-                                                <TouchableOpacity
-                                                    style={styles.videoCallButton}
-                                                    onPress={() => {
-                                                        Alert.alert(
-                                                            "Iniciar Videollamada",
-                                                            `¿Estás listo para iniciar la videollamada con ${appointment.client.firstname}?`,
-                                                            [
-                                                                { text: "Cancelar", style: "cancel" },
-                                                                {
-                                                                    text: "Iniciar",
-                                                                    onPress: async () => {
-                                                                        try {
-                                                                            // Create or find existing chat with client
-                                                                            const chat = await createChat(
-                                                                                token!,
-                                                                                user!._id,
-                                                                                appointment.client._id
-                                                                            );
-                                                                            // Navigate to pro-chat with startVideoCall param
-                                                                            router.push(`/pro-chat/${chat._id}?startVideoCall=true` as any);
-                                                                        } catch (error: any) {
-                                                                            console.error("Error starting video call:", error);
-                                                                            Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
-                                                                        }
-                                                                    },
-                                                                },
-                                                            ]
-                                                        );
-                                                    }}
-                                                >
-                                                    <View style={styles.videoCallButtonContent}>
-                                                        <View style={styles.videoCallIconContainer}>
-                                                            <MaterialIcons name="videocam" size={24} color="#fff" />
-                                                        </View>
-                                                        <View style={styles.videoCallTextContainer}>
-                                                            <Text style={styles.videoCallButtonText}>Iniciar Videollamada</Text>
-                                                            <Text style={styles.videoCallButtonSubtext}>Pulsa aquí para comenzar la cita</Text>
-                                                        </View>
-                                                        <MaterialIcons name="arrow-forward" size={20} color="#7c3aed" />
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )}
-
-                                            {/* Actions */}
-                                            <View style={styles.appointmentActions}>
-                                                {isActionLoading ? (
-                                                    <View style={styles.loadingAction}>
-                                                        <ActivityIndicator size="small" color={COLORS.primary} />
-                                                    </View>
-                                                ) : isCancelled ? (
-                                                    <TouchableOpacity
-                                                        style={styles.singleAction}
-                                                        onPress={() => handleViewDetails(appointment._id)}
-                                                    >
-                                                        <MaterialIcons name="info" size={18} color={COLORS.gray500} />
-                                                        <Text style={styles.actionText}>Ver Detalles</Text>
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <>
-                                                        <TouchableOpacity
-                                                            style={styles.actionButton}
-                                                            onPress={() => handleViewDetails(appointment._id)}
-                                                        >
-                                                            <MaterialIcons name="visibility" size={20} color={COLORS.gray500} />
-                                                            <Text style={styles.actionLabel}>Detalles</Text>
-                                                        </TouchableOpacity>
-
-                                                        {isPending && (
-                                                            <TouchableOpacity
-                                                                style={[styles.actionButton, styles.confirmButton]}
-                                                                onPress={() => handleConfirm(appointment._id)}
-                                                            >
-                                                                <MaterialIcons name="check-circle" size={20} color={COLORS.green500} />
-                                                                <Text style={[styles.actionLabel, { color: COLORS.green700 }]}>Confirmar</Text>
-                                                            </TouchableOpacity>
-                                                        )}
-
-                                                        <TouchableOpacity
-                                                            style={styles.actionButton}
-                                                            onPress={() => handleCancel(appointment._id)}
-                                                        >
-                                                            <MaterialIcons name="cancel" size={20} color={COLORS.red500} />
-                                                            <Text style={[styles.actionLabel, { color: COLORS.red700 }]}>Cancelar</Text>
-                                                        </TouchableOpacity>
-                                                    </>
-                                                )}
-                                            </View>
+                            {upcomingAppointmentsPreview.map(apt => (
+                                <View key={apt._id} style={styles.upcomingPreviewCard}>
+                                    <View style={styles.upcomingPreviewDate}>
+                                        <Text style={styles.upcomingPreviewDay}>
+                                            {new Date(apt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()}
+                                        </Text>
+                                        <Text style={styles.upcomingPreviewDayNum}>
+                                            {new Date(apt.date + 'T00:00:00').getDate()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.upcomingPreviewInfo}>
+                                        <Text style={styles.upcomingPreviewTime}>{apt.time}</Text>
+                                        <Text style={styles.upcomingPreviewClient}>
+                                            {apt.client?.firstname} {apt.client?.lastname}
+                                        </Text>
+                                        <View style={styles.upcomingPreviewBadge}>
+                                            <MaterialIcons
+                                                name={apt.type === "videoconference" ? "videocam" : "location-on"}
+                                                size={12}
+                                                color={apt.type === "videoconference" ? COLORS.blue600 : COLORS.green600}
+                                            />
+                                            <Text style={[
+                                                styles.upcomingPreviewType,
+                                                { color: apt.type === "videoconference" ? COLORS.blue600 : COLORS.green600 }
+                                            ]}>
+                                                {apt.type === "videoconference" ? "Videollamada" : "Presencial"}
+                                            </Text>
                                         </View>
                                     </View>
-                                );
-                            })}
+                                    <TouchableOpacity
+                                        style={styles.upcomingPreviewAction}
+                                        onPress={() => handleViewDetails(apt._id)}
+                                    >
+                                        <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
                         </View>
-                    ))}
+                    )}
 
                     <View style={{ height: 40 }} />
                 </ScrollView>
-            ) : null}
+            )}
+
+            {/* Reschedule Modal */}
+            <Modal
+                visible={rescheduleModal.visible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setRescheduleModal(prev => ({ ...prev, visible: false }))}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Reprogramar cita</Text>
+                            <TouchableOpacity
+                                onPress={() => setRescheduleModal(prev => ({ ...prev, visible: false }))}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray500} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {rescheduleModal.appointment && (
+                            <View style={styles.modalBody}>
+                                <Text style={styles.modalLabel}>
+                                    Cita con {rescheduleModal.appointment.client.firstname} {rescheduleModal.appointment.client.lastname}
+                                </Text>
+                                <Text style={styles.modalCurrentDate}>
+                                    Actualmente: {formatDateFull(rescheduleModal.appointment.date)} a las {rescheduleModal.appointment.time}
+                                </Text>
+
+                                {/* New Date */}
+                                <Text style={styles.inputLabel}>Nueva fecha (YYYY-MM-DD)</Text>
+                                <View style={styles.datePickerButton}>
+                                    <MaterialIcons name="calendar-today" size={20} color={COLORS.primary} />
+                                    <TextInput
+                                        style={styles.dateInputText}
+                                        placeholder="Ej: 2026-01-15"
+                                        placeholderTextColor={COLORS.gray400}
+                                        value={rescheduleModal.newDateStr}
+                                        onChangeText={(text) =>
+                                            setRescheduleModal(prev => ({ ...prev, newDateStr: text }))
+                                        }
+                                    />
+                                </View>
+
+                                {/* New Time */}
+                                <Text style={styles.inputLabel}>Nueva hora</Text>
+                                <TextInput
+                                    style={styles.textInput}
+                                    placeholder="Ej: 10:00"
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={rescheduleModal.newTime}
+                                    onChangeText={(text) =>
+                                        setRescheduleModal(prev => ({ ...prev, newTime: text }))
+                                    }
+                                />
+
+                                {/* Comments */}
+                                <Text style={styles.inputLabel}>Comentarios (opcional)</Text>
+                                <TextInput
+                                    style={[styles.textInput, styles.textArea]}
+                                    placeholder="Motivo del cambio de hora..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={rescheduleModal.comments}
+                                    onChangeText={(text) =>
+                                        setRescheduleModal(prev => ({ ...prev, comments: text }))
+                                    }
+                                    multiline
+                                    numberOfLines={3}
+                                />
+
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity
+                                        style={styles.modalCancelButton}
+                                        onPress={() => setRescheduleModal(prev => ({ ...prev, visible: false }))}
+                                    >
+                                        <Text style={styles.modalCancelText}>Cancelar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.modalConfirmButton}
+                                        onPress={handleReschedule}
+                                    >
+                                        <MaterialIcons name="edit-calendar" size={18} color="#fff" />
+                                        <Text style={styles.modalConfirmText}>Reprogramar</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Calendar Modal */}
+            <Modal
+                visible={showCalendarModal}
+                animationType="slide"
+                onRequestClose={() => setShowCalendarModal(false)}
+            >
+                <SafeAreaView style={styles.calendarModalContainer}>
+                    <View style={styles.calendarModalHeader}>
+                        <TouchableOpacity onPress={() => setShowCalendarModal(false)}>
+                            <MaterialIcons name="close" size={24} color={COLORS.textMain} />
+                        </TouchableOpacity>
+                        <Text style={styles.calendarModalTitle}>
+                            {calendarConnected ? "Mi Calendario" : "Sincronizar Calendario"}
+                        </Text>
+                        {calendarConnected ? (
+                            <TouchableOpacity onPress={handleDisconnectCalendar}>
+                                <MaterialIcons name="link-off" size={22} color={COLORS.red600} />
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={{ width: 24 }} />
+                        )}
+                    </View>
+
+                    {calendarConnected ? (
+                        <WebView
+                            source={{
+                                uri: calendarProvider === "outlook"
+                                    ? "https://outlook.live.com/calendar/0/view/week"
+                                    : "https://calendar.google.com/calendar/u/0/r"
+                            }}
+                            style={styles.calendarWebView}
+                            javaScriptEnabled={true}
+                            domStorageEnabled={true}
+                            sharedCookiesEnabled={true}
+                            thirdPartyCookiesEnabled={true}
+                        />
+                    ) : (
+                        <View style={styles.calendarNotConnectedContainer}>
+                            <View style={styles.calendarIconContainer}>
+                                <MaterialIcons name="event" size={64} color={COLORS.gray300} />
+                            </View>
+                            <Text style={styles.calendarNotConnectedTitle}>
+                                Calendario no sincronizado
+                            </Text>
+                            <Text style={styles.calendarNotConnectedText}>
+                                Sincroniza tu calendario para ver tus citas y disponibilidad en tiempo real
+                            </Text>
+
+                            <View style={styles.calendarConnectButtons}>
+                                <TouchableOpacity
+                                    style={styles.calendarConnectButton}
+                                    onPress={handleConnectGoogle}
+                                    disabled={isConnectingCalendar}
+                                >
+                                    {isConnectingCalendar ? (
+                                        <ActivityIndicator size="small" color="#4285F4" />
+                                    ) : (
+                                        <>
+                                            <MaterialIcons name="event" size={24} color="#4285F4" />
+                                            <Text style={styles.calendarConnectButtonText}>
+                                                Google Calendar
+                                            </Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.calendarConnectButton}
+                                    onPress={handleConnectOutlook}
+                                    disabled={isConnectingCalendar}
+                                >
+                                    <MaterialIcons name="calendar-today" size={24} color="#0078D4" />
+                                    <Text style={styles.calendarConnectButtonText}>
+                                        Outlook Calendar
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={styles.calendarHintText}>
+                                💡 Las citas confirmadas se añadirán automáticamente a tu calendario
+                            </Text>
+                        </View>
+                    )}
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 }
 
+// =============================================================================
+// STYLES
+// =============================================================================
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.backgroundLight,
     },
+    // Header
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -630,79 +1121,178 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         backgroundColor: COLORS.surfaceLight,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.gray200,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
     },
     headerButton: {
         padding: 8,
-        width: 40,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    avatarContainer: {
-        position: "relative",
-    },
-    headerAvatar: {
-        width: 40,
-        height: 40,
+        marginLeft: -8,
         borderRadius: 20,
     },
-    avatarPlaceholder: {
-        backgroundColor: COLORS.gray200,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    onlineDot: {
-        position: "absolute",
-        bottom: 0,
-        right: 0,
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: COLORS.green500,
-        borderWidth: 2,
-        borderColor: COLORS.surfaceLight,
-    },
-    statsContainer: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        gap: 12,
-        backgroundColor: COLORS.surfaceLight,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.gray200,
-    },
-    statCard: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        backgroundColor: COLORS.gray100,
-        borderRadius: 12,
-        padding: 12,
-    },
-    statIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    statNumber: {
+    headerTitle: {
         fontSize: 20,
         fontWeight: "bold",
         color: COLORS.textMain,
     },
-    statLabel: {
-        fontSize: 11,
-        color: COLORS.gray500,
-        fontWeight: "500",
+    calendarButton: {
+        padding: 8,
+        borderRadius: 20,
+        position: "relative",
     },
+    calendarDot: {
+        position: "absolute",
+        top: 6,
+        right: 6,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: COLORS.green500,
+        borderWidth: 1.5,
+        borderColor: COLORS.surfaceLight,
+    },
+    // Search
+    searchContainer: {
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        backgroundColor: COLORS.surfaceLight,
+    },
+    searchInputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        gap: 8,
+    },
+    searchInput: {
+        flex: 1,
+        paddingVertical: 10,
+        fontSize: 14,
+        color: COLORS.textMain,
+    },
+    // Tabs
+    tabsContainer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        backgroundColor: COLORS.surfaceLight,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray100,
+        paddingHorizontal: 16,
+    },
+    tab: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingBottom: 12,
+        gap: 6,
+        position: "relative",
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray400,
+    },
+    tabTextActive: {
+        fontWeight: "bold",
+        color: COLORS.primary,
+    },
+    tabBadge: {
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    tabBadgeActive: {
+        backgroundColor: COLORS.primaryLight,
+    },
+    tabBadgeText: {
+        fontSize: 10,
+        fontWeight: "bold",
+        color: COLORS.gray500,
+    },
+    tabBadgeTextActive: {
+        color: COLORS.primary,
+    },
+    tabIndicator: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        backgroundColor: COLORS.primary,
+        borderTopLeftRadius: 2,
+        borderTopRightRadius: 2,
+    },
+    // Pending Banner
+    pendingBanner: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.surfaceLight,
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.primaryLight,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    pendingBannerIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.orange50,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: COLORS.orange100,
+    },
+    pendingBannerContent: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    pendingBannerTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    pendingBannerSubtitle: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        marginTop: 2,
+    },
+    pendingBannerRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    pulseDot: {
+        width: 8,
+        height: 8,
+        position: "relative",
+    },
+    pulseDotInner: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: COLORS.orange500,
+    },
+    // Content
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
+        paddingBottom: 40,
     },
     loadingContainer: {
         flex: 1,
@@ -714,10 +1304,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.gray500,
     },
-    emptyContainer: {
-        flex: 1,
+    emptyState: {
         alignItems: "center",
         justifyContent: "center",
+        paddingVertical: 60,
         paddingHorizontal: 40,
     },
     emptyTitle: {
@@ -732,17 +1322,26 @@ const styles = StyleSheet.create({
         textAlign: "center",
         marginTop: 8,
     },
+    // Date Section
     dateSection: {
+        marginTop: 20,
         paddingHorizontal: 16,
-        paddingTop: 16,
+    },
+    dateHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+        paddingHorizontal: 4,
     },
     dateHeader: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: "bold",
-        color: COLORS.gray500,
+        color: COLORS.gray400,
         textTransform: "uppercase",
-        marginBottom: 12,
+        letterSpacing: 0.5,
     },
+    // Appointment Card
     appointmentCard: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
@@ -750,437 +1349,511 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         borderWidth: 1,
         borderColor: COLORS.gray100,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    appointmentCardHighlight: {
+        borderColor: COLORS.primary,
+        borderWidth: 1,
     },
     appointmentCardCancelled: {
-        backgroundColor: COLORS.gray100,
-        opacity: 0.75,
+        opacity: 0.6,
     },
     statusIndicator: {
         position: "absolute",
         left: 0,
         top: 0,
         bottom: 0,
-        width: 5,
+        width: 4,
     },
-    appointmentContent: {
-        padding: 16,
-        paddingLeft: 18,
+    cardContent: {
+        padding: 12,
+        paddingLeft: 16,
     },
-    appointmentHeader: {
+    cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
         marginBottom: 12,
     },
-    appointmentTime: {
-        fontSize: 22,
+    timeContainer: {
+        flexDirection: "row",
+        alignItems: "baseline",
+        gap: 8,
+    },
+    timeText: {
+        fontSize: 24,
         fontWeight: "bold",
         color: COLORS.textMain,
+        letterSpacing: -0.5,
     },
-    appointmentTimeCancelled: {
-        color: COLORS.gray500,
-        textDecorationLine: "line-through",
-    },
-    appointmentDuration: {
+    durationText: {
         fontSize: 12,
+        fontWeight: "500",
         color: COLORS.gray500,
     },
-    appointmentTypeRow: {
+    textCancelled: {
+        textDecorationLine: "line-through",
+        color: COLORS.gray400,
+    },
+    statusContainer: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        marginTop: 4,
-    },
-    typeBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-    },
-    typeBadgeVideo: {
-        backgroundColor: "#f3e8ff",
-    },
-    typeBadgePresencial: {
-        backgroundColor: COLORS.green50,
-    },
-    typeBadgeText: {
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    typeBadgeTextVideo: {
-        color: "#7c3aed",
-    },
-    typeBadgeTextPresencial: {
-        color: COLORS.green700,
     },
     statusBadge: {
-        paddingHorizontal: 10,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 999,
         borderWidth: 1,
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: "bold",
-    },
-    paymentStatus: {
-        fontSize: 10,
-        fontWeight: "600",
-        marginTop: 4,
-    },
-    clientInfo: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        marginBottom: 12,
-    },
-    clientAvatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-    },
-    clientInitialsContainer: {
-        backgroundColor: COLORS.blue100,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    clientInitials: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: COLORS.blue600,
-    },
-    clientName: {
-        fontSize: 15,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    clientNameCancelled: {
-        color: COLORS.gray500,
-    },
-    clientEmail: {
-        fontSize: 12,
-        color: COLORS.gray500,
-        marginTop: 2,
-    },
-    priceText: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    videoCallButton: {
-        backgroundColor: "#faf5ff",
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: "#e9d5ff",
-        marginBottom: 12,
-        overflow: "hidden",
-    },
-    videoCallButtonContent: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 12,
-        gap: 12,
-    },
-    videoCallIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: "#7c3aed",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    videoCallTextContainer: {
-        flex: 1,
-    },
-    videoCallButtonText: {
-        fontSize: 15,
-        fontWeight: "bold",
-        color: "#7c3aed",
-    },
-    videoCallButtonSubtext: {
-        fontSize: 12,
-        color: COLORS.gray500,
-        marginTop: 2,
-    },
-    appointmentActions: {
-        flexDirection: "row",
-        borderTopWidth: 1,
-        borderTopColor: COLORS.gray100,
-        paddingTop: 12,
-        gap: 8,
-    },
-    actionButton: {
-        flex: 1,
-        alignItems: "center",
         gap: 4,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: COLORS.gray100,
     },
-    confirmButton: {
-        backgroundColor: COLORS.green50,
-    },
-    actionLabel: {
-        fontSize: 11,
-        fontWeight: "600",
-        color: COLORS.gray500,
-    },
-    singleAction: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
-        paddingVertical: 8,
-    },
-    actionText: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: COLORS.gray500,
-    },
-    loadingAction: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 12,
-    },
-    // Tab bar styles
-    tabBar: {
-        flexDirection: "row",
-        backgroundColor: COLORS.surfaceLight,
-        marginHorizontal: 16,
-        borderRadius: 12,
-        padding: 4,
-        marginBottom: 12,
-    },
-    tab: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        paddingVertical: 10,
-        borderRadius: 8,
-    },
-    tabActive: {
-        backgroundColor: COLORS.backgroundLight,
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: COLORS.gray400,
-    },
-    tabTextActive: {
-        color: COLORS.primary,
-        fontWeight: "600",
-    },
-    syncBadge: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        backgroundColor: "#0F9D58",
-        alignItems: "center",
-        justifyContent: "center",
-        marginLeft: 2,
-    },
-    // Calendar styles - Google Calendar inspired
-    calendarContainer: {
-        flex: 1,
-        backgroundColor: "#F8F9FA",
-    },
-    calendar: {
-        backgroundColor: "#fff",
-        marginHorizontal: 16,
-        marginTop: 8,
-        borderRadius: 8,
-        overflow: "hidden",
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-    },
-    calendarLoadingOverlay: {
-        padding: 12,
-        alignItems: "center",
-        backgroundColor: "rgba(255,255,255,0.8)",
-    },
-    // Events list styles - Google Calendar inspired
-    eventsList: {
-        marginHorizontal: 16,
-        marginTop: 20,
-        marginBottom: 32,
-    },
-    eventsHeader: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: "#5F6368",
-        marginBottom: 12,
-        textTransform: "capitalize",
-        letterSpacing: 0.25,
-    },
-    eventItem: {
-        flexDirection: "row",
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 8,
-        alignItems: "flex-start",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    eventTwinpro: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#0F9D58", // Google Green
-    },
-    eventGoogle: {
-        borderLeftWidth: 4,
-        borderLeftColor: "#4285F4", // Google Blue
-    },
-    eventDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        marginRight: 12,
-        marginTop: 2,
-    },
-    eventContent: {
-        flex: 1,
-    },
-    eventTime: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: "#1A73E8",
-        marginBottom: 4,
-    },
-    eventTitle: {
-        fontSize: 15,
-        fontWeight: "500",
-        color: "#202124",
-        marginBottom: 4,
-        lineHeight: 20,
-    },
-    eventLocation: {
-        fontSize: 13,
-        color: "#5F6368",
-        marginBottom: 4,
-    },
-    eventSource: {
-        fontSize: 11,
-        color: "#9AA0A6",
-        fontWeight: "500",
-    },
-    noEvents: {
-        alignItems: "center",
-        padding: 32,
-        backgroundColor: "#fff",
-        borderRadius: 8,
-    },
-    noEventsText: {
-        fontSize: 14,
-        color: "#5F6368",
-        marginTop: 12,
-    },
-    // Custom calendar styles - Google Calendar inspired
-    calendarHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: 16,
-        paddingHorizontal: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E8EAED",
-    },
-    calendarArrow: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#F8F9FA",
-    },
-    calendarMonth: {
-        fontSize: 20,
-        fontWeight: "500",
-        color: "#3C4043",
-        letterSpacing: 0.25,
-    },
-    dayNamesRow: {
-        flexDirection: "row",
-        paddingVertical: 12,
-        backgroundColor: "#F8F9FA",
-    },
-    dayName: {
-        flex: 1,
-        textAlign: "center",
-        fontSize: 11,
-        fontWeight: "500",
-        color: "#70757A",
-        textTransform: "uppercase",
-        letterSpacing: 0.5,
-    },
-    calendarGrid: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        paddingVertical: 4,
-        paddingHorizontal: 4,
-    },
-    dayCell: {
-        width: "14.28%",
-        aspectRatio: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 2,
-    },
-    dayCellSelected: {
-        backgroundColor: "#1A73E8",
-        borderRadius: 999,
-    },
-    dayCellToday: {
-        backgroundColor: "#E8F0FE",
-        borderRadius: 999,
-    },
-    dayText: {
-        fontSize: 14,
-        fontWeight: "400",
-        color: "#3C4043",
-    },
-    dayTextSelected: {
-        color: "#fff",
-        fontWeight: "500",
-    },
-    dayTextToday: {
-        color: "#1A73E8",
-        fontWeight: "600",
-    },
-    eventDotsRow: {
-        flexDirection: "row",
-        gap: 3,
-        marginTop: 3,
-        height: 6,
-    },
-    eventDotSmall: {
+    statusDot: {
         width: 6,
         height: 6,
         borderRadius: 3,
     },
-    // Legacy styles (kept for compatibility)
+    statusText: {
+        fontSize: 10,
+        fontWeight: "bold",
+    },
+    closeButton: {
+        padding: 4,
+        marginRight: -4,
+    },
+    // Client Row
+    clientRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray50,
+        marginHorizontal: -4,
+        padding: 8,
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    clientAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: COLORS.gray100,
+    },
+    clientInitialsContainer: {
+        backgroundColor: COLORS.primaryLight,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    clientInitials: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.primary,
+    },
+    clientInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    clientName: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    clientLinks: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 2,
+    },
+    clientLink: {
+        fontSize: 11,
+        color: COLORS.gray500,
+    },
+    linkSeparator: {
+        marginHorizontal: 4,
+        color: COLORS.gray400,
+    },
+    typeBadgeContainer: {
+        marginTop: 6,
+    },
+    typeBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        alignSelf: "flex-start",
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 4,
+        gap: 4,
+    },
+    typeBadgeVideo: {
+        backgroundColor: COLORS.purple50,
+    },
+    typeBadgePresencial: {
+        backgroundColor: COLORS.gray100,
+    },
+    typeBadgeText: {
+        fontSize: 10,
+        fontWeight: "500",
+    },
+    typeBadgeTextVideo: {
+        color: COLORS.purple700,
+    },
+    typeBadgeTextPresencial: {
+        color: COLORS.gray700,
+    },
+    priceContainer: {
+        alignItems: "flex-end",
+        gap: 4,
+    },
+    priceText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    paymentBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    paymentBadgeText: {
+        fontSize: 9,
+        fontWeight: "600",
+    },
+    // Video Call Button
+    videoCallButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primary,
+        paddingVertical: 10,
+        borderRadius: 12,
+        marginBottom: 8,
+        gap: 6,
+        shadowColor: COLORS.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    videoCallButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#fff",
+    },
+    // Action Buttons
+    loadingActions: {
+        paddingVertical: 16,
+        alignItems: "center",
+    },
+    actionButtons: {
+        flexDirection: "row",
+        gap: 8,
+        paddingLeft: 4,
+        paddingRight: 4,
+    },
+    actionButton: {
+        flex: 1,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        backgroundColor: COLORS.surfaceLight,
+        alignItems: "center",
+    },
+    actionButtonDanger: {
+        borderColor: COLORS.gray200,
+    },
+    actionButtonText: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: COLORS.gray700,
+    },
+    actionButtonTextDanger: {
+        color: COLORS.red600,
+    },
+    // Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    modalContent: {
+        backgroundColor: COLORS.surfaceLight,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: "85%",
+    },
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray100,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    modalBody: {
+        padding: 20,
+    },
+    modalLabel: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        marginBottom: 4,
+    },
+    modalCurrentDate: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.gray600,
+        marginBottom: 8,
+        marginTop: 12,
+    },
+    datePickerButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        gap: 10,
+    },
+    datePickerText: {
+        fontSize: 14,
+        color: COLORS.textMain,
+    },
+    dateInputText: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.textMain,
+        paddingVertical: 0,
+    },
+    textInput: {
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        fontSize: 14,
+        color: COLORS.textMain,
+    },
+    textArea: {
+        height: 80,
+        textAlignVertical: "top",
+    },
+    modalActions: {
+        flexDirection: "row",
+        gap: 12,
+        marginTop: 24,
+    },
+    modalCancelButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        alignItems: "center",
+    },
+    modalCancelText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray600,
+    },
+    modalConfirmButton: {
+        flex: 1,
+        flexDirection: "row",
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+    },
+    modalConfirmText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#fff",
+    },
+    // Calendar Modal
+    calendarModalContainer: {
+        flex: 1,
+        backgroundColor: COLORS.backgroundLight,
+    },
+    calendarModalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        backgroundColor: COLORS.surfaceLight,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray200,
+    },
+    calendarModalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
     calendarWebView: {
         flex: 1,
     },
-    webViewLoading: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+    // Calendar Not Connected UI
+    calendarNotConnectedContainer: {
+        flex: 1,
+        padding: 24,
+        alignItems: "center",
         justifyContent: "center",
+    },
+    calendarIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 20,
+    },
+    calendarNotConnectedTitle: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+        marginBottom: 8,
+        textAlign: "center",
+    },
+    calendarNotConnectedText: {
+        fontSize: 14,
+        color: COLORS.gray500,
+        textAlign: "center",
+        marginBottom: 32,
+        lineHeight: 20,
+        paddingHorizontal: 16,
+    },
+    calendarConnectButtons: {
+        width: "100%",
+        gap: 12,
+        marginBottom: 24,
+    },
+    calendarConnectButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.surfaceLight,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        borderRadius: 12,
+        gap: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    calendarConnectButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    calendarHintText: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        textAlign: "center",
+        paddingHorizontal: 24,
+    },
+    // Upcoming Preview Section (in Today tab)
+    upcomingPreviewSection: {
+        marginTop: 24,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+    },
+    upcomingPreviewHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    upcomingPreviewTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    upcomingPreviewTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    viewAllButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 2,
+    },
+    viewAllText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.primary,
+    },
+    upcomingPreviewCard: {
+        flexDirection: "row",
         alignItems: "center",
         backgroundColor: COLORS.surfaceLight,
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    upcomingPreviewDate: {
+        width: 44,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    upcomingPreviewDay: {
+        fontSize: 10,
+        fontWeight: "600",
+        color: COLORS.gray500,
+        letterSpacing: 0.5,
+    },
+    upcomingPreviewDayNum: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    upcomingPreviewInfo: {
+        flex: 1,
+    },
+    upcomingPreviewTime: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    upcomingPreviewClient: {
+        fontSize: 13,
+        color: COLORS.gray600,
+        marginTop: 2,
+    },
+    upcomingPreviewBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 4,
+    },
+    upcomingPreviewType: {
+        fontSize: 11,
+        fontWeight: "500",
+    },
+    upcomingPreviewAction: {
+        padding: 4,
     },
 });

@@ -2,10 +2,12 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
     FlatList,
@@ -86,13 +88,21 @@ interface DisplayReview {
 
 export default function ProfessionalReviewsScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
     const [topTags, setTopTags] = useState<{ tag: string; count: number }[]>([]);
     const [sortBy, setSortBy] = useState<SortOption>('recent');
     const [showSortMenu, setShowSortMenu] = useState(false);
+
+    // Owner reply states
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyText, setReplyText] = useState("");
+    const [isSendingReply, setIsSendingReply] = useState(false);
+
+    // Check if current user is the owner of this profile
+    const isOwner = user?._id === professionalId;
 
     // Cargar profesional
     const loadProfessional = useCallback(async () => {
@@ -215,6 +225,34 @@ export default function ProfessionalReviewsScreen() {
         setShowSortMenu(false);
     };
 
+    // Handle sending a reply to a review (owner only)
+    const handleSendReply = async (reviewId: string) => {
+        if (!token || !replyText.trim()) {
+            Alert.alert("Error", "Por favor escribe una respuesta");
+            return;
+        }
+
+        setIsSendingReply(true);
+        try {
+            await reviewApi.replyToReview(token, reviewId, replyText.trim());
+
+            // Update local state
+            setReviews(prev => prev.map(r =>
+                r.id === reviewId
+                    ? { ...r, hasReply: true, replyText: replyText.trim() }
+                    : r
+            ));
+
+            setReplyingTo(null);
+            setReplyText("");
+            Alert.alert("✓ Éxito", "Tu respuesta ha sido publicada");
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo enviar la respuesta");
+        } finally {
+            setIsSendingReply(false);
+        }
+    };
+
     const renderReviewCard = ({ item }: { item: DisplayReview }) => {
         const initialsColors = item.userInitials ? getInitialsColor(item.userInitials) : null;
 
@@ -261,6 +299,58 @@ export default function ProfessionalReviewsScreen() {
                         </View>
                         <Text style={styles.replyText}>{item.replyText}</Text>
                     </View>
+                )}
+
+                {/* Reply Button/Form - Only for owner and reviews without replies */}
+                {isOwner && !item.hasReply && (
+                    replyingTo === item.id ? (
+                        <View style={styles.replyFormContainer}>
+                            <View style={styles.replyFormHeader}>
+                                <MaterialIcons name="reply" size={18} color={COLORS.textMain} />
+                                <Text style={styles.replyFormTitle}>Responder a esta reseña</Text>
+                            </View>
+                            <TextInput
+                                style={styles.replyInput}
+                                placeholder="Escribe tu respuesta aquí..."
+                                placeholderTextColor={COLORS.gray400}
+                                multiline
+                                value={replyText}
+                                onChangeText={setReplyText}
+                                editable={!isSendingReply}
+                            />
+                            <View style={styles.replyFormActions}>
+                                <TouchableOpacity
+                                    onPress={() => { setReplyingTo(null); setReplyText(""); }}
+                                    disabled={isSendingReply}
+                                >
+                                    <Text style={styles.replyCancelButton}>Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.replySendButton,
+                                        (!replyText.trim() || isSendingReply) && styles.replySendButtonDisabled
+                                    ]}
+                                    onPress={() => handleSendReply(item.id)}
+                                    disabled={!replyText.trim() || isSendingReply}
+                                >
+                                    {isSendingReply ? (
+                                        <ActivityIndicator size="small" color={COLORS.textMain} />
+                                    ) : (
+                                        <Text style={styles.replySendButtonText}>Enviar</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.replyButtonOwner}
+                            onPress={() => setReplyingTo(item.id)}
+                            activeOpacity={0.8}
+                        >
+                            <MaterialIcons name="reply" size={16} color={COLORS.gray500} />
+                            <Text style={styles.replyButtonOwnerText}>Responder</Text>
+                        </TouchableOpacity>
+                    )
                 )}
             </View>
         );
@@ -574,7 +664,7 @@ const styles = StyleSheet.create({
     professionalProfession: {
         fontSize: 12,
         fontWeight: "bold",
-        color: COLORS.primary,
+        color: "#b45309", // amber-700 for better contrast
         textTransform: "uppercase",
         letterSpacing: 2,
         marginBottom: 16,
@@ -857,5 +947,75 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.gray500,
         lineHeight: 20,
+    },
+    // Owner Reply Form Styles
+    replyFormContainer: {
+        marginTop: 16,
+        padding: 16,
+        backgroundColor: COLORS.gray100,
+        borderRadius: 12,
+    },
+    replyFormHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    replyFormTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    replyInput: {
+        backgroundColor: COLORS.white,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 14,
+        color: COLORS.textMain,
+        minHeight: 80,
+        textAlignVertical: "top",
+    },
+    replyFormActions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        gap: 16,
+        marginTop: 12,
+    },
+    replyCancelButton: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.gray500,
+    },
+    replySendButton: {
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+        minWidth: 80,
+        alignItems: "center",
+    },
+    replySendButtonDisabled: {
+        opacity: 0.5,
+    },
+    replySendButtonText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    replyButtonOwner: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: 6,
+        marginTop: 12,
+        paddingVertical: 8,
+    },
+    replyButtonOwnerText: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.gray500,
     },
 });

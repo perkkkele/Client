@@ -108,7 +108,7 @@ export default function AppointmentsBlock({
                 </View>
                 <View style={styles.toggleInfo}>
                     <Text style={[styles.toggleLabel, !user?.appointmentsEnabled && styles.textDisabled]}>
-                        Cobro anticipado presencial
+                        Pago al reservar
                     </Text>
                     <Text style={[styles.toggleHint, !user?.appointmentsEnabled && styles.textDisabled]}>
                         {user?.requirePaymentOnBooking !== false

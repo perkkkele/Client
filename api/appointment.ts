@@ -224,3 +224,28 @@ export async function cancelAppointment(
 
     return response.json();
 }
+
+// Reschedule an appointment (professional only)
+export async function rescheduleAppointment(
+    token: string,
+    appointmentId: string,
+    newDate: string,
+    newTime: string,
+    comments?: string
+): Promise<Appointment> {
+    const response = await fetch(`${API_URL}/appointment/${appointmentId}/reschedule`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newDate, newTime, comments }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to reschedule appointment");
+    }
+
+    return response.json();
+}

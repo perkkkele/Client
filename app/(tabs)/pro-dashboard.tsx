@@ -19,7 +19,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { userApi, analyticsApi, getAssetUrl } from "../../api";
-import { ProfileBlock, TwinBlock, StatsBlock, AppointmentsBlock } from "../../components/dashboard";
+import { ProfileBlock, TwinBlock, StatsBlock, AppointmentsBlock, EarningsBlock } from "../../components/dashboard";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -115,7 +115,7 @@ export default function ProDashboardScreen() {
     }, [loadAnalytics]);
 
     // ===== DASHBOARD CUSTOMIZATION =====
-    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'appointments', 'stats'];
+    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'appointments', 'earnings', 'stats'];
     const DASHBOARD_LAYOUT_KEY = `dashboard_layout_${user?._id}`;
 
     const [editMode, setEditMode] = useState(false);
@@ -431,6 +431,10 @@ export default function ProDashboardScreen() {
                                     onToggleAutoConfirm={handleToggleAutoConfirm}
                                     onTogglePaymentRequired={handleTogglePaymentRequired}
                                 />
+                            );
+                        case 'earnings':
+                            return renderBlockWithControls('earnings',
+                                <EarningsBlock token={token} />
                             );
                         case 'stats':
                             return renderBlockWithControls('stats',

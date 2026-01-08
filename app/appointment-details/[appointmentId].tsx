@@ -457,6 +457,21 @@ export default function AppointmentDetailsScreen() {
                     })()
                 )}
 
+                {/* Payment Status Badge - Show if authorized (pre-auth) */}
+                {appointment.paymentStatus === 'authorized' && (
+                    <View style={styles.paidBadgeContainer}>
+                        <View style={[styles.paidBadge, styles.authorizedBadge]}>
+                            <MaterialIcons name="hourglass-top" size={20} color="#0369a1" />
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.paidBadgeText, { color: '#0369a1' }]}>Pago Reservado</Text>
+                                <Text style={styles.authorizedSubtext}>
+                                    Se cobrará cuando el profesional confirme la cita
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
                 {/* Payment Status Badge - Show if paid */}
                 {appointment.paymentStatus === 'paid' && (
                     <View style={styles.paidBadgeContainer}>
@@ -865,6 +880,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: COLORS.green700,
+    },
+    // Pre-authorization badge (blue)
+    authorizedBadge: {
+        backgroundColor: "#e0f2fe",
+        borderWidth: 1,
+        borderColor: "#7dd3fc",
+    },
+    authorizedSubtext: {
+        fontSize: 12,
+        color: "#0284c7",
+        marginTop: 2,
     },
     // Info Card Styles
     infoCard: {
