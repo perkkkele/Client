@@ -1,6 +1,8 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -8,15 +10,18 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { getAssetUrl } from "../../api";
+import { getAssetUrl, reviewApi } from "../../api";
+import type { Review as APIReview } from "../../api/review";
 
 const COLORS = {
-    primary: "#137fec",
-    backgroundLight: "#f6f7f8",
+    primary: "#FFED00",
+    primaryDark: "#E6D500",
+    backgroundLight: "#f8f8f5",
     surfaceLight: "#FFFFFF",
     textMain: "#111418",
     textMuted: "#6B7280",
@@ -32,110 +37,167 @@ const COLORS = {
     lime700: "#4d7c0f",
     orange100: "#ffedd5",
     orange600: "#ea580c",
-    purple100: "#f3e8ff",
-    purple600: "#9333ea",
-    blue100: "#dbeafe",
+    amber50: "#fffbeb",
+    amber500: "#f59e0b",
+    blue50: "#eff6ff",
     blue600: "#2563eb",
-    pink100: "#fce7f3",
-    pink600: "#db2777",
-    teal100: "#ccfbf1",
-    teal600: "#0d9488",
 };
 
-function getAvatarUrl(avatarPath: string | undefined): string | null {
-    return getAssetUrl(avatarPath);
+// Avatar colors for initials
+const AVATAR_COLORS = [
+    { bg: "#ffedd5", text: "#ea580c" },
+    { bg: "#f3e8ff", text: "#9333ea" },
+    { bg: "#dbeafe", text: "#2563eb" },
+    { bg: "#fce7f3", text: "#db2777" },
+    { bg: "#ccfbf1", text: "#0d9488" },
+    { bg: "#fef3c7", text: "#d97706" },
+];
+
+function getAvatarUrl(avatarPath: string | undefined | null): string | null {
+    return getAssetUrl(avatarPath ?? undefined);
 }
 
-interface Review {
+function getInitials(firstname?: string, lastname?: string): string {
+    const first = firstname?.charAt(0).toUpperCase() || '';
+    const last = lastname?.charAt(0).toUpperCase() || '';
+    return first + last || 'U';
+}
+
+function getAvatarColor(name: string) {
+    const index = name.charCodeAt(0) % AVATAR_COLORS.length;
+    return AVATAR_COLORS[index];
+}
+
+function formatRelativeDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semana${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+    if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} mes${Math.floor(diffDays / 30) > 1 ? 'es' : ''}`;
+    return `Hace ${Math.floor(diffDays / 365)} año${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+}
+
+interface DisplayReview {
     id: string;
     initials: string;
     name: string;
+    authorAvatar?: string | null;
     date: string;
     rating: number;
     comment: string;
     tags: string[];
-    bgColor: string;
-    textColor: string;
-    hasResponse?: boolean;
+    avatarColor: { bg: string; text: string };
+    hasResponse: boolean;
     response?: string;
 }
 
-const MOCK_REVIEWS: Review[] = [
-    {
-        id: "1",
-        initials: "JP",
-        name: "Juan Pérez",
-        date: "Hace 2 días",
-        rating: 5.0,
-        comment: "Excelente atención, el gemelo digital respondió todas mis dudas antes de la cita. Me sentí muy cómodo y la información fue precisa.",
-        tags: ["Amabilidad", "Respuesta rápida"],
-        bgColor: COLORS.orange100,
-        textColor: COLORS.orange600,
-    },
-    {
-        id: "2",
-        initials: "MG",
-        name: "María Gómez",
-        date: "Hace 1 semana",
-        rating: 5.0,
-        comment: "Muy profesional y atenta. La plataforma funciona de maravilla y pude agendar mi cita sin complicaciones.",
-        tags: ["Profesionalismo"],
-        bgColor: COLORS.purple100,
-        textColor: COLORS.purple600,
-        hasResponse: true,
-        response: "¡Muchas gracias María! Me alegra saber que la plataforma te ha sido útil.",
-    },
-    {
-        id: "3",
-        initials: "RC",
-        name: "Roberto Castillo",
-        date: "Hace 2 semanas",
-        rating: 4.0,
-        comment: "Buena experiencia en general, aunque la respuesta del avatar demoró un poco en cargar al principio.",
-        tags: ["Claridad"],
-        bgColor: COLORS.blue100,
-        textColor: COLORS.blue600,
-    },
-    {
-        id: "4",
-        initials: "AL",
-        name: "Ana López",
-        date: "Hace 3 semanas",
-        rating: 5.0,
-        comment: "¡Me encantó! La doctora Bárbara siempre es muy atenta y su versión digital captura muy bien su esencia.",
-        tags: ["Empatía", "Eficacia"],
-        bgColor: COLORS.pink100,
-        textColor: COLORS.pink600,
-    },
-    {
-        id: "5",
-        initials: "CR",
-        name: "Carlos Ruiz",
-        date: "Hace 1 mes",
-        rating: 5.0,
-        comment: "Excelente servicio. Recomendado 100%.",
-        tags: [],
-        bgColor: COLORS.teal100,
-        textColor: COLORS.teal600,
-    },
+type SortOption = 'recent' | 'highest' | 'lowest';
+
+const FILTERS: { label: string; value: SortOption }[] = [
+    { label: "Más recientes", value: "recent" },
+    { label: "Mejor valoradas", value: "highest" },
+    { label: "Peor valoradas", value: "lowest" },
 ];
 
-const FILTERS = ["Más recientes", "Calificación más alta", "Calificación más baja", "Con fotos"];
-
 export default function ManageReviewsScreen() {
-    const { user } = useAuth();
-    const [activeFilter, setActiveFilter] = useState(0);
+    const { user, token } = useAuth();
+    const [reviews, setReviews] = useState<DisplayReview[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [sortBy, setSortBy] = useState<SortOption>('recent');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyText, setReplyText] = useState("");
+    const [isSendingReply, setIsSendingReply] = useState(false);
+
+    // Stats
+    const [rating, setRating] = useState(0);
+    const [ratingCount, setRatingCount] = useState(0);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.publicName || user?.firstname || "Profesional";
 
-    function handleBack() {
-        router.back();
-    }
+    const loadReviews = useCallback(async () => {
+        if (!user?._id) return;
 
-    function renderStars(rating: number) {
+        try {
+            const response = await reviewApi.getReviewsForProfessional(user._id, sortBy);
+
+            // Transform API reviews to display format
+            const displayReviews: DisplayReview[] = response.reviews.map((r: APIReview) => {
+                const name = `${r.author.firstname || ''} ${r.author.lastname || ''}`.trim() || 'Usuario';
+                return {
+                    id: r._id,
+                    initials: getInitials(r.author.firstname, r.author.lastname),
+                    name,
+                    authorAvatar: r.author.avatar,
+                    date: formatRelativeDate(r.createdAt),
+                    rating: r.rating,
+                    comment: r.comment,
+                    tags: r.tags || [],
+                    avatarColor: getAvatarColor(name),
+                    hasResponse: !!(r.reply && r.reply.text && r.reply.text.trim()),
+                    response: r.reply?.text?.trim() || '',
+                };
+            });
+
+            setReviews(displayReviews);
+            setRating(response.rating || 0);
+            setRatingCount(response.ratingCount || 0);
+        } catch (error) {
+            console.error("Error loading reviews:", error);
+            Alert.alert("Error", "No se pudieron cargar las reseñas");
+        } finally {
+            setIsLoading(false);
+            setRefreshing(false);
+        }
+    }, [user?._id, sortBy]);
+
+    useEffect(() => {
+        loadReviews();
+    }, [loadReviews]);
+
+    const handleRefresh = useCallback(() => {
+        setRefreshing(true);
+        loadReviews();
+    }, [loadReviews]);
+
+    const handleBack = () => {
+        router.back();
+    };
+
+    const handleSendReply = async (reviewId: string) => {
+        if (!token || !replyText.trim()) {
+            Alert.alert("Error", "Por favor escribe una respuesta");
+            return;
+        }
+
+        setIsSendingReply(true);
+        try {
+            await reviewApi.replyToReview(token, reviewId, replyText.trim());
+
+            // Update local state
+            setReviews(prev => prev.map(r =>
+                r.id === reviewId
+                    ? { ...r, hasResponse: true, response: replyText.trim() }
+                    : r
+            ));
+
+            setReplyingTo(null);
+            setReplyText("");
+            Alert.alert("✓ Éxito", "Tu respuesta ha sido publicada");
+        } catch (error: any) {
+            Alert.alert("Error", error.message || "No se pudo enviar la respuesta");
+        } finally {
+            setIsSendingReply(false);
+        }
+    };
+
+    function renderStars(starRating: number) {
         return (
             <View style={styles.starsRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -143,17 +205,36 @@ export default function ManageReviewsScreen() {
                         key={star}
                         name="star"
                         size={18}
-                        color={star <= rating ? COLORS.yellow400 : COLORS.gray200}
+                        color={star <= starRating ? COLORS.yellow400 : COLORS.gray200}
                     />
                 ))}
             </View>
         );
     }
 
-    function getRatingBadgeStyle(rating: number) {
-        if (rating >= 4.5) return { bg: COLORS.green50, text: COLORS.green700 };
-        if (rating >= 4.0) return { bg: COLORS.lime50, text: COLORS.lime700 };
+    function getRatingBadgeStyle(reviewRating: number) {
+        if (reviewRating >= 4.5) return { bg: COLORS.green50, text: COLORS.green700 };
+        if (reviewRating >= 4.0) return { bg: COLORS.lime50, text: COLORS.lime700 };
+        if (reviewRating >= 3.0) return { bg: COLORS.amber50, text: COLORS.amber500 };
         return { bg: COLORS.gray100, text: COLORS.gray500 };
+    }
+
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container} edges={["top"]}>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+                        <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textMain} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Gestión de Reseñas</Text>
+                    <View style={styles.headerButton} />
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>Cargando reseñas...</Text>
+                </View>
+            </SafeAreaView>
+        );
     }
 
     return (
@@ -161,13 +242,23 @@ export default function ManageReviewsScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
-                    <MaterialIcons name="arrow-back-ios" size={24} color={COLORS.primary} />
+                    <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textMain} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Gestión de Reseñas</Text>
                 <View style={styles.headerButton} />
             </View>
 
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        colors={[COLORS.primary]}
+                    />
+                }
+            >
                 {/* Profile Summary */}
                 <View style={styles.profileSummary}>
                     <View style={styles.avatarContainer}>
@@ -182,14 +273,23 @@ export default function ManageReviewsScreen() {
                     <View style={styles.profileInfo}>
                         <Text style={styles.profileName}>{displayName}</Text>
                         <View style={styles.ratingRow}>
-                            <Text style={styles.ratingValue}>4.9</Text>
+                            <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
                             <View style={styles.starsRow}>
                                 {[1, 2, 3, 4, 5].map((star) => (
-                                    <MaterialIcons key={star} name="star" size={20} color={COLORS.yellow400} />
+                                    <MaterialIcons
+                                        key={star}
+                                        name={star <= Math.round(rating) ? "star" : "star-border"}
+                                        size={20}
+                                        color={COLORS.yellow400}
+                                    />
                                 ))}
                             </View>
                         </View>
-                        <Text style={styles.reviewCount}>Basado en 124 reseñas</Text>
+                        <Text style={styles.reviewCount}>
+                            {ratingCount === 0
+                                ? "Sin reseñas todavía"
+                                : `Basado en ${ratingCount} ${ratingCount === 1 ? 'reseña' : 'reseñas'}`}
+                        </Text>
                     </View>
                 </View>
 
@@ -200,20 +300,20 @@ export default function ManageReviewsScreen() {
                     style={styles.filtersScroll}
                     contentContainerStyle={styles.filtersContent}
                 >
-                    {FILTERS.map((filter, index) => (
+                    {FILTERS.map((filter) => (
                         <TouchableOpacity
-                            key={index}
+                            key={filter.value}
                             style={[
                                 styles.filterButton,
-                                activeFilter === index && styles.filterButtonActive
+                                sortBy === filter.value && styles.filterButtonActive
                             ]}
-                            onPress={() => setActiveFilter(index)}
+                            onPress={() => setSortBy(filter.value)}
                         >
                             <Text style={[
                                 styles.filterText,
-                                activeFilter === index && styles.filterTextActive
+                                sortBy === filter.value && styles.filterTextActive
                             ]}>
-                                {filter}
+                                {filter.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -221,103 +321,143 @@ export default function ManageReviewsScreen() {
 
                 {/* Reviews List */}
                 <View style={styles.reviewsList}>
-                    {MOCK_REVIEWS.map((review) => {
-                        const badgeStyle = getRatingBadgeStyle(review.rating);
-                        return (
-                            <View key={review.id} style={styles.reviewCard}>
-                                {/* Review Header */}
-                                <View style={styles.reviewHeader}>
-                                    <View style={styles.reviewUser}>
-                                        <View style={[styles.userInitials, { backgroundColor: review.bgColor }]}>
-                                            <Text style={[styles.initialsText, { color: review.textColor }]}>
-                                                {review.initials}
-                                            </Text>
-                                        </View>
-                                        <View>
-                                            <Text style={styles.userName}>{review.name}</Text>
-                                            <Text style={styles.reviewDate}>{review.date}</Text>
-                                        </View>
-                                    </View>
-                                    <View style={[styles.ratingBadge, { backgroundColor: badgeStyle.bg }]}>
-                                        <Text style={[styles.ratingBadgeText, { color: badgeStyle.text }]}>
-                                            {review.rating.toFixed(1)}
-                                        </Text>
-                                        <MaterialIcons name="star" size={12} color={badgeStyle.text} />
-                                    </View>
-                                </View>
+                    {reviews.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <MaterialIcons name="rate-review" size={64} color={COLORS.gray200} />
+                            <Text style={styles.emptyTitle}>Sin reseñas</Text>
+                            <Text style={styles.emptySubtitle}>
+                                Aún no has recibido ninguna reseña. ¡Tus clientes podrán valorar tu servicio después de interactuar contigo!
+                            </Text>
+                        </View>
+                    ) : (
+                        reviews.map((review) => {
+                            const badgeStyle = getRatingBadgeStyle(review.rating);
+                            const authorAvatarUrl = getAvatarUrl(review.authorAvatar);
 
-                                {/* Stars */}
-                                {renderStars(review.rating)}
-
-                                {/* Comment */}
-                                <Text style={styles.reviewComment}>{review.comment}</Text>
-
-                                {/* Tags */}
-                                {review.tags.length > 0 && (
-                                    <View style={styles.tagsRow}>
-                                        {review.tags.map((tag, i) => (
-                                            <View key={i} style={styles.tag}>
-                                                <Text style={styles.tagText}>{tag}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                )}
-
-                                {/* Response or Reply Section */}
-                                {review.hasResponse ? (
-                                    <View style={styles.responseContainer}>
-                                        <View style={styles.responseHeader}>
-                                            {avatarUrl ? (
-                                                <Image source={{ uri: avatarUrl }} style={styles.responseAvatar} />
+                            return (
+                                <View key={review.id} style={styles.reviewCard}>
+                                    {/* Review Header */}
+                                    <View style={styles.reviewHeader}>
+                                        <View style={styles.reviewUser}>
+                                            {authorAvatarUrl ? (
+                                                <Image
+                                                    source={{ uri: authorAvatarUrl }}
+                                                    style={styles.userAvatar}
+                                                />
                                             ) : (
-                                                <View style={[styles.responseAvatar, styles.avatarPlaceholder]}>
-                                                    <MaterialIcons name="person" size={12} color={COLORS.gray400} />
+                                                <View style={[styles.userInitials, { backgroundColor: review.avatarColor.bg }]}>
+                                                    <Text style={[styles.initialsText, { color: review.avatarColor.text }]}>
+                                                        {review.initials}
+                                                    </Text>
                                                 </View>
                                             )}
-                                            <Text style={styles.responseOwner}>
-                                                {displayName} <Text style={styles.ownerLabel}>(Propietario)</Text>
+                                            <View>
+                                                <Text style={styles.userName}>{review.name}</Text>
+                                                <Text style={styles.reviewDate}>{review.date}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={[styles.ratingBadge, { backgroundColor: badgeStyle.bg }]}>
+                                            <Text style={[styles.ratingBadgeText, { color: badgeStyle.text }]}>
+                                                {review.rating.toFixed(1)}
                                             </Text>
-                                        </View>
-                                        <Text style={styles.responseText}>{review.response}</Text>
-                                    </View>
-                                ) : replyingTo === review.id ? (
-                                    <View style={styles.replyContainer}>
-                                        <View style={styles.replyHeader}>
-                                            <MaterialIcons name="reply" size={20} color={COLORS.primary} />
-                                            <Text style={styles.replyTitle}>Responder a la reseña</Text>
-                                        </View>
-                                        <TextInput
-                                            style={styles.replyInput}
-                                            placeholder="Escribe tu respuesta aquí..."
-                                            placeholderTextColor={COLORS.gray400}
-                                            multiline
-                                            value={replyText}
-                                            onChangeText={setReplyText}
-                                        />
-                                        <View style={styles.replyActions}>
-                                            <TouchableOpacity onPress={() => { setReplyingTo(null); setReplyText(""); }}>
-                                                <Text style={styles.cancelButton}>Cancelar</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity style={styles.sendButton}>
-                                                <Text style={styles.sendButtonText}>Enviar Respuesta</Text>
-                                            </TouchableOpacity>
+                                            <MaterialIcons name="star" size={12} color={badgeStyle.text} />
                                         </View>
                                     </View>
-                                ) : (
-                                    <View style={styles.replyFooter}>
+
+                                    {/* Stars */}
+                                    {renderStars(review.rating)}
+
+                                    {/* Comment */}
+                                    <Text style={styles.reviewComment}>{review.comment}</Text>
+
+                                    {/* Tags */}
+                                    {review.tags.length > 0 && (
+                                        <View style={styles.tagsRow}>
+                                            {review.tags.map((tag, i) => (
+                                                <View key={i} style={styles.tag}>
+                                                    <Text style={styles.tagText}>{tag}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {/* Response or Reply Section */}
+                                    {review.hasResponse ? (
+                                        <View style={styles.responseContainer}>
+                                            <View style={styles.responseHeader}>
+                                                {avatarUrl ? (
+                                                    <Image source={{ uri: avatarUrl }} style={styles.responseAvatar} />
+                                                ) : (
+                                                    <View style={[styles.responseAvatar, styles.avatarPlaceholderSmall]}>
+                                                        <MaterialIcons name="person" size={12} color={COLORS.gray400} />
+                                                    </View>
+                                                )}
+                                                <Text style={styles.responseOwner}>
+                                                    {displayName} <Text style={styles.ownerLabel}>(Tu respuesta)</Text>
+                                                </Text>
+                                            </View>
+                                            <Text style={styles.responseText}>{review.response}</Text>
+                                        </View>
+                                    ) : replyingTo === review.id ? (
+                                        <View style={styles.replyContainer}>
+                                            <View style={styles.replyHeader}>
+                                                <MaterialIcons name="reply" size={20} color={COLORS.textMain} />
+                                                <Text style={styles.replyTitle}>Responder a la reseña</Text>
+                                            </View>
+                                            <TextInput
+                                                style={styles.replyInput}
+                                                placeholder="Escribe tu respuesta aquí..."
+                                                placeholderTextColor={COLORS.gray400}
+                                                multiline
+                                                value={replyText}
+                                                onChangeText={setReplyText}
+                                                editable={!isSendingReply}
+                                            />
+                                            <View style={styles.replyActions}>
+                                                <TouchableOpacity
+                                                    onPress={() => { setReplyingTo(null); setReplyText(""); }}
+                                                    disabled={isSendingReply}
+                                                >
+                                                    <Text style={styles.cancelButton}>Cancelar</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.sendButton,
+                                                        (!replyText.trim() || isSendingReply) && styles.sendButtonDisabled
+                                                    ]}
+                                                    onPress={() => handleSendReply(review.id)}
+                                                    disabled={!replyText.trim() || isSendingReply}
+                                                >
+                                                    {isSendingReply ? (
+                                                        <ActivityIndicator size="small" color={COLORS.textMain} />
+                                                    ) : (
+                                                        <Text style={styles.sendButtonText}>Enviar</Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ) : (
                                         <TouchableOpacity
                                             style={styles.replyButton}
-                                            onPress={() => setReplyingTo(review.id)}
+                                            onPress={() => {
+                                                console.log('[ManageReviews] Opening reply for:', review.id);
+                                                setReplyingTo(review.id);
+                                            }}
+                                            activeOpacity={0.8}
                                         >
-                                            <MaterialIcons name="reply" size={20} color={COLORS.gray500} />
-                                            <Text style={styles.replyButtonText}>Responder</Text>
+                                            <MaterialIcons name="reply" size={20} color={COLORS.textMain} />
+                                            <Text style={styles.replyButtonText}>Responder a esta reseña</Text>
+                                            <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                         </TouchableOpacity>
-                                    </View>
-                                )}
-                            </View>
-                        );
-                    })}
+                                    )}
+                                </View>
+                            );
+                        })
+                    )}
                 </View>
+
+                {/* Bottom padding */}
+                <View style={{ height: 32 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -327,6 +467,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.backgroundLight,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: COLORS.gray500,
     },
     header: {
         flexDirection: "row",
@@ -363,7 +513,7 @@ const styles = StyleSheet.create({
     },
     avatarContainer: {
         padding: 2,
-        borderRadius: 34,
+        borderRadius: 36,
         borderWidth: 2,
         borderColor: COLORS.primary,
     },
@@ -373,6 +523,11 @@ const styles = StyleSheet.create({
         borderRadius: 32,
     },
     avatarPlaceholder: {
+        backgroundColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    avatarPlaceholderSmall: {
         backgroundColor: COLORS.gray200,
         alignItems: "center",
         justifyContent: "center",
@@ -438,12 +593,34 @@ const styles = StyleSheet.create({
         padding: 16,
         gap: 16,
     },
+    emptyState: {
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 48,
+        gap: 16,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    emptySubtitle: {
+        fontSize: 14,
+        color: COLORS.gray500,
+        textAlign: "center",
+        lineHeight: 22,
+    },
     reviewCard: {
         backgroundColor: COLORS.surfaceLight,
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 20,
         borderWidth: 1,
         borderColor: COLORS.gray100,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     reviewHeader: {
         flexDirection: "row",
@@ -455,6 +632,11 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
+    },
+    userAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
     },
     userInitials: {
         width: 40,
@@ -502,22 +684,23 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     tag: {
-        backgroundColor: COLORS.gray100,
-        paddingHorizontal: 8,
+        backgroundColor: COLORS.blue50,
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 6,
     },
     tagText: {
         fontSize: 12,
-        color: COLORS.gray500,
+        color: COLORS.blue600,
+        fontWeight: "500",
     },
     responseContainer: {
         marginTop: 16,
         padding: 16,
-        backgroundColor: "rgba(19, 127, 236, 0.05)",
+        backgroundColor: "rgba(255, 237, 0, 0.08)",
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "rgba(19, 127, 236, 0.1)",
+        borderColor: "rgba(255, 237, 0, 0.2)",
     },
     responseHeader: {
         flexDirection: "row",
@@ -536,7 +719,7 @@ const styles = StyleSheet.create({
         color: COLORS.textMain,
     },
     ownerLabel: {
-        color: COLORS.primary,
+        color: COLORS.amber500,
         fontWeight: "normal",
     },
     responseText: {
@@ -586,32 +769,37 @@ const styles = StyleSheet.create({
     },
     sendButton: {
         backgroundColor: COLORS.primary,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         borderRadius: 8,
+        minWidth: 80,
+        alignItems: "center",
+    },
+    sendButtonDisabled: {
+        opacity: 0.5,
     },
     sendButtonText: {
         fontSize: 14,
         fontWeight: "bold",
-        color: "#FFFFFF",
-    },
-    replyFooter: {
-        marginTop: 16,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.gray100,
-        alignItems: "flex-end",
+        color: COLORS.textMain,
     },
     replyButton: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        justifyContent: "center",
+        gap: 10,
+        marginTop: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        backgroundColor: COLORS.primary,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.primaryDark,
     },
     replyButtonText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: COLORS.gray500,
+        flex: 1,
+        fontSize: 15,
+        fontWeight: "600",
+        color: COLORS.textMain,
     },
 });

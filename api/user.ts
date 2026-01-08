@@ -99,6 +99,7 @@ export interface DigitalTwin {
     guardrails?: DigitalTwinGuardrails;
     knowledge?: DigitalTwinKnowledge;
     liveAvatarContextId?: string | null;
+    contextNeedsSync?: boolean;  // Flag to trigger context regeneration
     isActive?: boolean;
     activatedAt?: string | null;
 }
@@ -181,6 +182,13 @@ export interface User {
 
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
+
+    // === Stripe Connect (pagos directos a profesionales) ===
+    stripeConnectAccountId?: string | null;
+    stripeConnectOnboarded?: boolean;
+    stripeConnectDetailsSubmitted?: boolean;
+    stripeConnectChargesEnabled?: boolean;
+    stripeConnectPayoutsEnabled?: boolean;
 }
 
 // Tipo para actualizaciones parciales del usuario

@@ -704,6 +704,9 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
                 }
 
+                // Mark that context needs to be regenerated with new appearance
+                updateData.digitalTwin.contextNeedsSync = true;
+
                 await userApi.updateUser(token, updateData);
 
                 if (refreshUser) {

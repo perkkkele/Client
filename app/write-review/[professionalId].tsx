@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, getAssetUrl } from "../../api";
+import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
 
 const COLORS = {
@@ -107,6 +107,11 @@ export default function WriteReviewScreen() {
     };
 
     const handleSubmit = async () => {
+        if (!token) {
+            Alert.alert("Error", "Debes iniciar sesión para escribir una reseña.");
+            return;
+        }
+
         if (rating === 0) {
             Alert.alert("Valoración requerida", "Por favor, selecciona una valoración de estrellas.");
             return;
@@ -119,16 +124,27 @@ export default function WriteReviewScreen() {
 
         setIsSubmitting(true);
 
-        // TODO: Implement actual API call to submit review
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Preparar tags incluyendo customTag si existe
+            const allTags = Array.from(selectedTags);
+            if (customTag.trim()) {
+                allTags.push(customTag.trim().toLowerCase());
+            }
+
+            // Llamada real a la API
+            await reviewApi.createReview(token, {
+                professionalId,
+                rating,
+                comment: comment.trim(),
+                tags: allTags
+            });
 
             // Navigate to success screen with review data
-            const tagsString = Array.from(selectedTags).join(",");
+            const tagsString = allTags.join(",");
             router.replace(`/review-success/${professionalId}?rating=${rating}&comment=${encodeURIComponent(comment)}&tags=${encodeURIComponent(tagsString)}`);
-        } catch (error) {
-            Alert.alert("Error", "No se pudo publicar la reseña. Intenta de nuevo.");
+        } catch (error: any) {
+            console.error("Error submitting review:", error);
+            Alert.alert("Error", error.message || "No se pudo publicar la reseña. Intenta de nuevo.");
             setIsSubmitting(false);
         }
     };

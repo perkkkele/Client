@@ -18,6 +18,22 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
 import { useAuth } from "../../context";
 
+// Native Google Sign-In
+let GoogleSignin: any = null;
+let isGoogleSignInAvailable = false;
+try {
+    const GoogleSignInModule = require("@react-native-google-signin/google-signin");
+    GoogleSignin = GoogleSignInModule.GoogleSignin;
+    isGoogleSignInAvailable = true;
+
+    // Configure Google Sign-In
+    GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    });
+} catch (e) {
+    console.log("Google Sign-In not available:", e);
+}
+
 const COLORS = {
     primary: "#FFED00",
     primaryDark: "#E6D500",
@@ -35,7 +51,7 @@ const COLORS = {
 };
 
 export default function RegisterProScreen() {
-    const { login } = useAuth();
+    const { login, loginWithGoogle } = useAuth();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -44,12 +60,45 @@ export default function RegisterProScreen() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
     const isNameValid = name.trim().length >= 2;
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     const isPasswordValid = password.length >= 6;
     const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
     const canSubmit = isNameValid && isEmailValid && isPasswordValid && passwordsMatch && acceptedTerms;
+
+    // Handle native Google Sign-In for professionals
+    async function handleGoogleSignIn() {
+        if (!isGoogleSignInAvailable || !GoogleSignin) {
+            Alert.alert("Error", "Google Sign-In no está disponible en esta versión");
+            return;
+        }
+
+        setIsGoogleLoading(true);
+        try {
+            await GoogleSignin.hasPlayServices();
+            const userInfo = await GoogleSignin.signIn();
+            const idToken = userInfo.data?.idToken;
+
+            if (!idToken) {
+                throw new Error("No se pudo obtener el token de Google");
+            }
+
+            // Login/register with Google as 'userpro' (professional)
+            await loginWithGoogle(idToken, 'userpro');
+
+            // Navigate to professional profile setup
+            router.push("/onboarding/pro-profile");
+        } catch (error: any) {
+            console.log("Google Sign-In error:", error);
+            if (error.code !== "SIGN_IN_CANCELLED") {
+                Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+            }
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    }
 
     async function handleRegister() {
         if (!canSubmit) {
@@ -79,7 +128,7 @@ export default function RegisterProScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardView}
@@ -280,18 +329,24 @@ export default function RegisterProScreen() {
 
                         {/* Botones sociales */}
                         <View style={styles.socialButtonsContainer}>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Image
-                                    source={{
-                                        uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg",
-                                    }}
-                                    style={styles.socialIcon}
-                                />
-                                <Text style={styles.socialButtonText}>Google</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-apple" size={16} color="#000000" />
-                                <Text style={styles.socialButtonText}>Apple</Text>
+                            <TouchableOpacity
+                                style={[styles.socialButtonFull, (isGoogleLoading || !isGoogleSignInAvailable) && styles.buttonDisabled]}
+                                onPress={handleGoogleSignIn}
+                                disabled={isGoogleLoading || !isGoogleSignInAvailable}
+                            >
+                                {isGoogleLoading ? (
+                                    <ActivityIndicator size="small" color="#000000" />
+                                ) : (
+                                    <>
+                                        <Image
+                                            source={{
+                                                uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg",
+                                            }}
+                                            style={styles.socialIcon}
+                                        />
+                                        <Text style={styles.socialButtonText}>Continuar con Google</Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
 
@@ -511,6 +566,18 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 8,
         paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.cardLight,
+    },
+    socialButtonFull: {
+        width: "100%",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        paddingVertical: 14,
         borderRadius: 12,
         borderWidth: 1,
         borderColor: COLORS.border,

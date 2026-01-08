@@ -13,8 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
-import { userApi, getAssetUrl } from "../../api";
+import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
+import { Review as APIReview } from "../../api/review";
 
 const COLORS = {
     primary: "#f9f506",
@@ -40,52 +41,38 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-// Mock reviews data - in production this would come from an API
-const MOCK_REVIEWS = [
-    {
-        id: "1",
-        userName: "Carlos M.",
-        userAvatar: null,
-        rating: 5,
-        date: "Hace 2 días",
-        comment: "Excelente profesional, muy atenta y clara en sus explicaciones. Me ayudó mucho con mi dieta y el plan de rehabilitación fue fácil de seguir. ¡Totalmente recomendada!",
-    },
-    {
-        id: "2",
-        userName: "Laura G.",
-        userAvatar: null,
-        rating: 4,
-        date: "Hace 1 semana",
-        comment: "Muy buena atención clínica. La doctora sabe mucho y se nota. Lo único es que la espera fue un poco larga para conseguir la cita inicial, pero valió la pena.",
-    },
-    {
-        id: "3",
-        userName: "Miguel A.",
-        userInitials: "MA",
-        rating: 5,
-        date: "Hace 2 semanas",
-        comment: "Increíble el uso de la tecnología en sus consultas. Me sentí muy cómodo hablando con su avatar digital, la respuesta fue inmediata. 5 estrellas sin duda.",
-    },
-    {
-        id: "4",
-        userName: "Sofía R.",
-        userInitials: "SR",
-        rating: 3,
-        date: "Hace 1 mes",
-        comment: "La doctora es buena, pero tuve algunos problemas técnicos con la app durante la videollamada. Espero que lo mejoren.",
-    },
-];
+// Opciones de ordenamiento
+const SORT_OPTIONS = [
+    { id: 'recent', label: 'Más recientes' },
+    { id: 'highest', label: 'Mejor valoradas' },
+    { id: 'lowest', label: 'Peor valoradas' },
+] as const;
 
-const TRAIT_TAGS = [
-    { id: "amable", label: "#Amable", selected: true },
-    { id: "experta", label: "#Experta", selected: true },
-    { id: "rapida", label: "#Rápida", selected: false },
-    { id: "clara", label: "#Clara", selected: false },
-    { id: "paciente", label: "#Paciente", selected: false },
-    { id: "puntual", label: "#Puntual", selected: false },
-];
+type SortOption = typeof SORT_OPTIONS[number]['id'];
 
-interface Review {
+// Helper para formatear fecha relativa
+function formatRelativeDate(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Hoy';
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semana${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
+    if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} mes${Math.floor(diffDays / 30) > 1 ? 'es' : ''}`;
+    return `Hace ${Math.floor(diffDays / 365)} año${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+}
+
+// Helper para obtener iniciales
+function getInitials(firstname?: string, lastname?: string): string {
+    const first = firstname?.charAt(0).toUpperCase() || '';
+    const last = lastname?.charAt(0).toUpperCase() || '';
+    return first + last || 'U';
+}
+
+interface DisplayReview {
     id: string;
     userName: string;
     userAvatar?: string | null;
@@ -93,6 +80,8 @@ interface Review {
     rating: number;
     date: string;
     comment: string;
+    hasReply: boolean;
+    replyText?: string;
 }
 
 export default function ProfessionalReviewsScreen() {
@@ -100,24 +89,67 @@ export default function ProfessionalReviewsScreen() {
     const { token } = useAuth();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [reviews] = useState<Review[]>(MOCK_REVIEWS);
+    const [reviews, setReviews] = useState<DisplayReview[]>([]);
+    const [topTags, setTopTags] = useState<{ tag: string; count: number }[]>([]);
+    const [sortBy, setSortBy] = useState<SortOption>('recent');
+    const [showSortMenu, setShowSortMenu] = useState(false);
 
+    // Cargar profesional
     const loadProfessional = useCallback(async () => {
         if (!token || !professionalId) return;
-        setIsLoading(true);
         try {
             const data = await userApi.getUser(token, professionalId);
             setProfessional(data);
         } catch (error) {
             console.error("Error loading professional:", error);
+        }
+    }, [token, professionalId]);
+
+    // Cargar reseñas desde API
+    const loadReviews = useCallback(async () => {
+        if (!professionalId) return;
+        setIsLoading(true);
+        try {
+            const response = await reviewApi.getReviewsForProfessional(professionalId, sortBy);
+
+            // Transformar reseñas de API al formato de display
+            const displayReviews: DisplayReview[] = response.reviews.map((r: APIReview) => ({
+                id: r._id,
+                userName: `${r.author.firstname || ''} ${r.author.lastname?.charAt(0) || ''}.`.trim(),
+                userAvatar: r.author.avatar,
+                userInitials: getInitials(r.author.firstname, r.author.lastname),
+                rating: r.rating,
+                date: formatRelativeDate(r.createdAt),
+                comment: r.comment,
+                hasReply: !!(r.reply && r.reply.text && r.reply.text.trim()),
+                replyText: r.reply?.text?.trim() || '',
+            }));
+
+            setReviews(displayReviews);
+            setTopTags(response.topTags || []);
+
+            // Actualizar rating del profesional si lo tenemos
+            if (professional && response.rating !== undefined) {
+                setProfessional(prev => prev ? {
+                    ...prev,
+                    rating: response.rating,
+                    ratingCount: response.ratingCount
+                } : null);
+            }
+        } catch (error) {
+            console.error("Error loading reviews:", error);
         } finally {
             setIsLoading(false);
         }
-    }, [token, professionalId]);
+    }, [professionalId, sortBy, professional]);
 
     useEffect(() => {
         loadProfessional();
     }, [loadProfessional]);
+
+    useEffect(() => {
+        loadReviews();
+    }, [professionalId, sortBy]);
 
     const getAvatarUrl = (avatar: string | null | undefined) => {
         return getAssetUrl(avatar ?? undefined);
@@ -166,12 +198,24 @@ export default function ProfessionalReviewsScreen() {
     };
 
     const getInitialsColor = (initials: string) => {
-        if (initials === "MA") return { bg: COLORS.indigo100, text: COLORS.indigo500 };
-        if (initials === "SR") return { bg: COLORS.rose100, text: COLORS.rose500 };
-        return { bg: COLORS.gray100, text: COLORS.gray500 };
+        // Generar color basado en las iniciales para consistencia
+        const colors = [
+            { bg: COLORS.indigo100, text: COLORS.indigo500 },
+            { bg: COLORS.rose100, text: COLORS.rose500 },
+            { bg: '#FEF3C7', text: '#D97706' }, // amber
+            { bg: '#D1FAE5', text: '#059669' }, // green
+            { bg: '#DBEAFE', text: '#2563EB' }, // blue
+        ];
+        const index = initials.charCodeAt(0) % colors.length;
+        return colors[index];
     };
 
-    const renderReviewCard = ({ item }: { item: Review }) => {
+    const handleSortChange = (newSort: SortOption) => {
+        setSortBy(newSort);
+        setShowSortMenu(false);
+    };
+
+    const renderReviewCard = ({ item }: { item: DisplayReview }) => {
         const initialsColors = item.userInitials ? getInitialsColor(item.userInitials) : null;
 
         return (
@@ -199,6 +243,25 @@ export default function ProfessionalReviewsScreen() {
                     </View>
                 </View>
                 <Text style={styles.reviewComment}>"{item.comment}"</Text>
+
+                {/* Professional's Reply */}
+                {item.hasReply && item.replyText && (
+                    <View style={styles.replyContainer}>
+                        <View style={styles.replyHeader}>
+                            {avatarUrl ? (
+                                <Image source={{ uri: avatarUrl }} style={styles.replyAvatar} />
+                            ) : (
+                                <View style={styles.replyAvatarPlaceholder}>
+                                    <MaterialIcons name="person" size={12} color={COLORS.gray400} />
+                                </View>
+                            )}
+                            <Text style={styles.replyOwner}>
+                                {displayName?.split(' ')[0]}
+                            </Text>
+                        </View>
+                        <Text style={styles.replyText}>{item.replyText}</Text>
+                    </View>
+                )}
             </View>
         );
     };
@@ -280,41 +343,78 @@ export default function ProfessionalReviewsScreen() {
                         </View>
                     </View>
 
-                    {/* Trait Tags */}
-                    <View style={styles.traitsSection}>
-                        <Text style={styles.traitsTitle}>
-                            ¿Qué define mejor a {displayName?.split(" ")[0]}?
-                        </Text>
-                        <View style={styles.tagsContainer}>
-                            {TRAIT_TAGS.map((tag) => (
-                                <View
-                                    key={tag.id}
-                                    style={[
-                                        styles.traitTag,
-                                        tag.selected && styles.traitTagSelected
-                                    ]}
-                                >
-                                    <Text style={[
-                                        styles.traitTagText,
-                                        tag.selected && styles.traitTagTextSelected
-                                    ]}>
-                                        {tag.label}
-                                    </Text>
-                                    {tag.selected && (
-                                        <MaterialIcons name="check" size={14} color={COLORS.textMain} />
-                                    )}
-                                </View>
-                            ))}
+                    {/* Trait Tags - Now from API */}
+                    {topTags.length > 0 && (
+                        <View style={styles.traitsSection}>
+                            <Text style={styles.traitsTitle}>
+                                ¿Qué define mejor a {displayName?.split(" ")[0]}?
+                            </Text>
+                            <View style={styles.tagsContainer}>
+                                {topTags.slice(0, 6).map((tagData, index) => (
+                                    <View
+                                        key={tagData.tag}
+                                        style={[
+                                            styles.traitTag,
+                                            index < 2 && styles.traitTagSelected
+                                        ]}
+                                    >
+                                        <Text style={[
+                                            styles.traitTagText,
+                                            index < 2 && styles.traitTagTextSelected
+                                        ]}>
+                                            #{tagData.tag.charAt(0).toUpperCase() + tagData.tag.slice(1)}
+                                        </Text>
+                                        {index < 2 && (
+                                            <MaterialIcons name="check" size={14} color={COLORS.textMain} />
+                                        )}
+                                    </View>
+                                ))}
+                            </View>
                         </View>
-                    </View>
+                    )}
                 </View>
+
+                {/* Sort Menu Dropdown */}
+                {showSortMenu && (
+                    <View style={styles.sortMenu}>
+                        {SORT_OPTIONS.map(option => (
+                            <TouchableOpacity
+                                key={option.id}
+                                style={[
+                                    styles.sortMenuItem,
+                                    sortBy === option.id && styles.sortMenuItemActive
+                                ]}
+                                onPress={() => handleSortChange(option.id)}
+                            >
+                                <Text style={[
+                                    styles.sortMenuItemText,
+                                    sortBy === option.id && styles.sortMenuItemTextActive
+                                ]}>
+                                    {option.label}
+                                </Text>
+                                {sortBy === option.id && (
+                                    <MaterialIcons name="check" size={16} color={COLORS.primary} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
 
                 {/* Sort & Write Review Buttons */}
                 <View style={styles.actionsRow}>
-                    <TouchableOpacity style={styles.sortButton}>
+                    <TouchableOpacity
+                        style={styles.sortButton}
+                        onPress={() => setShowSortMenu(!showSortMenu)}
+                    >
                         <MaterialIcons name="sort" size={18} color={COLORS.gray500} />
-                        <Text style={styles.sortButtonText}>Más recientes</Text>
-                        <MaterialIcons name="expand-more" size={16} color={COLORS.gray400} />
+                        <Text style={styles.sortButtonText}>
+                            {SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Más recientes'}
+                        </Text>
+                        <MaterialIcons
+                            name={showSortMenu ? "expand-less" : "expand-more"}
+                            size={16}
+                            color={COLORS.gray400}
+                        />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.writeReviewButton}
@@ -683,5 +783,79 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: COLORS.gray500,
         fontWeight: "500",
+    },
+    // Sort Menu Dropdown
+    sortMenu: {
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        marginBottom: 12,
+        padding: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    sortMenuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    sortMenuItemActive: {
+        backgroundColor: COLORS.gray100,
+    },
+    sortMenuItemText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray500,
+    },
+    sortMenuItemTextActive: {
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
+    // Professional Reply Styles
+    replyContainer: {
+        marginTop: 16,
+        padding: 14,
+        backgroundColor: "rgba(249, 245, 6, 0.08)",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "rgba(249, 245, 6, 0.2)",
+    },
+    replyHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 8,
+    },
+    replyAvatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+    },
+    replyAvatarPlaceholder: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: COLORS.gray200,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    replyOwner: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    ownerLabel: {
+        color: COLORS.amber500,
+        fontWeight: "normal",
+    },
+    replyText: {
+        fontSize: 14,
+        color: COLORS.gray500,
+        lineHeight: 20,
     },
 });

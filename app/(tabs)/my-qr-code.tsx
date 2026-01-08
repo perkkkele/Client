@@ -1,6 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
     Image,
     Platform,
@@ -10,10 +10,14 @@ import {
     Text,
     TouchableOpacity,
     View,
+    ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
+import ViewShot from "react-native-view-shot";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
 
@@ -59,6 +63,8 @@ const TwinProLogo = () => (
 export default function MyQRCodeScreen() {
     const { user } = useAuth();
     const qrRef = useRef<any>(null);
+    const viewShotRef = useRef<ViewShot>(null);
+    const [isSharing, setIsSharing] = useState(false);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname
@@ -74,12 +80,48 @@ export default function MyQRCodeScreen() {
         : `https://twinpro.app/user/${user?._id}`;
 
     async function handleShare() {
+        if (isSharing) return;
+        setIsSharing(true);
+
         try {
-            await Share.share({
-                message: `Conéctate conmigo en TwinPro: ${displayName}\n\n${qrData}`,
-            });
+            // Check if sharing is available
+            const isSharingAvailable = await Sharing.isAvailableAsync();
+
+            if (isSharingAvailable && viewShotRef.current) {
+                // Capture the QR card as image
+                const uri = await (viewShotRef.current as any).capture();
+
+                // Share the image
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'image/png',
+                    dialogTitle: 'Compartir mi código QR',
+                });
+            } else {
+                // Fallback to text share if image sharing not available
+                const shareMessage = `✨ *${displayName}* ✨
+${profession}
+
+🔗 Conéctate conmigo en TwinPro:
+${qrData}
+
+📱 Escanea mi código QR o haz clic en el enlace para chatear con mi gemelo digital.`;
+
+                await Share.share({
+                    message: shareMessage,
+                });
+            }
         } catch (error) {
             console.log("Error sharing:", error);
+            // Fallback to text share on error
+            try {
+                await Share.share({
+                    message: `Conéctate conmigo en TwinPro: ${displayName}\n\n${qrData}`,
+                });
+            } catch (e) {
+                console.log("Fallback share error:", e);
+            }
+        } finally {
+            setIsSharing(false);
         }
     }
 
@@ -118,70 +160,90 @@ export default function MyQRCodeScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Tarjeta QR */}
-                <View style={styles.qrCard}>
-                    {/* Sección de perfil */}
-                    <View style={styles.profileSection}>
-                        <View style={styles.avatarContainer}>
-                            {avatarUrl ? (
-                                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-                            ) : (
-                                <View style={styles.avatarPlaceholder}>
-                                    <MaterialIcons name="person" size={40} color={COLORS.gray400} />
-                                </View>
-                            )}
-                            {isVerified && (
-                                <View style={styles.verifiedBadge}>
-                                    <MaterialIcons name="verified" size={16} color={COLORS.textDark} />
-                                </View>
-                            )}
-                        </View>
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.profileName}>{displayName}</Text>
-                            <Text style={styles.profileProfession}>{profession} • TwinPro</Text>
-                        </View>
-                    </View>
-
-                    {/* Código QR Corporativo TwinPro */}
-                    <View style={styles.qrContainer}>
-                        <View style={styles.qrWrapper}>
-                            <QRCode
-                                value={qrData}
-                                size={240}
-                                backgroundColor={COLORS.primary}
-                                color={COLORS.black}
-                                logo={undefined}
-                                logoSize={70}
-                                logoBackgroundColor="transparent"
-                                logoMargin={0}
-                                logoBorderRadius={12}
-                                quietZone={15}
-                                getRef={(ref) => (qrRef.current = ref)}
-                                ecl="M" // Medium error correction to allow logo
-                            />
-                            {/* Logo overlay in center */}
-                            <View style={styles.logoOverlay}>
-                                <TwinProLogo />
+                {/* Tarjeta QR - envuelta en ViewShot para captura */}
+                <ViewShot
+                    ref={viewShotRef}
+                    options={{
+                        format: "png",
+                        quality: 1,
+                        result: "tmpfile"
+                    }}
+                    style={styles.viewShotContainer}
+                >
+                    <View style={styles.qrCard}>
+                        {/* Sección de perfil */}
+                        <View style={styles.profileSection}>
+                            <View style={styles.avatarContainer}>
+                                {avatarUrl ? (
+                                    <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                                ) : (
+                                    <View style={styles.avatarPlaceholder}>
+                                        <MaterialIcons name="person" size={40} color={COLORS.gray400} />
+                                    </View>
+                                )}
+                                {isVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <MaterialIcons name="verified" size={16} color={COLORS.textDark} />
+                                    </View>
+                                )}
+                            </View>
+                            <View style={styles.profileInfo}>
+                                <Text style={styles.profileName}>{displayName}</Text>
+                                <Text style={styles.profileProfession}>{profession} • TwinPro</Text>
                             </View>
                         </View>
-                    </View>
 
-                    {/* Texto de ayuda */}
-                    <View style={styles.helperTextContainer}>
-                        <Text style={styles.helperText}>
-                            Escanea este código para conectar conmigo directamente en{" "}
-                            <Text style={styles.helperTextBrand}>TwinPro</Text>
-                        </Text>
-                        {/* URL discreta para escribir en navegador */}
-                        <Text style={styles.urlText}>{qrData.replace('https://', '')}</Text>
+                        {/* Código QR Corporativo TwinPro */}
+                        <View style={styles.qrContainer}>
+                            <View style={styles.qrWrapper}>
+                                <QRCode
+                                    value={qrData}
+                                    size={240}
+                                    backgroundColor={COLORS.primary}
+                                    color={COLORS.black}
+                                    logo={undefined}
+                                    logoSize={70}
+                                    logoBackgroundColor="transparent"
+                                    logoMargin={0}
+                                    logoBorderRadius={12}
+                                    quietZone={15}
+                                    getRef={(ref) => (qrRef.current = ref)}
+                                    ecl="M" // Medium error correction to allow logo
+                                />
+                                {/* Logo overlay in center */}
+                                <View style={styles.logoOverlay}>
+                                    <TwinProLogo />
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Texto de ayuda */}
+                        <View style={styles.helperTextContainer}>
+                            <Text style={styles.helperText}>
+                                Escanea este código para conectar conmigo directamente en{" "}
+                                <Text style={styles.helperTextBrand}>TwinPro</Text>
+                            </Text>
+                            {/* URL discreta para escribir en navegador */}
+                            <Text style={styles.urlText}>{qrData.replace('https://', '')}</Text>
+                        </View>
                     </View>
-                </View>
+                </ViewShot>
 
                 {/* Botones de acción */}
                 <View style={styles.actionsContainer}>
-                    <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                        <MaterialIcons name="share" size={22} color={COLORS.textDark} />
-                        <Text style={styles.shareButtonText}>Compartir Código QR</Text>
+                    <TouchableOpacity
+                        style={[styles.shareButton, isSharing && styles.shareButtonDisabled]}
+                        onPress={handleShare}
+                        disabled={isSharing}
+                    >
+                        {isSharing ? (
+                            <ActivityIndicator size="small" color={COLORS.textDark} />
+                        ) : (
+                            <MaterialIcons name="share" size={22} color={COLORS.textDark} />
+                        )}
+                        <Text style={styles.shareButtonText}>
+                            {isSharing ? "Preparando imagen..." : "Compartir Código QR"}
+                        </Text>
                     </TouchableOpacity>
 
                     <View style={styles.secondaryActionsRow}>
@@ -243,6 +305,11 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 16,
         paddingBottom: 40,
+    },
+
+    // ViewShot container
+    viewShotContainer: {
+        backgroundColor: COLORS.backgroundLight,
     },
 
     // Tarjeta QR
@@ -395,6 +462,9 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.textDark,
         letterSpacing: 0.5,
+    },
+    shareButtonDisabled: {
+        opacity: 0.7,
     },
     secondaryActionsRow: {
         flexDirection: "row",

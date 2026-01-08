@@ -255,6 +255,25 @@ export default function EditProProfileScreen() {
                         <Text style={styles.avatarHint}>Toca para cambiar tu foto</Text>
                     </View>
 
+                    {/* Username & Profile URL Section */}
+                    {user?.username && (
+                        <View style={styles.usernameSection}>
+                            <View style={styles.usernameCard}>
+                                <Text style={styles.usernameText}>@{user.username}</Text>
+                                <Text style={styles.profileUrlText}>
+                                    twinpro.app/{user.username}
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.qrButton}
+                                    onPress={() => router.push("/(tabs)/my-qr-code")}
+                                >
+                                    <MaterialIcons name="qr-code-2" size={16} color={COLORS.gray500} />
+                                    <Text style={styles.qrButtonText}>Ver mi código QR</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
                     {/* Form Fields */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>INFORMACIÓN BÁSICA</Text>
@@ -483,6 +502,49 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: COLORS.gray500,
         marginTop: 8,
+    },
+    usernameSection: {
+        marginBottom: 24,
+    },
+    usernameCard: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        padding: 16,
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    usernameRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 4,
+    },
+    usernameText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.primaryDark,
+    },
+    profileUrlText: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        marginBottom: 12,
+    },
+    qrButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    qrButtonText: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.gray500,
     },
     section: {
         marginBottom: 24,

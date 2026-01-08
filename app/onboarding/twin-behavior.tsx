@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { getPresetForProfessional } from "../../constants/digitalTwinPresets";
 
 const COLORS = {
     primary: "#FDE047",
@@ -114,6 +115,7 @@ export default function TwinBehaviorScreen() {
     const [formality, setFormality] = useState(1);
     const [depth, setDepth] = useState(1);
     const [tone, setTone] = useState(0);
+    const [isPresetApplied, setIsPresetApplied] = useState(false);
 
     const [allowedActions, setAllowedActions] = useState([
         { id: "1", text: "Dar precio exacto", enabled: true },
@@ -132,39 +134,94 @@ export default function TwinBehaviorScreen() {
     const [objective, setObjective] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    // Load previous configuration from user data on mount
+    // Load previous configuration from user data OR apply preset
     useEffect(() => {
+        console.log('[TwinBehavior] useEffect triggered');
+        console.log('[TwinBehavior] User data:', {
+            category: user?.category,
+            profession: user?.profession,
+            hasDigitalTwin: !!user?.digitalTwin,
+            hasBehavior: !!user?.digitalTwin?.behavior,
+            hasGuardrails: !!user?.digitalTwin?.guardrails
+        });
+
         const behavior = user?.digitalTwin?.behavior;
         const guardrails = user?.digitalTwin?.guardrails;
 
-        if (behavior) {
-            if (behavior.formality !== undefined) setFormality(behavior.formality);
-            if (behavior.depth !== undefined) setDepth(behavior.depth);
-            if (behavior.tone !== undefined) setTone(behavior.tone);
-            if (behavior.objective) setObjective(behavior.objective);
-        }
+        console.log('[TwinBehavior] behavior:', behavior);
+        console.log('[TwinBehavior] guardrails:', guardrails);
 
-        if (guardrails) {
-            // Load allowed actions if user has saved them
-            if (guardrails.allowed && guardrails.allowed.length > 0) {
-                setAllowedActions(
-                    guardrails.allowed.map((text, index) => ({
-                        id: `saved-allowed-${index}`,
-                        text,
-                        enabled: true
-                    }))
-                );
+        // Un objetivo no vacío indica que el usuario personalizó su configuración
+        // o que ya se aplicó un preset anteriormente
+        const hasCustomObjective = !!(behavior?.objective && behavior.objective.trim().length > 0);
+
+        // Solo consideramos que hay config guardada si hay un objetivo personalizado
+        // Los guardrails por defecto (hardcodeados) no cuentan como config personalizada
+        const hasSavedConfig = hasCustomObjective;
+
+        console.log('[TwinBehavior] hasCustomObjective:', hasCustomObjective);
+        console.log('[TwinBehavior] hasSavedConfig:', hasSavedConfig);
+
+        if (hasSavedConfig) {
+            console.log('[TwinBehavior] Loading saved config...');
+            // Usuario tiene configuración previa guardada - cargarla
+            if (behavior) {
+                if (behavior.formality !== undefined) setFormality(behavior.formality);
+                if (behavior.depth !== undefined) setDepth(behavior.depth);
+                if (behavior.tone !== undefined) setTone(behavior.tone);
+                if (behavior.objective) setObjective(behavior.objective);
             }
-            // Load restricted actions if user has saved them
-            if (guardrails.restricted && guardrails.restricted.length > 0) {
-                setRestrictedActions(
-                    guardrails.restricted.map((text, index) => ({
-                        id: `saved-restricted-${index}`,
-                        text,
-                        enabled: true
-                    }))
-                );
+
+            if (guardrails) {
+                if (guardrails.allowed && guardrails.allowed.length > 0) {
+                    setAllowedActions(
+                        guardrails.allowed.map((text, index) => ({
+                            id: `saved-allowed-${index}`,
+                            text,
+                            enabled: true
+                        }))
+                    );
+                }
+                if (guardrails.restricted && guardrails.restricted.length > 0) {
+                    setRestrictedActions(
+                        guardrails.restricted.map((text, index) => ({
+                            id: `saved-restricted-${index}`,
+                            text,
+                            enabled: true
+                        }))
+                    );
+                }
             }
+        } else {
+            // No hay configuración previa - aplicar preset según categoría/profesión
+            console.log('[TwinBehavior] Applying preset for:', {
+                category: user?.category,
+                profession: user?.profession,
+                hasCategory: !!user?.category,
+                hasProfession: !!user?.profession
+            });
+            const preset = getPresetForProfessional(user?.category, user?.profession);
+            console.log('[TwinBehavior] Preset applied:', preset);
+
+            setFormality(preset.formality);
+            setDepth(preset.depth);
+            setTone(preset.tone);
+            setObjective(preset.objective);
+            setAllowedActions(
+                preset.allowed.map((text, index) => ({
+                    id: `preset-allowed-${index}`,
+                    text,
+                    enabled: true
+                }))
+            );
+            setRestrictedActions(
+                preset.restricted.map((text, index) => ({
+                    id: `preset-restricted-${index}`,
+                    text,
+                    enabled: true
+                }))
+            );
+            setIsPresetApplied(true);
         }
     }, [user]);
 
@@ -209,7 +266,9 @@ export default function TwinBehaviorScreen() {
                         guardrails: {
                             allowed: allowedActions.map(a => a.text),
                             restricted: restrictedActions.map(a => a.text)
-                        }
+                        },
+                        // Mark that context needs to be regenerated with new behavior
+                        contextNeedsSync: true
                     }
                 });
 

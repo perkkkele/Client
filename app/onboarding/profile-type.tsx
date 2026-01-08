@@ -302,7 +302,8 @@ const styles = StyleSheet.create({
     contentSection: {
         flex: 0.38,
         paddingHorizontal: 24,
-        paddingVertical: 24,
+        paddingTop: 24,
+        paddingBottom: 32,
         justifyContent: "center",
     },
     questionSection: {

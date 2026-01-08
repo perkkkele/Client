@@ -177,38 +177,49 @@ export async function uploadTrainingVideo(
 
 /**
  * Get list of public avatars from LiveAvatar catalog
+ * Handles pagination to fetch ALL available avatars
  */
 export async function getPublicAvatars(): Promise<PublicAvatar[]> {
     try {
-        const response = await fetch(`${LIVEAVATAR_API_URL}/avatars/public`, {
-            method: "GET",
-            headers: {
-                "X-API-KEY": LIVEAVATAR_API_KEY,
-                "Accept": "application/json",
-            },
-        });
+        let allAvatars: PublicAvatar[] = [];
+        let nextUrl: string | null = `${LIVEAVATAR_API_URL}/avatars/public`;
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            console.error("LiveAvatar public avatars error:", error);
-            throw new Error(error.message || `Error fetching avatars: ${response.status}`);
+        while (nextUrl) {
+            const response: Response = await fetch(nextUrl, {
+                method: "GET",
+                headers: {
+                    "X-API-KEY": LIVEAVATAR_API_KEY,
+                    "Accept": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                console.error("LiveAvatar public avatars error:", error);
+                throw new Error(error.message || `Error fetching avatars: ${response.status}`);
+            }
+
+            const responseData: any = await response.json();
+            console.log("LiveAvatar public avatars response:", responseData);
+
+            // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
+            if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
+                allAvatars = [...allAvatars, ...responseData.data.results];
+                nextUrl = responseData.data.next || null;
+            } else if (responseData.data && Array.isArray(responseData.data)) {
+                // Fallback for direct array in data
+                allAvatars = [...allAvatars, ...responseData.data];
+                nextUrl = null;
+            } else if (Array.isArray(responseData)) {
+                allAvatars = [...allAvatars, ...responseData];
+                nextUrl = null;
+            } else {
+                nextUrl = null;
+            }
         }
 
-        const responseData = await response.json();
-        console.log("LiveAvatar public avatars response:", responseData);
-
-        // API returns { code: 1000, data: { count, next, previous, results: [...] }, message }
-        if (responseData.data && responseData.data.results && Array.isArray(responseData.data.results)) {
-            return responseData.data.results;
-        }
-        // Fallback for direct array in data
-        if (responseData.data && Array.isArray(responseData.data)) {
-            return responseData.data;
-        }
-        if (Array.isArray(responseData)) {
-            return responseData;
-        }
-        return [];
+        console.log(`Loaded ${allAvatars.length} public avatars total`);
+        return allAvatars;
     } catch (error) {
         console.error("Error fetching public avatars:", error);
         return [];
@@ -556,6 +567,37 @@ export async function updateContext(
     } catch (error) {
         console.error("Error updating context:", error);
         return null;
+    }
+}
+
+/**
+ * Delete a LiveAvatar context
+ * API: DELETE /v1/contexts/{context_id}
+ */
+export async function deleteContext(contextId: string): Promise<boolean> {
+    try {
+        console.log("Deleting LiveAvatar context:", contextId);
+
+        const response = await fetch(`${LIVEAVATAR_API_URL}/contexts/${contextId}`, {
+            method: "DELETE",
+            headers: {
+                "X-API-KEY": LIVEAVATAR_API_KEY,
+                "Accept": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            console.error("LiveAvatar delete context error:", error);
+            // Don't throw - just log and return false
+            return false;
+        }
+
+        console.log("LiveAvatar context deleted successfully:", contextId);
+        return true;
+    } catch (error) {
+        console.error("Error deleting context:", error);
+        return false;
     }
 }
 

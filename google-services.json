@@ -33,6 +33,35 @@
                     ]
                 }
             }
+        },
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:689354205188:android:d0298bf795035d6daaed51",
+                "android_client_info": {
+                    "package_name": "app.twinpro.twinpro.dev"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "689354205188-lh0997pqg6avg32bbig0avkj04oc55e6.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDb5DjaI8JYWhHuGmpwecXuG4pitwhbpIw"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "689354205188-lh0997pqg6avg32bbig0avkj04oc55e6.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
         }
     ],
     "configuration_version": "1"

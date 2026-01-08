@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -95,6 +95,13 @@ export default function ProContactScreen() {
     // Time picker modal
     const [timePickerVisible, setTimePickerVisible] = useState(false);
     const [timePickerType, setTimePickerType] = useState<"start" | "end">("start");
+
+    // Pre-fill professional email with user's account email
+    useEffect(() => {
+        if (user?.email && !contactEmail) {
+            setContactEmail(user.email);
+        }
+    }, [user?.email]);
 
     const calendarConnected = user?.connectedCalendar?.connected || false;
     const calendarProvider = user?.connectedCalendar?.provider || null;

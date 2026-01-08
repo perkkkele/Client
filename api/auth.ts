@@ -67,13 +67,16 @@ export async function refreshAccessToken(refreshToken: string): Promise<{ access
     return response.json();
 }
 
-export async function loginWithGoogle(idToken: string): Promise<LoginResponse> {
+export async function loginWithGoogle(
+    idToken: string,
+    userType?: 'user' | 'userpro'
+): Promise<LoginResponse> {
     const response = await fetch(`${API_URL}/auth/google`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ idToken }),
+        body: JSON.stringify({ idToken, userType }),
     });
 
     if (!response.ok) {

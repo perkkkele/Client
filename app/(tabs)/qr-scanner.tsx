@@ -116,7 +116,7 @@ export default function QRScannerScreen() {
         }
 
         // Check for web URL format: https://twinpro.app/@username or twinpro.app/@username
-        const webUrlMatch = data.match(/(?:https?:\/\/)?twinpro\.app\/@([a-zA-Z0-9_]+)/);
+        const webUrlMatch = data.match(/(?:https?:\/\/)?twinpro\.app\/@([a-zA-Z0-9_-]+)/);
         if (webUrlMatch && webUrlMatch[1]) {
             username = webUrlMatch[1];
         }
@@ -128,23 +128,8 @@ export default function QRScannerScreen() {
                 const response = await fetch(`${API_URL}/users/by-username/${username}`);
                 if (response.ok) {
                     const professional = await response.json();
-                    Alert.alert(
-                        "Código Escaneado",
-                        `¿Deseas iniciar un chat con ${professional.publicName || username}?`,
-                        [
-                            {
-                                text: "Cancelar",
-                                onPress: () => setScanned(false),
-                                style: "cancel",
-                            },
-                            {
-                                text: "Iniciar Chat",
-                                onPress: () => {
-                                    router.replace(`/avatar-chat/${professional._id}`);
-                                },
-                            },
-                        ]
-                    );
+                    // Navigate directly to chat without confirmation
+                    router.replace(`/avatar-chat/${professional._id}`);
                 } else {
                     Alert.alert(
                         "Profesional No Encontrado",

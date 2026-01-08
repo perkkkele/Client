@@ -704,6 +704,28 @@ export default function ProDashboardScreen() {
                                 <View style={styles.sideMenuCard}>
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/my-earnings"); }}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
+                                            <MaterialIcons name="account-balance-wallet" size={20} color={COLORS.green600} />
+                                        </View>
+                                        <Text style={styles.sideMenuCardLabel}>Mis Ingresos</Text>
+                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/stripe-onboarding"); }}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.indigo50 }]}>
+                                            <MaterialIcons name="account-balance" size={20} color={COLORS.indigo600} />
+                                        </View>
+                                        <Text style={styles.sideMenuCardLabel}>Configurar Pagos</Text>
+                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                    </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
                                         onPress={() => { setMenuVisible(false); router.push("/(settings)/plans-credits"); }}
                                     >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>

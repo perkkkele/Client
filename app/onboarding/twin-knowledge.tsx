@@ -19,6 +19,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi } from "../../api";
 import { KnowledgeDocument } from "../../api/user";
+import { getCategoryInstruction } from "../../constants/digitalTwinPresets";
 
 const COLORS = {
     primary: "#FDE047",
@@ -107,6 +108,12 @@ function buildContextPrompt(user: any): string {
     // Specialties
     if (user?.specialties && user.specialties.length > 0) {
         parts.push(`Tus especialidades incluyen: ${user.specialties.join(', ')}.`);
+    }
+
+    // Industry-specific instructions based on category
+    const categoryInstruction = getCategoryInstruction(user?.category);
+    if (categoryInstruction) {
+        parts.push(categoryInstruction);
     }
 
     return parts.join(' ');
@@ -452,6 +459,7 @@ export default function TwinKnowledgeScreen() {
                         trainingStatus: 'ready'
                     },
                     liveAvatarContextId: contextId,
+                    contextNeedsSync: false,  // Clear sync flag after regeneration
                     isActive: true,
                     activatedAt: new Date().toISOString()
                 }

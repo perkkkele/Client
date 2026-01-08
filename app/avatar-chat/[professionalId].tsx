@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
-import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi } from "../../api";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
@@ -528,16 +528,42 @@ export default function AvatarChatScreen() {
             return;
         }
 
-        const digitalTwin = professional.digitalTwin;
+        let digitalTwin = professional.digitalTwin;
         const avatarId = digitalTwin.appearance?.liveAvatarId;
         const voiceId = digitalTwin.appearance?.liveVoiceId;
-        const contextId = digitalTwin.liveAvatarContextId;
+        let contextId = digitalTwin.liveAvatarContextId;
 
         if (!avatarId) {
             console.log("No avatar ID configured, skipping session");
             setSessionError("El profesional no tiene un avatar configurado");
             setSessionStatus('error');
             return;
+        }
+
+        // Check if context needs regeneration (settings changed since last sync)
+        if (digitalTwin.contextNeedsSync || !contextId) {
+            if (token && professional._id) {
+                console.log("[AvatarChat] Context needs sync, regenerating...");
+                setSessionStatus('connecting');
+                setSessionError(null);
+                try {
+                    // Get fresh professional data and regenerate context
+                    const freshProfessional = await userApi.getUser(token, professional._id);
+                    const newContextId = await digitalTwinContextApi.regenerateDigitalTwinContext(token, freshProfessional);
+                    if (newContextId) {
+                        contextId = newContextId;
+                        console.log("[AvatarChat] Context regenerated:", contextId);
+                    }
+                } catch (syncError: any) {
+                    console.error("[AvatarChat] Error regenerating context:", syncError);
+                    // Continue with existing context if available
+                    if (!contextId) {
+                        setSessionError("Error al sincronizar el gemelo digital");
+                        setSessionStatus('error');
+                        return;
+                    }
+                }
+            }
         }
 
         if (!contextId) {
