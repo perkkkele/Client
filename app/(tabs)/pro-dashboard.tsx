@@ -85,6 +85,32 @@ export default function ProDashboardScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
 
+    // Escalation state
+    const [escalation, setEscalation] = useState({
+        enabled: false,
+        triggers: {
+            clientRequest: true,
+            twinUnable: true,
+            keywords: false,
+        },
+        keywords: ["urgente", "emergencia", "queja"],
+    });
+
+    // Load escalation from user on mount
+    useEffect(() => {
+        if (user?.escalation) {
+            setEscalation({
+                enabled: user.escalation.enabled ?? false,
+                triggers: {
+                    clientRequest: user.escalation.triggers?.clientRequest ?? true,
+                    twinUnable: user.escalation.triggers?.twinUnable ?? true,
+                    keywords: user.escalation.triggers?.keywords ?? false,
+                },
+                keywords: user.escalation.keywords || ["urgente", "emergencia", "queja"],
+            });
+        }
+    }, [user?.escalation]);
+
     // Analytics state
     const [analytics, setAnalytics] = useState({
         profileViews: 0,
@@ -282,6 +308,21 @@ export default function ProDashboardScreen() {
         setRefreshing(false);
     }, [loadAnalytics]);
 
+    // Handle escalation config change
+    async function handleEscalationChange(newConfig: typeof escalation) {
+        setEscalation(newConfig);
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                escalation: newConfig,
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error updating escalation config:", error);
+        }
+    }
+
     // Menu sections data
     const menuSections: MenuSection[] = [
         {
@@ -421,6 +462,8 @@ export default function ProDashboardScreen() {
                                     geminiActive={geminiActive}
                                     onGeminiChange={setGeminiActive}
                                     onConfigureGemini={handleConfigureGemini}
+                                    escalation={escalation}
+                                    onEscalationChange={handleEscalationChange}
                                 />
                             );
                         case 'appointments':

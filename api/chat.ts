@@ -187,9 +187,12 @@ export interface ProChat {
     unreadCount: number;
     lastMessage: string | null;
     lastMessageDate: string;
-    isEscalated: boolean;
-    escalatedAt?: string;
-    escalatedReason?: string;
+    escalation: {
+        status: 'none' | 'pending' | 'accepted' | 'declined';
+        requestedAt?: string;
+        reason?: 'client_request' | 'twin_unable' | 'keyword';
+        respondedAt?: string;
+    };
     videoCallActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -221,11 +224,11 @@ export async function getProChats(
     return data.chats || [];
 }
 
-// Escalate a chat for professional intervention
+// Escalate a chat - client requests to talk to human professional
 export async function escalateChat(
     token: string,
     chatId: string,
-    reason?: string
+    reason: 'client_request' | 'twin_unable' | 'keyword' = 'client_request'
 ): Promise<void> {
     const response = await fetch(`${API_URL}/chat/${chatId}/escalate`, {
         method: "POST",
@@ -239,6 +242,27 @@ export async function escalateChat(
     if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || error.msg || "Error al escalar chat");
+    }
+}
+
+// Professional responds to escalation request
+export async function respondToEscalation(
+    token: string,
+    chatId: string,
+    accept: boolean
+): Promise<void> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/escalation/respond`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ accept }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al responder a la escalación");
     }
 }
 

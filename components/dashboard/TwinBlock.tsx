@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Switch, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, Switch, StyleSheet, TextInput } from "react-native";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "./constants";
@@ -8,11 +8,23 @@ interface User {
     _id?: string;
 }
 
+interface EscalationConfig {
+    enabled: boolean;
+    triggers: {
+        clientRequest: boolean;
+        twinUnable: boolean;
+        keywords: boolean;
+    };
+    keywords: string[];
+}
+
 interface TwinBlockProps {
     user?: User;
     geminiActive: boolean;
     onGeminiChange: (value: boolean) => void;
     onConfigureGemini: () => void;
+    escalation?: EscalationConfig;
+    onEscalationChange?: (config: EscalationConfig) => void;
 }
 
 export default function TwinBlock({
@@ -20,10 +32,48 @@ export default function TwinBlock({
     geminiActive,
     onGeminiChange,
     onConfigureGemini,
+    escalation,
+    onEscalationChange,
 }: TwinBlockProps) {
+    const [showEscalationConfig, setShowEscalationConfig] = useState(false);
+    const [keywordInput, setKeywordInput] = useState("");
+
     const handleTestGemini = () => {
         if (user?._id) {
             router.push(`/avatar-chat/${user._id}` as any);
+        }
+    };
+
+    const handleEscalationToggle = (enabled: boolean) => {
+        if (onEscalationChange && escalation) {
+            onEscalationChange({ ...escalation, enabled });
+        }
+    };
+
+    const handleTriggerToggle = (trigger: 'clientRequest' | 'twinUnable' | 'keywords') => {
+        if (onEscalationChange && escalation) {
+            onEscalationChange({
+                ...escalation,
+                triggers: {
+                    ...escalation.triggers,
+                    [trigger]: !escalation.triggers[trigger]
+                }
+            });
+        }
+    };
+
+    const handleAddKeyword = () => {
+        if (keywordInput.trim() && onEscalationChange && escalation) {
+            const newKeywords = [...escalation.keywords, keywordInput.trim()];
+            onEscalationChange({ ...escalation, keywords: newKeywords });
+            setKeywordInput("");
+        }
+    };
+
+    const handleRemoveKeyword = (keyword: string) => {
+        if (onEscalationChange && escalation) {
+            const newKeywords = escalation.keywords.filter(k => k !== keyword);
+            onEscalationChange({ ...escalation, keywords: newKeywords });
         }
     };
 
@@ -69,6 +119,118 @@ export default function TwinBlock({
                     </View>
                     <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
                 </TouchableOpacity>
+
+                {/* Escalation Section */}
+                {onEscalationChange && escalation && (
+                    <>
+                        <View style={styles.escalationDivider} />
+                        <View style={styles.escalationSection}>
+                            <View style={styles.escalationHeader}>
+                                <View style={styles.escalationHeaderLeft}>
+                                    <MaterialIcons name="support-agent" size={20} color="#FFFFFF" />
+                                    <Text style={styles.escalationTitle}>Escalado a profesional</Text>
+                                </View>
+                                <Switch
+                                    value={escalation.enabled}
+                                    onValueChange={handleEscalationToggle}
+                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#60a5fa" }}
+                                    thumbColor="#FFFFFF"
+                                    ios_backgroundColor="rgba(0,0,0,0.3)"
+                                />
+                            </View>
+                            <Text style={styles.escalationHint}>
+                                Permite a tus clientes contactarte cuando el gemelo no pueda ayudarles
+                            </Text>
+
+                            {escalation.enabled && (
+                                <TouchableOpacity
+                                    style={styles.escalationExpandButton}
+                                    onPress={() => setShowEscalationConfig(!showEscalationConfig)}
+                                >
+                                    <Text style={styles.escalationExpandText}>
+                                        {showEscalationConfig ? "Ocultar opciones" : "Configurar triggers"}
+                                    </Text>
+                                    <MaterialIcons
+                                        name={showEscalationConfig ? "expand-less" : "expand-more"}
+                                        size={18}
+                                        color="rgba(255,255,255,0.7)"
+                                    />
+                                </TouchableOpacity>
+                            )}
+
+                            {escalation.enabled && showEscalationConfig && (
+                                <View style={styles.escalationOptions}>
+                                    <TouchableOpacity
+                                        style={styles.checkboxRow}
+                                        onPress={() => handleTriggerToggle('clientRequest')}
+                                    >
+                                        <MaterialIcons
+                                            name={escalation.triggers.clientRequest ? "check-box" : "check-box-outline-blank"}
+                                            size={22}
+                                            color={escalation.triggers.clientRequest ? "#60a5fa" : "rgba(255,255,255,0.5)"}
+                                        />
+                                        <Text style={styles.checkboxLabel}>El cliente lo solicite</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.checkboxRow}
+                                        onPress={() => handleTriggerToggle('twinUnable')}
+                                    >
+                                        <MaterialIcons
+                                            name={escalation.triggers.twinUnable ? "check-box" : "check-box-outline-blank"}
+                                            size={22}
+                                            color={escalation.triggers.twinUnable ? "#60a5fa" : "rgba(255,255,255,0.5)"}
+                                        />
+                                        <Text style={styles.checkboxLabel}>El gemelo no pueda responder</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.checkboxRow}
+                                        onPress={() => handleTriggerToggle('keywords')}
+                                    >
+                                        <MaterialIcons
+                                            name={escalation.triggers.keywords ? "check-box" : "check-box-outline-blank"}
+                                            size={22}
+                                            color={escalation.triggers.keywords ? "#60a5fa" : "rgba(255,255,255,0.5)"}
+                                        />
+                                        <Text style={styles.checkboxLabel}>Palabras clave detectadas</Text>
+                                    </TouchableOpacity>
+
+                                    {escalation.triggers.keywords && (
+                                        <View style={styles.keywordsSection}>
+                                            <View style={styles.keywordInputRow}>
+                                                <TextInput
+                                                    style={styles.keywordInput}
+                                                    placeholder="Nueva palabra clave..."
+                                                    placeholderTextColor="rgba(255,255,255,0.4)"
+                                                    value={keywordInput}
+                                                    onChangeText={setKeywordInput}
+                                                    onSubmitEditing={handleAddKeyword}
+                                                />
+                                                <TouchableOpacity
+                                                    style={styles.addKeywordButton}
+                                                    onPress={handleAddKeyword}
+                                                >
+                                                    <MaterialIcons name="add" size={20} color="#FFFFFF" />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <View style={styles.keywordTags}>
+                                                {escalation.keywords.map((keyword, index) => (
+                                                    <View key={index} style={styles.keywordTag}>
+                                                        <Text style={styles.keywordTagText}>{keyword}</Text>
+                                                        <TouchableOpacity onPress={() => handleRemoveKeyword(keyword)}>
+                                                            <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.7)" />
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+                    </>
+                )}
             </View>
         </View>
     );
@@ -207,5 +369,104 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: "rgba(255, 255, 255, 0.6)",
         marginTop: 2,
+    },
+    // Escalation styles
+    escalationDivider: {
+        height: 1,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        marginVertical: 16,
+    },
+    escalationSection: {
+        marginBottom: 8,
+    },
+    escalationHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 6,
+    },
+    escalationHeaderLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    escalationTitle: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    escalationHint: {
+        fontSize: 12,
+        color: "rgba(255, 255, 255, 0.5)",
+        marginBottom: 8,
+    },
+    escalationExpandButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingVertical: 8,
+    },
+    escalationExpandText: {
+        fontSize: 13,
+        color: "rgba(255, 255, 255, 0.7)",
+    },
+    escalationOptions: {
+        marginTop: 8,
+        paddingLeft: 4,
+    },
+    checkboxRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingVertical: 8,
+    },
+    checkboxLabel: {
+        fontSize: 14,
+        color: "rgba(255, 255, 255, 0.8)",
+    },
+    keywordsSection: {
+        marginTop: 12,
+        paddingLeft: 32,
+    },
+    keywordInputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 10,
+    },
+    keywordInput: {
+        flex: 1,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 14,
+        color: "#FFFFFF",
+    },
+    addKeywordButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        backgroundColor: "#60a5fa",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    keywordTags: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+    },
+    keywordTag: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: "rgba(96, 165, 250, 0.3)",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    keywordTagText: {
+        fontSize: 12,
+        color: "#FFFFFF",
     },
 });

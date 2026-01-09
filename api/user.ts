@@ -104,6 +104,18 @@ export interface DigitalTwin {
     activatedAt?: string | null;
 }
 
+export interface EscalationTriggers {
+    clientRequest?: boolean;  // Client can manually request to talk to professional
+    twinUnable?: boolean;     // Twin suggests escalation when it can't respond
+    keywords?: boolean;       // Specific keywords trigger escalation
+}
+
+export interface Escalation {
+    enabled?: boolean;
+    triggers?: EscalationTriggers;
+    keywords?: string[];
+}
+
 export interface User {
     _id: string;
     email: string;
@@ -183,6 +195,9 @@ export interface User {
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
 
+    // === Escalación a Profesional ===
+    escalation?: Escalation;
+
     // === Stripe Connect (pagos directos a profesionales) ===
     stripeConnectAccountId?: string | null;
     stripeConnectOnboarded?: boolean;
@@ -261,6 +276,9 @@ export interface UserUpdateData {
 
     // Gemelo Digital
     digitalTwin?: DigitalTwin;
+
+    // Escalación a profesional
+    escalation?: Escalation;
 }
 
 export async function getMe(token: string): Promise<User> {

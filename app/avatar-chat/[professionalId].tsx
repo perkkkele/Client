@@ -65,7 +65,7 @@ const COLORS = {
     black: "#000000",
 };
 
-type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | "appointments" | null;
+type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | "appointments" | "escalation" | null;
 
 interface Message {
     id: string;
@@ -171,6 +171,12 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
         content: "Agenda una cita con el profesional para una consulta presencial o virtual.",
         icon: "event",
     },
+    escalation: {
+        title: "Atención personalizada",
+        subtitle: "con el profesional",
+        content: "El gemelo ofrece ayuda inmediata. Al escalar, la sesión se pausará y la respuesta puede no ser inmediata.",
+        icon: "support-agent",
+    },
 };
 
 export default function AvatarChatScreen() {
@@ -225,6 +231,10 @@ export default function AvatarChatScreen() {
     const [humanCallLivekitUrl, setHumanCallLivekitUrl] = useState<string | null>(null);
     const [humanCallToken, setHumanCallToken] = useState<string | null>(null);
     const [humanCallConnected, setHumanCallConnected] = useState(false);
+
+    // Escalation state
+    const [escalationStatus, setEscalationStatus] = useState<'none' | 'pending' | 'accepted' | 'declined'>('none');
+    const [isEscalating, setIsEscalating] = useState(false);
 
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
@@ -869,6 +879,63 @@ export default function AvatarChatScreen() {
         }
     };
 
+    // Handle escalation request - client wants to talk to human professional
+    const handleEscalation = async () => {
+        if (!token || !currentChatId || isEscalating) return;
+
+        // Check if escalation is enabled for this professional
+        if (!professional?.escalation?.enabled) {
+            return;
+        }
+
+        setIsEscalating(true);
+        try {
+            await chatApi.escalateChat(token, currentChatId, 'client_request');
+            setEscalationStatus('pending');
+
+            // Pause the digital twin session while waiting for professional
+            setIsPaused(true);
+
+            // Add system message about escalation
+            const escalationMessage: Message = {
+                id: `escalation-${Date.now()}`,
+                type: "text",
+                content: "📞 Conversación escalada. El gemelo está en pausa mientras esperas al profesional.",
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, escalationMessage]);
+        } catch (error) {
+            console.error('Error escalating chat:', error);
+            const errorMessage: Message = {
+                id: `error-${Date.now()}`,
+                type: "text",
+                content: "⚠️ No se pudo contactar al profesional. Inténtalo de nuevo.",
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsEscalating(false);
+        }
+    };
+
+    // Cancel escalation and resume digital twin conversation
+    const handleCancelEscalation = () => {
+        setEscalationStatus('none');
+        setIsPaused(false);
+
+        // Add system message
+        const cancelMessage: Message = {
+            id: `cancel-escalation-${Date.now()}`,
+            type: "text",
+            content: "✓ Has retomado la conversación con el gemelo digital.",
+            isUser: false,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        setMessages(prev => [...prev, cancelMessage]);
+    };
+
     const handleInfoBubblePress = async (type: InfoBubbleType) => {
         if (activeInfoBubble === type) {
             setActiveInfoBubble(null);
@@ -973,9 +1040,25 @@ export default function AvatarChatScreen() {
                         <TouchableOpacity
                             style={[
                                 styles.professionalChip,
-                                isHumanSession && { borderColor: '#F59E0B', borderWidth: 2 }
+                                isHumanSession && { borderColor: '#F59E0B', borderWidth: 2 },
+                                // Subtle highlight when escalation is available
+                                (professional?.escalation?.enabled &&
+                                    professional?.escalation?.triggers?.clientRequest &&
+                                    escalationStatus === 'none' &&
+                                    currentChatId &&
+                                    !isHumanSession) && styles.professionalChipEscalationAvailable
                             ]}
-                            onPress={handleViewProfile}
+                            onPress={() => {
+                                // When escalation is available, show confirmation dialog
+                                if (professional?.escalation?.enabled &&
+                                    professional?.escalation?.triggers?.clientRequest &&
+                                    escalationStatus === 'none' &&
+                                    currentChatId &&
+                                    !isHumanSession) {
+                                    setActiveInfoBubble('escalation');
+                                }
+                            }}
+                            disabled={isEscalating}
                         >
                             <View style={styles.avatarSmallContainer}>
                                 {avatarUrl ? (
@@ -996,7 +1079,17 @@ export default function AvatarChatScreen() {
                                     styles.professionalChipRole,
                                     isHumanSession && { color: '#F59E0B', fontWeight: '600' }
                                 ]}>
-                                    {isHumanSession ? "👤 EN VIVO" : `${professional?.profession || "Profesional"} AI`}
+                                    {isHumanSession
+                                        ? "👤 EN VIVO"
+                                        : isEscalating
+                                            ? "Contactando..."
+                                            : (professional?.escalation?.enabled &&
+                                                professional?.escalation?.triggers?.clientRequest &&
+                                                escalationStatus === 'none' &&
+                                                currentChatId)
+                                                ? "Contactar con profesional"
+                                                : `${professional?.profession || "Profesional"} AI`
+                                    }
                                 </Text>
                             </View>
                         </TouchableOpacity>
@@ -1822,6 +1915,58 @@ export default function AvatarChatScreen() {
                                     Selecciona el tipo de cita y duración en la siguiente pantalla.
                                 </Text>
                             </View>
+                        ) : activeInfoBubble === "escalation" ? (
+                            /* Escalation Confirmation Dialog */
+                            <View style={styles.escalationDialogContent}>
+                                <Text style={styles.escalationDialogText}>
+                                    {INFO_BUBBLE_CONTENT.escalation.content}
+                                </Text>
+
+                                <Text style={styles.escalationDialogQuestion}>
+                                    ¿Qué quieres hacer?
+                                </Text>
+
+                                {/* Book Appointment - Primary action */}
+                                <TouchableOpacity
+                                    style={styles.escalationDialogButtonPrimary}
+                                    onPress={() => {
+                                        setActiveInfoBubble(null);
+                                        if (professionalId) {
+                                            router.push(`/book-appointment/${professionalId}` as any);
+                                        }
+                                    }}
+                                >
+                                    <MaterialIcons name="event" size={18} color={COLORS.textMain} />
+                                    <Text style={styles.escalationDialogButtonPrimaryText}>
+                                        Reservar una cita
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {/* Escalate - Secondary action */}
+                                <TouchableOpacity
+                                    style={styles.escalationDialogButtonSecondary}
+                                    onPress={() => {
+                                        setActiveInfoBubble(null);
+                                        handleEscalation();
+                                    }}
+                                    disabled={isEscalating}
+                                >
+                                    <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
+                                    <Text style={styles.escalationDialogButtonSecondaryText}>
+                                        {isEscalating ? 'Contactando...' : 'Escalar y esperar respuesta'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {/* Continue with Twin - Tertiary action */}
+                                <TouchableOpacity
+                                    style={styles.escalationDialogButtonTertiary}
+                                    onPress={() => setActiveInfoBubble(null)}
+                                >
+                                    <Text style={styles.escalationDialogButtonTertiaryText}>
+                                        Seguir con el gemelo digital
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         ) : (
                             <>
                                 <Text style={[
@@ -2012,6 +2157,35 @@ export default function AvatarChatScreen() {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+
+                {/* Escalation Status Banner - with cancel option */}
+                {escalationStatus === 'pending' && (
+                    <View style={styles.escalationBanner}>
+                        <View style={styles.escalationBannerContent}>
+                            <MaterialIcons name="hourglass-top" size={14} color="#F59E0B" />
+                            <Text style={styles.escalationBannerText}>
+                                Esperando al profesional...
+                            </Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.escalationBannerCancelButton}
+                            onPress={handleCancelEscalation}
+                        >
+                            <Text style={styles.escalationBannerCancelText}>
+                                Volver al gemelo
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {escalationStatus === 'accepted' && (
+                    <View style={[styles.escalationBanner, styles.escalationBannerAccepted]}>
+                        <MaterialIcons name="check-circle" size={14} color="#22C55E" />
+                        <Text style={[styles.escalationBannerText, { color: '#22C55E' }]}>
+                            El profesional se unirá pronto
+                        </Text>
+                    </View>
+                )}
 
                 {/* Input Row */}
                 <View style={styles.inputRow}>
@@ -2301,6 +2475,9 @@ const styles = StyleSheet.create({
     professionalChipRole: {
         fontSize: 12,
         color: COLORS.gray500,
+    },
+    professionalChipEscalationAvailable: {
+        // Very subtle - no visual change to chip itself, the text handles the indication
     },
     historyButton: {
         width: 40,
@@ -3718,5 +3895,119 @@ const styles = StyleSheet.create({
         color: COLORS.gray400,
         textAlign: "center",
         lineHeight: 14,
+    },
+    // Escalation styles
+    escalationButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: "#4F46E5",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        marginHorizontal: 16,
+        marginBottom: 8,
+    },
+    escalationButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.white,
+    },
+    escalationBanner: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "rgba(245, 158, 11, 0.1)",
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        marginHorizontal: 16,
+        marginBottom: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "rgba(245, 158, 11, 0.3)",
+    },
+    escalationBannerContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    escalationBannerAccepted: {
+        backgroundColor: "rgba(34, 197, 94, 0.1)",
+        borderColor: "rgba(34, 197, 94, 0.3)",
+    },
+    escalationBannerText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#F59E0B",
+    },
+    escalationBannerCancelButton: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    escalationBannerCancelText: {
+        fontSize: 11,
+        fontWeight: "500",
+        color: COLORS.indigo500,
+        textDecorationLine: "underline",
+    },
+    // Escalation Dialog Styles
+    escalationDialogContent: {
+        paddingTop: 4,
+    },
+    escalationDialogText: {
+        fontSize: 13,
+        lineHeight: 20,
+        color: COLORS.gray600,
+        marginBottom: 16,
+    },
+    escalationDialogQuestion: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        marginBottom: 12,
+    },
+    escalationDialogButtonPrimary: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        marginBottom: 10,
+    },
+    escalationDialogButtonPrimaryText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    escalationDialogButtonSecondary: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.white,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        marginBottom: 10,
+    },
+    escalationDialogButtonSecondaryText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray600,
+    },
+    escalationDialogButtonTertiary: {
+        alignItems: "center",
+        paddingVertical: 8,
+    },
+    escalationDialogButtonTertiaryText: {
+        fontSize: 13,
+        color: COLORS.gray500,
+        textDecorationLine: "underline",
     },
 });

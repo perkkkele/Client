@@ -265,6 +265,15 @@ export default function BookAppointmentScreen() {
         );
     };
 
+    const isToday = (day: number) => {
+        const today = new Date();
+        return (
+            day === today.getDate() &&
+            currentMonth.getMonth() === today.getMonth() &&
+            currentMonth.getFullYear() === today.getFullYear()
+        );
+    };
+
     const handleSelectDate = (day: number) => {
         if (isDatePast(day)) return;
         setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
@@ -374,6 +383,7 @@ export default function BookAppointmentScreen() {
         for (let day = 1; day <= daysInMonth; day++) {
             const isPast = isDatePast(day);
             const isSelected = isDateSelected(day);
+            const isTodayDate = isToday(day);
 
             days.push(
                 <TouchableOpacity
@@ -381,6 +391,7 @@ export default function BookAppointmentScreen() {
                     style={[
                         styles.calendarDay,
                         isPast && styles.calendarDayPast,
+                        isTodayDate && !isSelected && styles.calendarDayToday,
                         isSelected && styles.calendarDaySelected,
                     ]}
                     onPress={() => handleSelectDate(day)}
@@ -390,6 +401,7 @@ export default function BookAppointmentScreen() {
                         style={[
                             styles.calendarDayText,
                             isPast && styles.calendarDayTextPast,
+                            isTodayDate && !isSelected && styles.calendarDayTextToday,
                             isSelected && styles.calendarDayTextSelected,
                         ]}
                     >
@@ -847,6 +859,15 @@ const styles = StyleSheet.create({
     calendarDayTextSelected: {
         fontWeight: "bold",
         color: COLORS.textMain,
+    },
+    calendarDayToday: {
+        borderWidth: 2,
+        borderColor: COLORS.blue600,
+        borderRadius: 20,
+    },
+    calendarDayTextToday: {
+        color: COLORS.blue600,
+        fontWeight: "bold",
     },
     // Section
     section: {

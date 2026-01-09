@@ -340,13 +340,10 @@ export default function AppointmentDetailsScreen() {
                                 <Text style={styles.detailLabel}>Ubicación</Text>
                                 {appointment.type === "videoconference" ? (
                                     <>
-                                        <Text style={styles.detailValue}>Videollamada</Text>
-                                        {appointment.meetingLink && isActive && (
-                                            <TouchableOpacity onPress={handleJoinMeeting} style={styles.joinButton}>
-                                                <Text style={styles.joinButtonText}>Unirse a la reunión</Text>
-                                                <MaterialIcons name="open-in-new" size={14} color={COLORS.primary} />
-                                            </TouchableOpacity>
-                                        )}
+                                        <Text style={styles.detailValue}>Video-cita en la aplicación TwinPro</Text>
+                                        <Text style={styles.detailSubValue}>
+                                            El profesional te llamará a la hora indicada
+                                        </Text>
                                     </>
                                 ) : (
                                     <>
