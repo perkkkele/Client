@@ -325,8 +325,47 @@ function normalizeProfession(profession: string): string {
 }
 
 /**
+ * Convierte formas femeninas a masculinas para match con el diccionario
+ * Ejemplos: psicóloga → psicólogo, abogada → abogado, médica → médico
+ */
+function normalizeGender(profession: string): string {
+    // Patrones comunes de terminaciones femeninas en español
+    const feminineToMasculine: [RegExp, string][] = [
+        [/óloga$/i, 'ólogo'],      // psicóloga → psicólogo
+        [/ologa$/i, 'ologo'],      // psicologa → psicologo
+        [/ista$/i, 'ista'],        // dentista (neutro, no cambia)
+        [/ada$/i, 'ado'],          // abogada → abogado
+        [/ora$/i, 'or'],           // doctora → doctor
+        [/era$/i, 'ero'],          // peluquera → peluquero
+        [/ica$/i, 'ico'],          // médica → médico
+        [/a$/i, 'o'],              // Fallback genérico: nutricionista no cambia por la 'a' de ista
+    ];
+
+    let normalized = profession;
+
+    // Excluir profesiones neutras que terminan en 'a' pero no son femeninas
+    const neutralProfessions = ['terapeuta', 'fisioterapeuta', 'dentista', 'esteticista'];
+    const lowerProfession = profession.toLowerCase();
+
+    if (neutralProfessions.some(n => lowerProfession.includes(n))) {
+        return profession;
+    }
+
+    // Aplicar transformaciones
+    for (const [pattern, replacement] of feminineToMasculine) {
+        if (pattern.test(normalized)) {
+            normalized = normalized.replace(pattern, replacement);
+            break; // Solo aplicar una transformación
+        }
+    }
+
+    return normalized;
+}
+
+/**
  * Obtiene el preset más apropiado para un profesional
  * Prioridad: Profesión específica > Categoría > Genérico
+ * Maneja automáticamente: mayúsculas/minúsculas, acentos, formas femeninas/masculinas
  */
 export function getPresetForProfessional(
     category?: CategoryType | null,
@@ -336,7 +375,7 @@ export function getPresetForProfessional(
     if (profession) {
         const normalizedProfession = profession.toLowerCase().trim();
 
-        // Búsqueda exacta
+        // Búsqueda exacta (ya en minúsculas)
         if (PROFESSION_PRESETS[normalizedProfession]) {
             return PROFESSION_PRESETS[normalizedProfession];
         }
@@ -347,9 +386,26 @@ export function getPresetForProfessional(
             return PROFESSION_PRESETS[withoutAccents];
         }
 
-        // Búsqueda parcial (contiene)
+        // Intentar con normalización de género (femenino → masculino)
+        const genderNormalized = normalizeGender(normalizedProfession);
+        if (PROFESSION_PRESETS[genderNormalized]) {
+            return PROFESSION_PRESETS[genderNormalized];
+        }
+
+        // Intentar género + sin acentos
+        const genderAndAccents = normalizeProfession(genderNormalized);
+        if (PROFESSION_PRESETS[genderAndAccents]) {
+            return PROFESSION_PRESETS[genderAndAccents];
+        }
+
+        // Búsqueda parcial (contiene) - también con normalización de género
         for (const [key, preset] of Object.entries(PROFESSION_PRESETS)) {
-            if (normalizedProfession.includes(key) || key.includes(normalizedProfession)) {
+            const normalizedKey = key.toLowerCase();
+            if (normalizedProfession.includes(normalizedKey) || normalizedKey.includes(normalizedProfession)) {
+                return preset;
+            }
+            // Intentar con la versión normalizada por género
+            if (genderNormalized.includes(normalizedKey) || normalizedKey.includes(genderNormalized)) {
                 return preset;
             }
         }

@@ -19,6 +19,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, getAssetUrl } from "../../api";
 import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar } from "../../api/liveAvatar";
+import { useSubscription } from "../../hooks/useSubscription";
+import UpgradeModal from "../../components/UpgradeModal";
 
 // Video requirements constants
 const VIDEO_REQUIREMENTS = {
@@ -125,6 +127,11 @@ export default function TwinAppearanceScreen() {
 
     // Help modal state
     const [showHelpModal, setShowHelpModal] = useState(false);
+
+    // Subscription state for premium features
+    const { plan } = useSubscription();
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const isPremium = plan === 'premium';
 
     // Priorizar: avatar seleccionado en sesión > avatar guardado previamente > foto de usuario
     const avatarUrl = selectedAvatar?.preview_url
@@ -436,9 +443,13 @@ export default function TwinAppearanceScreen() {
         setShowVoiceModal(true);
     }
 
-    // Handler for "Entrenar con Video" button - shows custom avatars modal
+    // Handler for "Entrenar con Video" button - shows custom avatars modal (Premium only)
     // User can select an existing trained avatar or create a new one
     function handleSelectTrainedVideo() {
+        if (!isPremium) {
+            setShowUpgradeModal(true);
+            return;
+        }
         setVideoType("trained");
         setShowCustomAvatarModal(true);
     }
@@ -476,8 +487,12 @@ export default function TwinAppearanceScreen() {
         setShowCustomAvatarModal(false);
     }
 
-    // Handler for voice cloning - opens private voices modal
+    // Handler for voice cloning - opens private voices modal (Premium only)
     function handleVoiceCloning() {
+        if (!isPremium) {
+            setShowUpgradeModal(true);
+            return;
+        }
         setVoiceType("cloned");
         setShowPrivateVoiceModal(true);
     }
@@ -1051,6 +1066,12 @@ export default function TwinAppearanceScreen() {
                                 onPress={handleSelectTrainedVideo}
                             >
                                 {videoType === "trained" && <View style={styles.activeDot} />}
+                                {!isPremium && (
+                                    <View style={styles.premiumBadge}>
+                                        <MaterialIcons name="star" size={10} color="#000" />
+                                        <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                                    </View>
+                                )}
                                 <View style={[styles.optionIcon, videoType === "trained" && styles.optionIconSelected]}>
                                     <MaterialIcons name="videocam" size={18} color={videoType === "trained" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
@@ -1092,6 +1113,12 @@ export default function TwinAppearanceScreen() {
                             >
                                 {voiceType === "cloned" && selectedVoice && (
                                     <View style={styles.activeDot} />
+                                )}
+                                {!isPremium && (
+                                    <View style={styles.premiumBadge}>
+                                        <MaterialIcons name="star" size={10} color="#000" />
+                                        <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+                                    </View>
                                 )}
                                 <View style={[styles.optionIcon, voiceType === "cloned" && styles.optionIconPurple]}>
                                     <MaterialIcons name="mic" size={18} color={voiceType === "cloned" ? COLORS.accentPurple : COLORS.gray500} />
@@ -1590,6 +1617,14 @@ export default function TwinAppearanceScreen() {
                     </View>
                 </View>
             )}
+
+            {/* Premium Upgrade Modal */}
+            <UpgradeModal
+                visible={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                featureName="Avatar Personalizado / Voz Privada"
+                requiredPlan="premium"
+            />
         </SafeAreaView>
     );
 }
@@ -2374,6 +2409,24 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: COLORS.gray700,
         lineHeight: 18,
+    },
+    premiumBadge: {
+        position: "absolute",
+        top: 6,
+        right: 6,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        gap: 2,
+    },
+    premiumBadgeText: {
+        fontSize: 8,
+        fontWeight: "bold",
+        color: "#000000",
+        letterSpacing: 0.5,
     },
 });
 

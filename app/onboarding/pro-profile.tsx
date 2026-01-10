@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, STATIC_URL } from "../../api";
+import { normalizeProfession } from "../../constants/professionNormalizer";
 
 const COLORS = {
     primary: "#FDE047",
@@ -68,6 +69,9 @@ export default function ProProfileScreen() {
 
     const [publicName, setPublicName] = useState("");
     const [profession, setProfession] = useState("");
+    const [businessName, setBusinessName] = useState("");
+    const [businessType, setBusinessType] = useState<string>("");
+    const [showBusinessTypePicker, setShowBusinessTypePicker] = useState(false);
     const [category, setCategory] = useState("");
     const [specialties, setSpecialties] = useState<string[]>([]);
     const [newSpecialty, setNewSpecialty] = useState("");
@@ -75,7 +79,7 @@ export default function ProProfileScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
-    const bioMaxLength = 160;
+    const bioMaxLength = 250;
 
     // Validate alias format
     const validateAliasFormat = (value: string): { valid: boolean; error: string } => {
@@ -206,6 +210,8 @@ export default function ProProfileScreen() {
                     username: alias.toLowerCase(),
                     publicName: publicName.trim(),
                     profession: profession.trim(),
+                    businessName: businessName.trim() || undefined,
+                    businessType: businessType || undefined,
                     category: category as any,
                     specialties: specialties,
                     bio: bio.trim() || undefined,
@@ -371,8 +377,60 @@ export default function ProProfileScreen() {
                                 placeholderTextColor={COLORS.gray400}
                                 value={profession}
                                 onChangeText={setProfession}
+                                onBlur={() => {
+                                    if (profession.trim()) {
+                                        setProfession(normalizeProfession(profession));
+                                    }
+                                }}
                             />
                         </View>
+                    </View>
+
+                    {/* Empresa / Marca profesional (Opcional) */}
+                    <View style={styles.inputGroup}>
+                        <View style={styles.labelRow}>
+                            <Text style={styles.inputLabel}>Empresa / Marca profesional</Text>
+                            <Text style={styles.optionalLabel}>Opcional</Text>
+                        </View>
+                        <View style={styles.businessRow}>
+                            <View style={[styles.inputContainer, styles.businessNameInput]}>
+                                <MaterialIcons name="business" size={18} color={COLORS.gray400} style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Nombre de empresa..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={businessName}
+                                    onChangeText={setBusinessName}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={styles.businessTypeButton}
+                                onPress={() => setShowBusinessTypePicker(!showBusinessTypePicker)}
+                            >
+                                <Text style={[styles.businessTypeText, !businessType && styles.placeholder]}>
+                                    {businessType || "Tipo"}
+                                </Text>
+                                <MaterialIcons name="expand-more" size={18} color={COLORS.gray400} />
+                            </TouchableOpacity>
+                        </View>
+                        {showBusinessTypePicker && (
+                            <View style={styles.businessTypePicker}>
+                                {["Autónomo", "Empresa", "Clínica/Centro"].map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[styles.categoryOption, businessType === type && styles.categoryOptionSelected]}
+                                        onPress={() => {
+                                            setBusinessType(type);
+                                            setShowBusinessTypePicker(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.categoryOptionText, businessType === type && styles.categoryOptionTextSelected]}>
+                                            {type}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
                     </View>
 
                     {/* Categoría */}
@@ -821,5 +879,50 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: "#000000",
+    },
+    // Business field styles
+    labelRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    optionalLabel: {
+        fontSize: 9,
+        fontWeight: "500",
+        color: COLORS.gray400,
+        backgroundColor: COLORS.gray200,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    businessRow: {
+        flexDirection: "row",
+        gap: 8,
+    },
+    businessNameInput: {
+        flex: 1,
+    },
+    businessTypeButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
+        minWidth: 110,
+        gap: 4,
+    },
+    businessTypeText: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: COLORS.textMain,
+    },
+    businessTypePicker: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 12,
+        marginTop: 4,
+        overflow: "hidden",
     },
 });

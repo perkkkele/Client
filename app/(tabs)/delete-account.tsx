@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
     Alert,
     StyleSheet,
@@ -8,6 +8,9 @@ import {
     TouchableOpacity,
     View,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
@@ -91,84 +94,95 @@ export default function DeleteAccountScreen() {
                 <View style={{ width: 40 }} />
             </View>
 
-            <View style={styles.content}>
-                {/* Main content */}
-                <View style={styles.mainContent}>
-                    {/* Warning icon */}
-                    <View style={styles.iconWrapper}>
-                        <View style={styles.iconGlow} />
-                        <View style={styles.iconContainer}>
-                            <MaterialIcons name="warning" size={56} color={COLORS.red600} />
-                        </View>
-                    </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardView}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.content}>
+                        {/* Main content */}
+                        <View style={styles.mainContent}>
+                            {/* Warning icon */}
+                            <View style={styles.iconWrapper}>
+                                <View style={styles.iconGlow} />
+                                <View style={styles.iconContainer}>
+                                    <MaterialIcons name="warning" size={56} color={COLORS.red600} />
+                                </View>
+                            </View>
 
-                    {/* Warning text */}
-                    <View style={styles.textContainer}>
-                        <Text style={styles.title}>
-                            ¡Atención! Vas a eliminar tu cuenta definitivamente
-                        </Text>
-                        <Text style={styles.description}>
-                            Esta acción es{" "}
-                            <Text style={styles.descriptionHighlight}>irreversible</Text>. Se
-                            borrará tu perfil, historial de chats, datos de gemelo digital y
-                            toda la información asociada. No podrás recuperarla.
-                        </Text>
-                    </View>
-
-                    {/* Confirmation input */}
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.inputLabel}>
-                            Escribe <Text style={styles.inputLabelBold}>ELIMINAR</Text> para
-                            confirmar
-                        </Text>
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="ELIMINAR"
-                                placeholderTextColor={COLORS.gray400}
-                                value={confirmText}
-                                onChangeText={setConfirmText}
-                                autoCapitalize="characters"
-                            />
-                            <MaterialIcons
-                                name="edit"
-                                size={20}
-                                color={COLORS.gray400}
-                                style={styles.inputIcon}
-                            />
-                        </View>
-                    </View>
-                </View>
-
-                {/* Buttons */}
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={[styles.deleteButton, (!canDelete || isLoading) && styles.deleteButtonDisabled]}
-                        onPress={handleDeleteAccount}
-                        disabled={!canDelete || isLoading}
-                        activeOpacity={0.9}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                            <>
-                                <Text style={styles.deleteButtonText}>
-                                    Eliminar Cuenta Definitivamente
+                            {/* Warning text */}
+                            <View style={styles.textContainer}>
+                                <Text style={styles.title}>
+                                    ¡Atención! Vas a eliminar tu cuenta definitivamente
                                 </Text>
-                                <MaterialIcons name="delete-forever" size={20} color="#FFFFFF" />
-                            </>
-                        )}
-                    </TouchableOpacity>
+                                <Text style={styles.description}>
+                                    Esta acción es{" "}
+                                    <Text style={styles.descriptionHighlight}>irreversible</Text>. Se
+                                    borrará tu perfil, historial de chats, datos de gemelo digital y
+                                    toda la información asociada. No podrás recuperarla.
+                                </Text>
+                            </View>
 
-                    <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={handleCancel}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                            {/* Confirmation input */}
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.inputLabel}>
+                                    Escribe <Text style={styles.inputLabelBold}>ELIMINAR</Text> para
+                                    confirmar
+                                </Text>
+                                <View style={styles.inputWrapper}>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="ELIMINAR"
+                                        placeholderTextColor={COLORS.gray400}
+                                        value={confirmText}
+                                        onChangeText={setConfirmText}
+                                        autoCapitalize="characters"
+                                    />
+                                    <MaterialIcons
+                                        name="edit"
+                                        size={20}
+                                        color={COLORS.gray400}
+                                        style={styles.inputIcon}
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Buttons */}
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity
+                                style={[styles.deleteButton, (!canDelete || isLoading) && styles.deleteButtonDisabled]}
+                                onPress={handleDeleteAccount}
+                                disabled={!canDelete || isLoading}
+                                activeOpacity={0.9}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.deleteButtonText}>
+                                            Eliminar Cuenta Definitivamente
+                                        </Text>
+                                        <MaterialIcons name="delete-forever" size={20} color="#FFFFFF" />
+                                    </>
+                                )}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={handleCancel}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -199,6 +213,12 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: COLORS.textMain,
+    },
+    keyboardView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     content: {
         flex: 1,

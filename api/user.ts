@@ -133,6 +133,8 @@ export interface User {
     // === Campos profesionales ===
     publicName?: string | null;
     profession?: string | null;
+    businessName?: string | null;  // Nombre de empresa/marca profesional
+    businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro' | null;
     category?: CategoryType | null;
     specialties?: string[];
     bio?: string | null;
@@ -255,6 +257,8 @@ export interface UserUpdateData {
     // Campos profesionales
     publicName?: string;
     profession?: string;
+    businessName?: string;  // Nombre de empresa/marca profesional
+    businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro';
     category?: CategoryType;
     specialties?: string[];
     bio?: string;

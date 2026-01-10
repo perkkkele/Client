@@ -1,5 +1,7 @@
 import { router } from "expo-router";
-import { useCallback, useState, useEffect } from "react";;
+import { useCallback, useState, useEffect } from "react";
+import { useSubscription, FeatureName } from "../../hooks/useSubscription";
+import UpgradeModal, { RequiredPlan } from "../../components/UpgradeModal";
 import {
     Alert,
     Image,
@@ -72,6 +74,9 @@ interface MenuItem {
     onPress?: () => void;
     isLogout?: boolean;
     isActive?: boolean;
+    // Feature gating
+    requiredFeature?: FeatureName;
+    requiredPlan?: RequiredPlan;
 }
 
 interface MenuSection {
@@ -81,9 +86,15 @@ interface MenuSection {
 
 export default function ProDashboardScreen() {
     const { user, logout, token, refreshUser } = useAuth();
+    const { canAccess, getRequiredPlan } = useSubscription();
     const [geminiActive, setGeminiActive] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+
+    // Upgrade modal state
+    const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+    const [upgradeModalFeature, setUpgradeModalFeature] = useState("");
+    const [upgradeModalPlan, setUpgradeModalPlan] = useState<RequiredPlan>("professional");
 
     // Escalation state
     const [escalation, setEscalation] = useState({
@@ -338,7 +349,7 @@ export default function ProDashboardScreen() {
         {
             title: "Agenda",
             items: [
-                { icon: "calendar-month", label: "Gestión de citas", iconBg: COLORS.orange50, iconColor: COLORS.orange600, onPress: () => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); } },
+                { icon: "calendar-month", label: "Gestión de citas", iconBg: COLORS.orange50, iconColor: COLORS.orange600, requiredFeature: "appointments", requiredPlan: "professional", onPress: () => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); } },
             ],
         },
         {
@@ -346,7 +357,7 @@ export default function ProDashboardScreen() {
             items: [
                 { icon: "chat-bubble", label: "Respuestas del gemelo", iconBg: COLORS.indigo50, iconColor: COLORS.indigo600 },
                 { icon: "history", label: "Historial de conversaciones", iconBg: COLORS.teal50, iconColor: COLORS.teal600, onPress: () => { setMenuVisible(false); router.push("/(settings)/twin-history"); } },
-                { icon: "analytics", label: "Rendimiento del gemelo", iconBg: COLORS.rose50, iconColor: COLORS.rose600 },
+                { icon: "analytics", label: "Rendimiento del gemelo", iconBg: COLORS.rose50, iconColor: COLORS.rose600, requiredFeature: "analytics", requiredPlan: "professional" },
                 { icon: "tune", label: "Alcance y límites", iconBg: COLORS.cyan50, iconColor: COLORS.cyan600 },
             ],
         },
@@ -370,34 +381,64 @@ export default function ProDashboardScreen() {
     ];
 
     // Render menu item
-    const renderMenuItem = (item: MenuItem, index: number, isLast: boolean) => (
-        <TouchableOpacity
-            key={index}
-            style={[
-                styles.menuItem,
-                !isLast && styles.menuItemBorder,
-                item.isLogout && styles.menuItemLogout,
-                item.isActive && styles.menuItemActive,
-            ]}
-            onPress={item.onPress}
-        >
-            <View style={styles.menuItemLeft}>
-                <View style={[styles.menuItemIcon, { backgroundColor: item.iconBg }]}>
-                    <MaterialIcons name={item.icon as any} size={20} color={item.iconColor} />
+    const renderMenuItem = (item: MenuItem, index: number, isLast: boolean) => {
+        // Check if feature is gated and user doesn't have access
+        const isLocked = item.requiredFeature && !canAccess(item.requiredFeature);
+
+        const handlePress = () => {
+            if (isLocked && item.requiredPlan) {
+                // Show upgrade modal
+                setUpgradeModalFeature(item.label);
+                setUpgradeModalPlan(item.requiredPlan);
+                setUpgradeModalVisible(true);
+            } else if (item.onPress) {
+                item.onPress();
+            }
+        };
+
+        return (
+            <TouchableOpacity
+                key={index}
+                style={[
+                    styles.menuItem,
+                    !isLast && styles.menuItemBorder,
+                    item.isLogout && styles.menuItemLogout,
+                    item.isActive && styles.menuItemActive,
+                    isLocked && styles.menuItemLocked,
+                ]}
+                onPress={handlePress}
+            >
+                <View style={styles.menuItemLeft}>
+                    <View style={[styles.menuItemIcon, { backgroundColor: item.iconBg }]}>
+                        <MaterialIcons name={item.icon as any} size={20} color={item.iconColor} />
+                    </View>
+                    <Text style={[
+                        styles.menuItemLabel,
+                        item.isLogout && styles.menuItemLabelLogout,
+                        item.isActive && styles.menuItemLabelActive,
+                        isLocked && styles.menuItemLabelLocked,
+                    ]}>
+                        {item.label}
+                    </Text>
+                    {/* PRO Badge for locked features */}
+                    {isLocked && (
+                        <View style={[styles.proBadge, { backgroundColor: item.requiredPlan === 'premium' ? '#8b5cf6' : '#3b82f6' }]}>
+                            <Text style={styles.proBadgeText}>
+                                {item.requiredPlan === 'premium' ? 'PREMIUM' : 'PRO'}
+                            </Text>
+                        </View>
+                    )}
                 </View>
-                <Text style={[
-                    styles.menuItemLabel,
-                    item.isLogout && styles.menuItemLabelLogout,
-                    item.isActive && styles.menuItemLabelActive
-                ]}>
-                    {item.label}
-                </Text>
-            </View>
-            {!item.isLogout && !item.isActive && (
-                <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-            )}
-        </TouchableOpacity>
-    );
+                {!item.isLogout && !item.isActive && (
+                    isLocked ? (
+                        <MaterialIcons name="lock" size={18} color={COLORS.gray400} />
+                    ) : (
+                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                    )
+                )}
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
@@ -467,6 +508,31 @@ export default function ProDashboardScreen() {
                                 />
                             );
                         case 'appointments':
+                            // Gestión de Citas - Professional+ only
+                            if (!canAccess('appointments')) {
+                                return renderBlockWithControls('appointments',
+                                    <View key="appointments-locked" style={styles.lockedBlock}>
+                                        <View style={styles.lockedBlockContent}>
+                                            <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
+                                            <Text style={styles.lockedBlockTitle}>Gestión de Citas</Text>
+                                            <Text style={styles.lockedBlockDesc}>
+                                                Disponible en plan Professional o superior
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.lockedBlockButton}
+                                                onPress={() => {
+                                                    setUpgradeModalFeature("Gestión de Citas");
+                                                    setUpgradeModalPlan("professional");
+                                                    setUpgradeModalVisible(true);
+                                                }}
+                                            >
+                                                <MaterialIcons name="star" size={16} color="#000" />
+                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            }
                             return renderBlockWithControls('appointments',
                                 <AppointmentsBlock
                                     user={user || undefined}
@@ -476,10 +542,60 @@ export default function ProDashboardScreen() {
                                 />
                             );
                         case 'earnings':
+                            // Mis Ingresos - Professional+ only
+                            if (!canAccess('integratedPayments')) {
+                                return renderBlockWithControls('earnings',
+                                    <View key="earnings-locked" style={styles.lockedBlock}>
+                                        <View style={styles.lockedBlockContent}>
+                                            <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
+                                            <Text style={styles.lockedBlockTitle}>Mis Ingresos</Text>
+                                            <Text style={styles.lockedBlockDesc}>
+                                                Disponible en plan Professional o superior
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.lockedBlockButton}
+                                                onPress={() => {
+                                                    setUpgradeModalFeature("Mis Ingresos");
+                                                    setUpgradeModalPlan("professional");
+                                                    setUpgradeModalVisible(true);
+                                                }}
+                                            >
+                                                <MaterialIcons name="star" size={16} color="#000" />
+                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            }
                             return renderBlockWithControls('earnings',
                                 <EarningsBlock token={token} />
                             );
                         case 'stats':
+                            // Resumen de Actividad - Professional+ only
+                            if (!canAccess('analytics')) {
+                                return renderBlockWithControls('stats',
+                                    <View key="stats-locked" style={styles.lockedBlock}>
+                                        <View style={styles.lockedBlockContent}>
+                                            <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
+                                            <Text style={styles.lockedBlockTitle}>Resumen de Actividad</Text>
+                                            <Text style={styles.lockedBlockDesc}>
+                                                Disponible en plan Professional o superior
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={styles.lockedBlockButton}
+                                                onPress={() => {
+                                                    setUpgradeModalFeature("Resumen de Actividad");
+                                                    setUpgradeModalPlan("professional");
+                                                    setUpgradeModalVisible(true);
+                                                }}
+                                            >
+                                                <MaterialIcons name="star" size={16} color="#000" />
+                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            }
                             return renderBlockWithControls('stats',
                                 <StatsBlock analytics={analytics} />
                             );
@@ -609,13 +725,27 @@ export default function ProDashboardScreen() {
                                             </TouchableOpacity>
                                             <TouchableOpacity
                                                 style={styles.sideMenuSubItem}
-                                                onPress={() => { setMenuVisible(false); router.push("/(tabs)/my-qr-code"); }}
+                                                onPress={() => {
+                                                    if (!canAccess('qrCode')) {
+                                                        setUpgradeModalFeature("Mi Código QR");
+                                                        setUpgradeModalPlan("professional");
+                                                        setUpgradeModalVisible(true);
+                                                    } else {
+                                                        setMenuVisible(false);
+                                                        router.push("/(tabs)/my-qr-code");
+                                                    }
+                                                }}
                                             >
                                                 <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.teal50 }]}>
                                                     <MaterialIcons name="qr-code-2" size={16} color={COLORS.teal600} />
                                                 </View>
-                                                <Text style={styles.sideMenuSubLabel}>Mi Código QR</Text>
-                                                <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
+                                                <Text style={[styles.sideMenuSubLabel, !canAccess('qrCode') && styles.menuItemLabelLocked]}>Mi Código QR</Text>
+                                                {!canAccess('qrCode') && (
+                                                    <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
+                                                        <Text style={styles.proBadgeText}>PRO</Text>
+                                                    </View>
+                                                )}
+                                                <MaterialIcons name={!canAccess('qrCode') ? "lock" : "chevron-right"} size={18} color={COLORS.gray400} />
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -641,6 +771,32 @@ export default function ProDashboardScreen() {
                                         <Text style={styles.sideMenuCardLabel}>Mis chats Pro</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
+                                    <View style={styles.sideMenuCardDivider} />
+                                    {/* Widget para Web - Feature Gated */}
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => {
+                                            if (!canAccess('widget')) {
+                                                setUpgradeModalFeature("Widget para Web");
+                                                setUpgradeModalPlan("professional");
+                                                setUpgradeModalVisible(true);
+                                            } else {
+                                                setMenuVisible(false);
+                                                router.push("/(settings)/widget-settings");
+                                            }
+                                        }}
+                                    >
+                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.cyan50 }]}>
+                                            <MaterialIcons name="widgets" size={20} color={COLORS.cyan600} />
+                                        </View>
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('widget') && styles.menuItemLabelLocked]}>Widget para Web</Text>
+                                        {!canAccess('widget') && (
+                                            <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
+                                                <Text style={styles.proBadgeText}>PRO</Text>
+                                            </View>
+                                        )}
+                                        <MaterialIcons name={!canAccess('widget') ? "lock" : "chevron-right"} size={20} color={COLORS.gray400} />
+                                    </TouchableOpacity>
                                 </View>
                             </View>
 
@@ -650,24 +806,52 @@ export default function ProDashboardScreen() {
                                 <View style={styles.sideMenuCard}>
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
-                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); }}
+                                        onPress={() => {
+                                            if (!canAccess('appointments')) {
+                                                setUpgradeModalFeature("Gestión de citas");
+                                                setUpgradeModalPlan("professional");
+                                                setUpgradeModalVisible(true);
+                                            } else {
+                                                setMenuVisible(false);
+                                                router.push("/(settings)/manage-appointments");
+                                            }
+                                        }}
                                     >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.orange50 }]}>
                                             <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Gestión de citas</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>Gestión de citas</Text>
+                                        {!canAccess('appointments') && (
+                                            <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
+                                                <Text style={styles.proBadgeText}>PRO</Text>
+                                            </View>
+                                        )}
+                                        <MaterialIcons name={!canAccess('appointments') ? "lock" : "chevron-right"} size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
-                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/appointment-pricing"); }}
+                                        onPress={() => {
+                                            if (!canAccess('appointments')) {
+                                                setUpgradeModalFeature("Tarifas de citas");
+                                                setUpgradeModalPlan("professional");
+                                                setUpgradeModalVisible(true);
+                                            } else {
+                                                setMenuVisible(false);
+                                                router.push("/(settings)/appointment-pricing");
+                                            }
+                                        }}
                                     >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.yellow50 }]}>
                                             <MaterialIcons name="euro" size={20} color={COLORS.yellow600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Tarifas de citas</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>Tarifas de citas</Text>
+                                        {!canAccess('appointments') && (
+                                            <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
+                                                <Text style={styles.proBadgeText}>PRO</Text>
+                                            </View>
+                                        )}
+                                        <MaterialIcons name={!canAccess('appointments') ? "lock" : "chevron-right"} size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
@@ -842,6 +1026,14 @@ export default function ProDashboardScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Upgrade Modal */}
+            <UpgradeModal
+                visible={upgradeModalVisible}
+                onClose={() => setUpgradeModalVisible(false)}
+                featureName={upgradeModalFeature}
+                requiredPlan={upgradeModalPlan}
+            />
         </SafeAreaView>
     );
 }
@@ -1791,5 +1983,63 @@ const styles = StyleSheet.create({
     },
     fabEditMode: {
         backgroundColor: COLORS.green500,
+    },
+    // Feature gating styles
+    menuItemLocked: {
+        opacity: 0.8,
+    },
+    menuItemLabelLocked: {
+        color: COLORS.gray500,
+    },
+    proBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginLeft: 8,
+    },
+    proBadgeText: {
+        fontSize: 9,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+        letterSpacing: 0.5,
+    },
+    // Locked block styles for subscription gating
+    lockedBlock: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        padding: 24,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        borderStyle: "dashed",
+    },
+    lockedBlockContent: {
+        alignItems: "center",
+        gap: 12,
+    },
+    lockedBlockTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.gray500,
+    },
+    lockedBlockDesc: {
+        fontSize: 13,
+        color: COLORS.gray400,
+        textAlign: "center",
+    },
+    lockedBlockButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FDE047",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        gap: 6,
+        marginTop: 8,
+    },
+    lockedBlockButtonText: {
+        fontSize: 13,
+        fontWeight: "bold",
+        color: "#000",
     },
 });

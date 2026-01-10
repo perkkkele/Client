@@ -287,22 +287,34 @@ export default function RegisterProScreen() {
                         </View>
 
                         {/* Terms checkbox */}
-                        <TouchableOpacity
-                            style={styles.termsContainer}
-                            onPress={() => setAcceptedTerms(!acceptedTerms)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
-                                {acceptedTerms && (
-                                    <Ionicons name="checkmark" size={14} color={COLORS.backgroundDark} />
-                                )}
-                            </View>
+                        <View style={styles.termsContainer}>
+                            <TouchableOpacity
+                                onPress={() => setAcceptedTerms(!acceptedTerms)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                                    {acceptedTerms && (
+                                        <Ionicons name="checkmark" size={14} color={COLORS.backgroundDark} />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
                             <Text style={styles.termsText}>
                                 Acepto los{" "}
-                                <Text style={styles.termsLink}>Términos de Servicio</Text> y la{" "}
-                                <Text style={styles.termsLink}>Política de Privacidad</Text>.
+                                <Text
+                                    style={styles.termsLink}
+                                    onPress={() => router.push("/legal/terms-of-service")}
+                                >
+                                    Términos de Servicio
+                                </Text>
+                                {" "}y la{" "}
+                                <Text
+                                    style={styles.termsLink}
+                                    onPress={() => router.push("/legal/privacy-policy")}
+                                >
+                                    Política de Privacidad
+                                </Text>.
                             </Text>
-                        </TouchableOpacity>
+                        </View>
 
                         {/* Register Button */}
                         <TouchableOpacity

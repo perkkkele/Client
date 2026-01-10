@@ -12,6 +12,7 @@ import {
     Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl, chatApi, analyticsApi } from "../../api";
@@ -250,10 +251,13 @@ export default function ProfessionalProfileScreen() {
                             <MaterialIcons name="chat-bubble" size={20} color={COLORS.textMain} />
                             <Text style={styles.primaryButtonText}>Iniciar Chat</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.secondaryButton} onPress={handleBookAppointment}>
-                            <MaterialIcons name="calendar-month" size={20} color={COLORS.textMain} />
-                            <Text style={styles.secondaryButtonText}>Agendar Cita</Text>
-                        </TouchableOpacity>
+                        {/* Only show Agendar Cita for Professional/Premium plans */}
+                        {(professional.subscription?.plan === 'professional' || professional.subscription?.plan === 'premium') && (
+                            <TouchableOpacity style={styles.secondaryButton} onPress={handleBookAppointment}>
+                                <MaterialIcons name="calendar-month" size={20} color={COLORS.textMain} />
+                                <Text style={styles.secondaryButtonText}>Agendar Cita</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -350,6 +354,66 @@ export default function ProfessionalProfileScreen() {
                         </View>
                     )}
                 </View>
+
+                {/* Location Section - Show only if professional has location with coordinates */}
+                {professional.location?.lat && professional.location?.lng && (
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>UBICACIÓN</Text>
+
+                        {/* Address if available */}
+                        {(professional.location.address || professional.location.city) && (
+                            <View style={styles.locationAddress}>
+                                <MaterialIcons name="location-on" size={18} color={COLORS.primary} />
+                                <Text style={styles.locationText}>
+                                    {professional.location.address || ''}{professional.location.address && professional.location.city ? ', ' : ''}{professional.location.city || ''}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Map WebView - Same style as chat bubble */}
+                        <View style={styles.mapContainer}>
+                            <WebView
+                                style={styles.map}
+                                source={{
+                                    html: `
+                                        <!DOCTYPE html>
+                                        <html>
+                                        <head>
+                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                            <style>
+                                                body { margin: 0; padding: 0; }
+                                                iframe { border: 0; width: 100%; height: 100%; }
+                                            </style>
+                                        </head>
+                                        <body>
+                                            <iframe
+                                                src="https://www.google.com/maps?q=${professional.location.lat},${professional.location.lng}&z=15&output=embed"
+                                                width="100%"
+                                                height="100%"
+                                                style="border:0;"
+                                                allowfullscreen=""
+                                                loading="lazy">
+                                            </iframe>
+                                        </body>
+                                        </html>
+                                    `
+                                }}
+                                scrollEnabled={false}
+                            />
+                            {/* Overlay to open in Google Maps */}
+                            <TouchableOpacity
+                                style={styles.mapOverlay}
+                                onPress={() => {
+                                    const url = `https://www.google.com/maps/search/?api=1&query=${professional.location?.lat},${professional.location?.lng}`;
+                                    Linking.openURL(url);
+                                }}
+                            >
+                                <MaterialIcons name="open-in-new" size={14} color="#fff" />
+                                <Text style={styles.mapOverlayText}>Abrir en Maps</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
 
                 {/* Schedule Section */}
                 {professional.workSchedule && professional.workSchedule.workDays && professional.workSchedule.workDays.length > 0 && (
@@ -989,6 +1053,59 @@ const styles = StyleSheet.create({
     navLabel: {
         fontSize: 11,
         color: COLORS.gray500,
+        fontWeight: "500",
+    },
+    // Location Map Section
+    locationAddress: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    locationText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        flex: 1,
+    },
+    mapContainer: {
+        height: 180,
+        borderRadius: 12,
+        overflow: "hidden",
+        marginBottom: 12,
+    },
+    map: {
+        width: "100%",
+        height: "100%",
+    },
+    openMapsButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        paddingVertical: 12,
+        borderRadius: 10,
+    },
+    openMapsText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    mapOverlay: {
+        position: "absolute",
+        bottom: 8,
+        right: 8,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    mapOverlayText: {
+        fontSize: 12,
+        color: "#fff",
         fontWeight: "500",
     },
 });

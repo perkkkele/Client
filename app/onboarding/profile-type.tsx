@@ -1,14 +1,19 @@
 import { router } from "expo-router";
+import { useEffect, useRef } from "react";
 import {
     Image,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
+    Animated,
+    Easing,
+    Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const COLORS = {
     primary: "#FFEA00",
@@ -19,14 +24,98 @@ const COLORS = {
     gray200: "#E5E7EB",
     gray400: "#9CA3AF",
     gray700: "#374151",
+    gray800: "#1F2937",
     gray900: "#111827",
     secondaryText: "#64748B",
     blue100: "#DBEAFE",
+    blue400: "#60A5FA",
     blue600: "#2563EB",
+    blue900: "#1E3A8A",
     yellow700: "#A16207",
+    orange400: "#FB923C",
+    pink400: "#F472B6",
+    teal300: "#5EEAD4",
+    red400: "#F87171",
+    green500: "#22C55E",
 };
 
 export default function ProfileTypeScreen() {
+    // Animation refs for orbits
+    const orbitOuterRotation = useRef(new Animated.Value(0)).current;
+    const orbitInnerRotation = useRef(new Animated.Value(0)).current;
+
+    // Animation refs for floating badges
+    const badgeLegalAnim = useRef(new Animated.Value(0)).current;
+    const badgeBienestarAnim = useRef(new Animated.Value(0)).current;
+    const badgeSaludAnim = useRef(new Animated.Value(0)).current;
+    const badgeHeartAnim = useRef(new Animated.Value(0)).current;
+    const badgeAudioAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Orbit outer rotation - slow
+        Animated.loop(
+            Animated.timing(orbitOuterRotation, {
+                toValue: 1,
+                duration: 20000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+
+        // Orbit inner rotation - reverse
+        Animated.loop(
+            Animated.timing(orbitInnerRotation, {
+                toValue: -1,
+                duration: 15000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
+        ).start();
+
+        // Floating badge animations - gentle bounce
+        const createBounceAnimation = (animValue: Animated.Value, duration: number) => {
+            return Animated.loop(
+                Animated.sequence([
+                    Animated.timing(animValue, {
+                        toValue: 1,
+                        duration: duration,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(animValue, {
+                        toValue: 0,
+                        duration: duration,
+                        easing: Easing.inOut(Easing.ease),
+                        useNativeDriver: true,
+                    }),
+                ])
+            );
+        };
+
+        createBounceAnimation(badgeLegalAnim, 2000).start();
+        createBounceAnimation(badgeBienestarAnim, 2750).start();
+        createBounceAnimation(badgeSaludAnim, 2250).start();
+        createBounceAnimation(badgeHeartAnim, 1750).start();
+        createBounceAnimation(badgeAudioAnim, 2250).start();
+    }, []);
+
+    const orbitOuterSpin = orbitOuterRotation.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg'],
+    });
+
+    const orbitInnerSpin = orbitInnerRotation.interpolate({
+        inputRange: [-1, 0],
+        outputRange: ['-360deg', '0deg'],
+    });
+
+    const createBounceTranslate = (animValue: Animated.Value) => {
+        return animValue.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -8],
+        });
+    };
+
     function handleUserProfile() {
         router.push("/onboarding/register-user");
     }
@@ -45,14 +134,25 @@ export default function ProfileTypeScreen() {
 
                 {/* Central avatar illustration */}
                 <View style={styles.avatarSection}>
-                    <View style={styles.orbitOuter} />
-                    <View style={styles.orbitInner} />
+                    {/* Animated orbits */}
+                    <Animated.View
+                        style={[
+                            styles.orbitOuter,
+                            { transform: [{ rotate: orbitOuterSpin }] }
+                        ]}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.orbitInner,
+                            { transform: [{ rotate: orbitInnerSpin }] }
+                        ]}
+                    />
 
                     <View style={styles.centralAvatar}>
                         <View style={styles.avatarGlow} />
                         <View style={styles.avatarContainer}>
                             <Image
-                                source={{ uri: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&h=200&fit=crop" }}
+                                source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuDyx0DbJ8wfnxiUrp-BkYG_FAwEli1cnGAtVeeSPE3565wNV9QlYbfOR1j-Y6ftPHSfX34VPgQUQ_sGY3VrYUDaUKz7znsQpopVPCqECK_mRjUUL77mOw5vXtp5K3uY7gCgdLd0LffHi446kc1C2BD0l2mWoCiEOlKh3WWZIV5OsDNGfJK3j3zh07bqFPvpssN9lIetBnm6j02yYXkCoFp6korAZPBPuPm4EcPWU7yGEPa-e1F4D_6nQiOdF5wL8SwpKODiWf98QA" }}
                                 style={styles.avatarImage}
                             />
                         </View>
@@ -62,19 +162,63 @@ export default function ProfileTypeScreen() {
                         </View>
                     </View>
 
-                    {/* Floating badges */}
-                    <View style={[styles.floatingBadge, styles.badgeLegal]}>
-                        <MaterialIcons name="gavel" size={14} color="#60A5FA" />
+                    {/* Floating badges - Legal */}
+                    <Animated.View
+                        style={[
+                            styles.floatingBadge,
+                            styles.badgeLegal,
+                            { transform: [{ translateY: createBounceTranslate(badgeLegalAnim) }] }
+                        ]}
+                    >
+                        <MaterialIcons name="gavel" size={14} color={COLORS.blue400} />
                         <Text style={styles.badgeText}>Legal</Text>
-                    </View>
-                    <View style={[styles.floatingBadge, styles.badgeBienestar]}>
-                        <MaterialIcons name="spa" size={14} color="#FB923C" />
+                    </Animated.View>
+
+                    {/* Floating badges - Bienestar */}
+                    <Animated.View
+                        style={[
+                            styles.floatingBadge,
+                            styles.badgeBienestar,
+                            { transform: [{ translateY: createBounceTranslate(badgeBienestarAnim) }] }
+                        ]}
+                    >
+                        <MaterialIcons name="spa" size={14} color={COLORS.orange400} />
                         <Text style={styles.badgeText}>Bienestar</Text>
-                    </View>
-                    <View style={[styles.floatingBadge, styles.badgeSalud]}>
-                        <MaterialIcons name="favorite" size={14} color="#EC4899" />
-                        <Text style={styles.badgeText}>Salud</Text>
-                    </View>
+                    </Animated.View>
+
+                    {/* Floating badges - Salud (small, blurred effect) */}
+                    <Animated.View
+                        style={[
+                            styles.floatingBadgeSmall,
+                            styles.badgeSalud,
+                            { transform: [{ translateY: createBounceTranslate(badgeSaludAnim) }] }
+                        ]}
+                    >
+                        <MaterialIcons name="monitor-heart" size={12} color={COLORS.teal300} />
+                        <Text style={styles.badgeTextSmall}>Salud</Text>
+                    </Animated.View>
+
+                    {/* Heart icon badge - top right */}
+                    <Animated.View
+                        style={[
+                            styles.iconBadge,
+                            styles.badgeHeart,
+                            { transform: [{ translateY: createBounceTranslate(badgeHeartAnim) }] }
+                        ]}
+                    >
+                        <MaterialIcons name="favorite" size={18} color={COLORS.pink400} />
+                    </Animated.View>
+
+                    {/* Audio wave icon badge - bottom left */}
+                    <Animated.View
+                        style={[
+                            styles.iconBadgeLarge,
+                            styles.badgeAudio,
+                            { transform: [{ translateY: createBounceTranslate(badgeAudioAnim) }] }
+                        ]}
+                    >
+                        <MaterialIcons name="graphic-eq" size={32} color={COLORS.red400} />
+                    </Animated.View>
                 </View>
 
                 {/* Hero text */}
@@ -105,7 +249,7 @@ export default function ProfileTypeScreen() {
                         </View>
                         <View style={styles.optionContent}>
                             <Text style={styles.optionTitle}>Necesito un profesional</Text>
-                            <Text style={styles.optionSubtitle}>
+                            <Text style={styles.optionSubtitle} numberOfLines={1}>
                                 Busco un experto de forma rápida y segura.
                             </Text>
                         </View>
@@ -123,7 +267,7 @@ export default function ProfileTypeScreen() {
                         </View>
                         <View style={styles.optionContent}>
                             <Text style={styles.optionTitle}>Soy un profesional</Text>
-                            <Text style={styles.optionSubtitle}>
+                            <Text style={styles.optionSubtitle} numberOfLines={1}>
                                 Quiero crear mi gemelo digital.
                             </Text>
                         </View>
@@ -259,39 +403,103 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "rgba(17, 24, 39, 0.8)",
         paddingVertical: 6,
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: "rgba(55, 65, 81, 0.5)",
         gap: 6,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    floatingBadgeSmall: {
+        position: "absolute",
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(17, 24, 39, 0.6)",
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "rgba(55, 65, 81, 0.3)",
+        gap: 4,
+        opacity: 0.7,
+    },
+    iconBadge: {
+        position: "absolute",
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: "rgba(31, 41, 55, 0.8)",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "rgba(55, 65, 81, 0.5)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    iconBadgeLarge: {
+        position: "absolute",
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: "rgba(31, 41, 55, 0.8)",
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: "rgba(55, 65, 81, 0.5)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     badgeLegal: {
-        top: 20,
-        left: 20,
+        top: 40,
+        left: 24,
     },
     badgeBienestar: {
-        top: 60,
-        left: 60,
+        top: 72,
+        left: 72,
     },
     badgeSalud: {
-        top: 30,
-        right: 30,
+        top: 24,
+        left: 88,
+    },
+    badgeHeart: {
+        top: 48,
+        right: 16,
+    },
+    badgeAudio: {
+        bottom: 48,
+        left: 40,
     },
     badgeText: {
         fontSize: 11,
         fontWeight: "600",
         color: "#E5E7EB",
     },
+    badgeTextSmall: {
+        fontSize: 9,
+        fontWeight: "600",
+        color: "#9CA3AF",
+    },
     heroText: {
         alignItems: "center",
         paddingHorizontal: 16,
     },
     heroTitle: {
-        fontSize: 26,
+        fontSize: 28,
         fontWeight: "bold",
         color: COLORS.white,
-        marginBottom: 8,
+        marginBottom: 10,
         textAlign: "center",
+        letterSpacing: -0.5,
     },
     heroSubtitle: {
         fontSize: 15,
@@ -328,6 +536,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: COLORS.surfaceLight,
         padding: 16,
+        paddingVertical: 20,
         borderRadius: 24,
         borderWidth: 1,
         borderColor: COLORS.gray200,
