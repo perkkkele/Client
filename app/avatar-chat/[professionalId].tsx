@@ -244,6 +244,9 @@ export default function AvatarChatScreen() {
     const [escalationStatus, setEscalationStatus] = useState<'none' | 'pending' | 'accepted' | 'declined'>('none');
     const [isEscalating, setIsEscalating] = useState(false);
 
+    // Disclaimer banner state - shows for 3 seconds at session start
+    const [showDisclaimerBanner, setShowDisclaimerBanner] = useState(true);
+
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
     const videoPositionAnim = useRef(new Animated.Value(0)).current; // 0 = full, 1 = PiP
@@ -510,6 +513,14 @@ export default function AvatarChatScreen() {
 
         console.log('[handleNewConversation] New conversation started');
     }, [saveCurrentConversation, loadConversations, closeDrawer]);
+
+    // Auto-dismiss disclaimer banner after 3 seconds
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowDisclaimerBanner(false);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         loadProfessional();
@@ -1162,6 +1173,25 @@ export default function AvatarChatScreen() {
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
+
+            {/* Discrete Disclaimer Banner - auto-dismisses after 3 seconds */}
+            {showDisclaimerBanner && !isHumanSession && (
+                <View style={styles.disclaimerBanner}>
+                    <Text style={styles.disclaimerText}>
+                        Las respuestas de este gemelo digital tienen carácter informativo.{" "}
+                        <Text
+                            style={styles.disclaimerLink}
+                            onPress={() => {
+                                if (professional?._id) {
+                                    router.push(`/professional/${professional._id}` as any);
+                                }
+                            }}
+                        >
+                            Consulta el alcance y límites del servicio
+                        </Text>
+                    </Text>
+                </View>
+            )}
 
             {/* Video Feed - Resizable */}
             <Animated.View
@@ -2485,6 +2515,27 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 20,
+    },
+    disclaimerBanner: {
+        position: "absolute",
+        top: 90,
+        left: 20,
+        right: 20,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        zIndex: 15,
+    },
+    disclaimerText: {
+        fontSize: 10,
+        color: "rgba(255,255,255,0.85)",
+        textAlign: "center",
+        lineHeight: 14,
+    },
+    disclaimerLink: {
+        color: COLORS.primary,
+        textDecorationLine: "underline",
     },
     headerContent: {
         flexDirection: "row",

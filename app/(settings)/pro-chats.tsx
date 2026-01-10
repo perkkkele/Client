@@ -224,7 +224,7 @@ export default function ProChatsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Conversaciones del Gemelo</Text>
+                <Text style={styles.headerTitle}>Chats Escalados</Text>
                 <View style={styles.headerButton} />
             </View>
 

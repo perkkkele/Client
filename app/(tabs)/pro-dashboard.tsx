@@ -21,6 +21,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { userApi, analyticsApi, getAssetUrl } from "../../api";
+import { notificationsApi } from "../../api/notifications";
 import { ProfileBlock, TwinBlock, StatsBlock, AdvancedStatsBlock, AppointmentsBlock, EarningsBlock } from "../../components/dashboard";
 import type { AdvancedAnalytics } from "../../api/analytics";
 
@@ -91,6 +92,7 @@ export default function ProDashboardScreen() {
     const [geminiActive, setGeminiActive] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+    const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
     // Upgrade modal state
     const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
@@ -122,6 +124,25 @@ export default function ProDashboardScreen() {
             });
         }
     }, [user?.escalation]);
+
+    // Load notification unread count
+    useEffect(() => {
+        const loadUnreadCount = async () => {
+            if (!token || !user?._id) return;
+            try {
+                const count = await notificationsApi.getUnreadCount(token, user._id);
+                setUnreadNotificationCount(count);
+            } catch (error) {
+                console.error("Error loading unread count:", error);
+            }
+        };
+
+        loadUnreadCount();
+
+        // Refresh count every 30 seconds
+        const interval = setInterval(loadUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, [token, user?._id]);
 
     // Analytics state
     const [analytics, setAnalytics] = useState({
@@ -359,7 +380,7 @@ export default function ProDashboardScreen() {
                 { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push(`/professional/${user?._id}`); } },
                 { icon: "reviews", label: "Gestión de reseñas", iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
                 { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600, onPress: () => { setMenuVisible(false); router.push("/(settings)/work-schedule"); } },
-                { icon: "forum", label: "Mis chats Pro", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
+                { icon: "forum", label: "Chats Escalados", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
             ],
         },
         {
@@ -381,7 +402,7 @@ export default function ProDashboardScreen() {
             title: "Cuenta",
             items: [
                 { icon: "credit-card", label: "Planes y créditos", iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/plans-credits"); } },
-                { icon: "notifications", label: "Notificaciones", iconBg: COLORS.gray100, iconColor: COLORS.gray600 },
+                { icon: "notifications", label: "Notificaciones", iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/notification-settings"); } },
                 { icon: "logout", label: "Cerrar Sesión", iconBg: COLORS.red50, iconColor: COLORS.red600, isLogout: true, onPress: handleLogout },
             ],
         },
@@ -464,7 +485,20 @@ export default function ProDashboardScreen() {
                     <MaterialIcons name="menu" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Área Personal Pro</Text>
-                <View style={styles.headerPlaceholder} />
+                <TouchableOpacity
+                    style={styles.notificationButton}
+                    onPress={() => router.push("/(settings)/pro-notifications")}
+                >
+                    <MaterialIcons name="notifications" size={24} color={COLORS.textMain} />
+                    {/* Unread badge */}
+                    {unreadNotificationCount > 0 && (
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.notificationBadgeText}>
+                                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                            </Text>
+                        </View>
+                    )}
+                </TouchableOpacity>
             </View>
 
             {/* Main Content */}
@@ -814,7 +848,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="forum" size={20} color={COLORS.green600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Mis chats Pro</Text>
+                                        <Text style={styles.sideMenuCardLabel}>Chats Escalados</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -935,14 +969,6 @@ export default function ProDashboardScreen() {
                                     </View>
                                 </TouchableOpacity>
                                 <View style={styles.sideMenuCard}>
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
-                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.indigo50 }]}>
-                                            <MaterialIcons name="chat-bubble" size={20} color={COLORS.indigo600} />
-                                        </View>
-                                        <Text style={styles.sideMenuCardLabel}>Respuestas del gemelo</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-                                    </TouchableOpacity>
-                                    <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
                                         onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-history"); }}
@@ -956,16 +982,8 @@ export default function ProDashboardScreen() {
                                     <View style={styles.sideMenuCardDivider} />
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
-                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-performance"); }}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/twin-scope"); }}
                                     >
-                                        <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.rose50 }]}>
-                                            <MaterialIcons name="analytics" size={20} color={COLORS.rose600} />
-                                        </View>
-                                        <Text style={styles.sideMenuCardLabel}>Rendimiento del gemelo</Text>
-                                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-                                    </TouchableOpacity>
-                                    <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.cyan50 }]}>
                                             <MaterialIcons name="tune" size={20} color={COLORS.cyan600} />
                                         </View>
@@ -1012,7 +1030,10 @@ export default function ProDashboardScreen() {
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
-                                    <TouchableOpacity style={styles.sideMenuCardItem}>
+                                    <TouchableOpacity
+                                        style={styles.sideMenuCardItem}
+                                        onPress={() => { setMenuVisible(false); router.push("/(settings)/notification-settings"); }}
+                                    >
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>
                                             <MaterialIcons name="notifications" size={20} color={COLORS.gray600} />
                                         </View>
@@ -1112,9 +1133,30 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.textMain,
     },
-    headerPlaceholder: {
+    notificationButton: {
         width: 40,
         height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+    },
+    notificationBadge: {
+        position: "absolute",
+        top: 4,
+        right: 4,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: "#EF4444",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 4,
+    },
+    notificationBadgeText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: "#FFFFFF",
     },
     profileButton: {
         width: 40,
