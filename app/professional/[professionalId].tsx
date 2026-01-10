@@ -229,17 +229,17 @@ export default function ProfessionalProfileScreen() {
                                 <Text style={styles.ratingCount}>({professional.ratingCount || 0} reseñas)</Text>
                             </TouchableOpacity>
                         )}
-                        {professional.isVerified && (
+                        {professional.verification?.professionalVerified && (
                             <TouchableOpacity
                                 style={styles.verifiedBadge}
                                 onPress={() => Alert.alert(
-                                    "✓ Perfil Verificado",
-                                    "Este perfil ha sido validado por TwinPro.\n\nSu identidad y actividad profesional han sido comprobadas para ofrecerte una experiencia segura y fiable.",
+                                    "✓ Profesional Verificado",
+                                    "Este profesional ha verificado su actividad profesional mediante declaración jurada.\n\nTwinPro ha comprobado su identidad y profesión para ofrecerte una experiencia segura y fiable.",
                                     [{ text: "Entendido", style: "default" }]
                                 )}
                             >
-                                <MaterialIcons name="verified" size={16} color={COLORS.blue500} />
-                                <Text style={styles.verifiedText}>Verificado</Text>
+                                <MaterialIcons name="workspace-premium" size={16} color={COLORS.blue500} />
+                                <Text style={styles.verifiedText}>Profesional Verificado</Text>
                             </TouchableOpacity>
                         )}
                     </View>

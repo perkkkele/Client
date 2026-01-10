@@ -204,6 +204,41 @@ export interface User {
     stripeConnectDetailsSubmitted?: boolean;
     stripeConnectChargesEnabled?: boolean;
     stripeConnectPayoutsEnabled?: boolean;
+
+    // === Suscripción Profesional ===
+    subscription?: {
+        plan?: 'starter' | 'professional' | 'premium';
+        stripeSubscriptionId?: string | null;
+        stripeCustomerId?: string | null;
+        status?: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete';
+        currentPeriodStart?: string | null;
+        currentPeriodEnd?: string | null;
+        minutesUsed?: number;
+        minutesIncluded?: number;
+        minutesResetDate?: string | null;
+        extraMinutesUsed?: number;
+        extraMinutePrice?: number;
+    };
+
+    // === Verificaciones ===
+    verification?: {
+        identityVerified?: boolean;
+        identityVerifiedAt?: string | null;
+        professionalVerified?: boolean;
+        professionalVerifiedAt?: string | null;
+        professionalVerificationData?: {
+            declarationAccepted?: boolean;
+            licenseNumber?: string | null;
+            additionalInfo?: string | null;
+            documents?: Array<{
+                id: string;
+                filename: string;
+                url: string;
+                uploadedAt: string;
+            }>;
+            submittedAt?: string | null;
+        };
+    };
 }
 
 // Tipo para actualizaciones parciales del usuario

@@ -256,7 +256,8 @@ export default function CategoryResultsScreen() {
         const avatarUrl = getAvatarUrl(item.avatar);
         const fullName = `${item.firstname || ""} ${item.lastname || ""}`.trim();
         const isOnline = item.isOnline;
-        const isVerified = item.ratingCount > 10;
+        // Check professional verification from the verification object
+        const isProfessionalVerified = (item as any).verification?.professionalVerified === true;
         const isFavorite = favoriteIds.has(item._id);
 
         return (
@@ -296,7 +297,7 @@ export default function CategoryResultsScreen() {
                             <MaterialIcons name="bolt" size={10} color="#FFFFFF" />
                         </View>
                     )}
-                    {isVerified && !isOnline && (
+                    {isProfessionalVerified && !isOnline && (
                         <View style={[styles.onlineBadge, { backgroundColor: COLORS.blue500 }]}>
                             <MaterialIcons name="verified" size={10} color="#FFFFFF" />
                         </View>
