@@ -361,6 +361,7 @@ export default function PlansCreditsScreen() {
             { key: "directoryListing", label: "Aparecer en directorio", icon: "public" },
             { key: "catalogAvatar", label: "Avatar del catálogo", icon: "face" },
             { key: "customAvatar", label: "Avatar personalizado", icon: "auto-fix-high" },
+            { key: "escalation", label: "Escalado a profesional", icon: "support-agent" },
             { key: "appointments", label: "Agendar citas", icon: "event" },
             { key: "videoAppointments", label: "Video-citas", icon: "videocam" },
             { key: "integratedPayments", label: "Cobros integrados", icon: "payments" },

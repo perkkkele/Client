@@ -219,7 +219,7 @@ export default function ProContactScreen() {
                     website: website.trim() || undefined,
                     location: finalLocationData,
                     workSchedule,
-                    appointmentsEnabled: true, // Enable appointments for the professional
+                    appointmentsEnabled: false, // Starter plan - appointments require Professional+ plan
                     socialLinks: {
                         linkedin: linkedin.trim() || null,
                         instagram: instagram.trim() || null,

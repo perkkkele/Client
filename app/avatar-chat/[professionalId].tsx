@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
     ActivityIndicator,
     Image,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -65,7 +67,7 @@ const COLORS = {
     black: "#000000",
 };
 
-type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | "appointments" | "escalation" | null;
+type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" | "appointments" | "escalation" | "escalation_keyword" | null;
 
 interface Message {
     id: string;
@@ -176,6 +178,12 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
         subtitle: "con el profesional",
         content: "El gemelo ofrece ayuda inmediata. Al escalar, la sesión se pausará y la respuesta puede no ser inmediata.",
         icon: "support-agent",
+    },
+    escalation_keyword: {
+        title: "Para asegurarme de ayudarte de la mejor forma posible…",
+        subtitle: "",
+        content: "¿Quieres hablar directamente con el profesional?\n\nPor lo que comentas, puede que este tema requiera atención humana.\n\nPuedes seguir hablando con el gemelo digital o, si lo deseas, escalar la conversación. Ten en cuenta que al hacerlo la respuesta del profesional puede no ser inmediata.\n\nPara una atención directa, también puedes reservar una cita.",
+        icon: "priority-high",
     },
 };
 
@@ -791,8 +799,29 @@ export default function AvatarChatScreen() {
         });
         setInputText("");
 
-        // Hide info bubble when user sends a message
-        setActiveInfoBubble(null);
+        // Keyword detection for automatic escalation
+        if (professional?.escalation?.enabled &&
+            professional?.escalation?.triggers?.keywords &&
+            professional?.escalation?.keywords?.length > 0 &&
+            escalationStatus === 'none' &&
+            !isHumanSession) {
+            const lowerMessage = messageText.toLowerCase();
+            const matchedKeyword = professional.escalation.keywords.find(
+                (keyword: string) => lowerMessage.includes(keyword.toLowerCase())
+            );
+            if (matchedKeyword) {
+                console.log('[Escalation] Keyword detected:', matchedKeyword);
+                // Show keyword-specific escalation dialog
+                setActiveInfoBubble('escalation_keyword');
+                // Don't proceed to hide the info bubble - we just showed escalation dialog
+            } else {
+                // Hide info bubble when user sends a message (no keyword triggered)
+                setActiveInfoBubble(null);
+            }
+        } else {
+            // Hide info bubble when user sends a message (escalation not available)
+            setActiveInfoBubble(null);
+        }
 
         // Show mute reminder if avatar is muted
         if (isMuted && sessionStatus === 'active') {
@@ -1029,7 +1058,11 @@ export default function AvatarChatScreen() {
         professional?.email?.split("@")[0] || "Profesional";
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
             {/* Header Overlay */}
             <SafeAreaView edges={["top"]} style={styles.headerOverlay}>
                 <View style={styles.headerContent}>
@@ -1926,21 +1959,23 @@ export default function AvatarChatScreen() {
                                     ¿Qué quieres hacer?
                                 </Text>
 
-                                {/* Book Appointment - Primary action */}
-                                <TouchableOpacity
-                                    style={styles.escalationDialogButtonPrimary}
-                                    onPress={() => {
-                                        setActiveInfoBubble(null);
-                                        if (professionalId) {
-                                            router.push(`/book-appointment/${professionalId}` as any);
-                                        }
-                                    }}
-                                >
-                                    <MaterialIcons name="event" size={18} color={COLORS.textMain} />
-                                    <Text style={styles.escalationDialogButtonPrimaryText}>
-                                        Reservar una cita
-                                    </Text>
-                                </TouchableOpacity>
+                                {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
+                                {professional?.appointmentsEnabled && (
+                                    <TouchableOpacity
+                                        style={styles.escalationDialogButtonPrimary}
+                                        onPress={() => {
+                                            setActiveInfoBubble(null);
+                                            if (professionalId) {
+                                                router.push(`/book-appointment/${professionalId}` as any);
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons name="event" size={18} color={COLORS.textMain} />
+                                        <Text style={styles.escalationDialogButtonPrimaryText}>
+                                            Reservar una cita
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 {/* Escalate - Secondary action */}
                                 <TouchableOpacity
@@ -1954,6 +1989,56 @@ export default function AvatarChatScreen() {
                                     <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
                                     <Text style={styles.escalationDialogButtonSecondaryText}>
                                         {isEscalating ? 'Contactando...' : 'Escalar y esperar respuesta'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {/* Continue with Twin - Tertiary action */}
+                                <TouchableOpacity
+                                    style={styles.escalationDialogButtonTertiary}
+                                    onPress={() => setActiveInfoBubble(null)}
+                                >
+                                    <Text style={styles.escalationDialogButtonTertiaryText}>
+                                        Seguir con el gemelo digital
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : activeInfoBubble === "escalation_keyword" ? (
+                            /* Keyword-Triggered Escalation Dialog */
+                            <View style={styles.escalationDialogContent}>
+                                <Text style={styles.escalationDialogText}>
+                                    {INFO_BUBBLE_CONTENT.escalation_keyword.content}
+                                </Text>
+
+                                {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
+                                {professional?.appointmentsEnabled && (
+                                    <TouchableOpacity
+                                        style={styles.escalationDialogButtonPrimary}
+                                        onPress={() => {
+                                            setActiveInfoBubble(null);
+                                            if (professionalId) {
+                                                router.push(`/book-appointment/${professionalId}` as any);
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons name="event" size={18} color={COLORS.textMain} />
+                                        <Text style={styles.escalationDialogButtonPrimaryText}>
+                                            Reservar cita con el profesional
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Escalate - Secondary action */}
+                                <TouchableOpacity
+                                    style={styles.escalationDialogButtonSecondary}
+                                    onPress={() => {
+                                        setActiveInfoBubble(null);
+                                        handleEscalation();
+                                    }}
+                                    disabled={isEscalating}
+                                >
+                                    <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
+                                    <Text style={styles.escalationDialogButtonSecondaryText}>
+                                        {isEscalating ? 'Contactando...' : 'Escalar conversación y esperar respuesta'}
                                     </Text>
                                 </TouchableOpacity>
 
@@ -2371,7 +2456,7 @@ export default function AvatarChatScreen() {
                     </Animated.View>
                 </>
             )}
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
