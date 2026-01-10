@@ -1,6 +1,6 @@
 import { API_URL } from "./config";
 
-export type AnalyticsEventType = "profileView" | "conversationStart" | "conversationEnd" | "phoneCall";
+export type AnalyticsEventType = "profileView" | "conversationStart" | "conversationEnd" | "phoneCall" | "escalation";
 
 export interface AnalyticsEventMetadata {
     durationSeconds?: number;
@@ -10,9 +10,32 @@ export interface AnalyticsEventMetadata {
 
 export interface AnalyticsSummary {
     profileViews: number;
+    totalConversations: number;
     totalConversationSeconds: number;
     appointmentsBooked: number;
     phoneCalls: number;
+    escalations: number;
+}
+
+export interface AdvancedAnalytics {
+    trafficBySource: {
+        app: number;
+        "web-widget": number;
+        "qr-code": number;
+        "direct-link": number;
+    };
+    peakHours: number[]; // Array of 24 elements (0-23)
+    weekdayDistribution: number[]; // Array of 7 elements (0=Sunday, 6=Saturday)
+    conversionRates: {
+        viewToConversation: number; // Percentage
+        conversationToAppointment: number; // Percentage
+    };
+    averageConversationDuration: number; // Seconds
+    visitors: {
+        unique: number;
+        returning: number;
+        total: number;
+    };
 }
 
 /**
@@ -81,6 +104,39 @@ export async function getSummary(
         return result.data as AnalyticsSummary;
     } catch (error) {
         console.error("Error getting analytics summary:", error);
+        return null;
+    }
+}
+
+/**
+ * Obtener analíticas avanzadas para profesionales Premium
+ */
+export async function getAdvancedAnalytics(
+    token: string,
+    professionalId: string
+): Promise<AdvancedAnalytics | null> {
+    try {
+        const response = await fetch(
+            `${API_URL}/analytics/advanced/${professionalId}`,
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error("Error getting advanced analytics:", error);
+            return null;
+        }
+
+        const result = await response.json();
+        return result.data as AdvancedAnalytics;
+    } catch (error) {
+        console.error("Error getting advanced analytics:", error);
         return null;
     }
 }

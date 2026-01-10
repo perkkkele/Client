@@ -21,7 +21,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { userApi, analyticsApi, getAssetUrl } from "../../api";
-import { ProfileBlock, TwinBlock, StatsBlock, AppointmentsBlock, EarningsBlock } from "../../components/dashboard";
+import { ProfileBlock, TwinBlock, StatsBlock, AdvancedStatsBlock, AppointmentsBlock, EarningsBlock } from "../../components/dashboard";
+import type { AdvancedAnalytics } from "../../api/analytics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -125,26 +126,41 @@ export default function ProDashboardScreen() {
     // Analytics state
     const [analytics, setAnalytics] = useState({
         profileViews: 0,
+        totalConversations: 0,
         totalConversationSeconds: 0,
         appointmentsBooked: 0,
         phoneCalls: 0,
+        escalations: 0,
     });
+    const [advancedAnalytics, setAdvancedAnalytics] = useState<AdvancedAnalytics | null>(null);
     const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+    // Check if user has Premium plan
+    const isPremium = user?.subscription?.plan === 'premium';
 
     // Load analytics data
     const loadAnalytics = useCallback(async () => {
         if (!token || !user?._id) return;
         try {
+            // Load basic analytics (Professional+)
             const summary = await analyticsApi.getSummary(token, user._id);
             if (summary) {
                 setAnalytics(summary);
+            }
+
+            // Load advanced analytics (Premium only)
+            if (user?.subscription?.plan === 'premium') {
+                const advanced = await analyticsApi.getAdvancedAnalytics(token, user._id);
+                if (advanced) {
+                    setAdvancedAnalytics(advanced);
+                }
             }
         } catch (error) {
             console.error("Error loading analytics:", error);
         } finally {
             setLoadingAnalytics(false);
         }
-    }, [token, user?._id]);
+    }, [token, user?._id, user?.subscription?.plan]);
 
     // Load analytics on mount
     useEffect(() => {
@@ -152,7 +168,7 @@ export default function ProDashboardScreen() {
     }, [loadAnalytics]);
 
     // ===== DASHBOARD CUSTOMIZATION =====
-    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'appointments', 'earnings', 'stats'];
+    const DEFAULT_BLOCK_ORDER = ['profile', 'twin', 'appointments', 'earnings', 'stats', 'advancedStats'];
     const DASHBOARD_LAYOUT_KEY = `dashboard_layout_${user?._id}`;
 
     const [editMode, setEditMode] = useState(false);
@@ -598,6 +614,36 @@ export default function ProDashboardScreen() {
                             }
                             return renderBlockWithControls('stats',
                                 <StatsBlock analytics={analytics} />
+                            );
+                        case 'advancedStats':
+                            // Analíticas Avanzadas - Premium only
+                            if (!isPremium) {
+                                return renderBlockWithControls('advancedStats',
+                                    <View key="advancedStats-locked" style={styles.lockedBlock}>
+                                        <View style={styles.lockedBlockContent}>
+                                            <MaterialIcons name="diamond" size={32} color="#8B5CF6" />
+                                            <Text style={styles.lockedBlockTitle}>Analíticas Avanzadas</Text>
+                                            <Text style={styles.lockedBlockDesc}>
+                                                Disponible exclusivamente en plan Premium
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={[styles.lockedBlockButton, { backgroundColor: '#8B5CF6' }]}
+                                                onPress={() => {
+                                                    setUpgradeModalFeature("Analíticas Avanzadas");
+                                                    setUpgradeModalPlan("premium");
+                                                    setUpgradeModalVisible(true);
+                                                }}
+                                            >
+                                                <MaterialIcons name="diamond" size={16} color="#FFF" />
+                                                <Text style={[styles.lockedBlockButtonText, { color: '#FFF' }]}>Obtener Premium</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            }
+                            if (!advancedAnalytics) return null; // Still loading
+                            return renderBlockWithControls('advancedStats',
+                                <AdvancedStatsBlock analytics={advancedAnalytics} />
                             );
                         default:
                             return null;

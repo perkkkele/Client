@@ -922,6 +922,14 @@ export default function AvatarChatScreen() {
             await chatApi.escalateChat(token, currentChatId, 'client_request');
             setEscalationStatus('pending');
 
+            // Record escalation event for analytics
+            if (professionalId) {
+                analyticsApi.recordEvent(token, professionalId, 'escalation', {
+                    source: 'app',
+                    chatId: currentChatId,
+                });
+            }
+
             // Pause the digital twin session while waiting for professional
             setIsPaused(true);
 

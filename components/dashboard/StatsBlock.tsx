@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "./constants";
 import { analyticsApi } from "../../api";
@@ -7,9 +7,11 @@ import { analyticsApi } from "../../api";
 interface StatsBlockProps {
     analytics: {
         profileViews: number;
+        totalConversations: number;
         totalConversationSeconds: number;
         appointmentsBooked: number;
         phoneCalls: number;
+        escalations: number;
     };
 }
 
@@ -17,35 +19,46 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
     return (
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Resumen de Actividad</Text>
-                <TouchableOpacity style={styles.sectionLink}>
-                    <Text style={styles.sectionLinkText}>Configuración</Text>
-                    <MaterialIcons name="settings" size={16} color={COLORS.primary} />
-                </TouchableOpacity>
+                <View style={styles.titleBadge}>
+                    <MaterialIcons name="bar-chart" size={16} color={COLORS.primary} />
+                    <Text style={styles.sectionTitle}>Resumen de Actividad</Text>
+                </View>
             </View>
             <View style={styles.statsGrid}>
+                {/* Visitas al Perfil */}
                 <View style={styles.statCard}>
                     <View style={styles.statHeader}>
                         <View style={[styles.statIcon, { backgroundColor: COLORS.blue50 }]}>
                             <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
                         </View>
-                        <View style={styles.statBadge}>
-                            <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
-                            <Text style={styles.statBadgeText}>+12%</Text>
-                        </View>
                     </View>
                     <Text style={styles.statLabel}>Visitas Perfil</Text>
                     <Text style={styles.statValue}>{analytics.profileViews.toLocaleString()}</Text>
                 </View>
+
+                {/* Conversaciones Totales */}
                 <View style={styles.statCard}>
                     <View style={styles.statHeader}>
                         <View style={[styles.statIcon, { backgroundColor: COLORS.purple50 }]}>
-                            <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
+                            <MaterialIcons name="chat" size={20} color={COLORS.purple600} />
+                        </View>
+                    </View>
+                    <Text style={styles.statLabel}>Conversaciones</Text>
+                    <Text style={styles.statValue}>{analytics.totalConversations.toLocaleString()}</Text>
+                </View>
+
+                {/* Duración Chats */}
+                <View style={styles.statCard}>
+                    <View style={styles.statHeader}>
+                        <View style={[styles.statIcon, { backgroundColor: "#E0F2FE" }]}>
+                            <MaterialIcons name="schedule" size={20} color="#0EA5E9" />
                         </View>
                     </View>
                     <Text style={styles.statLabel}>Duración Chats</Text>
                     <Text style={styles.statValue}>{analyticsApi.formatDuration(analytics.totalConversationSeconds)}</Text>
                 </View>
+
+                {/* Citas Agendadas */}
                 <View style={styles.statCard}>
                     <View style={styles.statHeader}>
                         <View style={[styles.statIcon, { backgroundColor: COLORS.orange50 }]}>
@@ -55,18 +68,27 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                     <Text style={styles.statLabel}>Citas Agendadas</Text>
                     <Text style={styles.statValue}>{analytics.appointmentsBooked}</Text>
                 </View>
+
+                {/* Llamadas Recibidas */}
                 <View style={styles.statCard}>
                     <View style={styles.statHeader}>
                         <View style={[styles.statIcon, { backgroundColor: COLORS.green50 }]}>
                             <MaterialIcons name="call" size={20} color={COLORS.green600} />
                         </View>
-                        <View style={styles.statBadge}>
-                            <MaterialIcons name="trending-up" size={14} color={COLORS.green600} />
-                            <Text style={styles.statBadgeText}>+5%</Text>
+                    </View>
+                    <Text style={styles.statLabel}>Llamadas</Text>
+                    <Text style={styles.statValue}>{analytics.phoneCalls}</Text>
+                </View>
+
+                {/* Escalaciones */}
+                <View style={styles.statCard}>
+                    <View style={styles.statHeader}>
+                        <View style={[styles.statIcon, { backgroundColor: "#FEF3C7" }]}>
+                            <MaterialIcons name="support-agent" size={20} color="#D97706" />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Llamadas recibidas</Text>
-                    <Text style={styles.statValue}>{analytics.phoneCalls}</Text>
+                    <Text style={styles.statLabel}>Escalaciones</Text>
+                    <Text style={styles.statValue}>{analytics.escalations}</Text>
                 </View>
             </View>
         </View>
@@ -79,25 +101,23 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
         paddingHorizontal: 16,
         marginBottom: 12,
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: COLORS.textMain,
-    },
-    sectionLink: {
+    titleBadge: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 4,
+        backgroundColor: COLORS.blue50,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
     },
-    sectionLinkText: {
-        fontSize: 14,
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: "700",
         color: COLORS.primary,
-        fontWeight: "500",
     },
     statsGrid: {
         flexDirection: "row",
