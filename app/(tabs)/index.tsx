@@ -16,7 +16,7 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getAssetUrl, chatApi, professionalApi } from "../../api";
 import type { Chat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
@@ -98,6 +98,7 @@ function formatRelativeTime(dateString: string | undefined): string {
 
 export default function TwinProHomeScreen() {
   const { token, user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [chats, setChats] = useState<Chat[]>([]);
   const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -660,7 +661,7 @@ export default function TwinProHomeScreen() {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TouchableOpacity style={styles.navItem}>
           <View style={styles.navItemActive}>
             <MaterialIcons name="chat-bubble" size={24} color={COLORS.black} />

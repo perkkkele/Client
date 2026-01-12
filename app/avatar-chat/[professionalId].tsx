@@ -17,7 +17,7 @@ import {
     Dimensions,
     Linking,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
 import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi } from "../../api";
@@ -197,6 +197,7 @@ export default function AvatarChatScreen() {
 
     const { token, user: currentUser } = useAuth();
     const { subscribeToMessages } = useIncomingCall();
+    const insets = useSafeAreaInsets();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -246,6 +247,98 @@ export default function AvatarChatScreen() {
 
     // Disclaimer banner state - shows for 3 seconds at session start
     const [showDisclaimerBanner, setShowDisclaimerBanner] = useState(true);
+
+    // Disabled twin / Personal attention mode
+    const [showPersonalAttentionOverlay, setShowPersonalAttentionOverlay] = useState(true);
+    const [isSessionExpired, setIsSessionExpired] = useState(false);
+    const [sessionStatusChecked, setSessionStatusChecked] = useState(false); // Track if we've checked session limit
+    const [currentChat, setCurrentChat] = useState<any>(null);
+    const isTwinDisabled = professional?.digitalTwin?.isActive === false;
+    // Effective twin disabled = either globally disabled OR session expired for this user
+    const isTwinEffectivelyDisabled = isTwinDisabled || isSessionExpired;
+
+    // Remaining minutes for countdown warning
+    const [remainingMinutes, setRemainingMinutes] = useState<number | null>(null);
+
+    // Mark session as checked when professional has no limit configured
+    useEffect(() => {
+        if (professional && !sessionStatusChecked) {
+            const sessionLimit = professional?.digitalTwin?.sessionLimitMinutes || 0;
+            if (sessionLimit === 0) {
+                console.log('[SessionLimit] No limit configured, marking as checked');
+                setSessionStatusChecked(true);
+            }
+        }
+    }, [professional, sessionStatusChecked]);
+
+    // Session time limit tracking - runs every 60 seconds when chat is active
+    useEffect(() => {
+        // Only track time if:
+        // 1. We have a current chat
+        // 2. Twin is not already disabled
+        // 3. Session is not already expired
+        // 4. Professional has a session limit configured
+        if (!currentChatId || !token || isTwinDisabled || isSessionExpired) {
+            return;
+        }
+
+        const sessionLimit = professional?.digitalTwin?.sessionLimitMinutes || 0;
+        if (sessionLimit === 0) {
+            return; // No limit configured, handled by separate useEffect
+        }
+
+        console.log('[SessionLimit] Starting session time tracking for chat:', currentChatId, 'limit:', sessionLimit, 'minutes');
+
+        // Check initial status and set remaining time
+        const checkInitialStatus = async () => {
+            try {
+                const status = await chatApi.getSessionStatus(token, currentChatId);
+                if (status.isExpired) {
+                    console.log('[SessionLimit] Session already expired on load');
+                    setIsSessionExpired(true);
+                    setRemainingMinutes(0);
+                    // Show the "Tiempo agotado" overlay
+                    setShowPersonalAttentionOverlay(true);
+                } else {
+                    const remaining = sessionLimit - (status.usedMinutes || 0);
+                    setRemainingMinutes(remaining);
+                    console.log('[SessionLimit] Remaining minutes:', remaining);
+                }
+            } catch (error) {
+                console.error('[SessionLimit] Error checking initial status:', error);
+            } finally {
+                setSessionStatusChecked(true);
+            }
+        };
+        checkInitialStatus();
+
+        // Set up interval to add 1 minute every 60 seconds
+        const intervalId = setInterval(async () => {
+            try {
+                console.log('[SessionLimit] Adding 1 minute to session time...');
+                const status = await chatApi.updateSessionTime(token, currentChatId, 1);
+                const remaining = sessionLimit - (status.usedMinutes || 0);
+                console.log('[SessionLimit] Session status:', status.usedMinutes, '/', sessionLimit, 'minutes used. Remaining:', remaining);
+
+                setRemainingMinutes(remaining);
+
+                if (status.isExpired && !isSessionExpired) {
+                    console.log('[SessionLimit] Session limit reached! Disabling twin for this user.');
+                    setIsSessionExpired(true);
+                    setRemainingMinutes(0);
+                    // Show the "Tiempo agotado" overlay
+                    setShowPersonalAttentionOverlay(true);
+                }
+            } catch (error) {
+                console.error('[SessionLimit] Error updating session time:', error);
+            }
+        }, 60000); // Every 60 seconds
+
+        return () => {
+            console.log('[SessionLimit] Cleaning up session timer');
+            clearInterval(intervalId);
+        };
+    }, [currentChatId, token, isTwinDisabled, isSessionExpired, professional?.digitalTwin?.sessionLimitMinutes]);
 
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
@@ -375,6 +468,8 @@ export default function AvatarChatScreen() {
                 setMessages(INITIAL_MESSAGES);
             } else {
                 setMessages(formattedMessages);
+                // Hide personal attention overlay when there are existing messages
+                setShowPersonalAttentionOverlay(false);
             }
         } catch (error) {
             console.error("Error loading conversation messages:", error);
@@ -387,7 +482,12 @@ export default function AvatarChatScreen() {
         setIsLoading(true);
         try {
             const data = await userApi.getUser(token, professionalId);
-            console.log('[DEBUG] Professional data loaded:', { appointmentsEnabled: data.appointmentsEnabled, appointmentHours: data.appointmentHours });
+            console.log('[DEBUG] Professional data loaded:', {
+                appointmentsEnabled: data.appointmentsEnabled,
+                appointmentHours: data.appointmentHours,
+                digitalTwinIsActive: data?.digitalTwin?.isActive,
+                sessionLimitMinutes: data?.digitalTwin?.sessionLimitMinutes,
+            });
             setProfessional(data);
         } catch (error) {
             console.error("Error loading professional:", error);
@@ -514,11 +614,11 @@ export default function AvatarChatScreen() {
         console.log('[handleNewConversation] New conversation started');
     }, [saveCurrentConversation, loadConversations, closeDrawer]);
 
-    // Auto-dismiss disclaimer banner after 3 seconds
+    // Auto-dismiss disclaimer banner after 5 seconds
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowDisclaimerBanner(false);
-        }, 3000);
+        }, 5000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -526,6 +626,46 @@ export default function AvatarChatScreen() {
         loadProfessional();
         loadConversations();
     }, [loadProfessional, loadConversations]);
+
+    // Auto-create or find a chat for session limit tracking
+    useEffect(() => {
+        const ensureChatExists = async () => {
+            // Only create if we don't have a currentChatId and are not in private mode
+            if (currentChatId || !token || !currentUser?._id || !professionalId || isPrivateMode) {
+                return;
+            }
+
+            try {
+                // Try to find existing chat first
+                const chats = await chatApi.getChats(token);
+                const existingChat = chats.find((chat: any) => {
+                    const p1Id = typeof chat.participant_one === 'string' ? chat.participant_one : chat.participant_one?._id;
+                    const p2Id = typeof chat.participant_two === 'string' ? chat.participant_two : chat.participant_two?._id;
+                    const matchesProfessional = p1Id === professionalId || p2Id === professionalId;
+                    const matchesUser = p1Id === currentUser._id || p2Id === currentUser._id;
+                    return matchesProfessional && matchesUser && chat.isAvatarChat;
+                });
+
+                if (existingChat) {
+                    console.log('[ensureChatExists] Found existing chat:', existingChat._id);
+                    setCurrentChatId(existingChat._id);
+                } else {
+                    // Create a new chat for session tracking
+                    console.log('[ensureChatExists] Creating new chat for session tracking');
+                    const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
+                    console.log('[ensureChatExists] Created chat:', newChat._id);
+                    setCurrentChatId(newChat._id);
+                }
+            } catch (error) {
+                console.error('[ensureChatExists] Error ensuring chat exists:', error);
+            }
+        };
+
+        // Only run after professional is loaded
+        if (professional) {
+            ensureChatExists();
+        }
+    }, [professional, token, currentUser?._id, professionalId, isPrivateMode, currentChatId]);
 
     // Initialize human video call when in video call mode
     useEffect(() => {
@@ -552,8 +692,9 @@ export default function AvatarChatScreen() {
 
     // Initialize LiveAvatar session when professional is loaded (skip if in human session)
     const initializeLiveAvatarSession = useCallback(async () => {
-        if (!professional?.digitalTwin?.isActive) {
-            console.log("Digital twin not active, skipping session initialization");
+        // Skip if twin is globally disabled or session expired for this user
+        if (!professional?.digitalTwin?.isActive || isSessionExpired) {
+            console.log("Digital twin not active or session expired, skipping session initialization");
             return;
         }
 
@@ -650,12 +791,12 @@ export default function AvatarChatScreen() {
         }
     }, [professional]);
 
-    // Start session when professional is loaded
+    // Start session when professional is loaded (only if session not expired and status checked)
     useEffect(() => {
-        if (professional && !isLoading && sessionStatus === 'idle') {
+        if (professional && !isLoading && sessionStatus === 'idle' && sessionStatusChecked && !isSessionExpired) {
             initializeLiveAvatarSession();
         }
-    }, [professional, isLoading, sessionStatus, initializeLiveAvatarSession]);
+    }, [professional, isLoading, sessionStatus, sessionStatusChecked, isSessionExpired, initializeLiveAvatarSession]);
 
     // Track processed transcript entries to avoid duplicates
     const processedTranscriptCountRef = useRef(0);
@@ -780,6 +921,11 @@ export default function AvatarChatScreen() {
         console.log('handleSendMessage called, inputText:', inputText);
         if (!inputText.trim()) return;
 
+        // Hide personal attention overlay when user sends first message
+        if (showPersonalAttentionOverlay) {
+            setShowPersonalAttentionOverlay(false);
+        }
+
         // Block sending when communication is paused
         if (isPaused) {
             const pausedMessage: Message = {
@@ -810,12 +956,13 @@ export default function AvatarChatScreen() {
         });
         setInputText("");
 
-        // Keyword detection for automatic escalation
+        // Keyword detection for automatic escalation (disabled when twin is off - already direct attention)
         if (professional?.escalation?.enabled &&
             professional?.escalation?.triggers?.keywords &&
             professional?.escalation?.keywords?.length > 0 &&
             escalationStatus === 'none' &&
-            !isHumanSession) {
+            !isHumanSession &&
+            !isTwinEffectivelyDisabled) {
             const lowerMessage = messageText.toLowerCase();
             const matchedKeyword = professional.escalation.keywords.find(
                 (keyword: string) => lowerMessage.includes(keyword.toLowerCase())
@@ -849,38 +996,44 @@ export default function AvatarChatScreen() {
         }, 100);
 
         // FIRST: Send text to LiveAvatar via data channel if available (don't block on DB)
-        if (sessionStatus === 'active' && sendTextToAvatarRef.current) {
-            try {
-                // Store the typed message to prevent duplicate from user.transcription event
-                lastTypedMessageRef.current = messageText;
+        // Skip LiveAvatar entirely when twin is disabled - messages go directly to professional
+        if (!isTwinEffectivelyDisabled) {
+            if (sessionStatus === 'active' && sendTextToAvatarRef.current) {
+                try {
+                    // Store the typed message to prevent duplicate from user.transcription event
+                    lastTypedMessageRef.current = messageText;
 
-                console.log('Sending text to LiveAvatar via data channel:', messageText);
-                sendTextToAvatarRef.current(messageText);
-                console.log('Text sent to LiveAvatar successfully');
-                // The avatar's response will come through the onTranscription callback
-            } catch (error: any) {
-                console.error('Error sending text to LiveAvatar:', error);
-                // Show error as a system message
-                const errorMessage: Message = {
+                    console.log('Sending text to LiveAvatar via data channel:', messageText);
+                    sendTextToAvatarRef.current(messageText);
+                    console.log('Text sent to LiveAvatar successfully');
+                    // The avatar's response will come through the onTranscription callback
+                } catch (error: any) {
+                    console.error('Error sending text to LiveAvatar:', error);
+                    // Show error as a system message
+                    const errorMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        type: "text",
+                        content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                        isUser: false,
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    };
+                    setMessages(prev => [...prev, errorMessage]);
+                }
+            } else {
+                console.log('Session not active or data channel not ready, cannot send message to avatar');
+                // If session is not active, show a message (only when twin is enabled but not connected)
+                const infoMessage: Message = {
                     id: (Date.now() + 1).toString(),
                     type: "text",
-                    content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                    content: "El avatar no está conectado. Espera a que se establezca la conexión.",
                     isUser: false,
                     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                 };
-                setMessages(prev => [...prev, errorMessage]);
+                setMessages(prev => [...prev, infoMessage]);
             }
         } else {
-            console.log('Session not active or data channel not ready, cannot send message to avatar');
-            // If session is not active, show a message
-            const infoMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                type: "text",
-                content: "El avatar no está conectado. Espera a que se establezca la conexión.",
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            };
-            setMessages(prev => [...prev, infoMessage]);
+            // Twin is disabled - messages go directly to professional (no LiveAvatar interaction)
+            console.log('[handleSendMessage] Twin disabled - message will be sent directly to professional');
         }
 
         // SECOND: Save to database in background (don't await - non-blocking)
@@ -1101,12 +1254,13 @@ export default function AvatarChatScreen() {
                                     !isHumanSession) && styles.professionalChipEscalationAvailable
                             ]}
                             onPress={() => {
-                                // When escalation is available, show confirmation dialog
+                                // When escalation is available, show confirmation dialog (disabled if twin is off)
                                 if (professional?.escalation?.enabled &&
                                     professional?.escalation?.triggers?.clientRequest &&
                                     escalationStatus === 'none' &&
                                     currentChatId &&
-                                    !isHumanSession) {
+                                    !isHumanSession &&
+                                    !isTwinDisabled) {
                                     setActiveInfoBubble('escalation');
                                 }
                             }}
@@ -1138,7 +1292,8 @@ export default function AvatarChatScreen() {
                                             : (professional?.escalation?.enabled &&
                                                 professional?.escalation?.triggers?.clientRequest &&
                                                 escalationStatus === 'none' &&
-                                                currentChatId)
+                                                currentChatId &&
+                                                !isTwinDisabled)
                                                 ? "Contactar con profesional"
                                                 : `${professional?.profession || "Profesional"} AI`
                                     }
@@ -1174,333 +1329,429 @@ export default function AvatarChatScreen() {
                 </View>
             </SafeAreaView>
 
-            {/* Discrete Disclaimer Banner - auto-dismisses after 3 seconds */}
-            {showDisclaimerBanner && !isHumanSession && (
-                <View style={styles.disclaimerBanner}>
-                    <Text style={styles.disclaimerText}>
-                        Las respuestas de este gemelo digital tienen carácter informativo.{" "}
-                        <Text
-                            style={styles.disclaimerLink}
-                            onPress={() => {
-                                if (professional?._id) {
-                                    router.push(`/professional/${professional._id}` as any);
-                                }
-                            }}
-                        >
-                            Consulta el alcance y límites del servicio
-                        </Text>
-                    </Text>
-                </View>
-            )}
-
-            {/* Video Feed - Resizable */}
-            <Animated.View
-                style={[
-                    styles.videoContainer,
-                    {
-                        position: isVideoMinimized ? "absolute" : "relative",
-                        zIndex: isVideoMinimized ? 100 : 1,
-                        width: videoPositionAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [SCREEN_WIDTH - 32, PIP_WIDTH],
-                        }),
-                        height: videoPositionAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [VIDEO_MAX_HEIGHT - 32, PIP_HEIGHT],
-                        }),
-                        marginTop: videoPositionAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [100, 110],
-                        }),
-                        marginLeft: videoPositionAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [16, SCREEN_WIDTH - PIP_WIDTH - 16],
-                        }),
-                        borderRadius: videoPositionAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [16, 12],
-                        }),
-                    }
-                ]}
-            >
-                <TouchableOpacity
-                    style={styles.videoPlaceholder}
-                    activeOpacity={isVideoMinimized ? 0.8 : 0.9}
-                    onPress={() => {
-                        if (isVideoMinimized) {
-                            maximizeVideo();
-                        } else {
-                            // Toggle pause state when tapping center of video
-                            setIsPaused(!isPaused);
+            {/* Video Feed - Resizable (hidden when twin is disabled/expired and overlay dismissed) */}
+            {!(isTwinEffectivelyDisabled && !showPersonalAttentionOverlay) && (
+                <Animated.View
+                    style={[
+                        styles.videoContainer,
+                        {
+                            position: isVideoMinimized ? "absolute" : "relative",
+                            zIndex: isVideoMinimized ? 100 : 1,
+                            width: videoPositionAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [SCREEN_WIDTH - 32, PIP_WIDTH],
+                            }),
+                            height: videoPositionAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [VIDEO_MAX_HEIGHT - 32, PIP_HEIGHT],
+                            }),
+                            marginTop: videoPositionAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [110, 120],
+                            }),
+                            marginLeft: videoPositionAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [16, SCREEN_WIDTH - PIP_WIDTH - 16],
+                            }),
+                            borderRadius: videoPositionAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [16, 12],
+                            }),
                         }
-                    }}
+                    ]}
                 >
-                    {/* Pause Overlay */}
-                    {isPaused && !isVideoMinimized && (
-                        <View style={styles.pauseOverlay}>
-                            <View style={styles.pauseIconContainer}>
-                                <MaterialIcons name="play-arrow" size={48} color={COLORS.white} />
+                    <TouchableOpacity
+                        style={[
+                            styles.videoPlaceholder,
+                            // White background when twin is disabled to show clean overlay
+                            isTwinDisabled && { backgroundColor: COLORS.white }
+                        ]}
+                        activeOpacity={isTwinDisabled ? 1 : (isVideoMinimized ? 0.8 : 0.9)}
+                        onPress={() => {
+                            // Don't allow tapping to pause when twin is disabled
+                            if (isTwinDisabled) return;
+                            if (isVideoMinimized) {
+                                maximizeVideo();
+                            } else {
+                                // Toggle pause state when tapping center of video
+                                setIsPaused(!isPaused);
+                            }
+                        }}
+                    >
+                        {/* Pause Overlay */}
+                        {isPaused && !isVideoMinimized && (
+                            <View style={styles.pauseOverlay}>
+                                <View style={styles.pauseIconContainer}>
+                                    <MaterialIcons name="play-arrow" size={48} color={COLORS.white} />
+                                </View>
+                                <Text style={styles.pauseText}>EN PAUSA</Text>
+                                <Text style={styles.pauseHint}>Toca para reanudar</Text>
                             </View>
-                            <Text style={styles.pauseText}>EN PAUSA</Text>
-                            <Text style={styles.pauseHint}>Toca para reanudar</Text>
-                        </View>
-                    )}
+                        )}
 
-                    {/* Human Video Call when in live session with professional */}
-                    {isHumanSession && humanCallLivekitUrl && humanCallToken ? (
-                        <HumanVideoCall
-                            livekitUrl={humanCallLivekitUrl}
-                            token={humanCallToken}
-                            style={styles.videoImage}
-                            onConnectionChange={(connected) => {
-                                console.log('[HumanCall] Connection:', connected);
-                                setHumanCallConnected(connected);
-                            }}
-                            onDisconnect={() => {
-                                console.log('[HumanCall] Disconnected, returning to AI mode');
-                                setIsHumanSession(false);
-                                setHumanCallLivekitUrl(null);
-                                setHumanCallToken(null);
-                                setHumanCallConnected(false);
-                            }}
-                        />
-                    ) : sessionStatus === 'active' && livekitUrl && livekitToken ? (
-                        /* LiveKit AI Avatar when session is active */
-                        <LiveAvatarVideo
-                            livekitUrl={livekitUrl}
-                            livekitToken={livekitToken}
-                            style={styles.videoImage}
-                            muted={isMuted}
-                            onConnectionChange={(connected) => {
-                                console.log('LiveKit connection:', connected);
-                            }}
-                            onError={(error) => {
-                                console.error('LiveKit error:', error);
-                            }}
-                            onTranscription={(text, isFinal) => {
-                                // Ignore avatar responses when communication is paused
-                                if (isPaused) {
-                                    console.log('[Paused] Ignoring avatar transcription:', text);
-                                    return;
-                                }
-
-                                // Only add final transcriptions as messages (avatar's response)
-                                if (isFinal && text.trim()) {
-                                    const trimmedText = text.trim();
-                                    const newMessage: Message = {
-                                        id: `avatar-${Date.now()}`,
-                                        type: 'text',
-                                        content: trimmedText,
-                                        isUser: false,
-                                        timestamp: new Date().toLocaleTimeString('es-ES', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }),
-                                    };
-                                    setMessages(prev => [...prev, newMessage]);
-                                    console.log('Avatar says:', trimmedText);
-
-                                    // Save avatar response to chat (if chat exists and not in private mode)
-                                    if (currentChatId && token && !isPrivateMode) {
-                                        chatMessageApi.sendTextMessage(token, currentChatId, trimmedText, true)
-                                            .then(() => console.log('[Avatar] Response saved to chat'))
-                                            .catch(err => console.error('[Avatar] Error saving response:', err));
-                                    }
-
-                                    // Scroll to bottom
-                                    setTimeout(() => {
-                                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                                    }, 100);
-                                }
-                            }}
-                            onUserTranscription={(text, isFinal) => {
-                                // Ignore user voice input when communication is paused
-                                if (isPaused) {
-                                    console.log('[Paused] Ignoring user transcription:', text);
-                                    return;
-                                }
-
-                                // Add user's spoken words as messages (but not typed messages that echo back)
-                                if (isFinal && text.trim()) {
-                                    const trimmedText = text.trim();
-
-                                    // Check if this is a duplicate of a typed message
-                                    if (lastTypedMessageRef.current &&
-                                        trimmedText.toLowerCase() === lastTypedMessageRef.current.toLowerCase()) {
-                                        console.log('Skipping duplicate user.transcription for typed message:', trimmedText);
-                                        lastTypedMessageRef.current = null; // Clear after checking
+                        {/* Human Video Call when in live session with professional */}
+                        {isHumanSession && humanCallLivekitUrl && humanCallToken ? (
+                            <HumanVideoCall
+                                livekitUrl={humanCallLivekitUrl}
+                                token={humanCallToken}
+                                style={styles.videoImage}
+                                onConnectionChange={(connected) => {
+                                    console.log('[HumanCall] Connection:', connected);
+                                    setHumanCallConnected(connected);
+                                }}
+                                onDisconnect={() => {
+                                    console.log('[HumanCall] Disconnected, returning to AI mode');
+                                    setIsHumanSession(false);
+                                    setHumanCallLivekitUrl(null);
+                                    setHumanCallToken(null);
+                                    setHumanCallConnected(false);
+                                }}
+                            />
+                        ) : sessionStatus === 'active' && livekitUrl && livekitToken ? (
+                            /* LiveKit AI Avatar when session is active */
+                            <LiveAvatarVideo
+                                livekitUrl={livekitUrl}
+                                livekitToken={livekitToken}
+                                style={styles.videoImage}
+                                muted={isMuted}
+                                onConnectionChange={(connected) => {
+                                    console.log('LiveKit connection:', connected);
+                                }}
+                                onError={(error) => {
+                                    console.error('LiveKit error:', error);
+                                }}
+                                onTranscription={(text, isFinal) => {
+                                    // Ignore avatar responses when communication is paused
+                                    if (isPaused) {
+                                        console.log('[Paused] Ignoring avatar transcription:', text);
                                         return;
                                     }
 
-                                    const newMessage: Message = {
-                                        id: `user-voice-${Date.now()}`,
-                                        type: 'text',
-                                        content: trimmedText,
-                                        isUser: true,
-                                        timestamp: new Date().toLocaleTimeString('es-ES', {
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }),
-                                    };
-                                    setMessages(prev => [...prev, newMessage]);
-                                    console.log('User said:', trimmedText);
+                                    // Only add final transcriptions as messages (avatar's response)
+                                    if (isFinal && text.trim()) {
+                                        const trimmedText = text.trim();
+                                        const newMessage: Message = {
+                                            id: `avatar-${Date.now()}`,
+                                            type: 'text',
+                                            content: trimmedText,
+                                            isUser: false,
+                                            timestamp: new Date().toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }),
+                                        };
+                                        setMessages(prev => [...prev, newMessage]);
+                                        console.log('Avatar says:', trimmedText);
 
-                                    // Scroll to bottom
-                                    setTimeout(() => {
-                                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                                    }, 100);
-                                }
-                            }}
-                            onSendTextReady={(sendText) => {
-                                console.log('Text sender ready');
-                                sendTextToAvatarRef.current = sendText;
-                            }}
-                        />
-                    ) : avatarUrl ? (
-                        <Image source={{ uri: avatarUrl }} style={styles.videoImage} />
-                    ) : (
-                        <View style={styles.videoPlaceholderInner}>
-                            <MaterialIcons name="person" size={80} color={COLORS.gray400} />
-                        </View>
-                    )}
+                                        // Save avatar response to chat (if chat exists and not in private mode)
+                                        if (currentChatId && token && !isPrivateMode) {
+                                            chatMessageApi.sendTextMessage(token, currentChatId, trimmedText, true)
+                                                .then(() => console.log('[Avatar] Response saved to chat'))
+                                                .catch(err => console.error('[Avatar] Error saving response:', err));
+                                        }
 
-                    {/* Session Status Overlay */}
-                    {sessionStatus === 'connecting' && !isVideoMinimized && (
-                        <View style={styles.sessionOverlay}>
-                            <ActivityIndicator size="large" color={COLORS.primary} />
-                            <Text style={styles.sessionOverlayText}>Conectando con el avatar...</Text>
-                        </View>
-                    )}
-
-                    {sessionStatus === 'active' && !isVideoMinimized && (
-                        <View style={styles.sessionBadge}>
-                            <View style={styles.sessionBadgeDot} />
-                            <Text style={styles.sessionBadgeText}>EN VIVO</Text>
-                        </View>
-                    )}
-
-                    {sessionStatus === 'error' && !isVideoMinimized && (
-                        <View style={styles.sessionOverlay}>
-                            <MaterialIcons name="error-outline" size={48} color={COLORS.gray400} />
-                            <Text style={styles.sessionOverlayText}>{sessionError || 'Error de conexión'}</Text>
-                            <TouchableOpacity
-                                style={styles.retryButton}
-                                onPress={() => {
-                                    setSessionStatus('idle');
-                                    setSessionError(null);
+                                        // Scroll to bottom
+                                        setTimeout(() => {
+                                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                                        }, 100);
+                                    }
                                 }}
-                            >
-                                <Text style={styles.retryButtonText}>Reintentar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                onUserTranscription={(text, isFinal) => {
+                                    // Ignore user voice input when communication is paused
+                                    if (isPaused) {
+                                        console.log('[Paused] Ignoring user transcription:', text);
+                                        return;
+                                    }
 
+                                    // Add user's spoken words as messages (but not typed messages that echo back)
+                                    if (isFinal && text.trim()) {
+                                        const trimmedText = text.trim();
 
-                    {/* Reduced gradient - only at bottom near buttons */}
-                    <View style={styles.videoGradient} />
+                                        // Check if this is a duplicate of a typed message
+                                        if (lastTypedMessageRef.current &&
+                                            trimmedText.toLowerCase() === lastTypedMessageRef.current.toLowerCase()) {
+                                            console.log('Skipping duplicate user.transcription for typed message:', trimmedText);
+                                            lastTypedMessageRef.current = null; // Clear after checking
+                                            return;
+                                        }
 
-                    {/* Mute Button */}
-                    {!isVideoMinimized && (
-                        <TouchableOpacity
-                            style={styles.muteButton}
-                            onPress={() => setIsMuted(!isMuted)}
-                        >
-                            <MaterialIcons
-                                name={isMuted ? "volume-off" : "volume-up"}
-                                size={20}
-                                color={COLORS.white}
+                                        const newMessage: Message = {
+                                            id: `user-voice-${Date.now()}`,
+                                            type: 'text',
+                                            content: trimmedText,
+                                            isUser: true,
+                                            timestamp: new Date().toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }),
+                                        };
+                                        setMessages(prev => [...prev, newMessage]);
+                                        console.log('User said:', trimmedText);
+
+                                        // Scroll to bottom
+                                        setTimeout(() => {
+                                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                                        }, 100);
+                                    }
+                                }}
+                                onSendTextReady={(sendText) => {
+                                    console.log('Text sender ready');
+                                    sendTextToAvatarRef.current = sendText;
+                                }}
                             />
-                        </TouchableOpacity>
-                    )}
+                        ) : isTwinEffectivelyDisabled ? (
+                            /* When twin is disabled, show empty placeholder - the overlay handles display */
+                            null
+                        ) : avatarUrl ? (
+                            <Image source={{ uri: avatarUrl }} style={styles.videoImage} />
+                        ) : (
+                            <View style={styles.videoPlaceholderInner}>
+                                <MaterialIcons name="person" size={80} color={COLORS.gray400} />
+                            </View>
+                        )}
 
-                    {/* Mute Reminder Toast */}
-                    {showMuteReminder && (
-                        <TouchableOpacity
-                            style={styles.muteReminderToast}
-                            onPress={() => {
-                                setIsMuted(false);
-                                setShowMuteReminder(false);
-                            }}
-                            activeOpacity={0.9}
-                        >
-                            <MaterialIcons name="volume-off" size={14} color={COLORS.white} />
-                            <Text style={styles.muteReminderText}>Audio silenciado</Text>
-                            <Text style={styles.muteReminderAction}>Tocar para activar</Text>
-                        </TouchableOpacity>
-                    )}
+                        {/* Session Status Overlay */}
+                        {sessionStatus === 'connecting' && !isVideoMinimized && (
+                            <View style={styles.sessionOverlay}>
+                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <Text style={styles.sessionOverlayText}>Conectando con el avatar...</Text>
+                            </View>
+                        )}
 
-                    {/* Action Buttons */}
-                    <View style={styles.videoActions}>
-                        <TouchableOpacity
-                            style={[
-                                styles.videoActionButton,
-                                activeInfoBubble === "profile" && styles.videoActionPrimary
-                            ]}
-                            onPress={() => handleInfoBubblePress("profile")}
-                        >
-                            <MaterialIcons name="person" size={18} color={activeInfoBubble === "profile" ? COLORS.black : COLORS.white} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[
-                                styles.videoActionButton,
-                                activeInfoBubble === "contact" && styles.videoActionPrimary
-                            ]}
-                            onPress={() => handleInfoBubblePress("contact")}
-                        >
-                            <MaterialIcons name="call" size={18} color={activeInfoBubble === "contact" ? COLORS.black : COLORS.white} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[
-                                styles.videoActionButton,
-                                activeInfoBubble === "location" && styles.videoActionPrimary
-                            ]}
-                            onPress={() => handleInfoBubblePress("location")}
-                        >
-                            <MaterialIcons name="location-on" size={18} color={activeInfoBubble === "location" ? COLORS.black : COLORS.white} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[
-                                styles.videoActionButton,
-                                activeInfoBubble === "share" && styles.videoActionPrimary
-                            ]}
-                            onPress={() => handleInfoBubblePress("share")}
-                        >
-                            <MaterialIcons name="ios-share" size={18} color={activeInfoBubble === "share" ? COLORS.black : COLORS.white} />
-                        </TouchableOpacity>
-                        {/* Calendar icon for appointments - only visible if professional accepts appointments */}
-                        {professional?.appointmentsEnabled && (
+                        {sessionStatus === 'active' && !isVideoMinimized && (
+                            <View style={styles.sessionBadge}>
+                                <View style={styles.sessionBadgeDot} />
+                                <Text style={styles.sessionBadgeText}>EN VIVO</Text>
+                            </View>
+                        )}
+
+                        {/* Session Time Warning - shows when less than 2 minutes remaining */}
+                        {(() => {
+                            const sessionLimit = professional?.digitalTwin?.sessionLimitMinutes || 0;
+                            // Debug log
+                            console.log('[Countdown] sessionLimit:', sessionLimit, 'remainingMinutes:', remainingMinutes, 'isTwinDisabled:', isTwinDisabled, 'isSessionExpired:', isSessionExpired);
+
+                            // Calculate what to display
+                            const displayMinutes = remainingMinutes !== null ? remainingMinutes : sessionLimit;
+
+                            // Show countdown when:
+                            // - Video is not minimized
+                            // - Twin is not disabled
+                            // - Session is not expired
+                            // - sessionLimit > 0 (limit is configured)
+                            // - EITHER sessionLimit <= 2 (small limit, always show) OR remainingMinutes <= 2
+                            const showWarning = !isVideoMinimized && !isTwinDisabled && !isSessionExpired && sessionLimit > 0 && displayMinutes > 0 && (
+                                sessionLimit <= 2 || (remainingMinutes !== null && remainingMinutes <= 2)
+                            );
+
+                            return showWarning ? (
+                                <View style={styles.sessionTimeWarning}>
+                                    <MaterialIcons name="timer" size={12} color="#FCD34D" />
+                                    <Text style={styles.sessionTimeWarningText}>
+                                        {displayMinutes === 1 ? '1 min' : `${displayMinutes} min`}
+                                    </Text>
+                                </View>
+                            ) : null;
+                        })()}
+
+                        {sessionStatus === 'error' && !isVideoMinimized && (
+                            <View style={styles.sessionOverlay}>
+                                <MaterialIcons name="error-outline" size={48} color={COLORS.gray400} />
+                                <Text style={styles.sessionOverlayText}>{sessionError || 'Error de conexión'}</Text>
+                                <TouchableOpacity
+                                    style={styles.retryButton}
+                                    onPress={() => {
+                                        setSessionStatus('idle');
+                                        setSessionError(null);
+                                    }}
+                                >
+                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* Personal Attention Mode Overlay (when digital twin is disabled) */}
+                        {isTwinDisabled && showPersonalAttentionOverlay && !isVideoMinimized && (
+                            <View style={styles.personalAttentionOverlay}>
+                                <View style={styles.personalAttentionIcon}>
+                                    <MaterialIcons name="person" size={40} color={COLORS.primary} />
+                                </View>
+                                <Text style={styles.personalAttentionTitle}>Atención personal</Text>
+                                <Text style={styles.personalAttentionText}>
+                                    Este profesional ha decidido atender personalmente las consultas. Puedes escribir tu mensaje y te responderá lo antes posible.
+                                </Text>
+                                {professional?.appointmentsEnabled && (
+                                    <TouchableOpacity
+                                        style={styles.personalAttentionButton}
+                                        onPress={() => {
+                                            if (professionalId) {
+                                                router.push(`/book-appointment/${professionalId}` as any);
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
+                                        <Text style={styles.personalAttentionButtonText}>Reservar cita</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Session Expired Overlay (when session time limit reached) */}
+                        {isSessionExpired && showPersonalAttentionOverlay && !isVideoMinimized && !isTwinDisabled && (
+                            <View style={styles.personalAttentionOverlay}>
+                                <View style={[styles.personalAttentionIcon, { backgroundColor: '#FEF3C7' }]}>
+                                    <MaterialIcons name="schedule" size={40} color="#F59E0B" />
+                                </View>
+                                <Text style={styles.personalAttentionTitle}>Tiempo agotado</Text>
+                                <Text style={styles.personalAttentionText}>
+                                    El tiempo disponible de hoy con el gemelo digital ha finalizado. Puedes continuar mañana o dejar algún mensaje al profesional.
+                                </Text>
+                                {professional?.appointmentsEnabled && (professional?.subscription?.plan === 'professional' || professional?.subscription?.plan === 'premium') && (
+                                    <TouchableOpacity
+                                        style={styles.personalAttentionButton}
+                                        onPress={() => {
+                                            if (professionalId) {
+                                                router.push(`/book-appointment/${professionalId}` as any);
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
+                                        <Text style={styles.personalAttentionButtonText}>Reservar cita</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+
+                        {/* Reduced gradient - only at bottom near buttons, hidden when twin is disabled */}
+                        {!isTwinDisabled && <View style={styles.videoGradient} />}
+
+                        {/* Mute Button - hidden when twin is disabled */}
+                        {!isVideoMinimized && !isTwinDisabled && (
                             <TouchableOpacity
-                                style={[
-                                    styles.videoActionButton,
-                                    activeInfoBubble === "appointments" && styles.videoActionPrimary
-                                ]}
-                                onPress={() => handleInfoBubblePress("appointments")}
+                                style={styles.muteButton}
+                                onPress={() => setIsMuted(!isMuted)}
                             >
-                                <MaterialIcons name="event" size={18} color={activeInfoBubble === "appointments" ? COLORS.black : COLORS.white} />
+                                <MaterialIcons
+                                    name={isMuted ? "volume-off" : "volume-up"}
+                                    size={20}
+                                    color={COLORS.white}
+                                />
                             </TouchableOpacity>
                         )}
-                    </View>
 
-                    {/* Toggle Size Button */}
-                    <TouchableOpacity
-                        style={styles.toggleSizeButton}
-                        onPress={toggleVideoSize}
-                    >
-                        <MaterialIcons
-                            name={isVideoMinimized ? "expand-less" : "expand-more"}
-                            size={20}
-                            color={COLORS.white}
-                        />
+                        {/* Mute Reminder Toast */}
+                        {showMuteReminder && (
+                            <TouchableOpacity
+                                style={styles.muteReminderToast}
+                                onPress={() => {
+                                    setIsMuted(false);
+                                    setShowMuteReminder(false);
+                                }}
+                                activeOpacity={0.9}
+                            >
+                                <MaterialIcons name="volume-off" size={14} color={COLORS.white} />
+                                <Text style={styles.muteReminderText}>Audio silenciado</Text>
+                                <Text style={styles.muteReminderAction}>Tocar para activar</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Discrete Disclaimer Banner - positioned above action buttons */}
+                        {showDisclaimerBanner && !isHumanSession && !isTwinDisabled && !isVideoMinimized && (
+                            <View style={styles.disclaimerBanner}>
+                                <Text style={styles.disclaimerText}>
+                                    Las respuestas de este gemelo digital tienen carácter informativo.{" "}
+                                    <Text
+                                        style={styles.disclaimerLink}
+                                        onPress={() => {
+                                            if (professional?._id) {
+                                                router.push(`/twin-disclaimer/${professional._id}` as any);
+                                            }
+                                        }}
+                                    >
+                                        Consulta el alcance y límites del gemelo digital
+                                    </Text>
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Action Buttons - hidden when twin is disabled/expired and overlay is showing */}
+                        {!(isTwinEffectivelyDisabled && showPersonalAttentionOverlay) && (
+                            <View style={styles.videoActions}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.videoActionButton,
+                                        activeInfoBubble === "profile" && styles.videoActionPrimary
+                                    ]}
+                                    onPress={() => handleInfoBubblePress("profile")}
+                                >
+                                    <MaterialIcons name="person" size={18} color={activeInfoBubble === "profile" ? COLORS.black : COLORS.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.videoActionButton,
+                                        activeInfoBubble === "contact" && styles.videoActionPrimary
+                                    ]}
+                                    onPress={() => handleInfoBubblePress("contact")}
+                                >
+                                    <MaterialIcons name="call" size={18} color={activeInfoBubble === "contact" ? COLORS.black : COLORS.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.videoActionButton,
+                                        activeInfoBubble === "location" && styles.videoActionPrimary
+                                    ]}
+                                    onPress={() => handleInfoBubblePress("location")}
+                                >
+                                    <MaterialIcons name="location-on" size={18} color={activeInfoBubble === "location" ? COLORS.black : COLORS.white} />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.videoActionButton,
+                                        activeInfoBubble === "share" && styles.videoActionPrimary
+                                    ]}
+                                    onPress={() => handleInfoBubblePress("share")}
+                                >
+                                    <MaterialIcons name="ios-share" size={18} color={activeInfoBubble === "share" ? COLORS.black : COLORS.white} />
+                                </TouchableOpacity>
+                                {/* Calendar icon for appointments - only visible if professional accepts appointments */}
+                                {professional?.appointmentsEnabled && (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.videoActionButton,
+                                            activeInfoBubble === "appointments" && styles.videoActionPrimary
+                                        ]}
+                                        onPress={() => handleInfoBubblePress("appointments")}
+                                    >
+                                        <MaterialIcons name="event" size={18} color={activeInfoBubble === "appointments" ? COLORS.black : COLORS.white} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Toggle Size Button - hidden when twin is disabled */}
+                        {!isTwinDisabled && (
+                            <TouchableOpacity
+                                style={styles.toggleSizeButton}
+                                onPress={toggleVideoSize}
+                            >
+                                <MaterialIcons
+                                    name={isVideoMinimized ? "expand-less" : "expand-more"}
+                                    size={20}
+                                    color={COLORS.white}
+                                />
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Minimized indicator text */}
+                        {isVideoMinimized && (
+                            <View style={styles.minimizedOverlay}>
+                                <Text style={styles.minimizedText}>Toca para expandir</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
-
-                    {/* Minimized indicator text */}
-                    {isVideoMinimized && (
-                        <View style={styles.minimizedOverlay}>
-                            <Text style={styles.minimizedText}>Toca para expandir</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-            </Animated.View>
+                </Animated.View>
+            )}
 
             {/* Dynamic Info Bubble with overlay to close on tap outside */}
             {activeInfoBubble && (
@@ -2187,8 +2438,17 @@ export default function AvatarChatScreen() {
                                     {/* Professional label for human messages */}
                                     {message.isFromProfessional && (
                                         <View style={styles.proBadgeInMessage}>
-                                            <View style={styles.proBadgeDot} />
-                                            <Text style={styles.proBadgeText}>EN VIVO</Text>
+                                            {isHumanSession && isVideoCallMode ? (
+                                                <>
+                                                    <View style={styles.proBadgeDot} />
+                                                    <Text style={styles.proBadgeText}>EN VIVO</Text>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <MaterialIcons name="person" size={10} color={COLORS.primary} />
+                                                    <Text style={styles.proBadgeTextAsync}>Profesional</Text>
+                                                </>
+                                            )}
                                         </View>
                                     )}
                                     <Text style={[
@@ -2262,7 +2522,7 @@ export default function AvatarChatScreen() {
             </ScrollView>
 
             {/* Input Area */}
-            <View style={styles.inputArea}>
+            <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 {/* Quick Replies */}
                 <ScrollView
                     horizontal
@@ -2515,17 +2775,18 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         zIndex: 20,
+        backgroundColor: COLORS.backgroundLight,
     },
     disclaimerBanner: {
         position: "absolute",
-        top: 90,
-        left: 20,
-        right: 20,
-        backgroundColor: "rgba(0,0,0,0.6)",
+        bottom: 52,
+        left: 8,
+        right: 8,
+        backgroundColor: "rgba(0,0,0,0.75)",
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
-        zIndex: 15,
+        zIndex: 50,
     },
     disclaimerText: {
         fontSize: 10,
@@ -2963,6 +3224,12 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#F59E0B",
         letterSpacing: 0.5,
+    },
+    proBadgeTextAsync: {
+        fontSize: 9,
+        fontWeight: "600",
+        color: COLORS.gray600,
+        letterSpacing: 0.3,
     },
     messageTime: {
         fontSize: 10,
@@ -3592,7 +3859,7 @@ const styles = StyleSheet.create({
     sessionBadge: {
         position: "absolute",
         top: 12,
-        left: 12,
+        right: 12,
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(239, 68, 68, 0.9)",
@@ -3612,6 +3879,23 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: "700",
         letterSpacing: 0.5,
+    },
+    sessionTimeWarning: {
+        position: "absolute",
+        top: 40,
+        right: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        gap: 4,
+    },
+    sessionTimeWarningText: {
+        color: "#FCD34D",
+        fontSize: 10,
+        fontWeight: "600",
     },
     retryButton: {
         marginTop: 16,
@@ -4153,5 +4437,63 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: COLORS.gray500,
         textDecorationLine: "underline",
+    },
+    // === Personal Attention Overlay (when twin is disabled) ===
+    personalAttentionOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: COLORS.white,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        borderRadius: 16,
+    },
+    personalAttentionIcon: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: COLORS.black,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 10,
+    },
+    personalAttentionTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.textMain,
+        marginBottom: 6,
+        textAlign: "center",
+    },
+    personalAttentionText: {
+        fontSize: 12,
+        color: COLORS.gray600,
+        textAlign: "center",
+        lineHeight: 17,
+        marginBottom: 14,
+        paddingHorizontal: 4,
+    },
+    personalAttentionButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    personalAttentionButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    personalAttentionSecondary: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingVertical: 8,
+    },
+    personalAttentionSecondaryText: {
+        fontSize: 14,
+        color: COLORS.primary,
+        fontWeight: "500",
     },
 });

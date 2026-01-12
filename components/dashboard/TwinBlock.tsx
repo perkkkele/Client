@@ -83,27 +83,32 @@ export default function TwinBlock({
             <View style={styles.twinCardGlow2} />
             <View style={styles.twinCardContent}>
                 <View style={styles.twinHeader}>
+                    {/* Icon column with caption - touchable to test */}
                     <TouchableOpacity
-                        style={styles.twinHeaderTouchable}
+                        style={styles.twinIconColumn}
                         onPress={handleTestGemini}
                     >
                         <View style={styles.twinIconContainer}>
                             <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
                         </View>
-                        <View style={styles.twinInfo}>
-                            <Text style={styles.twinTitle}>Gemelo Digital</Text>
-                            <View style={styles.twinStatus}>
-                                <View style={[
-                                    styles.statusDot,
-                                    !geminiActive && styles.statusDotInactive
-                                ]} />
-                                <Text style={styles.statusText}>
-                                    {geminiActive ? "Activo y público" : "Inactivo"}
-                                </Text>
-                            </View>
-                            <Text style={styles.testHint}>Toca aquí para probar tu gemelo digital</Text>
+                        <View style={styles.testHintRow}>
+                            <MaterialIcons name="touch-app" size={10} color="rgba(255,255,255,0.5)" />
+                            <Text style={styles.testHint}>Probar</Text>
                         </View>
                     </TouchableOpacity>
+                    {/* Info column */}
+                    <View style={styles.twinInfo}>
+                        <Text style={styles.twinTitle}>Gemelo Digital</Text>
+                        <View style={styles.twinStatus}>
+                            <View style={[
+                                styles.statusDot,
+                                !geminiActive && styles.statusDotInactive
+                            ]} />
+                            <Text style={styles.statusText}>
+                                {geminiActive ? "Activo y público" : "Inactivo"}
+                            </Text>
+                        </View>
+                    </View>
                     <Switch
                         value={geminiActive}
                         onValueChange={onGeminiChange}
@@ -231,6 +236,8 @@ export default function TwinBlock({
                         </View>
                     </>
                 )}
+
+
             </View>
         </View>
     );
@@ -277,6 +284,10 @@ const styles = StyleSheet.create({
         alignItems: "flex-start",
         flex: 1,
     },
+    twinIconColumn: {
+        alignItems: "center",
+        marginRight: 14,
+    },
     twinIconContainer: {
         width: 52,
         height: 52,
@@ -284,7 +295,6 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255, 255, 255, 0.15)",
         alignItems: "center",
         justifyContent: "center",
-        marginRight: 14,
     },
     twinInfo: {
         flex: 1,
@@ -314,10 +324,16 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "rgba(255, 255, 255, 0.8)",
     },
+    testHintRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 2,
+    },
     testHint: {
-        fontSize: 12,
+        fontSize: 11,
         color: "rgba(255, 255, 255, 0.5)",
         fontStyle: "italic",
+        marginLeft: 4,
     },
     configureButton: {
         flexDirection: "row",
@@ -468,5 +484,28 @@ const styles = StyleSheet.create({
     keywordTagText: {
         fontSize: 12,
         color: "#FFFFFF",
+    },
+    // Session Limit Styles
+    sessionLimitRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 12,
+        gap: 10,
+    },
+    sessionLimitInput: {
+        width: 60,
+        height: 40,
+        backgroundColor: "rgba(255,255,255,0.1)",
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.2)",
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "bold",
+        textAlign: "center",
+    },
+    sessionLimitLabel: {
+        fontSize: 14,
+        color: "rgba(255,255,255,0.7)",
     },
 });

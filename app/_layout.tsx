@@ -87,6 +87,31 @@ function RootLayoutNav() {
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
+  // Handle notification navigation based on type
+  const handleNotificationNavigation = (data: any) => {
+    console.log("[Notification] Processing navigation for:", data);
+
+    if (!data) return;
+
+    if (data.type === "appointment" && data.appointmentId) {
+      router.push(`/appointment-details/${data.appointmentId}` as any);
+    } else if (data.type === "video_call" && data.chatId) {
+      router.push({
+        pathname: `/incoming-call/${data.chatId}`,
+        params: {
+          callerName: data.callerName || "Profesional",
+          callerAvatar: data.callerAvatar || "",
+        },
+      } as any);
+    } else if (data.type === "escalation" && data.chatId) {
+      console.log("[Notification] Navigating to escalated chat:", data.chatId);
+      router.push(`/pro-chat/${data.chatId}` as any);
+    } else if (data.type === "direct_attention" && data.chatId) {
+      console.log("[Notification] Navigating to direct attention chat:", data.chatId);
+      router.push(`/pro-chat/${data.chatId}` as any);
+    }
+  };
+
   // Register for push notifications when user is authenticated
   useEffect(() => {
     if (!token) return;
@@ -95,6 +120,17 @@ function RootLayoutNav() {
       const pushToken = await registerForPushNotifications();
       if (pushToken) {
         await registerPushTokenWithServer(token, pushToken);
+      }
+
+      // Check if the app was opened by a notification (from closed/background state)
+      const lastNotificationResponse = await Notifications.getLastNotificationResponseAsync();
+      if (lastNotificationResponse) {
+        console.log("[Notification] App opened by notification:", lastNotificationResponse);
+        const data = lastNotificationResponse.notification.request.content.data;
+        // Small delay to ensure navigation is ready
+        setTimeout(() => {
+          handleNotificationNavigation(data);
+        }, 500);
       }
     };
 
@@ -105,24 +141,11 @@ function RootLayoutNav() {
       console.log("[Notification] Received:", notification.request.content);
     });
 
-    // Listen for notification taps
+    // Listen for notification taps (while app is running)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       console.log("[Notification] Tapped:", data);
-
-      // Navigate based on notification type
-      if (data.type === "appointment" && data.appointmentId) {
-        router.push(`/appointment-details/${data.appointmentId}` as any);
-      } else if (data.type === "video_call" && data.chatId) {
-        // Navigate to incoming call screen
-        router.push({
-          pathname: `/incoming-call/${data.chatId}`,
-          params: {
-            callerName: data.callerName || "Profesional",
-            callerAvatar: data.callerAvatar || "",
-          },
-        } as any);
-      }
+      handleNotificationNavigation(data);
     });
 
     return () => {

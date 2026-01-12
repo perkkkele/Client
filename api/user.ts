@@ -102,6 +102,8 @@ export interface DigitalTwin {
     contextNeedsSync?: boolean;  // Flag to trigger context regeneration
     isActive?: boolean;
     activatedAt?: string | null;
+    sessionLimitMinutes?: number;  // Per-client session time limit (0 = no limit)
+    disclaimer?: string | null;  // Professional's disclaimer text for clients
 }
 
 export interface EscalationTriggers {

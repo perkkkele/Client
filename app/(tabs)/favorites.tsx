@@ -11,7 +11,7 @@ import {
     View,
     Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import * as userApi from "../../api/user";
@@ -53,6 +53,7 @@ interface Favorite {
 
 export default function FavoritesScreen() {
     const { token, user } = useAuth();
+    const insets = useSafeAreaInsets();
     const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchText, setSearchText] = useState("");
@@ -273,7 +274,7 @@ export default function FavoritesScreen() {
             </View>
 
             {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
+            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate500} />
                     <Text style={styles.navLabel}>Chats</Text>

@@ -12,7 +12,7 @@ import {
     View,
     ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { professionalApi, userApi, getAssetUrl } from "../../api";
@@ -70,6 +70,7 @@ type SortOption = typeof SORT_OPTIONS[number]["id"];
 export default function CategoryResultsScreen() {
     const { category, search } = useLocalSearchParams<{ category: string; search?: string }>();
     const { token, user } = useAuth();
+    const insets = useSafeAreaInsets();
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -656,7 +657,7 @@ export default function CategoryResultsScreen() {
             </Modal>
 
             {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
+            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
                     <Text style={styles.navLabel}>Chats</Text>

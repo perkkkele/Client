@@ -1,17 +1,21 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Image,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { userApi } from "../../api";
 
 const COLORS = {
     primary: "#137fec",
@@ -24,34 +28,58 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-interface ModeOption {
-    id: string;
-    title: string;
-    description: string;
-}
-
-const MODE_OPTIONS: ModeOption[] = [
-    {
-        id: "automatic",
-        title: "Respuestas automáticas",
-        description: "Solo contesta preguntas frecuentes de la base de datos.",
-    },
-    {
-        id: "hybrid",
-        title: "Soporte Híbrido",
-        description: "Responde automáticamente solo cuando estás ausente.",
-    },
-    {
-        id: "fulltime",
-        title: "Atención 24/7",
-        description: "Gestiona todas las conversaciones de forma autónoma.",
-    },
-];
-
 export default function TwinControlPanelScreen() {
-    const { user } = useAuth();
+    const { user, token, refreshUser } = useAuth();
     const [isActive, setIsActive] = useState(false);
-    const [selectedMode, setSelectedMode] = useState("automatic");
+    const [sessionLimitMinutes, setSessionLimitMinutes] = useState(0);
+    const [sessionLimitInput, setSessionLimitInput] = useState("0");
+
+    // Sync isActive and sessionLimitMinutes from user.digitalTwin
+    useEffect(() => {
+        if (user?.digitalTwin) {
+            setIsActive(user.digitalTwin.isActive ?? false);
+            const limit = user.digitalTwin.sessionLimitMinutes ?? 0;
+            setSessionLimitMinutes(limit);
+            setSessionLimitInput(limit.toString());
+        }
+    }, [user?.digitalTwin?.isActive, user?.digitalTwin?.sessionLimitMinutes]);
+
+    // Handle toggle change with API persistence
+    async function handleToggle(value: boolean) {
+        setIsActive(value);
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                digitalTwin: {
+                    isActive: value,
+                },
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error toggling digital twin:", error);
+        }
+    }
+
+    // Handle session limit change
+    async function handleSessionLimitSave() {
+        const value = parseInt(sessionLimitInput) || 0;
+        if (value === sessionLimitMinutes) return; // No change
+
+        setSessionLimitMinutes(value);
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                digitalTwin: {
+                    sessionLimitMinutes: value,
+                },
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error updating session limit:", error);
+        }
+    }
 
     function handleBack() {
         router.back();
@@ -70,119 +98,115 @@ export default function TwinControlPanelScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                {/* Status Card */}
-                <View style={styles.statusCard}>
-                    <View style={styles.statusContent}>
-                        <View style={styles.statusInfo}>
-                            <View style={styles.statusBadge}>
-                                <View style={styles.statusDot} />
-                                <Text style={styles.statusLabel}>LISTO PARA ACTIVAR</Text>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+            >
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Status Card */}
+                    <View style={styles.statusCard}>
+                        <View style={styles.statusContent}>
+                            <View style={styles.statusInfo}>
+                                <Text style={styles.statusTitle}>Tu gemelo está configurado</Text>
+                                <Text style={styles.statusDescription}>Todos los sistemas sincronizados.</Text>
                             </View>
-                            <Text style={styles.statusTitle}>Tu gemelo está configurado</Text>
-                            <Text style={styles.statusDescription}>Todos los sistemas sincronizados.</Text>
-                        </View>
-                        <View style={styles.statusImage}>
-                            <MaterialIcons name="smart-toy" size={48} color={COLORS.primary} />
-                        </View>
-                    </View>
-                </View>
-
-                {/* Master Toggle */}
-                <View style={styles.toggleCard}>
-                    <View style={styles.toggleContent}>
-                        <View>
-                            <Text style={styles.toggleTitle}>Estado del Gemelo</Text>
-                            <View style={styles.toggleStatus}>
-                                <MaterialIcons
-                                    name={isActive ? "wifi" : "wifi-off"}
-                                    size={14}
-                                    color={COLORS.textSecondary}
-                                />
-                                <Text style={styles.toggleStatusText}>
-                                    {isActive ? "ONLINE" : "OFFLINE"}
-                                </Text>
+                            <View style={styles.statusImage}>
+                                <MaterialIcons name="smart-toy" size={48} color={COLORS.primary} />
                             </View>
                         </View>
-                        <Switch
-                            value={isActive}
-                            onValueChange={setIsActive}
-                            trackColor={{ false: COLORS.borderDark, true: COLORS.primary }}
-                            thumbColor={COLORS.white}
-                        />
-                    </View>
-                </View>
-
-                {/* Operational Mode */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Modo de Funcionamiento</Text>
-                    {MODE_OPTIONS.map((option) => (
                         <TouchableOpacity
-                            key={option.id}
-                            style={[
-                                styles.modeOption,
-                                selectedMode === option.id && styles.modeOptionSelected
-                            ]}
-                            onPress={() => setSelectedMode(option.id)}
+                            style={styles.testTwinButton}
+                            onPress={() => user?._id && router.push(`/avatar-chat/${user._id}`)}
                         >
-                            <View style={[
-                                styles.radioButton,
-                                selectedMode === option.id && styles.radioButtonSelected
-                            ]}>
-                                {selectedMode === option.id && <View style={styles.radioButtonInner} />}
+                            <MaterialIcons name="chat-bubble" size={18} color={COLORS.white} />
+                            <Text style={styles.testTwinButtonText}>Probar gemelo digital</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Master Toggle */}
+                    <View style={styles.toggleCard}>
+                        <View style={styles.toggleContent}>
+                            <View>
+                                <Text style={styles.toggleTitle}>Estado del Gemelo</Text>
+                                <View style={styles.toggleStatus}>
+                                    <MaterialIcons
+                                        name={isActive ? "wifi" : "wifi-off"}
+                                        size={14}
+                                        color={isActive ? COLORS.green500 : COLORS.textSecondary}
+                                    />
+                                    <Text style={[styles.toggleStatusText, isActive && { color: COLORS.green500 }]}>
+                                        {isActive ? "Activo y público" : "Inactivo"}
+                                    </Text>
+                                </View>
                             </View>
-                            <View style={styles.modeContent}>
-                                <Text style={styles.modeTitle}>{option.title}</Text>
-                                <Text style={styles.modeDescription}>{option.description}</Text>
+                            <Switch
+                                value={isActive}
+                                onValueChange={handleToggle}
+                                trackColor={{ false: COLORS.borderDark, true: COLORS.primary }}
+                                thumbColor={COLORS.white}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Session Time Limit */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Límite de Sesión por Cliente</Text>
+                        <View style={styles.sessionLimitCard}>
+                            <View style={styles.sessionLimitContent}>
+                                <View style={styles.sessionLimitInfo}>
+                                    <MaterialIcons name="timer" size={24} color={COLORS.primary} />
+                                    <View style={styles.sessionLimitTextContainer}>
+                                        <Text style={styles.sessionLimitTitle}>Tiempo máximo de atención</Text>
+                                        <Text style={styles.sessionLimitHint}>
+                                            Tiempo máximo de atención por cliente en 24h. Si es 0, no hay límite.
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={styles.sessionLimitInputRow}>
+                                    <TextInput
+                                        style={styles.sessionLimitInput}
+                                        placeholder="0"
+                                        placeholderTextColor={COLORS.textSecondary}
+                                        value={sessionLimitInput}
+                                        onChangeText={(text) => setSessionLimitInput(text.replace(/[^0-9]/g, ''))}
+                                        onEndEditing={handleSessionLimitSave}
+                                        keyboardType="numeric"
+                                        maxLength={3}
+                                    />
+                                    <Text style={styles.sessionLimitLabel}>minutos</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Configuration Summary */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Resumen de Configuración</Text>
+
+                        <TouchableOpacity
+                            style={styles.configItem}
+                            onPress={() => router.push("/onboarding/twin-appearance")}
+                        >
+                            <View style={styles.configItemLeft}>
+                                <View style={styles.configIcon}>
+                                    <MaterialIcons name="settings" size={24} color={COLORS.primary} />
+                                </View>
+                                <View>
+                                    <Text style={styles.configTitle}>Configuración del gemelo digital</Text>
+                                    <Text style={styles.configSubtitle}>Apariencia, comportamiento y conocimiento</Text>
+                                </View>
                             </View>
                         </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Configuration Summary */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Resumen de Configuración</Text>
-
-                    <TouchableOpacity style={styles.configItem}>
-                        <View style={styles.configItemLeft}>
-                            <View style={styles.configIcon}>
-                                <MaterialIcons name="shield" size={24} color={COLORS.primary} />
-                            </View>
-                            <View>
-                                <Text style={styles.configTitle}>Guardarraíles</Text>
-                                <Text style={styles.configValue}>Nivel Estricto Activo</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="chevron-right" size={24} color={COLORS.textSecondary} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.configItem}>
-                        <View style={styles.configItemLeft}>
-                            <View style={styles.configIcon}>
-                                <MaterialIcons name="menu-book" size={24} color={COLORS.primary} />
-                            </View>
-                            <View>
-                                <Text style={styles.configTitle}>Base de Conocimiento</Text>
-                                <Text style={styles.configSubtitle}>25 documentos cargados</Text>
-                            </View>
-                        </View>
-                        <MaterialIcons name="chevron-right" size={24} color={COLORS.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Action Buttons */}
-                <View style={styles.actionButtons}>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <MaterialIcons name="chat-bubble" size={20} color={COLORS.white} />
-                        <Text style={styles.actionButtonText}>Probar Gemelo</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
-                        <MaterialIcons name="share" size={20} color={COLORS.white} />
-                        <Text style={styles.actionButtonText}>Copiar Enlace</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView >
     );
 }
 
@@ -274,6 +298,22 @@ const styles = StyleSheet.create({
         borderColor: COLORS.borderDark,
         alignItems: "center",
         justifyContent: "center",
+    },
+    testTwinButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: COLORS.primary,
+        marginHorizontal: 16,
+        marginBottom: 16,
+        paddingVertical: 12,
+        borderRadius: 10,
+    },
+    testTwinButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.white,
     },
     toggleCard: {
         backgroundColor: COLORS.surfaceDark,
@@ -418,5 +458,57 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "500",
         color: COLORS.white,
+    },
+    // Session Limit Styles
+    sessionLimitCard: {
+        backgroundColor: COLORS.surfaceDark,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: COLORS.borderDark,
+        padding: 16,
+    },
+    sessionLimitContent: {
+        gap: 16,
+    },
+    sessionLimitInfo: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 12,
+    },
+    sessionLimitTextContainer: {
+        flex: 1,
+    },
+    sessionLimitTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.white,
+    },
+    sessionLimitHint: {
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        marginTop: 4,
+        lineHeight: 18,
+    },
+    sessionLimitInputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginLeft: 36,
+    },
+    sessionLimitInput: {
+        width: 70,
+        height: 44,
+        backgroundColor: "#283039",
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.borderDark,
+        color: COLORS.white,
+        fontSize: 18,
+        fontWeight: "bold",
+        textAlign: "center",
+    },
+    sessionLimitLabel: {
+        fontSize: 14,
+        color: COLORS.textSecondary,
     },
 });

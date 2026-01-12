@@ -190,7 +190,7 @@ export interface ProChat {
     escalation: {
         status: 'none' | 'pending' | 'accepted' | 'declined';
         requestedAt?: string;
-        reason?: 'client_request' | 'twin_unable' | 'keyword';
+        reason?: 'client_request' | 'twin_unable' | 'keyword' | 'twin_disabled';
         respondedAt?: string;
     };
     videoCallActive: boolean;
@@ -285,4 +285,56 @@ export async function proReply(
         const error = await response.json();
         throw new Error(error.message || error.msg || "Error al enviar mensaje");
     }
+}
+
+// Session time limit tracking interfaces
+export interface SessionStatus {
+    isExpired: boolean;
+    remainingMinutes: number;
+    usedMinutes: number;
+    resetAt?: string;
+    limitMinutes?: number;
+}
+
+// Get session status for a chat (without adding time)
+export async function getSessionStatus(
+    token: string,
+    chatId: string
+): Promise<SessionStatus> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/session-status`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al obtener estado de sesión");
+    }
+
+    return response.json();
+}
+
+// Update session time (add minutes) and check if expired
+export async function updateSessionTime(
+    token: string,
+    chatId: string,
+    minutesToAdd: number = 1
+): Promise<SessionStatus> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/session-time`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ minutesToAdd }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al actualizar tiempo de sesión");
+    }
+
+    return response.json();
 }

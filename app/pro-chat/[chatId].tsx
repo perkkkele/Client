@@ -14,7 +14,7 @@ import {
     Dimensions,
     Image,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
 import { getChat, proReply } from "../../api/chat";
@@ -66,6 +66,7 @@ const formatDateHeader = (dateString: string) => {
 export default function ProChatScreen() {
     const { chatId, startVideoCall } = useLocalSearchParams<{ chatId: string; startVideoCall?: string }>();
     const { user, token } = useAuth();
+    const insets = useSafeAreaInsets();
     const scrollViewRef = useRef<ScrollView>(null);
     const autoStartAttempted = useRef(false);
 
@@ -126,10 +127,27 @@ export default function ProChatScreen() {
         loadChatData();
     }, [loadChatData]);
 
-    // Auto-start video call when navigating from appointment card
+    // Auto-start video call when navigating from appointment card (Premium only)
     useEffect(() => {
         if (startVideoCall === 'true' && !loading && !autoStartAttempted.current && token && chatId) {
             autoStartAttempted.current = true;
+
+            // Check premium subscription before auto-starting
+            if (user?.subscription?.plan !== 'premium') {
+                Alert.alert(
+                    "Función Premium",
+                    "Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.",
+                    [
+                        { text: "Entendido", style: "cancel" },
+                        {
+                            text: "Ver planes",
+                            onPress: () => router.push("/(settings)/plans-credits")
+                        }
+                    ]
+                );
+                return;
+            }
+
             // Start video call automatically without confirmation dialog
             (async () => {
                 setStartingCall(true);
@@ -147,7 +165,7 @@ export default function ProChatScreen() {
                 }
             })();
         }
-    }, [startVideoCall, loading, token, chatId]);
+    }, [startVideoCall, loading, token, chatId, user?.subscription?.plan]);
 
     useEffect(() => {
         setTimeout(() => {
@@ -234,8 +252,27 @@ export default function ProChatScreen() {
         }
     }
 
+    // Check if user has premium plan for video calls
+    const isPremium = user?.subscription?.plan === 'premium';
+
     const handleStartVideoCall = async () => {
         if (!token || !chatId || startingCall) return;
+
+        // Check premium subscription
+        if (!isPremium) {
+            Alert.alert(
+                "Función Premium",
+                "Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.\n\n¿Quieres mejorar tu plan?",
+                [
+                    { text: "Ahora no", style: "cancel" },
+                    {
+                        text: "Ver planes",
+                        onPress: () => router.push("/(settings)/plans-credits")
+                    }
+                ]
+            );
+            return;
+        }
 
         Alert.alert(
             "Iniciar videollamada",
@@ -330,25 +367,43 @@ export default function ProChatScreen() {
                         </View>
                     </View>
 
-                    {/* Video call button */}
+                    {/* Video call button (Premium feature) */}
                     {!isInCall && (
                         <TouchableOpacity
-                            style={styles.videoCallButton}
+                            style={[
+                                styles.videoCallButton,
+                                !isPremium && styles.videoCallButtonLocked
+                            ]}
                             onPress={handleStartVideoCall}
                             disabled={startingCall}
                         >
                             {startingCall ? (
                                 <ActivityIndicator size="small" color={COLORS.textMain} />
                             ) : (
-                                <MaterialIcons name="videocam" size={20} color={COLORS.textMain} />
+                                <>
+                                    <MaterialIcons
+                                        name="videocam"
+                                        size={20}
+                                        color={isPremium ? COLORS.textMain : COLORS.gray500}
+                                    />
+                                    {!isPremium && (
+                                        <View style={styles.lockBadge}>
+                                            <MaterialIcons name="lock" size={10} color={COLORS.textLight} />
+                                        </View>
+                                    )}
+                                </>
                             )}
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
 
-            {/* Main Content */}
-            <View style={styles.mainContent}>
+            {/* Main Content - Wrapped in KeyboardAvoidingView */}
+            <KeyboardAvoidingView
+                style={styles.mainContent}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+            >
                 {/* Video Call Area (when active) */}
                 {isInCall && livekitUrl && livekitToken && (
                     <View style={styles.videoSection}>
@@ -369,11 +424,7 @@ export default function ProChatScreen() {
                         <ActivityIndicator size="large" color={COLORS.primary} />
                     </View>
                 ) : (
-                    <KeyboardAvoidingView
-                        style={styles.chatContainer}
-                        behavior={Platform.OS === "ios" ? "padding" : undefined}
-                        keyboardVerticalOffset={100}
-                    >
+                    <View style={styles.chatContainer}>
                         <ScrollView
                             ref={scrollViewRef}
                             style={styles.messagesScroll}
@@ -461,7 +512,7 @@ export default function ProChatScreen() {
                         </ScrollView>
 
                         {/* Input Area */}
-                        <View style={styles.inputArea}>
+                        <View style={[styles.inputArea, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
                             <View style={styles.inputRow}>
                                 {/* Add button */}
                                 <TouchableOpacity style={styles.addButton}>
@@ -501,9 +552,9 @@ export default function ProChatScreen() {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
+                    </View>
                 )}
-            </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -622,6 +673,22 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
+    },
+    videoCallButtonLocked: {
+        backgroundColor: COLORS.gray200,
+    },
+    lockBadge: {
+        position: "absolute",
+        bottom: -2,
+        right: -2,
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.gray500,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: COLORS.surfaceLight,
     },
     // Main Content
     mainContent: {

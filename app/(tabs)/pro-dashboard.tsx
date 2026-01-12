@@ -16,7 +16,7 @@ import {
     Animated,
     Dimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
@@ -89,7 +89,9 @@ interface MenuSection {
 export default function ProDashboardScreen() {
     const { user, logout, token, refreshUser } = useAuth();
     const { canAccess, getRequiredPlan } = useSubscription();
-    const [geminiActive, setGeminiActive] = useState(true);
+    const insets = useSafeAreaInsets();
+    // Initialize with false until user data loads, then sync with user.digitalTwin.isActive
+    const [geminiActive, setGeminiActive] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
@@ -124,6 +126,13 @@ export default function ProDashboardScreen() {
             });
         }
     }, [user?.escalation]);
+
+    // Sync geminiActive from user.digitalTwin.isActive
+    useEffect(() => {
+        if (user?.digitalTwin) {
+            setGeminiActive(user.digitalTwin.isActive ?? false);
+        }
+    }, [user?.digitalTwin?.isActive]);
 
     // Load notification unread count
     useEffect(() => {
@@ -371,6 +380,24 @@ export default function ProDashboardScreen() {
         }
     }
 
+    // Handle gemini/digital twin toggle change
+    async function handleGeminiToggle(value: boolean) {
+        setGeminiActive(value);
+        if (!token) return;
+
+        try {
+            await userApi.updateUser(token, {
+                digitalTwin: {
+                    isActive: value,
+                },
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error("Error toggling digital twin:", error);
+        }
+    }
+
+
     // Menu sections data
     const menuSections: MenuSection[] = [
         {
@@ -380,7 +407,7 @@ export default function ProDashboardScreen() {
                 { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push(`/professional/${user?._id}`); } },
                 { icon: "reviews", label: "Gestión de reseñas", iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
                 { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600, onPress: () => { setMenuVisible(false); router.push("/(settings)/work-schedule"); } },
-                { icon: "forum", label: "Chats Escalados", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
+                { icon: "forum", label: "Atención directa", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
             ],
         },
         {
@@ -551,7 +578,7 @@ export default function ProDashboardScreen() {
                                 <TwinBlock
                                     user={user || undefined}
                                     geminiActive={geminiActive}
-                                    onGeminiChange={setGeminiActive}
+                                    onGeminiChange={handleGeminiToggle}
                                     onConfigureGemini={handleConfigureGemini}
                                     escalation={escalation}
                                     onEscalationChange={handleEscalationChange}
@@ -686,7 +713,7 @@ export default function ProDashboardScreen() {
             </ScrollView>
 
             {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
+            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray400} />
                     <Text style={styles.navLabel}>Chats</Text>
@@ -848,7 +875,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="forum" size={20} color={COLORS.green600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Chats Escalados</Text>
+                                        <Text style={styles.sideMenuCardLabel}>Atención directa</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />

@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const COLORS = {
@@ -57,6 +57,8 @@ const FEATURES: FeatureItem[] = [
 ];
 
 export default function BecomeProScreen() {
+    const insets = useSafeAreaInsets();
+
     function handleBecomePro() {
         // Navigate to the existing professional profile onboarding flow
         router.push("/onboarding/pro-profile");
@@ -140,7 +142,7 @@ export default function BecomeProScreen() {
             </ScrollView>
 
             {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
+            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation("chats")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate400} />
                     <Text style={styles.navLabel}>Chats</Text>

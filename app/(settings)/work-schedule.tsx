@@ -452,11 +452,36 @@ export default function WorkScheduleScreen() {
                     </View>
                 </View>
 
-                {/* Calendar Sync Section */}
+                {/* Calendar Sync Section - Premium Only */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>SINCRONIZACIÓN DE CALENDARIO</Text>
+                    <View style={styles.sectionTitleRow}>
+                        <Text style={styles.sectionTitle}>SINCRONIZACIÓN DE CALENDARIO</Text>
+                    </View>
                     <View style={styles.calendarCard}>
-                        {calendarConnected ? (
+                        {user?.subscription?.plan !== 'premium' ? (
+                            <View style={styles.calendarLockedContent}>
+                                <View style={styles.lockedIconContainer}>
+                                    <MaterialIcons name="workspace-premium" size={24} color="#f59e0b" />
+                                </View>
+                                <Text style={styles.calendarLockedTitle}>
+                                    Función exclusiva Premium
+                                </Text>
+                                <Text style={styles.calendarLockedHint}>
+                                    Sincroniza tu disponibilidad con Google Calendar o Outlook automáticamente.
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.upgradeButton}
+                                    onPress={() => Alert.alert(
+                                        "Plan Premium",
+                                        "Actualiza a Premium para sincronizar tu calendario con Google o Outlook.",
+                                        [{ text: "OK" }]
+                                    )}
+                                >
+                                    <MaterialIcons name="workspace-premium" size={16} color="#f59e0b" />
+                                    <Text style={styles.upgradeButtonText}>Mejorar a Premium</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : calendarConnected ? (
                             <View style={styles.calendarConnectedContent}>
                                 <View style={styles.calendarConnectedRow}>
                                     <View style={styles.calendarProviderIcon}>
@@ -1440,5 +1465,66 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500",
         color: COLORS.gray600,
+    },
+    // Premium-locked calendar sync styles
+    sectionTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    premiumBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: "#fef3c7",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    premiumBadgeText: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: "#f59e0b",
+    },
+    calendarLockedContent: {
+        alignItems: "center",
+        padding: 20,
+        gap: 12,
+    },
+    lockedIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    calendarLockedTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        textAlign: "center",
+    },
+    calendarLockedHint: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    upgradeButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: "#fef3c7",
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginTop: 4,
+    },
+    upgradeButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#d97706",
     },
 });

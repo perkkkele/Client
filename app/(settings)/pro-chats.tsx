@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     ScrollView,
@@ -85,6 +85,7 @@ interface ClientGroup {
     chats: ProChat[];
     hasEscalated: boolean;
     escalatedCount: number;
+    pendingCount: number;  // Chats with pending escalation (not yet attended)
     totalUnread: number;
     lastMessageDate: string;
 }
@@ -95,7 +96,6 @@ export default function ProChatsScreen() {
     const [chats, setChats] = useState<ProChat[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [filterEscalated, setFilterEscalated] = useState(false);
     const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
     const loadChats = useCallback(async () => {
@@ -115,6 +115,13 @@ export default function ProChatsScreen() {
     useEffect(() => {
         loadChats();
     }, [loadChats]);
+
+    // Auto-refresh when screen gains focus (e.g., after responding to an escalated chat)
+    useFocusEffect(
+        useCallback(() => {
+            loadChats();
+        }, [loadChats])
+    );
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
@@ -137,6 +144,7 @@ export default function ProChatsScreen() {
                     chats: [],
                     hasEscalated: false,
                     escalatedCount: 0,
+                    pendingCount: 0,
                     totalUnread: 0,
                     lastMessageDate: chat.lastMessageDate,
                 });
@@ -144,9 +152,17 @@ export default function ProChatsScreen() {
 
             const group = groups.get(clientId)!;
             group.chats.push(chat);
-            if (chat.isEscalated) {
+
+            // Check escalation status - 'pending' means awaiting professional response
+            const isPending = chat.escalation?.status === 'pending';
+            const isEscalated = chat.escalation?.status === 'pending' || chat.escalation?.status === 'accepted';
+
+            if (isEscalated) {
                 group.hasEscalated = true;
                 group.escalatedCount++;
+            }
+            if (isPending) {
+                group.pendingCount++;
             }
             group.totalUnread += chat.unreadCount || 0;
             if (new Date(chat.lastMessageDate) > new Date(group.lastMessageDate)) {
@@ -183,16 +199,15 @@ export default function ProChatsScreen() {
         }
     }, [clientGroups]);
 
-    // Filter groups
+    // Filter groups by search query
     const filteredGroups = useMemo(() => {
         return clientGroups.filter(group => {
-            if (filterEscalated && !group.hasEscalated) return false;
             if (!searchQuery) return true;
             const query = searchQuery.toLowerCase();
             return group.clientName.toLowerCase().includes(query) ||
                 group.clientEmail?.toLowerCase().includes(query);
         });
-    }, [clientGroups, filterEscalated, searchQuery]);
+    }, [clientGroups, searchQuery]);
 
     const toggleClient = (clientId: string) => {
         setExpandedClients(prev => {
@@ -210,8 +225,12 @@ export default function ProChatsScreen() {
         router.back();
     }
 
-    const totalClients = clientGroups.length;
-    const escalatedClients = clientGroups.filter(g => g.hasEscalated).length;
+    // Calculate total pending and attended across all clients
+    const totalPending = clientGroups.reduce((sum, g) => sum + g.pendingCount, 0);
+    const totalAttended = clientGroups.reduce((sum, g) => {
+        // Count ALL chats with 'accepted' status (including twin_disabled)
+        return sum + g.chats.filter(c => c.escalation?.status === 'accepted').length;
+    }, 0);
 
     const getAvatarUrl = (avatar: string | undefined) => {
         return getAssetUrl(avatar);
@@ -224,26 +243,23 @@ export default function ProChatsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Chats Escalados</Text>
+                <Text style={styles.headerTitle}>Atención directa</Text>
                 <View style={styles.headerButton} />
             </View>
 
             {/* Stats Bar */}
             <View style={styles.statsBar}>
                 <View style={styles.statItem}>
-                    <MaterialIcons name="people" size={18} color={COLORS.primaryDark} />
-                    <Text style={styles.statValue}>{totalClients}</Text>
-                    <Text style={styles.statLabel}>Clientes</Text>
+                    <MaterialIcons name="support-agent" size={18} color={COLORS.orange500} />
+                    <Text style={[styles.statValue, { color: COLORS.orange500 }]}>{totalPending}</Text>
+                    <Text style={styles.statLabel}>Pendientes</Text>
                 </View>
                 <View style={styles.statDivider} />
-                <TouchableOpacity
-                    style={[styles.statItem, filterEscalated && styles.statItemActive]}
-                    onPress={() => setFilterEscalated(!filterEscalated)}
-                >
-                    <MaterialIcons name="support-agent" size={18} color={COLORS.orange500} />
-                    <Text style={[styles.statValue, { color: COLORS.orange500 }]}>{escalatedClients}</Text>
-                    <Text style={styles.statLabel}>Escalados</Text>
-                </TouchableOpacity>
+                <View style={styles.statItem}>
+                    <MaterialIcons name="check-circle" size={18} color={COLORS.green500} />
+                    <Text style={[styles.statValue, { color: COLORS.green500 }]}>{totalAttended}</Text>
+                    <Text style={styles.statLabel}>Atendidos</Text>
+                </View>
             </View>
 
             {/* Search */}
@@ -280,9 +296,7 @@ export default function ProChatsScreen() {
                     <Text style={styles.emptySubtitle}>
                         {chats.length === 0
                             ? "Las conversaciones con tu gemelo digital aparecerán aquí"
-                            : filterEscalated
-                                ? "No hay clientes con chats escalados"
-                                : "Prueba con otra búsqueda"}
+                            : "Prueba con otra búsqueda"}
                     </Text>
                 </View>
             ) : (
@@ -331,11 +345,6 @@ export default function ProChatsScreen() {
                                     <View style={styles.clientInfo}>
                                         <View style={styles.clientNameRow}>
                                             <Text style={styles.clientName}>{group.clientName}</Text>
-                                            {group.hasEscalated && (
-                                                <View style={styles.escalatedBadge}>
-                                                    <MaterialIcons name="person" size={12} color={COLORS.white} />
-                                                </View>
-                                            )}
                                         </View>
                                         <Text style={styles.clientMeta}>
                                             {group.chats.length} hilo{group.chats.length !== 1 ? 's' : ''}
@@ -343,11 +352,11 @@ export default function ProChatsScreen() {
                                         </Text>
                                     </View>
 
-                                    {/* Right side */}
+                                    {/* Right side - Show pending escalation count */}
                                     <View style={styles.clientRight}>
-                                        {group.totalUnread > 0 && (
-                                            <View style={styles.unreadBadge}>
-                                                <Text style={styles.unreadText}>{group.totalUnread}</Text>
+                                        {group.pendingCount > 0 && (
+                                            <View style={styles.pendingBadge}>
+                                                <Text style={styles.pendingText}>{group.pendingCount}</Text>
                                             </View>
                                         )}
                                         <MaterialIcons
@@ -361,51 +370,86 @@ export default function ProChatsScreen() {
                                 {/* Expanded Threads */}
                                 {isExpanded && (
                                     <View style={styles.threadsContainer}>
-                                        {group.chats.map((chat, chatIndex) => (
-                                            <TouchableOpacity
-                                                key={chat._id}
-                                                style={[
-                                                    styles.threadRow,
-                                                    chatIndex === group.chats.length - 1 && styles.threadRowLast,
-                                                    chat.isEscalated && styles.threadRowEscalated
-                                                ]}
-                                                onPress={() => router.push(`/pro-chat/${chat._id}` as any)}
-                                            >
-                                                {/* Escalated indicator bar */}
-                                                {chat.isEscalated && <View style={styles.escalatedBar} />}
+                                        {group.chats.map((chat, chatIndex) => {
+                                            // Determine if this chat is pending (awaiting professional response)
+                                            const isPending = chat.escalation?.status === 'pending';
+                                            const isAttended = chat.escalation?.status === 'accepted';
+                                            // Direct attention = twin was disabled when chat started
+                                            const isDirectAttention = chat.escalation?.reason === 'twin_disabled';
+                                            const hasEscalation = isPending || isAttended || isDirectAttention;
 
-                                                <View style={[styles.threadIconContainer, chat.isEscalated && styles.threadIconEscalated]}>
-                                                    {chat.isEscalated ? (
-                                                        <MaterialIcons name="support-agent" size={16} color={COLORS.white} />
-                                                    ) : (
-                                                        <MaterialIcons name="chat-bubble-outline" size={16} color={COLORS.gray400} />
-                                                    )}
-                                                </View>
-                                                <View style={styles.threadContent}>
-                                                    <View style={styles.threadHeader}>
-                                                        <Text style={[styles.threadPreview, chat.isEscalated && styles.threadPreviewEscalated]} numberOfLines={1}>
-                                                            {chat.lastMessage || "Sin mensajes"}
-                                                        </Text>
-                                                        {chat.isEscalated && (
-                                                            <View style={styles.escalatedPill}>
-                                                                <Text style={styles.escalatedPillText}>Requiere atención</Text>
-                                                            </View>
+                                            return (
+                                                <TouchableOpacity
+                                                    key={chat._id}
+                                                    style={[
+                                                        styles.threadRow,
+                                                        chatIndex === group.chats.length - 1 && styles.threadRowLast,
+                                                        isPending && styles.threadRowPending,
+                                                        isAttended && styles.threadRowAttended
+                                                    ]}
+                                                    onPress={() => router.push(`/pro-chat/${chat._id}` as any)}
+                                                >
+                                                    {/* Indicator bar: orange=pending, green=attended */}
+                                                    {isPending && <View style={styles.pendingBar} />}
+                                                    {isAttended && <View style={styles.attendedBar} />}
+
+                                                    <View style={[
+                                                        styles.threadIconContainer,
+                                                        isPending && styles.threadIconPending,
+                                                        isAttended && styles.threadIconAttended
+                                                    ]}>
+                                                        {isPending ? (
+                                                            <MaterialIcons name="support-agent" size={16} color={COLORS.white} />
+                                                        ) : isAttended ? (
+                                                            <MaterialIcons name="check" size={16} color={COLORS.white} />
+                                                        ) : (
+                                                            <MaterialIcons name="chat-bubble-outline" size={16} color={COLORS.gray400} />
                                                         )}
                                                     </View>
-                                                    <View style={styles.threadMeta}>
-                                                        <Text style={styles.threadDate}>
-                                                            {formatDate(chat.lastMessageDate)}
-                                                        </Text>
-                                                        {chat.isEscalated && chat.escalatedReason && (
-                                                            <Text style={styles.escalatedReason} numberOfLines={1}>
-                                                                → {chat.escalatedReason}
+                                                    <View style={styles.threadContent}>
+                                                        <View style={styles.threadHeader}>
+                                                            <Text style={[
+                                                                styles.threadPreview,
+                                                                isPending && styles.threadPreviewPending
+                                                            ]} numberOfLines={1}>
+                                                                {chat.lastMessage || "Sin mensajes"}
                                                             </Text>
-                                                        )}
+                                                            {isPending && (
+                                                                <View style={styles.pendingPill}>
+                                                                    <Text style={styles.pendingPillText}>Pendiente</Text>
+                                                                </View>
+                                                            )}
+                                                            {isAttended && (
+                                                                <View style={styles.attendedPill}>
+                                                                    <Text style={styles.attendedPillText}>Atendido</Text>
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                        <View style={styles.threadMeta}>
+                                                            <Text style={styles.threadDate}>
+                                                                {formatDate(chat.lastMessageDate)}
+                                                            </Text>
+                                                            {hasEscalation && chat.escalation?.reason && (
+                                                                <Text style={[
+                                                                    styles.escalatedReason,
+                                                                    isAttended && styles.attendedReason
+                                                                ]} numberOfLines={1}>
+                                                                    → {chat.escalation.reason === 'client_request' ? 'Escalado' :
+                                                                        chat.escalation.reason === 'keyword' ? 'Palabra clave' :
+                                                                            chat.escalation.reason === 'twin_disabled' ? 'Gemelo off' :
+                                                                                'Sugerencia'}
+                                                                </Text>
+                                                            )}
+                                                        </View>
                                                     </View>
-                                                </View>
-                                                <MaterialIcons name="chevron-right" size={20} color={chat.isEscalated ? COLORS.orange500 : COLORS.gray300} />
-                                            </TouchableOpacity>
-                                        ))}
+                                                    <MaterialIcons
+                                                        name="chevron-right"
+                                                        size={20}
+                                                        color={isPending ? COLORS.orange500 : isAttended ? COLORS.green500 : COLORS.gray300}
+                                                    />
+                                                </TouchableOpacity>
+                                            );
+                                        })}
                                     </View>
                                 )}
                             </View>
@@ -478,6 +522,66 @@ const styles = StyleSheet.create({
         height: 40,
         backgroundColor: COLORS.gray200,
         marginHorizontal: 24,
+    },
+    // New Stats Section Styles
+    statsSection: {
+        backgroundColor: COLORS.surfaceLight,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.gray200,
+    },
+    statsRow: {
+        marginBottom: 12,
+    },
+    statsRowTitle: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: COLORS.gray500,
+        letterSpacing: 0.5,
+        marginBottom: 8,
+    },
+    statsCardsRow: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    statsCard: {
+        flex: 1,
+        backgroundColor: COLORS.white,
+        borderRadius: 12,
+        padding: 12,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    statsCardIconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 6,
+    },
+    statsCardEscalated: {
+        borderColor: "rgba(249, 115, 22, 0.3)",
+    },
+    statsCardTwinOff: {
+        borderColor: "rgba(124, 58, 237, 0.3)",
+    },
+    statsCardAttendedEscalated: {
+        borderColor: "rgba(34, 197, 94, 0.3)",
+    },
+    statsCardAttendedTwinOff: {
+        borderColor: "rgba(124, 58, 237, 0.3)",
+    },
+    statsCardValue: {
+        fontSize: 22,
+        fontWeight: "700",
+    },
+    statsCardLabel: {
+        fontSize: 10,
+        color: COLORS.textMuted,
+        fontWeight: "500",
     },
     searchSection: {
         backgroundColor: COLORS.surfaceLight,
@@ -725,5 +829,114 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: "700",
         color: COLORS.white,
+    },
+    // === Pending escalation styles (orange - awaiting response) ===
+    pendingBadge: {
+        minWidth: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: COLORS.orange500,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 6,
+    },
+    pendingText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+    threadRowPending: {
+        backgroundColor: "rgba(249, 115, 22, 0.08)",
+    },
+    pendingBar: {
+        position: "absolute",
+        left: 0,
+        top: 4,
+        bottom: 4,
+        width: 3,
+        backgroundColor: COLORS.orange500,
+        borderRadius: 2,
+    },
+    threadIconPending: {
+        backgroundColor: COLORS.orange500,
+    },
+    threadPreviewPending: {
+        flex: 1,
+        fontWeight: "600",
+    },
+    pendingPill: {
+        backgroundColor: COLORS.orange500,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+    },
+    pendingPillText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+    // === Attended escalation styles (green - already responded) ===
+    threadRowAttended: {
+        backgroundColor: "rgba(34, 197, 94, 0.05)",
+    },
+    attendedBar: {
+        position: "absolute",
+        left: 0,
+        top: 4,
+        bottom: 4,
+        width: 3,
+        backgroundColor: COLORS.green500,
+        borderRadius: 2,
+    },
+    threadIconAttended: {
+        backgroundColor: COLORS.green500,
+    },
+    attendedPill: {
+        backgroundColor: COLORS.green500,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+    },
+    attendedPillText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+    attendedReason: {
+        color: COLORS.green500,
+    },
+    // === Direct attention styles (purple - twin was disabled) ===
+    threadRowDirect: {
+        backgroundColor: "rgba(124, 58, 237, 0.05)",
+    },
+    directBar: {
+        position: "absolute",
+        left: 0,
+        top: 4,
+        bottom: 4,
+        width: 3,
+        backgroundColor: "#7C3AED",
+        borderRadius: 2,
+    },
+    threadIconDirect: {
+        backgroundColor: "#7C3AED",
+    },
+    threadPreviewDirect: {
+        color: "#7C3AED",
+        fontWeight: "500",
+    },
+    directPill: {
+        backgroundColor: "#7C3AED",
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+    },
+    directPillText: {
+        fontSize: 10,
+        fontWeight: "700",
+        color: COLORS.white,
+    },
+    directReason: {
+        color: "#7C3AED",
     },
 });
