@@ -1334,6 +1334,12 @@ export default function AvatarChatScreen() {
                 <Animated.View
                     style={[
                         styles.videoContainer,
+                        // Remove shadows and set white background when session expired for clean overlay
+                        isTwinEffectivelyDisabled && {
+                            shadowOpacity: 0,
+                            elevation: 0,
+                            backgroundColor: COLORS.white,
+                        },
                         {
                             position: isVideoMinimized ? "absolute" : "relative",
                             zIndex: isVideoMinimized ? 100 : 1,
@@ -1363,13 +1369,13 @@ export default function AvatarChatScreen() {
                     <TouchableOpacity
                         style={[
                             styles.videoPlaceholder,
-                            // White background when twin is disabled to show clean overlay
-                            isTwinDisabled && { backgroundColor: COLORS.white }
+                            // White background when twin is disabled or session expired to show clean overlay
+                            isTwinEffectivelyDisabled && { backgroundColor: COLORS.white }
                         ]}
-                        activeOpacity={isTwinDisabled ? 1 : (isVideoMinimized ? 0.8 : 0.9)}
+                        activeOpacity={isTwinEffectivelyDisabled ? 1 : (isVideoMinimized ? 0.8 : 0.9)}
                         onPress={() => {
-                            // Don't allow tapping to pause when twin is disabled
-                            if (isTwinDisabled) return;
+                            // Don't allow tapping to pause when twin is disabled or session expired
+                            if (isTwinEffectivelyDisabled) return;
                             if (isVideoMinimized) {
                                 maximizeVideo();
                             } else {
@@ -1623,11 +1629,11 @@ export default function AvatarChatScreen() {
                         )}
 
 
-                        {/* Reduced gradient - only at bottom near buttons, hidden when twin is disabled */}
-                        {!isTwinDisabled && <View style={styles.videoGradient} />}
+                        {/* Reduced gradient - only at bottom near buttons, hidden when twin is disabled or session expired */}
+                        {!isTwinEffectivelyDisabled && <View style={styles.videoGradient} />}
 
-                        {/* Mute Button - hidden when twin is disabled */}
-                        {!isVideoMinimized && !isTwinDisabled && (
+                        {/* Mute Button - hidden when twin is disabled or session expired */}
+                        {!isVideoMinimized && !isTwinEffectivelyDisabled && (
                             <TouchableOpacity
                                 style={styles.muteButton}
                                 onPress={() => setIsMuted(!isMuted)}
@@ -1656,8 +1662,8 @@ export default function AvatarChatScreen() {
                             </TouchableOpacity>
                         )}
 
-                        {/* Discrete Disclaimer Banner - positioned above action buttons */}
-                        {showDisclaimerBanner && !isHumanSession && !isTwinDisabled && !isVideoMinimized && (
+                        {/* Discrete Disclaimer Banner - positioned above action buttons, hidden when session expired */}
+                        {showDisclaimerBanner && !isHumanSession && !isTwinEffectivelyDisabled && !isVideoMinimized && (
                             <View style={styles.disclaimerBanner}>
                                 <Text style={styles.disclaimerText}>
                                     Las respuestas de este gemelo digital tienen carácter informativo.{" "}
@@ -1729,8 +1735,8 @@ export default function AvatarChatScreen() {
                             </View>
                         )}
 
-                        {/* Toggle Size Button - hidden when twin is disabled */}
-                        {!isTwinDisabled && (
+                        {/* Toggle Size Button - hidden when twin is disabled or session expired */}
+                        {!isTwinEffectivelyDisabled && (
                             <TouchableOpacity
                                 style={styles.toggleSizeButton}
                                 onPress={toggleVideoSize}
