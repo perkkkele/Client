@@ -38,33 +38,47 @@ const COLORS = {
 
 // 12 Plantillas de descargo por categoría profesional
 const DISCLAIMER_TEMPLATES: Record<string, string> = {
-    legal: `AVISO LEGAL: Las respuestas proporcionadas por este asistente virtual tienen carácter meramente informativo y orientativo. No constituyen asesoramiento legal profesional, ni crean relación abogado-cliente. Para asuntos legales específicos, consulte directamente con un profesional colegiado. El uso de este servicio no sustituye la consulta presencial requerida en procedimientos judiciales o administrativos.`,
+    legal: `AVISO LEGAL
+La información proporcionada a través de este servicio es automatizada y de carácter informativo. No constituye asesoramiento legal profesional ni crea relación abogado-cliente. TwinPro no presta servicios legales. Para casos concretos, consulte siempre con un profesional colegiado.`,
 
-    salud: `AVISO SANITARIO: La información proporcionada por este asistente tiene carácter exclusivamente informativo y educativo. No sustituye el diagnóstico, tratamiento o consejo de un profesional sanitario cualificado. Ante cualquier síntoma o duda médica, consulte siempre con su médico. En caso de emergencia, llame inmediatamente al 112 o acuda a urgencias.`,
+    salud: `AVISO SANITARIO
+La información ofrecida es automatizada y de carácter general. No sustituye el diagnóstico, tratamiento ni la atención de un profesional sanitario. TwinPro no presta servicios médicos ni de salud mental. Ante síntomas o emergencias, consulte con un profesional o llame al 112.`,
 
-    fitness: `AVISO SOBRE EJERCICIO FÍSICO: Las recomendaciones de este asistente son orientativas y generales. Antes de iniciar cualquier programa de ejercicios, consulte con un profesional de la salud, especialmente si tiene condiciones médicas preexistentes. Cada persona tiene necesidades diferentes; adapte cualquier consejo a su situación particular.`,
+    fitness: `AVISO SOBRE EJERCICIO FÍSICO
+Las recomendaciones son orientativas y automatizadas. No sustituyen la valoración de un profesional de la salud o del deporte. Adapte cualquier ejercicio a su condición física y consulte con un especialista si tiene dudas o patologías.`,
 
-    educacion: `AVISO EDUCATIVO: Los contenidos proporcionados son recursos educativos de apoyo y no sustituyen la formación reglada ni certificaciones oficiales. La información puede requerir actualización. Consulte fuentes oficiales para validar cualquier contenido antes de tomar decisiones académicas o profesionales.`,
+    educacion: `AVISO EDUCATIVO
+El contenido proporcionado es informativo y de apoyo educativo. No sustituye formación reglada, certificaciones oficiales ni garantiza resultados académicos. La información puede requerir verificación o actualización.`,
 
-    tecnologia: `AVISO TÉCNICO: La orientación técnica proporcionada es informativa y basada en estándares generales. Las soluciones pueden variar según su configuración específica. No nos hacemos responsables de pérdidas de datos o daños derivados de la aplicación de estas sugerencias. Realice siempre copias de seguridad antes de cualquier intervención.`,
+    tecnologia: `AVISO TÉCNICO
+La información técnica es automatizada y general. Las soluciones pueden variar según el contexto y la configuración específica. TwinPro no se responsabiliza de daños derivados de la aplicación directa de estas sugerencias. Realice siempre copias de seguridad.`,
 
-    diseno: `AVISO CREATIVO: Las sugerencias de diseño proporcionadas son orientativas y buscan inspirar. Los resultados finales dependen de múltiples factores y la implementación específica. Las preferencias estéticas son subjetivas; estas recomendaciones no garantizan resultados específicos.`,
+    diseno: `AVISO CREATIVO
+Las sugerencias proporcionadas son orientativas y automatizadas. Los resultados finales dependen de múltiples factores y decisiones humanas. No se garantizan resultados concretos.`,
 
-    bienestar: `AVISO SOBRE BIENESTAR: Este servicio ofrece información de bienestar general y no constituye terapia psicológica, coaching certificado ni tratamiento de salud mental. Si experimenta dificultades emocionales significativas, busque ayuda profesional. En crisis, contacte con servicios de emergencia.`,
+    bienestar: `AVISO DE BIENESTAR
+Este servicio ofrece información general de bienestar. No constituye terapia psicológica, tratamiento clínico ni intervención sanitaria. Si experimenta malestar emocional significativo, busque ayuda profesional especializada.`,
 
-    inmobiliario: `AVISO INMOBILIARIO: La información sobre propiedades y mercado inmobiliario es orientativa y puede no estar actualizada. Los precios, disponibilidad y condiciones pueden variar. Este servicio no sustituye la tasación profesional ni el asesoramiento legal. Verifique toda información antes de tomar decisiones de compra o inversión.`,
+    inmobiliario: `AVISO INMOBILIARIO
+La información sobre propiedades y mercado es orientativa y puede no estar actualizada. No sustituye la tasación profesional ni el asesoramiento legal o financiero. Verifique siempre la información antes de tomar decisiones.`,
 
-    estetica: `AVISO DE ESTÉTICA: Las recomendaciones proporcionadas son generales y orientativas. Los resultados de cualquier tratamiento varían según el individuo. Consulte siempre con un profesional antes de aplicar cualquier procedimiento. Este servicio no sustituye la valoración presencial obligatoria para tratamientos.`,
+    estetica: `AVISO DE ESTÉTICA
+Las recomendaciones proporcionadas son generales y orientativas. Los resultados de cualquier tratamiento varían según el individuo. Consulte siempre con un profesional antes de aplicar cualquier procedimiento.`,
 
-    hogar: `AVISO PARA SERVICIOS DEL HOGAR: Las orientaciones proporcionadas son informativas. Para trabajos que requieran instalaciones, manipulación eléctrica, gas u obras, contrate siempre profesionales certificados. No nos responsabilizamos de daños derivados de trabajos realizados sin supervisión profesional adecuada.`,
+    hogar: `AVISO SERVICIOS DEL HOGAR
+La información proporcionada es orientativa. Para trabajos técnicos, eléctricos, de gas u obras, contrate siempre profesionales certificados. TwinPro no se responsabiliza de intervenciones realizadas sin supervisión profesional.`,
 
-    finanzas: `AVISO FINANCIERO: La información proporcionada es de carácter general y educativo. No constituye asesoramiento financiero, fiscal ni de inversiones personalizado. Las decisiones financieras deben tomarse tras consultar con asesores cualificados. Los mercados conllevan riesgos; el rendimiento pasado no garantiza resultados futuros.`,
+    finanzas: `AVISO FINANCIERO
+La información proporcionada es general y educativa. No constituye asesoramiento financiero, fiscal ni de inversión personalizado. Las decisiones financieras conllevan riesgos y deben tomarse con asesores cualificados.`,
 
-    energia: `AVISO ENERGÉTICO: Las recomendaciones sobre instalaciones energéticas son orientativas. Para instalaciones eléctricas, gas, solar u otras, contrate siempre instaladores autorizados. Verifique cumplimiento normativo antes de cualquier instalación. No nos responsabilizamos de instalaciones realizadas sin supervisión profesional.`,
+    energia: `AVISO ENERGÉTICO
+Las recomendaciones sobre instalaciones energéticas son orientativas. Para cualquier instalación eléctrica, solar o de gas, contrate profesionales autorizados y verifique el cumplimiento normativo.`,
 
-    empleo: `AVISO SOBRE EMPLEO: La información sobre ofertas laborales y orientación profesional es informativa. Verifique siempre las ofertas directamente con las empresas. No garantizamos colocación laboral. Los procesos de selección dependen de múltiples factores externos a este servicio.`,
+    empleo: `AVISO SOBRE EMPLEO
+La información laboral es orientativa y no garantiza procesos de selección ni contratación. Verifique siempre las condiciones directamente con las empresas o entidades correspondientes.`,
 
-    otros: `AVISO GENERAL: Las respuestas proporcionadas por este asistente virtual tienen carácter informativo y orientativo. No sustituyen el consejo profesional especializado. La información puede requerir actualización o adaptación a su situación específica. Consulte siempre con profesionales cualificados para tomar decisiones importantes.`,
+    otros: `AVISO GENERAL
+Las respuestas proporcionadas por este asistente virtual son automatizadas y de carácter informativo. No sustituyen el consejo profesional especializado. La información puede requerir adaptación a su situación específica. Consulte siempre con profesionales cualificados.`,
 };
 
 const getCategoryLabel = (category: string) => {

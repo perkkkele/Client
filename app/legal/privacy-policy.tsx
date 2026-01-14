@@ -5,6 +5,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -19,6 +20,8 @@ const COLORS = {
     textMuted: "#64748B",
     gray100: "#F3F4F6",
     gray200: "#E5E7EB",
+    gray400: "#9CA3AF",
+    gray500: "#6B7280",
     gray700: "#374151",
     gray800: "#1E293B",
     white: "#FFFFFF",
@@ -48,37 +51,38 @@ export default function PrivacyPolicyScreen() {
             >
                 {/* Meta Text */}
                 <View style={styles.metaContainer}>
-                    <Text style={styles.metaText}>Última actualización: 15 Oct, 2023</Text>
+                    <View style={styles.metaDot} />
+                    <Text style={styles.metaText}>Última actualización: 14 de enero, 2026</Text>
                 </View>
+
+                {/* Intro Text */}
                 <Text style={styles.introText}>
-                    En TwinPro, nos tomamos muy en serio la privacidad de tus datos. Este documento detalla cómo recopilamos, usamos y protegemos tu información personal al interactuar con nuestros avatares profesionales.
+                    En TwinPro tratamos tus datos personales con responsabilidad y transparencia.
+                </Text>
+                <Text style={[styles.introText, { marginBottom: 20 }]}>
+                    Este resumen explica de forma clara qué datos tratamos, para qué los usamos y cuáles son tus derechos al utilizar la plataforma.
                 </Text>
 
                 {/* Executive Summary Card */}
                 <View style={styles.summaryCard}>
-                    <View style={styles.summaryHeader}>
-                        <View style={styles.summaryIconContainer}>
-                            <MaterialIcons name="summarize" size={18} color={COLORS.primary} />
-                        </View>
-                        <Text style={styles.summaryTitle}>RESUMEN EJECUTIVO</Text>
-                    </View>
+                    <Text style={styles.summaryTitle}>🧾 RESUMEN EJECUTIVO</Text>
                     <View style={styles.summaryList}>
                         <View style={styles.summaryItem}>
                             <MaterialIcons name="check" size={18} color={COLORS.green600} />
                             <Text style={styles.summaryText}>
-                                <Text style={styles.summaryBold}>Recopilación Mínima:</Text> Solo guardamos los datos necesarios (email, teléfono) para gestionar tu cuenta.
+                                <Text style={styles.summaryBold}>Tratamiento responsable:</Text> Recogemos únicamente los datos necesarios para prestar el servicio y mejorar su funcionamiento.
                             </Text>
                         </View>
                         <View style={styles.summaryItem}>
                             <MaterialIcons name="check" size={18} color={COLORS.green600} />
                             <Text style={styles.summaryText}>
-                                <Text style={styles.summaryBold}>Encriptación:</Text> Tus conversaciones con avatares están encriptadas y protegidas.
+                                <Text style={styles.summaryBold}>Seguridad y confidencialidad:</Text> Aplicamos medidas técnicas y organizativas adecuadas para proteger tu información.
                             </Text>
                         </View>
                         <View style={styles.summaryItem}>
                             <MaterialIcons name="check" size={18} color={COLORS.green600} />
                             <Text style={styles.summaryText}>
-                                <Text style={styles.summaryBold}>Control Total:</Text> Puedes descargar o borrar tus datos desde tu perfil en cualquier momento.
+                                <Text style={styles.summaryBold}>Control del usuario:</Text> Puedes acceder, modificar o eliminar tus datos y gestionar tus preferencias en cualquier momento.
                             </Text>
                         </View>
                     </View>
@@ -86,93 +90,159 @@ export default function PrivacyPolicyScreen() {
 
                 {/* Section 1 - Data Collection */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <MaterialIcons name="storage" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>1. Recopilación de información</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>1. Recopilación de Información</Text>
+                    <Text style={styles.paragraph}>
+                        Recopilamos datos personales cuando utilizas TwinPro, en función de cómo interactúas con la plataforma.
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12, fontWeight: "600", color: COLORS.textLight }]}>
+                        Tipos de datos tratados:
+                    </Text>
                     <View style={styles.sectionCard}>
-                        <Text style={styles.paragraph}>
-                            Recopilamos información para proporcionar y mejorar nuestros servicios de comunicación. Los tipos de datos incluyen:
-                        </Text>
                         <View style={styles.dataList}>
                             <View style={styles.dataItem}>
                                 <View style={styles.dataDot} />
                                 <Text style={styles.dataText}>
-                                    <Text style={styles.dataBold}>Datos de Registro:</Text> Nombre, correo electrónico, número de teléfono y foto de perfil.
+                                    <Text style={styles.dataBold}>Datos de registro:</Text> nombre, correo electrónico, número de teléfono, foto de perfil u otros datos facilitados voluntariamente.
                                 </Text>
                             </View>
                             <View style={styles.dataItem}>
                                 <View style={styles.dataDot} />
                                 <Text style={styles.dataText}>
-                                    <Text style={styles.dataBold}>Contenido de Mensajes:</Text> Conversaciones encriptadas con avatares profesionales para mejorar el contexto de las respuestas.
+                                    <Text style={styles.dataBold}>Datos de uso:</Text> interacciones con la aplicación, frecuencia de uso, preferencias y configuración.
                                 </Text>
                             </View>
                             <View style={styles.dataItem}>
                                 <View style={styles.dataDot} />
                                 <Text style={styles.dataText}>
-                                    <Text style={styles.dataBold}>Datos de Uso:</Text> Frecuencia de uso, interacciones con directorios y preferencias de avatares.
+                                    <Text style={styles.dataBold}>Comunicaciones:</Text> contenido de chats e interacciones con gemelos digitales o profesionales.
+                                </Text>
+                            </View>
+                            <View style={styles.dataItem}>
+                                <View style={styles.dataDot} />
+                                <Text style={styles.dataText}>
+                                    <Text style={styles.dataBold}>Datos técnicos:</Text> información básica del dispositivo y versión de la app.
                                 </Text>
                             </View>
                         </View>
                     </View>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        TwinPro no solicita datos innecesarios ni sensibles para el uso estándar del servicio.
+                    </Text>
                 </View>
 
                 {/* Section 2 - Data Usage */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <MaterialIcons name="psychology" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>2. Uso de la información</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>2. Uso de la Información</Text>
                     <Text style={styles.paragraph}>
-                        La información recopilada se utiliza principalmente para garantizar que los avatares profesionales respondan de manera precisa y útil. Además, utilizamos los datos para:
+                        Los datos se utilizan para:
                     </Text>
                     <View style={styles.usageGrid}>
                         <View style={styles.usageItem}>
+                            <MaterialIcons name="settings" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Prestar y gestionar el servicio</Text>
+                        </View>
+                        <View style={styles.usageItem}>
+                            <MaterialIcons name="smart-toy" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Facilitar interacciones con gemelos digitales y profesionales</Text>
+                        </View>
+                        <View style={styles.usageItem}>
                             <MaterialIcons name="build" size={20} color={COLORS.textMuted} />
-                            <Text style={styles.usageText}>Mantenimiento y mejora técnica</Text>
+                            <Text style={styles.usageText}>Mejorar la experiencia de usuario y la estabilidad de la plataforma</Text>
                         </View>
                         <View style={styles.usageItem}>
                             <MaterialIcons name="security" size={20} color={COLORS.textMuted} />
-                            <Text style={styles.usageText}>Detección y prevención de fraude</Text>
+                            <Text style={styles.usageText}>Prevenir usos indebidos, fraudes o incidencias de seguridad</Text>
                         </View>
                         <View style={styles.usageItem}>
-                            <MaterialIcons name="analytics" size={20} color={COLORS.textMuted} />
-                            <Text style={styles.usageText}>Análisis anonimizado de tendencias</Text>
+                            <MaterialIcons name="gavel" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Cumplir obligaciones legales</Text>
                         </View>
                     </View>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        Cuando utilizamos datos con fines analíticos, lo hacemos de forma agregada o pseudonimizada, y solo si el usuario ha dado su consentimiento.
+                    </Text>
                 </View>
 
                 {/* Section 3 - Security */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <MaterialIcons name="lock" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>3. Almacenamiento y Seguridad</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>3. Almacenamiento y Seguridad</Text>
                     <Text style={styles.paragraph}>
-                        Implementamos medidas de seguridad de nivel industrial, incluyendo encriptación de extremo a extremo para chats sensibles. Sus datos se almacenan en servidores seguros con acceso restringido únicamente a personal autorizado. Retenemos su información solo el tiempo necesario para cumplir con los fines establecidos en esta política.
+                        Tus datos se almacenan en servidores seguros y se conservan únicamente durante el tiempo necesario para cumplir las finalidades descritas.
                     </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        TwinPro implementa:
+                    </Text>
+                    <View style={styles.usageGrid}>
+                        <View style={styles.usageItem}>
+                            <MaterialIcons name="vpn-key" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Controles de acceso restringido</Text>
+                        </View>
+                        <View style={styles.usageItem}>
+                            <MaterialIcons name="verified-user" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Medidas de seguridad de nivel industrial</Text>
+                        </View>
+                        <View style={styles.usageItem}>
+                            <MaterialIcons name="shield" size={20} color={COLORS.textMuted} />
+                            <Text style={styles.usageText}>Protocolos de protección frente a accesos no autorizados</Text>
+                        </View>
+                    </View>
                 </View>
 
                 {/* Section 4 - Rights */}
                 <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <MaterialIcons name="gavel" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>4. Tus Derechos</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>4. Tus Derechos</Text>
+                    <Text style={styles.paragraph}>
+                        Como usuario, tienes derecho a:
+                    </Text>
                     <View style={styles.rightsCard}>
-                        <Text style={styles.rightsText}>
-                            Como usuario de TwinPro, tienes derecho a acceder, rectificar o eliminar tus datos personales en cualquier momento. También puedes oponerte al procesamiento de ciertos datos o solicitar su portabilidad.
-                        </Text>
-                        <TouchableOpacity>
+                        <View style={styles.dataList}>
+                            <View style={styles.dataItem}>
+                                <MaterialIcons name="visibility" size={16} color={COLORS.gray500} />
+                                <Text style={styles.dataText}>Acceder a tus datos personales</Text>
+                            </View>
+                            <View style={styles.dataItem}>
+                                <MaterialIcons name="edit" size={16} color={COLORS.gray500} />
+                                <Text style={styles.dataText}>Rectificar datos inexactos</Text>
+                            </View>
+                            <View style={styles.dataItem}>
+                                <MaterialIcons name="delete" size={16} color={COLORS.gray500} />
+                                <Text style={styles.dataText}>Solicitar la eliminación de tus datos</Text>
+                            </View>
+                            <View style={styles.dataItem}>
+                                <MaterialIcons name="block" size={16} color={COLORS.gray500} />
+                                <Text style={styles.dataText}>Oponerte o limitar determinados tratamientos</Text>
+                            </View>
+                            <View style={styles.dataItem}>
+                                <MaterialIcons name="sync-alt" size={16} color={COLORS.gray500} />
+                                <Text style={styles.dataText}>Solicitar la portabilidad de tus datos</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.contactButton}
+                            onPress={() => Linking.openURL("mailto:legal@twinpro.app")}
+                        >
+                            <MaterialIcons name="mail" size={16} color={COLORS.textLight} />
                             <Text style={styles.contactLink}>Contactar al Oficial de Privacidad</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Al usar TwinPro, aceptas estos términos.</Text>
-                </View>
+                {/* Full Terms Button */}
+                <TouchableOpacity
+                    style={styles.fullTermsButton}
+                    onPress={() => Linking.openURL("https://legal.twinpro.app#privacy")}
+                >
+                    <View style={styles.fullTermsLeft}>
+                        <MaterialIcons name="description" size={20} color={COLORS.gray500} />
+                        <Text style={styles.fullTermsText}>Ver Términos y Condiciones Completos</Text>
+                    </View>
+                    <MaterialIcons name="arrow-forward" size={18} color={COLORS.gray400} />
+                </TouchableOpacity>
+
+                {/* Footer Disclaimer */}
+                <Text style={styles.footerDisclaimer}>
+                    Este resumen no reemplaza el documento legal completo. Al usar la app, aceptas los Términos y Condiciones oficiales.
+                </Text>
 
                 {/* Bottom spacer */}
                 <View style={styles.bottomSpacer} />
@@ -220,7 +290,16 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     metaContainer: {
-        marginBottom: 8,
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 16,
+        gap: 8,
+    },
+    metaDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: COLORS.primary,
     },
     metaText: {
         fontSize: 11,
@@ -233,7 +312,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         lineHeight: 22,
         color: COLORS.textMuted,
-        marginBottom: 20,
+        marginBottom: 8,
     },
     summaryCard: {
         backgroundColor: COLORS.surfaceLight,
@@ -298,12 +377,12 @@ const styles = StyleSheet.create({
         padding: 16,
         borderWidth: 1,
         borderColor: COLORS.gray100,
+        marginTop: 8,
     },
     paragraph: {
         fontSize: 14,
         lineHeight: 22,
         color: COLORS.textMuted,
-        marginBottom: 12,
     },
     dataList: {
         gap: 10,
@@ -345,6 +424,7 @@ const styles = StyleSheet.create({
         borderColor: COLORS.gray100,
     },
     usageText: {
+        flex: 1,
         fontSize: 14,
         fontWeight: "500",
         color: COLORS.gray700,
@@ -355,29 +435,64 @@ const styles = StyleSheet.create({
         padding: 20,
         borderWidth: 1,
         borderColor: "rgba(249, 245, 6, 0.2)",
+        marginTop: 12,
     },
-    rightsText: {
-        fontSize: 14,
-        lineHeight: 22,
-        color: COLORS.gray700,
-        marginBottom: 12,
+    contactButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: "rgba(249, 245, 6, 0.3)",
     },
     contactLink: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: "bold",
         color: COLORS.textLight,
         textDecorationLine: "underline",
     },
-    footer: {
-        marginTop: 16,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.gray200,
+    legalSection: {
+        marginBottom: 20,
     },
-    footerText: {
-        fontSize: 12,
+    legalTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: COLORS.textLight,
+        marginBottom: 8,
+    },
+    legalText: {
+        fontSize: 14,
+        lineHeight: 22,
         color: COLORS.textMuted,
+    },
+    fullTermsButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        borderRadius: 16,
+        backgroundColor: COLORS.surfaceLight,
+        marginBottom: 16,
+    },
+    fullTermsLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    fullTermsText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textLight,
+    },
+    footerDisclaimer: {
+        fontSize: 12,
+        color: COLORS.gray400,
         textAlign: "center",
+        lineHeight: 18,
+        paddingHorizontal: 16,
     },
     bottomSpacer: {
         height: 32,

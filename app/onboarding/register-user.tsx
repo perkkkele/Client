@@ -42,7 +42,8 @@ export default function RegisterUserScreen() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(true);
+    const [acceptAnalytics, setAcceptAnalytics] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const isNameValid = name.trim().length >= 2;
@@ -59,8 +60,8 @@ export default function RegisterUserScreen() {
 
         setIsLoading(true);
         try {
-            // Primero registrar la cuenta
-            await authApi.register(email, password);
+            // Primero registrar la cuenta con preferencias de analítica
+            await authApi.register(email, password, 'user', acceptAnalytics);
 
             // Luego iniciar sesión automáticamente para obtener el token
             await login(email, password);
@@ -267,6 +268,23 @@ export default function RegisterUserScreen() {
                             </Text>
                         </View>
 
+                        {/* Analytics consent checkbox (optional) */}
+                        <View style={styles.termsContainer}>
+                            <TouchableOpacity
+                                onPress={() => setAcceptAnalytics(!acceptAnalytics)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.checkbox, acceptAnalytics && styles.checkboxChecked]}>
+                                    {acceptAnalytics && (
+                                        <Ionicons name="checkmark" size={14} color={COLORS.backgroundDark} />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                            <Text style={styles.termsText}>
+                                Acepto el uso de tecnologías analíticas para mejorar el servicio.
+                            </Text>
+                        </View>
+
                         {/* Register Button */}
                         <TouchableOpacity
                             style={[styles.registerButton, (!canSubmit || isLoading) && styles.buttonDisabled]}
@@ -300,10 +318,6 @@ export default function RegisterUserScreen() {
                                     style={styles.socialIcon}
                                 />
                                 <Text style={styles.socialButtonText}>Google</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.socialButton}>
-                                <Ionicons name="logo-apple" size={16} color="#000000" />
-                                <Text style={styles.socialButtonText}>Apple</Text>
                             </TouchableOpacity>
                         </View>
 

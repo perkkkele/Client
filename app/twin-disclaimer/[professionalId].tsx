@@ -184,6 +184,26 @@ export default function TwinDisclaimerScreen() {
                     </View>
                 </View>
 
+                {/* AVISO LEGAL Section */}
+                <View style={styles.legalNoticeSection}>
+                    <View style={styles.legalNoticeHeader}>
+                        <MaterialIcons name="gavel" size={18} color={COLORS.amber600} />
+                        <Text style={styles.legalNoticeTitle}>AVISO LEGAL</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.legalNoticeCard}
+                        onPress={() => router.push("/legal/legal-notice" as any)}
+                    >
+                        <Text style={styles.legalNoticeText}>
+                            Este documento detalla las condiciones legales, responsabilidades y limitaciones de uso de la plataforma TwinPro. El uso de la plataforma implica la aceptación de todos los términos aquí descritos.
+                        </Text>
+                        <View style={styles.legalNoticeLink}>
+                            <Text style={styles.legalNoticeLinkText}>Ver documento completo</Text>
+                            <MaterialIcons name="arrow-forward" size={16} color="#2563EB" />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+
                 {/* Understand button */}
                 <TouchableOpacity
                     style={styles.understandButton}
@@ -353,5 +373,44 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: COLORS.textMain,
+    },
+    // Legal Notice Section
+    legalNoticeSection: {
+        marginBottom: 24,
+    },
+    legalNoticeHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    legalNoticeTitle: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: COLORS.amber600,
+        letterSpacing: 0.5,
+    },
+    legalNoticeCard: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+    },
+    legalNoticeText: {
+        fontSize: 13,
+        lineHeight: 20,
+        color: COLORS.gray500,
+        marginBottom: 12,
+    },
+    legalNoticeLink: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    legalNoticeLinkText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#2563EB",
     },
 });

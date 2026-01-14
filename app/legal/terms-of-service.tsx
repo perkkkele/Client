@@ -5,6 +5,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -18,6 +19,8 @@ const COLORS = {
     textMuted: "#64748B",
     gray100: "#F3F4F6",
     gray200: "#E5E7EB",
+    gray400: "#9CA3AF",
+    gray500: "#6B7280",
     gray700: "#374151",
     gray800: "#1E293B",
     white: "#FFFFFF",
@@ -48,44 +51,74 @@ export default function TermsOfServiceScreen() {
                 {/* Meta Text */}
                 <View style={styles.metaContainer}>
                     <View style={styles.metaDot} />
-                    <Text style={styles.metaText}>Última actualización: 24 de Octubre, 2023</Text>
+                    <Text style={styles.metaText}>Última actualización: 14 de enero, 2026</Text>
                 </View>
 
                 {/* Section 1 - Introduction */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>1. Introducción</Text>
                     <Text style={styles.paragraph}>
-                        Bienvenido a nuestra aplicación. Al acceder y utilizar nuestros servicios de comunicación con avatares, usted acepta estar sujeto a los siguientes términos y condiciones. Nuestra plataforma facilita la conexión entre usuarios y representaciones digitales ("Avatares") de profesionales verificados. Por favor, lea estos términos detenidamente antes de continuar.
+                        Bienvenido a TwinPro. Al acceder y utilizar la aplicación, aceptas quedar vinculado por los presentes Términos de Servicio.
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        TwinPro es una plataforma tecnológica de intermediación que facilita la comunicación entre usuarios y profesionales, incluyendo interacciones mediante gemelos digitales basados en inteligencia artificial, así como chats, videollamadas, agenda y servicios asociados.
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        TwinPro no presta servicios profesionales ni actúa como representante de los profesionales que utilizan la plataforma.
                     </Text>
                 </View>
 
-                {/* Section 2 - Professional Avatars */}
+                {/* Section 2 - Digital Twins */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>2. Uso de Avatares Profesionales</Text>
+                    <Text style={styles.sectionTitle}>2. Uso de Gemelos Digitales y Profesionales</Text>
                     <Text style={styles.paragraph}>
-                        Los avatares disponibles en esta plataforma son representaciones generadas o gestionadas por profesionales reales. Sin embargo, debe tener en cuenta lo siguiente:
+                        Los gemelos digitales disponibles en TwinPro son representaciones automatizadas configuradas o supervisadas por profesionales reales.
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        Debes tener en cuenta que:
                     </Text>
                     <View style={styles.bulletList}>
                         <View style={styles.bulletItem}>
                             <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
                             <Text style={styles.bulletText}>
-                                El asesoramiento proporcionado a través de la interfaz de chat tiene fines informativos y no sustituye una consulta profesional presencial en situaciones de emergencia.
+                                Las respuestas generadas son automatizadas, con fines informativos y orientativos
                             </Text>
                         </View>
                         <View style={styles.bulletItem}>
                             <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
                             <Text style={styles.bulletText}>
-                                Usted acepta tratar a los avatares y a los profesionales detrás de ellos con respeto y cortesía en todo momento.
+                                No sustituyen la atención ni el asesoramiento profesional humano
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
+                            <Text style={styles.bulletText}>
+                                Pueden ser inexactas, incompletas o desactualizadas
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
+                            <Text style={styles.bulletText}>
+                                No deben utilizarse para tomar decisiones críticas sin validación humana
                             </Text>
                         </View>
                     </View>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        El usuario se compromete a mantener un uso respetuoso de la plataforma y de los profesionales que la integran.
+                    </Text>
                 </View>
 
                 {/* Section 3 - Privacy */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>3. Privacidad y Datos</Text>
+                    <Text style={styles.sectionTitle}>3. Privacidad y Datos Personales</Text>
                     <Text style={styles.paragraph}>
-                        Sus conversaciones están encriptadas de extremo a extremo. No compartimos el contenido de sus chats con terceros sin su consentimiento explícito, salvo cuando sea requerido por ley. Para más detalles, consulte nuestra{" "}
+                        El tratamiento de los datos personales se realiza conforme a la normativa vigente (RGPD y normativa aplicable).
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        TwinPro aplica medidas de seguridad adecuadas para proteger la información y no vende datos personales.
+                    </Text>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        Para más información, consulta nuestra{" "}
                         <Text style={styles.link} onPress={() => router.push("/legal/privacy-policy")}>
                             Política de Privacidad
                         </Text>.
@@ -94,12 +127,29 @@ export default function TermsOfServiceScreen() {
 
                 {/* Section 4 - Payments */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>4. Pagos y Suscripciones</Text>
-                    <View style={styles.infoCard}>
-                        <Text style={styles.infoCardTitle}>Renovación Automática</Text>
-                        <Text style={styles.infoCardText}>
-                            Las suscripciones a perfiles Pro se renuevan automáticamente al final de cada ciclo de facturación a menos que se cancelen con al menos 24 horas de antelación.
-                        </Text>
+                    <Text style={styles.sectionTitle}>4. Servicios, Créditos y Suscripciones</Text>
+                    <Text style={styles.paragraph}>
+                        TwinPro puede ofrecer funcionalidades gratuitas y servicios de pago mediante créditos, suscripciones u otros modelos.
+                    </Text>
+                    <View style={styles.bulletList}>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
+                            <Text style={styles.bulletText}>
+                                Las suscripciones se renuevan automáticamente salvo cancelación previa
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
+                            <Text style={styles.bulletText}>
+                                Siempre se informará al usuario antes de realizar cualquier cargo
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="check-circle" size={18} color={COLORS.primary} />
+                            <Text style={styles.bulletText}>
+                                Las condiciones económicas completas se detallan en los Términos de Servicio oficiales
+                            </Text>
+                        </View>
                     </View>
                 </View>
 
@@ -107,9 +157,49 @@ export default function TermsOfServiceScreen() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>5. Limitación de Responsabilidad</Text>
                     <Text style={styles.paragraph}>
-                        La empresa no se hace responsable por decisiones tomadas basándose únicamente en la información proporcionada por los avatares. El uso del servicio es bajo su propio riesgo.
+                        TwinPro no será responsable de:
+                    </Text>
+                    <View style={styles.bulletList}>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="remove" size={18} color={COLORS.gray400} />
+                            <Text style={styles.bulletText}>
+                                Las decisiones tomadas por los usuarios basándose en información obtenida a través de la plataforma
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="remove" size={18} color={COLORS.gray400} />
+                            <Text style={styles.bulletText}>
+                                El contenido proporcionado por gemelos digitales o profesionales
+                            </Text>
+                        </View>
+                        <View style={styles.bulletItem}>
+                            <MaterialIcons name="remove" size={18} color={COLORS.gray400} />
+                            <Text style={styles.bulletText}>
+                                La disponibilidad, resultado o calidad de los servicios ofrecidos por los profesionales
+                            </Text>
+                        </View>
+                    </View>
+                    <Text style={[styles.paragraph, { marginTop: 12 }]}>
+                        El uso de TwinPro se realiza bajo la responsabilidad del usuario.
                     </Text>
                 </View>
+
+                {/* Full Terms Button */}
+                <TouchableOpacity
+                    style={styles.fullTermsButton}
+                    onPress={() => Linking.openURL("https://legal.twinpro.app#terms")}
+                >
+                    <View style={styles.fullTermsLeft}>
+                        <MaterialIcons name="description" size={20} color={COLORS.gray500} />
+                        <Text style={styles.fullTermsText}>Ver Términos y Condiciones Completos</Text>
+                    </View>
+                    <MaterialIcons name="arrow-forward" size={18} color={COLORS.gray400} />
+                </TouchableOpacity>
+
+                {/* Footer Disclaimer */}
+                <Text style={styles.footerDisclaimer}>
+                    Este resumen no reemplaza el documento legal completo. Al usar la app, aceptas los Términos y Condiciones oficiales.
+                </Text>
 
                 {/* Bottom spacer */}
                 <View style={styles.bottomSpacer} />
@@ -204,27 +294,51 @@ const styles = StyleSheet.create({
         color: COLORS.textMuted,
     },
     link: {
-        color: COLORS.primary,
-        fontWeight: "500",
+        color: "#2563EB",
+        fontWeight: "600",
         textDecorationLine: "underline",
     },
-    infoCard: {
-        backgroundColor: COLORS.backgroundLight,
-        borderRadius: 16,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: COLORS.gray100,
+    legalSection: {
+        marginBottom: 20,
     },
-    infoCardTitle: {
-        fontSize: 14,
+    legalTitle: {
+        fontSize: 16,
         fontWeight: "600",
         color: COLORS.textLight,
         marginBottom: 8,
     },
-    infoCardText: {
+    legalText: {
         fontSize: 14,
         lineHeight: 22,
         color: COLORS.textMuted,
+    },
+    fullTermsButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        borderRadius: 16,
+        backgroundColor: COLORS.surfaceLight,
+        marginBottom: 16,
+    },
+    fullTermsLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    fullTermsText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textLight,
+    },
+    footerDisclaimer: {
+        fontSize: 12,
+        color: COLORS.gray400,
+        textAlign: "center",
+        lineHeight: 18,
+        paddingHorizontal: 16,
     },
     bottomSpacer: {
         height: 32,
