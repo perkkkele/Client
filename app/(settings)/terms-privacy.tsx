@@ -44,28 +44,28 @@ const SUMMARY_ITEMS: SummaryItem[] = [
         iconBg: COLORS.blue50,
         iconColor: COLORS.blue600,
         title: "Privacidad de Datos",
-        description: "Tus conversaciones están encriptadas. No compartimos tus datos personales con terceros sin tu consentimiento explícito.",
+        description: "Tus datos personales se tratan conforme a la normativa vigente (RGPD y normativa aplicable). Tus comunicaciones están protegidas mediante medidas de seguridad adecuadas y no vendemos tus datos personales.\n\nAlgunos datos pueden compartirse con proveedores tecnológicos únicamente cuando sea necesario para prestar el servicio o por obligación legal.",
     },
     {
         icon: "smart-toy",
         iconBg: COLORS.purple50,
         iconColor: COLORS.purple600,
-        title: "Interacción con Avatares",
-        description: "Te comunicas con \"Gemelos Digitales\" (IA) entrenados por profesionales. No son respuestas humanas en tiempo real.",
+        title: "Interacción con Gemelos Digitales (IA)",
+        description: "En TwinPro puedes interactuar con Gemelos Digitales basados en inteligencia artificial, configurados o supervisados por profesionales.\n\nLas respuestas generadas:\n• Son automatizadas\n• Tienen carácter informativo y orientativo\n• No sustituyen la atención ni el asesoramiento profesional humano\n• Pueden ser inexactas, incompletas o desactualizadas.",
     },
     {
         icon: "verified-user",
         iconBg: COLORS.orange50,
         iconColor: COLORS.orange600,
         title: "Responsabilidad del Usuario",
-        description: "Eres responsable de mantener el respeto en los chats. El acoso o uso indebido resultará en la suspensión de la cuenta.",
+        description: "Al utilizar TwinPro, te comprometes a:\n• Usar el servicio de forma respetuosa y conforme a la ley\n• No realizar usos indebidos, abusivos o fraudulentos\n• No basar decisiones críticas exclusivamente en la información proporcionada por la plataforma o los gemelos digitales\n\nEl incumplimiento de estas normas puede dar lugar a la suspensión o cancelación de la cuenta.",
     },
     {
         icon: "payments",
         iconBg: COLORS.green50,
         iconColor: COLORS.green600,
-        title: "Servicios y Pagos",
-        description: "El uso básico puede ser gratuito, pero consultas avanzadas pueden requerir créditos. Siempre se te avisará antes de cobrar.",
+        title: "Servicios, Créditos y Pagos",
+        description: "TwinPro puede ofrecer:\n• Funcionalidades gratuitas\n• Servicios de pago mediante créditos, suscripciones u otros modelos\n\nSiempre se te informará previamente antes de realizar cualquier cargo. Las condiciones económicas se detallan en los Términos de Servicio.",
     },
 ];
 
@@ -75,7 +75,7 @@ export default function TermsPrivacyScreen() {
     }
 
     function handleViewFullTerms() {
-        Linking.openURL("https://twinpro.com/terms");
+        Linking.openURL("https://legal.twinpro.app");
     }
 
     return (
@@ -96,9 +96,8 @@ export default function TermsPrivacyScreen() {
             >
                 {/* Intro */}
                 <View style={styles.intro}>
-                    <Text style={styles.introTitle}>Lo esencial en breve</Text>
                     <Text style={styles.introSubtitle}>
-                        Hemos resumido nuestros términos legales para que entiendas rápidamente cómo protegemos tus datos y cómo funciona el servicio.
+                        Hemos resumido los puntos clave de nuestros textos legales para que entiendas de forma clara cómo funciona TwinPro, cómo se tratan tus datos y cuáles son las responsabilidades asociadas al uso del servicio.
                     </Text>
                 </View>
 

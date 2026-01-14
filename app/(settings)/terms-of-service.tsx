@@ -5,6 +5,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
@@ -104,6 +105,19 @@ export default function TermsOfServiceScreen() {
                     <Text style={styles.paragraph}>
                         La empresa no se hace responsable por decisiones tomadas basándose únicamente en la información proporcionada por los avatares. El uso del servicio es bajo su propio riesgo.
                     </Text>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <TouchableOpacity
+                        style={styles.fullDocButton}
+                        onPress={() => Linking.openURL("https://legal.twinpro.app#terms")}
+                    >
+                        <MaterialIcons name="description" size={18} color={COLORS.gray500} />
+                        <Text style={styles.fullDocText}>Ver documento completo</Text>
+                        <MaterialIcons name="arrow-forward" size={16} color={COLORS.gray400} />
+                    </TouchableOpacity>
+                    <Text style={styles.footerText}>Al usar TwinPro, aceptas estos términos.</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -212,5 +226,32 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.gray600,
         lineHeight: 22,
+    },
+    // Footer
+    footer: {
+        paddingTop: 24,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+        gap: 16,
+    },
+    fullDocButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        borderRadius: 12,
+    },
+    fullDocText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+    },
+    footerText: {
+        fontSize: 12,
+        color: COLORS.gray400,
+        textAlign: "center",
     },
 });
