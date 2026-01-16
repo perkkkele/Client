@@ -10,7 +10,17 @@ interface ProCallVideoProps {
     onError?: (error: string) => void;
     onParticipantJoin?: (identity: string) => void;
     onParticipantLeave?: (identity: string) => void;
+    onControlsReady?: (controls: VideoCallControls) => void;
+    muted?: boolean;
+    cameraOff?: boolean;
     style?: any;
+}
+
+// Control functions exposed to parent
+export interface VideoCallControls {
+    switchCamera: () => Promise<void>;
+    setMuted: (muted: boolean) => Promise<void>;
+    setCameraEnabled: (enabled: boolean) => Promise<void>;
 }
 
 // Try to import LiveKit
@@ -119,6 +129,108 @@ function VideoRenderer({ style }: { style?: any }) {
     );
 }
 
+// Room controller component - uses useRoomContext inside LiveKitRoom
+function RoomController({
+    onControlsReady,
+    muted,
+    cameraOff
+}: {
+    onControlsReady?: (controls: VideoCallControls) => void;
+    muted?: boolean;
+    cameraOff?: boolean;
+}) {
+    const { useRoomContext } = LiveKitModule;
+    const room = useRoomContext ? useRoomContext() : null;
+    const controlsReadyRef = React.useRef(false);
+    const [isFrontCamera, setIsFrontCamera] = useState(true);
+
+    // Expose controls to parent when room is available
+    useEffect(() => {
+        if (room && onControlsReady && !controlsReadyRef.current) {
+            controlsReadyRef.current = true;
+
+            const controls: VideoCallControls = {
+                switchCamera: async () => {
+                    try {
+                        console.log('[ProCallVideo] Switching camera...');
+                        const newFacingMode = isFrontCamera ? 'environment' : 'user';
+
+                        // Get current video track
+                        const videoPublication = room.localParticipant?.getTrackPublication?.('video');
+
+                        // Approach: Unpublish current track, wait, then republish with new facingMode
+                        console.log('[ProCallVideo] Unpublishing and republishing with facingMode:', newFacingMode);
+
+                        // Unpublish current track
+                        if (videoPublication?.track) {
+                            await room.localParticipant?.unpublishTrack?.(videoPublication.track);
+                            console.log('[ProCallVideo] Unpublished video track');
+                        } else {
+                            // Or just disable if no track found
+                            await room.localParticipant?.setCameraEnabled?.(false);
+                        }
+
+                        // Wait for cleanup
+                        await new Promise(resolve => setTimeout(resolve, 300));
+
+                        // Re-enable camera with new facingMode
+                        await room.localParticipant?.setCameraEnabled?.(true, {
+                            facingMode: newFacingMode,
+                        });
+
+                        setIsFrontCamera(prev => !prev);
+                        console.log('[ProCallVideo] Switched to', newFacingMode, 'camera');
+                    } catch (error) {
+                        console.error('[ProCallVideo] Error switching camera:', error);
+
+                        // Try to recover camera
+                        try {
+                            console.log('[ProCallVideo] Attempting to recover camera...');
+                            await room.localParticipant?.setCameraEnabled?.(true);
+                        } catch (recoveryError) {
+                            console.error('[ProCallVideo] Recovery failed:', recoveryError);
+                        }
+                    }
+                },
+                setMuted: async (muted: boolean) => {
+                    try {
+                        await room.localParticipant?.setMicrophoneEnabled(!muted);
+                        console.log('[ProCallVideo] Microphone:', muted ? 'muted' : 'unmuted');
+                    } catch (error) {
+                        console.error('[ProCallVideo] Error setting mute:', error);
+                    }
+                },
+                setCameraEnabled: async (enabled: boolean) => {
+                    try {
+                        await room.localParticipant?.setCameraEnabled(enabled);
+                        console.log('[ProCallVideo] Camera:', enabled ? 'enabled' : 'disabled');
+                    } catch (error) {
+                        console.error('[ProCallVideo] Error setting camera:', error);
+                    }
+                }
+            };
+
+            onControlsReady(controls);
+        }
+    }, [room, onControlsReady, isFrontCamera]);
+
+    // Handle muted prop changes
+    useEffect(() => {
+        if (room && muted !== undefined) {
+            room.localParticipant?.setMicrophoneEnabled(!muted);
+        }
+    }, [room, muted]);
+
+    // Handle cameraOff prop changes
+    useEffect(() => {
+        if (room && cameraOff !== undefined) {
+            room.localParticipant?.setCameraEnabled(!cameraOff);
+        }
+    }, [room, cameraOff]);
+
+    return null;
+}
+
 // Main LiveKit Room component
 function LiveKitVideoPlayer({
     livekitUrl,
@@ -127,12 +239,15 @@ function LiveKitVideoPlayer({
     onError,
     onParticipantJoin,
     onParticipantLeave,
+    onControlsReady,
+    muted,
+    cameraOff,
     style
 }: ProCallVideoProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const { LiveKitRoom, useParticipants } = LiveKitModule;
+    const { LiveKitRoom } = LiveKitModule;
 
     if (error) {
         return (
@@ -173,6 +288,11 @@ function LiveKitVideoPlayer({
                 onParticipantLeave?.(participant?.identity);
             }}
         >
+            <RoomController
+                onControlsReady={onControlsReady}
+                muted={muted}
+                cameraOff={cameraOff}
+            />
             {!isConnected ? (
                 <View style={[styles.loadingContainer, style]}>
                     <ActivityIndicator size="large" color="#137fec" />

@@ -19,7 +19,7 @@ import { useAuth } from "../../context";
 import { getVideoCallToken, endVideoCall } from "../../api/videoCall";
 import { getChat } from "../../api/chat";
 import { getMessages, sendTextMessage, ChatMessage } from "../../api/chatMessage";
-import ProCallVideo from "../../components/ProCallVideo";
+import ProCallVideo, { VideoCallControls } from "../../components/ProCallVideo";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -50,6 +50,7 @@ export default function VideoCallScreen() {
     const [participantName, setParticipantName] = useState("Participante");
     const [callDuration, setCallDuration] = useState(0);
     const [remoteParticipant, setRemoteParticipant] = useState<string | null>(null);
+    const [videoControls, setVideoControls] = useState<VideoCallControls | null>(null);
 
     // Controls state
     const [isMuted, setIsMuted] = useState(false);
@@ -219,6 +220,12 @@ export default function VideoCallScreen() {
                     onError={(err) => console.error("Video error:", err)}
                     onParticipantJoin={(identity) => setRemoteParticipant(identity)}
                     onParticipantLeave={() => setRemoteParticipant(null)}
+                    onControlsReady={(controls) => {
+                        console.log('[VideoCall] Controls ready');
+                        setVideoControls(controls);
+                    }}
+                    muted={isMuted}
+                    cameraOff={isCameraOff}
                 />
 
                 {/* Remote participant indicator */}
@@ -278,7 +285,11 @@ export default function VideoCallScreen() {
             <View style={styles.controlsContainer}>
                 <TouchableOpacity
                     style={[styles.controlButton, isMuted && styles.controlButtonActive]}
-                    onPress={() => setIsMuted(!isMuted)}
+                    onPress={() => {
+                        const newMuted = !isMuted;
+                        setIsMuted(newMuted);
+                        videoControls?.setMuted(newMuted);
+                    }}
                 >
                     <MaterialIcons
                         name={isMuted ? "mic-off" : "mic"}
@@ -289,12 +300,32 @@ export default function VideoCallScreen() {
 
                 <TouchableOpacity
                     style={[styles.controlButton, isCameraOff && styles.controlButtonActive]}
-                    onPress={() => setIsCameraOff(!isCameraOff)}
+                    onPress={() => {
+                        const newCameraOff = !isCameraOff;
+                        setIsCameraOff(newCameraOff);
+                        videoControls?.setCameraEnabled(!newCameraOff);
+                    }}
                 >
                     <MaterialIcons
                         name={isCameraOff ? "videocam-off" : "videocam"}
                         size={24}
                         color={COLORS.textMain}
+                    />
+                </TouchableOpacity>
+
+                {/* Camera switch button */}
+                <TouchableOpacity
+                    style={styles.controlButton}
+                    onPress={() => {
+                        console.log('[VideoCall] Switching camera...');
+                        videoControls?.switchCamera();
+                    }}
+                    disabled={isCameraOff}
+                >
+                    <MaterialIcons
+                        name="cameraswitch"
+                        size={24}
+                        color={isCameraOff ? COLORS.gray500 : COLORS.textMain}
                     />
                 </TouchableOpacity>
 

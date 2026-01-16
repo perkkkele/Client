@@ -6,12 +6,16 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
+    Alert,
     Animated,
+    Linking,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
+import { Camera } from "expo-camera";
 import { MaterialIcons } from "@expo/vector-icons";
 import {
     Room,
@@ -20,6 +24,7 @@ import {
     VideoTrack,
     RemoteParticipant,
     LocalParticipant,
+    createLocalVideoTrack,
 } from "livekit-client";
 import { VideoView } from "@livekit/react-native";
 
@@ -60,6 +65,10 @@ export default function HumanVideoCall({
     const [remoteVideoTrack, setRemoteVideoTrack] = useState<VideoTrack | null>(null);
     const [localVideoTrack, setLocalVideoTrack] = useState<VideoTrack | null>(null);
     const [callDuration, setCallDuration] = useState(0);
+    const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+
+    // Force re-render counter - incremented when tracks change
+    const [trackUpdateCounter, setTrackUpdateCounter] = useState(0);
 
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -82,6 +91,27 @@ export default function HumanVideoCall({
         ).start();
     }, []);
 
+    // Debug: Log when remoteVideoTrack state changes
+    useEffect(() => {
+        console.log('[HumanVideoCall] Remote video track state changed:',
+            remoteVideoTrack ? `Track present (sid: ${remoteVideoTrack.sid})` : 'null'
+        );
+    }, [remoteVideoTrack]);
+
+    // Debug: Log when localVideoTrack state changes with details
+    useEffect(() => {
+        if (localVideoTrack) {
+            console.log('[HumanVideoCall] Local video track state changed:', {
+                sid: localVideoTrack.sid,
+                hasMediaStreamTrack: !!localVideoTrack.mediaStreamTrack,
+                trackId: localVideoTrack.mediaStreamTrack?.id,
+                trackEnabled: localVideoTrack.mediaStreamTrack?.enabled,
+                trackReadyState: localVideoTrack.mediaStreamTrack?.readyState,
+            });
+        } else {
+            console.log('[HumanVideoCall] Local video track state changed: null');
+        }
+    }, [localVideoTrack]);
     // Connect to room
     useEffect(() => {
         if (!livekitUrl || !token) return;
@@ -113,21 +143,43 @@ export default function HumanVideoCall({
             _publication: any,
             participant: RemoteParticipant
         ) => {
-            console.log("[HumanVideoCall] Track subscribed:", track.kind);
+            const localId = newRoom.localParticipant?.identity || 'unknown';
+            console.log(`[HumanVideoCall][${localId}] Remote track subscribed: ${track.kind} from ${participant.identity}`);
             if (track.kind === Track.Kind.Video) {
-                setRemoteVideoTrack(track as VideoTrack);
+                const videoTrack = track as VideoTrack;
+                console.log(`[HumanVideoCall][${localId}] Remote video track details:`, {
+                    sid: videoTrack.sid,
+                    isMuted: videoTrack.isMuted,
+                    mediaStreamTrack: videoTrack.mediaStreamTrack ? 'present' : 'missing'
+                });
+                // Force re-render by updating counter immediately after setting track
+                setRemoteVideoTrack(videoTrack);
+                // Use setTimeout to ensure the state update triggers a new render cycle
+                setTimeout(() => {
+                    setTrackUpdateCounter(prev => prev + 1);
+                    console.log(`[HumanVideoCall][${localId}] Force re-render triggered for remote video`);
+                }, 100);
             }
         };
 
         const handleTrackUnsubscribed = (track: Track) => {
+            const localId = newRoom.localParticipant?.identity || 'unknown';
+            console.log(`[HumanVideoCall][${localId}] Remote track unsubscribed: ${track.kind}`);
             if (track.kind === Track.Kind.Video) {
                 setRemoteVideoTrack(null);
             }
         };
 
         const handleLocalTrackPublished = (publication: any, participant: LocalParticipant) => {
+            const localId = newRoom.localParticipant?.identity || 'unknown';
+            console.log(`[HumanVideoCall][${localId}] Local track published: ${publication.track?.kind}`);
             if (publication.track?.kind === Track.Kind.Video) {
                 setLocalVideoTrack(publication.track as VideoTrack);
+                // Force re-render to ensure PiP updates correctly
+                setTimeout(() => {
+                    setTrackUpdateCounter(prev => prev + 1);
+                    console.log(`[HumanVideoCall][${localId}] Force re-render triggered for local video`);
+                }, 100);
             }
         };
 
@@ -139,10 +191,58 @@ export default function HumanVideoCall({
 
         // Connect and enable camera/mic (front camera by default)
         newRoom.connect(livekitUrl, token).then(async () => {
-            await newRoom.localParticipant.setCameraEnabled(true, {
-                facingMode: 'user' // Front camera
-            });
-            await newRoom.localParticipant.setMicrophoneEnabled(true);
+            const participantId = newRoom.localParticipant?.identity || 'unknown';
+            console.log(`[HumanVideoCall][${participantId}] Connected, checking permissions...`);
+
+            // Request camera and microphone permissions
+            const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
+            const { status: micStatus } = await Camera.requestMicrophonePermissionsAsync();
+
+            console.log(`[HumanVideoCall][${participantId}] Permissions - Camera: ${cameraStatus}, Mic: ${micStatus}`);
+
+            if (cameraStatus !== 'granted' || micStatus !== 'granted') {
+                console.error(`[HumanVideoCall][${participantId}] Permissions denied`);
+                Alert.alert(
+                    'Permisos necesarios',
+                    'Para la videollamada necesitamos acceso a tu cámara y micrófono. Por favor, habilita los permisos en la configuración de la aplicación.',
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Abrir Configuración', onPress: () => Linking.openSettings() }
+                    ]
+                );
+                return;
+            }
+
+            // Try to enable camera - if it fails, we can still receive remote video
+            try {
+                console.log(`[HumanVideoCall][${participantId}] Enabling camera...`);
+                await newRoom.localParticipant.setCameraEnabled(true, {
+                    facingMode: 'user' // Front camera
+                });
+                await newRoom.localParticipant.setMicrophoneEnabled(true);
+
+                // Explicitly get the local video track after camera is enabled
+                const cameraPublication = newRoom.localParticipant.getTrackPublication(Track.Source.Camera);
+                if (cameraPublication?.track) {
+                    console.log(`[HumanVideoCall][${participantId}] Setting local video track from publication`);
+                    setLocalVideoTrack(cameraPublication.track as VideoTrack);
+                    // Force re-render for PiP
+                    setTimeout(() => {
+                        setTrackUpdateCounter(prev => prev + 1);
+                        console.log(`[HumanVideoCall][${participantId}] Force re-render triggered for local PiP from publication`);
+                    }, 150);
+                } else {
+                    console.log(`[HumanVideoCall][${participantId}] WARNING: No local camera track found after enabling`);
+                }
+            } catch (cameraError: any) {
+                console.error(`[HumanVideoCall][${participantId}] Camera error (continuing anyway):`, cameraError.message || cameraError);
+                // Even if local camera fails, we can still receive and display remote video
+                Alert.alert(
+                    'Error de cámara',
+                    'No se pudo activar tu cámara, pero puedes continuar viendo y escuchando al otro participante.',
+                    [{ text: 'Entendido' }]
+                );
+            }
         }).catch(err => {
             console.error("[HumanVideoCall] Connection error:", err);
         });
@@ -182,18 +282,61 @@ export default function HumanVideoCall({
 
     // Switch between front and back camera
     const handleSwitchCamera = async () => {
-        if (!room || isCameraOff) return;
+        if (!room || isCameraOff || isSwitchingCamera) return;
+
+        const participantId = room.localParticipant?.identity || 'unknown';
+        setIsSwitchingCamera(true);
+
         try {
+            console.log(`[HumanVideoCall][${participantId}] ========== SWITCH CAMERA TRIGGERED ==========`);
+            console.log(`[HumanVideoCall][${participantId}] Current isFrontCamera:`, isFrontCamera);
             const newFacingMode = isFrontCamera ? 'environment' : 'user';
-            // Re-enable camera with new facing mode
-            await room.localParticipant.setCameraEnabled(false);
-            await room.localParticipant.setCameraEnabled(true, {
-                facingMode: newFacingMode
+
+            // Get current video track
+            const videoPublication = room.localParticipant.getTrackPublication(Track.Source.Camera);
+
+            // Create new track with different facingMode and republish
+            console.log(`[HumanVideoCall][${participantId}] Creating new video track with facingMode:`, newFacingMode);
+
+            // Unpublish current video track first
+            if (videoPublication?.track) {
+                await room.localParticipant.unpublishTrack(videoPublication.track);
+                console.log(`[HumanVideoCall][${participantId}] Unpublished current video track`);
+            }
+
+            // Wait a moment for cleanup
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // Create new track with opposite facingMode
+            const newTrack = await createLocalVideoTrack({
+                facingMode: newFacingMode,
+                resolution: { width: 640, height: 480 },
             });
+
+            // Publish the new track
+            await room.localParticipant.publishTrack(newTrack, {
+                source: Track.Source.Camera,
+            });
+
+            // Update local video state and force re-render for remote viewers
+            setLocalVideoTrack(newTrack);
             setIsFrontCamera(!isFrontCamera);
-            console.log("[HumanVideoCall] Switched to", newFacingMode, "camera");
+            setTrackUpdateCounter(prev => prev + 1);
+            console.log(`[HumanVideoCall][${participantId}] Switched to ${newFacingMode} camera successfully`);
+            console.log(`[HumanVideoCall][${participantId}] ========== SWITCH CAMERA COMPLETE ==========`);
+
         } catch (error) {
-            console.error("[HumanVideoCall] Error switching camera:", error);
+            console.error(`[HumanVideoCall][${participantId}] Error switching camera:`, error);
+
+            // Fallback: try re-enabling camera if switching failed
+            try {
+                console.log(`[HumanVideoCall][${participantId}] Fallback: re-enabling camera...`);
+                await room.localParticipant.setCameraEnabled(true);
+            } catch (fallbackError) {
+                console.error(`[HumanVideoCall][${participantId}] Fallback also failed:`, fallbackError);
+            }
+        } finally {
+            setIsSwitchingCamera(false);
         }
     };
 
@@ -208,13 +351,15 @@ export default function HumanVideoCall({
 
     return (
         <View style={[styles.container, style]}>
-            {/* Remote video (professional) */}
+            {/* Remote video (the other person) */}
             <View style={styles.remoteVideoContainer}>
                 {remoteVideoTrack ? (
                     <VideoView
+                        key={`remote-${remoteVideoTrack.sid || 'default'}-${trackUpdateCounter}`}
                         videoTrack={remoteVideoTrack}
                         style={styles.remoteVideo}
                         objectFit="cover"
+                        zOrder={0}
                     />
                 ) : (
                     <View style={styles.waitingContainer}>
@@ -229,14 +374,16 @@ export default function HumanVideoCall({
                 <View style={styles.goldBorder} pointerEvents="none" />
             </View>
 
-            {/* Local video PiP */}
+            {/* Local video PiP (your own camera) */}
             {localVideoTrack && !isCameraOff && (
                 <View style={styles.localVideoContainer}>
                     <VideoView
+                        key={`local-${localVideoTrack.sid || 'default'}-${isFrontCamera ? 'front' : 'back'}-${trackUpdateCounter}`}
                         videoTrack={localVideoTrack}
                         style={styles.localVideo}
                         objectFit="cover"
-                        mirror={true}
+                        mirror={isFrontCamera}
+                        zOrder={1}
                     />
                 </View>
             )}
@@ -301,8 +448,8 @@ export default function HumanVideoCall({
 
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
         width: "100%",
-        aspectRatio: 4 / 3,
         backgroundColor: COLORS.backgroundDark,
         borderRadius: 16,
         overflow: "hidden",
@@ -314,6 +461,8 @@ const styles = StyleSheet.create({
     },
     remoteVideo: {
         flex: 1,
+        width: '100%',
+        height: '100%',
     },
     goldBorder: {
         position: "absolute",
@@ -345,9 +494,12 @@ const styles = StyleSheet.create({
         overflow: "hidden",
         borderWidth: 2,
         borderColor: COLORS.textMain,
+        backgroundColor: "#1a1a1a", // Fallback background
     },
     localVideo: {
         flex: 1,
+        width: '100%',
+        height: '100%',
     },
     liveBadge: {
         position: "absolute",

@@ -24,9 +24,7 @@ import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAss
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
-import HumanVideoCall from "../../components/HumanVideoCall";
 import { WebView } from "react-native-webview";
-import { getVideoCallToken } from "../../api/videoCall";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -189,11 +187,7 @@ const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string
 
 export default function AvatarChatScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
-    const params = useLocalSearchParams();
 
-    // Video call params (when navigating from incoming-call)
-    const isVideoCallMode = params.videoCall === "true";
-    const videoCallChatId = params.chatId as string | undefined;
 
     const { token, user: currentUser } = useAuth();
     const { subscribeToMessages } = useIncomingCall();
@@ -235,11 +229,10 @@ export default function AvatarChatScreen() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
 
-    // Human Video Call State (when in live call with real professional)
-    const [isHumanSession, setIsHumanSession] = useState(isVideoCallMode);
-    const [humanCallLivekitUrl, setHumanCallLivekitUrl] = useState<string | null>(null);
-    const [humanCallToken, setHumanCallToken] = useState<string | null>(null);
-    const [humanCallConnected, setHumanCallConnected] = useState(false);
+    // Human video calls are now handled by dedicated client-video-call screen
+    // This constant maintains compatibility with existing render conditions
+    const isHumanSession = false;
+
 
     // Escalation state
     const [escalationStatus, setEscalationStatus] = useState<'none' | 'pending' | 'accepted' | 'declined'>('none');
@@ -667,31 +660,10 @@ export default function AvatarChatScreen() {
         }
     }, [professional, token, currentUser?._id, professionalId, isPrivateMode, currentChatId]);
 
-    // Initialize human video call when in video call mode
-    useEffect(() => {
-        const initHumanVideoCall = async () => {
-            if (!isVideoCallMode || !videoCallChatId || !token) return;
 
-            console.log('[AvatarChat] Initializing human video call for chat:', videoCallChatId);
-
-            try {
-                const callData = await getVideoCallToken(token, videoCallChatId);
-                console.log('[AvatarChat] Got video call token, connecting to:', callData.livekitUrl);
-
-                setHumanCallLivekitUrl(callData.livekitUrl);
-                setHumanCallToken(callData.token ?? null);
-                setIsHumanSession(true);
-            } catch (error) {
-                console.error('[AvatarChat] Error getting video call token:', error);
-                setIsHumanSession(false);
-            }
-        };
-
-        initHumanVideoCall();
-    }, [isVideoCallMode, videoCallChatId, token]);
-
-    // Initialize LiveAvatar session when professional is loaded (skip if in human session)
+    // Initialize LiveAvatar session when professional is loaded
     const initializeLiveAvatarSession = useCallback(async () => {
+
         // Skip if twin is globally disabled or session expired for this user
         if (!professional?.digitalTwin?.isActive || isSessionExpired) {
             console.log("Digital twin not active or session expired, skipping session initialization");
@@ -1396,26 +1368,9 @@ export default function AvatarChatScreen() {
                             </View>
                         )}
 
-                        {/* Human Video Call when in live session with professional */}
-                        {isHumanSession && humanCallLivekitUrl && humanCallToken ? (
-                            <HumanVideoCall
-                                livekitUrl={humanCallLivekitUrl}
-                                token={humanCallToken}
-                                style={styles.videoImage}
-                                onConnectionChange={(connected) => {
-                                    console.log('[HumanCall] Connection:', connected);
-                                    setHumanCallConnected(connected);
-                                }}
-                                onDisconnect={() => {
-                                    console.log('[HumanCall] Disconnected, returning to AI mode');
-                                    setIsHumanSession(false);
-                                    setHumanCallLivekitUrl(null);
-                                    setHumanCallToken(null);
-                                    setHumanCallConnected(false);
-                                }}
-                            />
-                        ) : sessionStatus === 'active' && livekitUrl && livekitToken ? (
-                            /* LiveKit AI Avatar when session is active */
+
+                        {/* LiveKit AI Avatar when session is active */}
+                        {sessionStatus === 'active' && livekitUrl && livekitToken ? (
                             <LiveAvatarVideo
                                 livekitUrl={livekitUrl}
                                 livekitToken={livekitToken}
@@ -1517,15 +1472,16 @@ export default function AvatarChatScreen() {
                             </View>
                         )}
 
-                        {/* Session Status Overlay */}
-                        {sessionStatus === 'connecting' && !isVideoMinimized && (
+                        {/* Session Status Overlay - only for digital twin sessions */}
+                        {sessionStatus === 'connecting' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionOverlay}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
                                 <Text style={styles.sessionOverlayText}>Conectando con el avatar...</Text>
                             </View>
                         )}
 
-                        {sessionStatus === 'active' && !isVideoMinimized && (
+                        {/* EN VIVO badge - only for digital twin sessions (HumanVideoCall has its own) */}
+                        {sessionStatus === 'active' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionBadge}>
                                 <View style={styles.sessionBadgeDot} />
                                 <Text style={styles.sessionBadgeText}>EN VIVO</Text>
@@ -1543,11 +1499,12 @@ export default function AvatarChatScreen() {
 
                             // Show countdown when:
                             // - Video is not minimized
+                            // - Not in human session
                             // - Twin is not disabled
                             // - Session is not expired
                             // - sessionLimit > 0 (limit is configured)
                             // - EITHER sessionLimit <= 2 (small limit, always show) OR remainingMinutes <= 2
-                            const showWarning = !isVideoMinimized && !isTwinDisabled && !isSessionExpired && sessionLimit > 0 && displayMinutes > 0 && (
+                            const showWarning = !isVideoMinimized && !isHumanSession && !isTwinDisabled && !isSessionExpired && sessionLimit > 0 && displayMinutes > 0 && (
                                 sessionLimit <= 2 || (remainingMinutes !== null && remainingMinutes <= 2)
                             );
 
@@ -1561,7 +1518,8 @@ export default function AvatarChatScreen() {
                             ) : null;
                         })()}
 
-                        {sessionStatus === 'error' && !isVideoMinimized && (
+                        {/* Session error - only for digital twin sessions */}
+                        {sessionStatus === 'error' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionOverlay}>
                                 <MaterialIcons name="error-outline" size={48} color={COLORS.gray400} />
                                 <Text style={styles.sessionOverlayText}>{sessionError || 'Error de conexión'}</Text>
@@ -1630,11 +1588,11 @@ export default function AvatarChatScreen() {
                         )}
 
 
-                        {/* Reduced gradient - only at bottom near buttons, hidden when twin is disabled or session expired */}
-                        {!isTwinEffectivelyDisabled && <View style={styles.videoGradient} />}
+                        {/* Reduced gradient - only at bottom near buttons, hidden when twin is disabled, session expired, or in human video call */}
+                        {!isTwinEffectivelyDisabled && !isHumanSession && <View style={styles.videoGradient} />}
 
-                        {/* Mute Button - hidden when twin is disabled or session expired */}
-                        {!isVideoMinimized && !isTwinEffectivelyDisabled && (
+                        {/* Mute Button - hidden when twin is disabled, session expired, or in human video call */}
+                        {!isVideoMinimized && !isTwinEffectivelyDisabled && !isHumanSession && (
                             <TouchableOpacity
                                 style={styles.muteButton}
                                 onPress={() => setIsMuted(!isMuted)}
@@ -1682,8 +1640,8 @@ export default function AvatarChatScreen() {
                             </View>
                         )}
 
-                        {/* Action Buttons - hidden when twin is disabled/expired and overlay is showing */}
-                        {!(isTwinEffectivelyDisabled && showPersonalAttentionOverlay) && (
+                        {/* Action Buttons - hidden when twin is disabled/expired and overlay is showing, or in human video call */}
+                        {!(isTwinEffectivelyDisabled && showPersonalAttentionOverlay) && !isHumanSession && (
                             <View style={styles.videoActions}>
                                 <TouchableOpacity
                                     style={[
@@ -1736,8 +1694,8 @@ export default function AvatarChatScreen() {
                             </View>
                         )}
 
-                        {/* Toggle Size Button - hidden when twin is disabled or session expired */}
-                        {!isTwinEffectivelyDisabled && (
+                        {/* Toggle Size Button - hidden when twin is disabled, session expired, or in human video call */}
+                        {!isTwinEffectivelyDisabled && !isHumanSession && (
                             <TouchableOpacity
                                 style={styles.toggleSizeButton}
                                 onPress={toggleVideoSize}

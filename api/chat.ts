@@ -128,6 +128,38 @@ export async function deleteChat(token: string, chatId: string): Promise<void> {
     }
 }
 
+// Send a text message in a chat
+export interface SendMessageOptions {
+    isFromBot?: boolean;
+    isFromVideoCall?: boolean;
+}
+
+export async function sendMessage(
+    token: string,
+    chatId: string,
+    message: string,
+    options: SendMessageOptions = {}
+): Promise<void> {
+    const response = await fetch(`${API_URL}/chat/message`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            chat_id: chatId,
+            message,
+            isFromBot: options.isFromBot || false,
+            isFromVideoCall: options.isFromVideoCall || false,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al enviar mensaje");
+    }
+}
+
 // Interface for avatar conversation history
 export interface AvatarConversation {
     _id: string;

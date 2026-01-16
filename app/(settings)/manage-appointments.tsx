@@ -884,7 +884,12 @@ export default function ManageAppointmentsScreen() {
                             </View>
 
                             {upcomingAppointmentsPreview.map(apt => (
-                                <View key={apt._id} style={styles.upcomingPreviewCard}>
+                                <TouchableOpacity
+                                    key={apt._id}
+                                    style={styles.upcomingPreviewCard}
+                                    onPress={() => setActiveTab("upcoming")}
+                                    activeOpacity={0.7}
+                                >
                                     <View style={styles.upcomingPreviewDate}>
                                         <Text style={styles.upcomingPreviewDay}>
                                             {new Date(apt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()}
@@ -912,13 +917,10 @@ export default function ManageAppointmentsScreen() {
                                             </Text>
                                         </View>
                                     </View>
-                                    <TouchableOpacity
-                                        style={styles.upcomingPreviewAction}
-                                        onPress={() => handleViewDetails(apt._id)}
-                                    >
+                                    <View style={styles.upcomingPreviewAction}>
                                         <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
-                                    </TouchableOpacity>
-                                </View>
+                                    </View>
+                                </TouchableOpacity>
                             ))}
                         </View>
                     )}

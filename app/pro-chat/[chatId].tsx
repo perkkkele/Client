@@ -92,8 +92,17 @@ export default function ProChatScreen() {
 
         try {
             const chat = await getChat(token, chatId);
-            const client = chat.participant_one as any;
-            if (client) {
+
+            // Determine which participant is the client (not the current professional)
+            const p1 = chat.participant_one as any;
+            const p2 = chat.participant_two as any;
+            const p1Id = typeof p1 === 'string' ? p1 : p1?._id;
+            const p2Id = typeof p2 === 'string' ? p2 : p2?._id;
+
+            // Client is the participant that is NOT the current user (professional)
+            const client = (p1Id === user?._id) ? p2 : p1;
+
+            if (client && typeof client === 'object') {
                 const name = client.firstname && client.lastname
                     ? `${client.firstname} ${client.lastname}`
                     : client.firstname || client.email?.split('@')[0] || 'Cliente';
@@ -177,11 +186,17 @@ export default function ProChatScreen() {
     const { subscribeToMessages } = useIncomingCall();
 
     useEffect(() => {
-        if (!chatId || !subscribeToMessages) return;
+        if (!chatId || !subscribeToMessages) {
+            console.log('[ProChat] Cannot subscribe - chatId:', chatId, 'subscribeToMessages:', !!subscribeToMessages);
+            return;
+        }
+
+        console.log('[ProChat] Subscribing to messages for chat:', chatId);
 
         const unsubscribe = subscribeToMessages(chatId, (data) => {
+            console.log('[ProChat] Received socket message:', JSON.stringify(data));
             // Add new messages from client or twin (not from pro)
-            if (!data.message.isFromProfessional) {
+            if (!data.message?.isFromProfessional) {
                 const newMsg: ChatMessage = {
                     _id: data.message._id,
                     chat: data.message.chat,
@@ -193,8 +208,18 @@ export default function ProChatScreen() {
                     createdAt: data.message.createdAt,
                     updatedAt: data.message.updatedAt,
                 };
-                setMessages(prev => [...prev, newMsg]);
-                console.log('[ProChat] Added client/twin message via socket');
+                // Check for duplicates before adding
+                setMessages(prev => {
+                    const exists = prev.some(m => m._id === newMsg._id);
+                    if (exists) {
+                        console.log('[ProChat] Skipping duplicate message');
+                        return prev;
+                    }
+                    console.log('[ProChat] Added client/twin message via socket');
+                    return [...prev, newMsg];
+                });
+            } else {
+                console.log('[ProChat] Skipping own message (isFromProfessional: true)');
             }
         });
 

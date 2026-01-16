@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { getAssetUrl } from "../../api";
 
 const COLORS = {
     backgroundDark: "#0a0f14",
@@ -90,13 +91,13 @@ export default function IncomingCallScreen() {
         setIsAnswering(true);
         Vibration.cancel();
 
-        // Navigate to avatar-chat with video call mode
-        // callerId is the professional's ID
+        // Navigate to dedicated client video call screen
         router.replace({
-            pathname: `/avatar-chat/${callerId}`,
+            pathname: `/client-video-call/${chatId}`,
             params: {
-                videoCall: "true",
-                chatId: chatId,
+                professionalId: callerId,
+                professionalName: callerName,
+                professionalAvatar: callerAvatar,
             },
         } as any);
     };
@@ -125,7 +126,7 @@ export default function IncomingCallScreen() {
                 <Animated.View style={[styles.avatarContainer, { transform: [{ scale: pulseAnim }] }]}>
                     <View style={styles.avatarRing}>
                         {callerAvatar ? (
-                            <Image source={{ uri: callerAvatar }} style={styles.avatar} />
+                            <Image source={{ uri: getAssetUrl(callerAvatar) || undefined }} style={styles.avatar} />
                         ) : (
                             <View style={styles.avatarPlaceholder}>
                                 <Text style={styles.avatarInitial}>
