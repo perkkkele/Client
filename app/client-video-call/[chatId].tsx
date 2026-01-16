@@ -19,6 +19,8 @@ import {
     Platform,
     Dimensions,
     Animated,
+    Alert,
+    Linking,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -42,6 +44,8 @@ const COLORS = {
     gray200: "#E5E7EB",
     gray300: "#D1D5DB",
     gray400: "#9CA3AF",
+    gray500: "#6B7280",
+    gray600: "#4B5563",
     gold400: "#FBBF24",
     gold500: "#F59E0B",
     green500: "#22C55E",
@@ -60,6 +64,16 @@ interface Message {
     isFromProfessional?: boolean;
     isFromVideoCall?: boolean;
     timestamp: string;
+}
+
+// Conversation thread for drawer
+interface ConversationThread {
+    id: string;
+    title: string;
+    preview: string;
+    date: string;
+    isVideoCall: boolean;
+    isActive?: boolean;
 }
 
 export default function ClientVideoCallScreen() {
@@ -97,6 +111,61 @@ export default function ClientVideoCallScreen() {
     // Drawer state
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const drawerAnim = useRef(new Animated.Value(-SCREEN_WIDTH * 0.8)).current;
+    const [conversationThreads, setConversationThreads] = useState<ConversationThread[]>([]);
+    const [loadingThreads, setLoadingThreads] = useState(false);
+    const [drawerSearchText, setDrawerSearchText] = useState("");
+    const [isMuted, setIsMuted] = useState(false);
+    const [isHistoryVisible, setIsHistoryVisible] = useState(true);
+
+    // Load conversation history for drawer
+    const loadConversationThreads = useCallback(async () => {
+        if (!token || !professionalId) return;
+
+        setLoadingThreads(true);
+        try {
+            const conversations = await chatApi.getAvatarChats(token, professionalId);
+
+            const threads: ConversationThread[] = conversations.map((conv: any) => ({
+                id: conv._id,
+                title: conv.title || "Conversación",
+                preview: conv.preview || conv.lastMessage || "",
+                date: new Date(conv.lastMessageDate || conv.updatedAt).toLocaleDateString('es-ES', {
+                    day: 'numeric',
+                    month: 'short'
+                }),
+                isVideoCall: false, // Twin conversations
+                isActive: conv._id === chatId,
+            }));
+
+            // Add current video call as active thread if not already in list
+            const currentExists = threads.some(t => t.id === chatId);
+            if (!currentExists && chatId) {
+                threads.unshift({
+                    id: chatId,
+                    title: "Videollamada en curso",
+                    preview: messages.length > 0 ? messages[messages.length - 1].content || "" : "Videollamada activa",
+                    date: "Ahora",
+                    isVideoCall: true,
+                    isActive: true,
+                });
+            } else {
+                // Mark all threads as video call if they have video call messages
+                // For now, mark the current chat as video call
+                const activeThread = threads.find(t => t.id === chatId);
+                if (activeThread) {
+                    activeThread.isVideoCall = true;
+                    activeThread.isActive = true;
+                    activeThread.title = "Videollamada actual";
+                }
+            }
+
+            setConversationThreads(threads);
+        } catch (error) {
+            console.error('[ClientVideoCall] Error loading threads:', error);
+        } finally {
+            setLoadingThreads(false);
+        }
+    }, [token, professionalId, chatId, messages]);
 
     // Fetch video call token on mount
     useEffect(() => {
@@ -219,13 +288,14 @@ export default function ClientVideoCallScreen() {
     // Drawer functions
     const openDrawer = useCallback(() => {
         setIsDrawerOpen(true);
+        loadConversationThreads(); // Load threads when opening
         Animated.spring(drawerAnim, {
             toValue: 0,
             useNativeDriver: true,
             tension: 65,
             friction: 11,
         }).start();
-    }, [drawerAnim]);
+    }, [drawerAnim, loadConversationThreads]);
 
     const closeDrawer = useCallback(() => {
         Animated.spring(drawerAnim, {
@@ -235,6 +305,80 @@ export default function ClientVideoCallScreen() {
             friction: 11,
         }).start(() => setIsDrawerOpen(false));
     }, [drawerAnim]);
+
+    // Drawer footer handlers
+    const handleReportProblem = useCallback(() => {
+        const email = "soporte@twinpro.app";
+        const subject = encodeURIComponent("Problema en videollamada");
+        const body = encodeURIComponent(`Chat ID: ${chatId}\nDescribe el problema:\n\n`);
+        Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`);
+    }, [chatId]);
+
+    const handleToggleMute = useCallback(() => {
+        setIsMuted(prev => !prev);
+        // TODO: Persist mute state to server if needed
+    }, []);
+
+    const handleToggleHistory = useCallback(() => {
+        setIsHistoryVisible(prev => !prev);
+        // TODO: Persist history visibility to server if needed
+    }, []);
+
+    const handleClearAllHistory = useCallback(() => {
+        Alert.alert(
+            "Borrar historial",
+            "¿Estás seguro de que quieres borrar todo el historial de videollamadas con este profesional? Esta acción no se puede deshacer.",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Borrar",
+                    style: "destructive",
+                    onPress: async () => {
+                        // Delete all video call threads
+                        if (!token) return;
+                        try {
+                            const videoCallThreads = conversationThreads.filter(t => t.isVideoCall);
+                            for (const thread of videoCallThreads) {
+                                await chatApi.deleteChat(token, thread.id);
+                            }
+                            // Clear local state and close drawer
+                            setConversationThreads([]);
+                            closeDrawer();
+                            Alert.alert("Historial borrado", "Se ha eliminado todo el historial de videollamadas.");
+                        } catch (error) {
+                            console.error("[ClientVideoCall] Error deleting history:", error);
+                            Alert.alert("Error", "No se pudo borrar el historial. Inténtalo de nuevo.");
+                        }
+                    }
+                }
+            ]
+        );
+    }, [token, conversationThreads, closeDrawer]);
+
+    const handleDeleteThread = useCallback((threadId: string, threadTitle: string) => {
+        Alert.alert(
+            "Borrar conversación",
+            `¿Estás seguro de que quieres borrar "${threadTitle}"?`,
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Borrar",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            await chatApi.deleteChat(token, threadId);
+                            // Remove from local state
+                            setConversationThreads(prev => prev.filter(t => t.id !== threadId));
+                        } catch (error) {
+                            console.error("[ClientVideoCall] Error deleting thread:", error);
+                            Alert.alert("Error", "No se pudo borrar la conversación.");
+                        }
+                    }
+                }
+            ]
+        );
+    }, [token]);
 
     // Avatar URL helper
     const avatarUrl = professionalAvatar ? getAssetUrl(professionalAvatar) : null;
@@ -497,34 +641,160 @@ export default function ClientVideoCallScreen() {
                 </View>
             </SafeAreaView>
 
-            {/* Drawer Overlay */}
+            {/* Conversations Drawer */}
             {isDrawerOpen && (
-                <TouchableOpacity
-                    style={styles.drawerOverlay}
-                    activeOpacity={1}
-                    onPress={closeDrawer}
-                />
-            )}
+                <>
+                    {/* Drawer Overlay */}
+                    <TouchableOpacity
+                        style={styles.drawerOverlay}
+                        activeOpacity={1}
+                        onPress={closeDrawer}
+                    />
+                    {/* Drawer Panel */}
+                    <Animated.View
+                        style={[
+                            styles.drawer,
+                            { transform: [{ translateX: drawerAnim }] }
+                        ]}
+                    >
+                        {/* Drawer Header */}
+                        <View style={styles.drawerHeader}>
+                            <Text style={styles.drawerTitle}>Videollamadas</Text>
+                            <TouchableOpacity
+                                style={styles.drawerCloseButton}
+                                onPress={closeDrawer}
+                            >
+                                <MaterialIcons name="close" size={24} color={COLORS.gray400} />
+                            </TouchableOpacity>
+                        </View>
 
-            {/* Drawer */}
-            <Animated.View
-                style={[
-                    styles.drawer,
-                    { transform: [{ translateX: drawerAnim }] },
-                ]}
-            >
-                <View style={styles.drawerHeader}>
-                    <Text style={styles.drawerTitle}>Historial</Text>
-                    <TouchableOpacity onPress={closeDrawer}>
-                        <MaterialIcons name="close" size={24} color={COLORS.textMain} />
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.drawerContent}>
-                    <Text style={styles.drawerEmptyText}>
-                        El historial de conversaciones estará disponible aquí
-                    </Text>
-                </View>
-            </Animated.View>
+                        {/* Search Input */}
+                        <View style={styles.drawerSearchContainer}>
+                            <View style={styles.drawerSearchInputWrapper}>
+                                <MaterialIcons name="search" size={20} color={COLORS.gray400} />
+                                <TextInput
+                                    style={styles.drawerSearchInput}
+                                    placeholder="Buscar videollamadas..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={drawerSearchText}
+                                    onChangeText={setDrawerSearchText}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Conversations List */}
+                        <ScrollView
+                            style={styles.drawerConversationsList}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ flexGrow: 1 }}
+                        >
+                            {/* Debug info */}
+                            <Text style={{ color: COLORS.gray400, fontSize: 10, textAlign: 'center', marginBottom: 8 }}>
+                                {loadingThreads ? 'Cargando...' : `${conversationThreads.filter(t => t.isVideoCall).length} videollamadas encontradas`}
+                            </Text>
+
+                            {loadingThreads ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>Cargando historial...</Text>
+                                </View>
+                            ) : conversationThreads.filter(t => t.isVideoCall).length === 0 ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                    <MaterialIcons name="videocam-off" size={48} color={COLORS.gray300} />
+                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>Sin videollamadas</Text>
+                                    <Text style={{ color: COLORS.gray400, marginTop: 4, fontSize: 12, textAlign: 'center' }}>
+                                        Tu historial de videollamadas aparecerá aquí
+                                    </Text>
+                                </View>
+                            ) : (
+                                conversationThreads
+                                    .filter(t => t.isVideoCall)
+                                    .filter(t =>
+                                        t.title.toLowerCase().includes(drawerSearchText.toLowerCase()) ||
+                                        t.preview.toLowerCase().includes(drawerSearchText.toLowerCase())
+                                    )
+                                    .map((thread) => {
+                                        const isConvActive = thread.isActive;
+                                        return (
+                                            <TouchableOpacity
+                                                key={thread.id}
+                                                style={[
+                                                    styles.drawerConversationItem,
+                                                    isConvActive && styles.drawerConversationItemActive
+                                                ]}
+                                                onPress={() => {
+                                                    closeDrawer();
+                                                    if (isConvActive) return;
+                                                    router.replace({
+                                                        pathname: "/client-video-call/[chatId]",
+                                                        params: {
+                                                            chatId: thread.id,
+                                                            professionalId,
+                                                            professionalName,
+                                                            professionalAvatar,
+                                                        },
+                                                    });
+                                                }}
+                                            >
+                                                <View style={styles.drawerConversationHeader}>
+                                                    <Text style={[
+                                                        styles.drawerConversationDate,
+                                                        isConvActive && styles.drawerConversationDateActive
+                                                    ]}>
+                                                        {thread.date}
+                                                    </Text>
+                                                </View>
+                                                <Text style={[
+                                                    styles.drawerConversationTitle,
+                                                    isConvActive && styles.drawerConversationTitleActive
+                                                ]} numberOfLines={1}>
+                                                    {thread.title}
+                                                </Text>
+                                                <Text style={styles.drawerConversationPreview} numberOfLines={2}>
+                                                    {thread.preview || "Sin mensajes"}
+                                                </Text>
+                                                {isConvActive && (
+                                                    <View style={styles.drawerConversationArrow}>
+                                                        <MaterialIcons name="arrow-forward-ios" size={16} color={COLORS.primary} />
+                                                    </View>
+                                                )}
+                                                {/* Delete button for each thread */}
+                                                <TouchableOpacity
+                                                    style={styles.drawerDeleteButton}
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteThread(thread.id, thread.title);
+                                                    }}
+                                                >
+                                                    <MaterialIcons name="delete" size={18} color={COLORS.gray400} />
+                                                </TouchableOpacity>
+                                            </TouchableOpacity>
+                                        );
+                                    })
+                            )}
+
+                            {/* Spacer to push footer to bottom */}
+                            <View style={{ flex: 1, minHeight: 20 }} />
+
+                            {/* Drawer Footer - At bottom */}
+                            <View style={[styles.drawerFooter, { marginTop: 16 }]}>
+                                <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
+                                    <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
+                                    <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
+                                </TouchableOpacity>
+                                <View style={styles.drawerDivider} />
+                                <TouchableOpacity style={styles.drawerDeleteAllButton} onPress={handleClearAllHistory}>
+                                    <MaterialIcons name="delete-sweep" size={18} color="#EF4444" />
+                                    <Text style={styles.drawerDeleteAllText}>Borrar todo el historial</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Safe area padding for bottom navigation */}
+                            <View style={{ height: 40 }} />
+                        </ScrollView>
+                    </Animated.View>
+                </>
+            )}
         </KeyboardAvoidingView>
     );
 }
@@ -949,6 +1219,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 10,
         elevation: 10,
+        // Flex layout for header, content, footer
+        flexDirection: "column",
     },
     drawerHeader: {
         flexDirection: "row",
@@ -966,13 +1238,266 @@ const styles = StyleSheet.create({
     },
     drawerContent: {
         flex: 1,
-        padding: 20,
-        alignItems: "center",
-        justifyContent: "center",
+        padding: 16,
     },
     drawerEmptyText: {
         fontSize: 14,
         color: COLORS.textMuted,
         textAlign: "center",
+    },
+    drawerLoadingContainer: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 40,
+    },
+    drawerLoadingText: {
+        marginTop: 12,
+        fontSize: 14,
+        color: COLORS.textMuted,
+    },
+    threadItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 8,
+        backgroundColor: COLORS.gray50,
+    },
+    threadItemActive: {
+        backgroundColor: COLORS.primary + "20",
+        borderWidth: 1,
+        borderColor: COLORS.gold400,
+    },
+    threadIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.white,
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: 12,
+    },
+    threadContent: {
+        flex: 1,
+    },
+    threadHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
+    },
+    threadTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        flex: 1,
+    },
+    threadTitleActive: {
+        color: COLORS.gold500,
+    },
+    threadDate: {
+        fontSize: 12,
+        color: COLORS.textMuted,
+        marginLeft: 8,
+    },
+    threadPreview: {
+        fontSize: 13,
+        color: COLORS.textMuted,
+    },
+    threadActiveBadge: {
+        backgroundColor: COLORS.gold500,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 10,
+        marginLeft: 8,
+    },
+    threadActiveBadgeText: {
+        fontSize: 10,
+        fontWeight: "600",
+        color: COLORS.white,
+    },
+    // Avatar-chat drawer styles
+    drawerCloseButton: {
+        padding: 8,
+        marginRight: -8,
+    },
+    drawerConversationsList: {
+        flex: 1,
+        paddingHorizontal: 16,
+    },
+    drawerConversationItem: {
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 8,
+        position: "relative",
+    },
+    drawerConversationItemActive: {
+        backgroundColor: COLORS.white,
+        borderLeftWidth: 4,
+        borderLeftColor: COLORS.primary,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 1,
+    },
+    drawerConversationHeader: {
+        marginBottom: 4,
+    },
+    drawerConversationDate: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.gray400,
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        alignSelf: "flex-start",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        overflow: "hidden",
+    },
+    drawerConversationDateActive: {
+        backgroundColor: `${COLORS.primary}20`,
+        color: COLORS.primary,
+        fontWeight: "bold",
+    },
+    drawerConversationTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.gray600,
+        marginBottom: 4,
+    },
+    drawerConversationTitleActive: {
+        color: COLORS.textMain,
+        fontWeight: "bold",
+    },
+    drawerConversationPreview: {
+        fontSize: 12,
+        color: COLORS.gray500,
+        lineHeight: 18,
+    },
+    drawerConversationArrow: {
+        position: "absolute",
+        right: 16,
+        top: 16,
+    },
+    drawerDeleteButton: {
+        position: "absolute",
+        right: 8,
+        bottom: 8,
+        padding: 6,
+    },
+    // Search styles
+    drawerSearchContainer: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        gap: 12,
+    },
+    drawerSearchInputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        gap: 8,
+    },
+    drawerSearchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.textMain,
+        padding: 0,
+    },
+    // Footer styles
+    drawerFooter: {
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.gray200,
+        backgroundColor: `${COLORS.gray100}80`,
+    },
+    drawerFooterOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        gap: 12,
+    },
+    drawerFooterOptionText: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: COLORS.gray600,
+    },
+    drawerDivider: {
+        height: 1,
+        backgroundColor: COLORS.gray200,
+        marginVertical: 8,
+    },
+    drawerHistoryToggle: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.gray200,
+        marginBottom: 8,
+    },
+    drawerHistoryToggleLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    drawerHistoryIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: `${COLORS.primary}20`,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    drawerHistoryTitle: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+    },
+    drawerHistorySubtitle: {
+        fontSize: 10,
+        fontWeight: "500",
+        color: COLORS.gray500,
+    },
+    drawerHistoryToggleSwitch: {
+        width: 36,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: "#22C55E",
+        justifyContent: "center",
+        alignItems: "flex-end",
+        paddingHorizontal: 2,
+    },
+    drawerHistoryToggleDot: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: COLORS.white,
+    },
+    drawerDeleteAllButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 10,
+        gap: 8,
+    },
+    drawerDeleteAllText: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: "#EF4444",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
 });
