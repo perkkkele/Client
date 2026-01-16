@@ -58,7 +58,8 @@ export default function RegisterProScreen() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(true);
+    const [acceptAnalytics, setAcceptAnalytics] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -108,8 +109,8 @@ export default function RegisterProScreen() {
 
         setIsLoading(true);
         try {
-            // Primero registrar la cuenta como profesional (userpro)
-            await authApi.register(email, password, 'userpro');
+            // Primero registrar la cuenta como profesional (userpro) con preferencias de analítica
+            await authApi.register(email, password, 'userpro', acceptAnalytics);
 
             // Luego iniciar sesión automáticamente para obtener el token
             await login(email, password);
@@ -313,6 +314,23 @@ export default function RegisterProScreen() {
                                 >
                                     Política de Privacidad
                                 </Text>.
+                            </Text>
+                        </View>
+
+                        {/* Analytics consent checkbox (optional) */}
+                        <View style={styles.termsContainer}>
+                            <TouchableOpacity
+                                onPress={() => setAcceptAnalytics(!acceptAnalytics)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.checkbox, acceptAnalytics && styles.checkboxChecked]}>
+                                    {acceptAnalytics && (
+                                        <Ionicons name="checkmark" size={14} color={COLORS.backgroundDark} />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                            <Text style={styles.termsText}>
+                                Acepto el uso de tecnologías analíticas para mejorar el servicio.
                             </Text>
                         </View>
 

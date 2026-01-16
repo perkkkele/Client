@@ -431,8 +431,8 @@ export default function ProChatScreen() {
                             contentContainerStyle={styles.messagesContent}
                             showsVerticalScrollIndicator={false}
                         >
-                            {/* Spacer for header */}
-                            <View style={{ height: isInCall ? 16 : 80 }} />
+                            {/* Spacer for floating header */}
+                            <View style={{ height: isInCall ? 16 : 110 }} />
 
                             {groupedMessages.length === 0 ? (
                                 <View style={styles.emptyContainer}>

@@ -957,14 +957,15 @@ export default function AvatarChatScreen() {
         setInputText("");
 
         // Keyword detection for automatic escalation (disabled when twin is off - already direct attention)
+        const escalationKeywords = professional?.escalation?.keywords;
         if (professional?.escalation?.enabled &&
             professional?.escalation?.triggers?.keywords &&
-            professional?.escalation?.keywords?.length > 0 &&
+            escalationKeywords && escalationKeywords.length > 0 &&
             escalationStatus === 'none' &&
             !isHumanSession &&
             !isTwinEffectivelyDisabled) {
             const lowerMessage = messageText.toLowerCase();
-            const matchedKeyword = professional.escalation.keywords.find(
+            const matchedKeyword = escalationKeywords.find(
                 (keyword: string) => lowerMessage.includes(keyword.toLowerCase())
             );
             if (matchedKeyword) {

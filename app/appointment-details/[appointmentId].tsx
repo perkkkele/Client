@@ -455,7 +455,7 @@ export default function AppointmentDetailsScreen() {
                 )}
 
                 {/* Payment Status Badge - Show if authorized (pre-auth) */}
-                {appointment.paymentStatus === 'authorized' && (
+                {(appointment?.paymentStatus as any) === 'authorized' && (
                     <View style={styles.paidBadgeContainer}>
                         <View style={[styles.paidBadge, styles.authorizedBadge]}>
                             <MaterialIcons name="hourglass-top" size={20} color="#0369a1" />

@@ -159,11 +159,11 @@ export default function TwinScopeScreen() {
 
         setSaving(true);
         try {
-            await userApi.updateMe(token, {
+            await userApi.updateUser(token, {
                 digitalTwin: {
                     ...user?.digitalTwin,
-                    disclaimer: disclaimer.trim() || null,
-                },
+                    disclaimer: disclaimer.trim() || undefined,
+                } as any,
             });
             await refreshUser();
             setHasChanges(false);

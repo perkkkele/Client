@@ -104,11 +104,11 @@ function RootLayoutNav() {
         },
       } as any);
     } else if (data.type === "escalation" && data.chatId) {
-      console.log("[Notification] Navigating to escalated chat:", data.chatId);
-      router.push(`/pro-chat/${data.chatId}` as any);
+      console.log("[Notification] Navigating to Atención directa:", data.chatId);
+      router.push("/(settings)/pro-chats" as any);
     } else if (data.type === "direct_attention" && data.chatId) {
-      console.log("[Notification] Navigating to direct attention chat:", data.chatId);
-      router.push(`/pro-chat/${data.chatId}` as any);
+      console.log("[Notification] Navigating to Atención directa:", data.chatId);
+      router.push("/(settings)/pro-chats" as any);
     }
   };
 

@@ -34,7 +34,7 @@ export default function NotificationsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
             {/* Skip button */}
             <View style={styles.topBar}>
                 <View style={{ width: 48 }} />

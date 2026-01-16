@@ -87,6 +87,14 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#137fec"
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Permiso para guardar códigos QR en tu galería.",
+          "savePhotosPermission": "Permiso para guardar imágenes en tu galería.",
+          "isAccessMediaLocationEnabled": true
+        }
       ]
     ],
     "experiments": {

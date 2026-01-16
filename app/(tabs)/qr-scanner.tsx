@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context";
+import * as ImagePicker from "expo-image-picker";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -37,6 +38,10 @@ try {
 } catch (e) {
     console.log("expo-camera not available, using fallback");
 }
+
+// Note: Gallery QR scanning is temporarily disabled
+// expo-barcode-scanner was removed due to being deprecated and causing build failures
+// A future update will use jsQR or rn-qr-generator for this feature
 
 export default function QRScannerScreen() {
     const { user } = useAuth();
@@ -157,6 +162,17 @@ export default function QRScannerScreen() {
         setFlashOn(!flashOn);
     };
 
+    // Pick image from gallery and scan QR code
+    // NOTE: Gallery QR scanning is temporarily disabled
+    // expo-barcode-scanner was removed due to being deprecated and causing build failures
+    const pickImageFromGallery = async () => {
+        Alert.alert(
+            "Función Temporalmente Deshabilitada",
+            "El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.",
+            [{ text: "OK" }]
+        );
+    };
+
     // Si la cámara no está disponible (Expo Go sin development build)
     if (!hasCamera) {
         return (
@@ -227,7 +243,7 @@ export default function QRScannerScreen() {
                             <Text style={styles.actionLabel}>Linterna</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.actionButton}>
+                        <TouchableOpacity style={styles.actionButton} onPress={pickImageFromGallery}>
                             <View style={styles.actionIconContainer}>
                                 <MaterialIcons name="image" size={24} color={COLORS.white} />
                             </View>
@@ -350,7 +366,7 @@ export default function QRScannerScreen() {
                         <Text style={styles.actionLabel}>Linterna</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity style={styles.actionButton} onPress={pickImageFromGallery}>
                         <View style={styles.actionIconContainer}>
                             <MaterialIcons name="image" size={24} color={COLORS.white} />
                         </View>

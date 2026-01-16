@@ -211,7 +211,7 @@ export default function ProProfileScreen() {
                     publicName: publicName.trim(),
                     profession: profession.trim(),
                     businessName: businessName.trim() || undefined,
-                    businessType: businessType || undefined,
+                    businessType: (businessType || undefined) as 'Autónomo' | 'Empresa' | 'Clínica/Centro' | undefined,
                     category: category as any,
                     specialties: specialties,
                     bio: bio.trim() || undefined,

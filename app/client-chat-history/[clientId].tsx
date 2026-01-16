@@ -97,7 +97,7 @@ export default function ClientChatHistoryScreen() {
 
             // Get client info from first chat
             if (clientChats.length > 0) {
-                const client = clientChats[0].participants.find(p => p._id === clientId);
+                const client = clientChats[0].participants.find((p: any) => p._id === clientId);
                 if (client) {
                     setClientInfo({
                         firstname: client.firstname,

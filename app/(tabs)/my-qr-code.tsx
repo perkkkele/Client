@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
     ActivityIndicator,
+    Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
@@ -18,6 +19,8 @@ import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import ViewShot from "react-native-view-shot";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import * as MediaLibrary from "expo-media-library";
+import * as Print from "expo-print";
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
 
@@ -126,13 +129,100 @@ ${qrData}
     }
 
     async function handleDownload() {
-        // TODO: Implementar descarga de imagen QR
-        console.log("Guardar QR");
+        try {
+            // Request media library permissions
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert(
+                    "Permiso Requerido",
+                    "Necesitamos acceso a tu galería para guardar el código QR."
+                );
+                return;
+            }
+
+            if (!viewShotRef.current) {
+                Alert.alert("Error", "No se pudo capturar la imagen");
+                return;
+            }
+
+            // Capture the QR card as image
+            const uri = await (viewShotRef.current as any).capture();
+
+            // Save to media library
+            const asset = await MediaLibrary.createAssetAsync(uri);
+            await MediaLibrary.createAlbumAsync("TwinPro", asset, false);
+
+            Alert.alert(
+                "¡Guardado!",
+                "Tu código QR se ha guardado en la galería (álbum TwinPro)"
+            );
+        } catch (error) {
+            console.error("Error saving QR:", error);
+            Alert.alert("Error", "No se pudo guardar el código QR");
+        }
     }
 
     async function handlePrint() {
-        // TODO: Implementar impresión
-        console.log("Imprimir QR");
+        try {
+            if (!viewShotRef.current) {
+                Alert.alert("Error", "No se pudo capturar la imagen para imprimir");
+                return;
+            }
+
+            // Capture the QR card as image
+            const uri = await (viewShotRef.current as any).capture();
+
+            // Read the image as base64
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: 'base64',
+            });
+
+            // Create HTML with the QR image for printing
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body {
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            margin: 0;
+                            padding: 20px;
+                            box-sizing: border-box;
+                        }
+                        img {
+                            max-width: 100%;
+                            height: auto;
+                        }
+                        .container {
+                            text-align: center;
+                        }
+                        .title {
+                            font-family: Arial, sans-serif;
+                            font-size: 24px;
+                            margin-bottom: 20px;
+                            color: #181811;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1 class="title">Mi Código QR - TwinPro</h1>
+                        <img src="data:image/png;base64,${base64}" />
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // Open print dialog
+            await Print.printAsync({ html });
+        } catch (error) {
+            console.error("Error printing QR:", error);
+            Alert.alert("Error", "No se pudo imprimir el código QR");
+        }
     }
 
     function handleRefresh() {

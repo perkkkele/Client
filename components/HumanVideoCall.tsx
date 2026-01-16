@@ -56,6 +56,7 @@ export default function HumanVideoCall({
     const [isConnected, setIsConnected] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [isCameraOff, setIsCameraOff] = useState(false);
+    const [isFrontCamera, setIsFrontCamera] = useState(true); // Front camera by default
     const [remoteVideoTrack, setRemoteVideoTrack] = useState<VideoTrack | null>(null);
     const [localVideoTrack, setLocalVideoTrack] = useState<VideoTrack | null>(null);
     const [callDuration, setCallDuration] = useState(0);
@@ -136,9 +137,11 @@ export default function HumanVideoCall({
         newRoom.on(RoomEvent.TrackUnsubscribed, handleTrackUnsubscribed);
         newRoom.on(RoomEvent.LocalTrackPublished, handleLocalTrackPublished);
 
-        // Connect and enable camera/mic
+        // Connect and enable camera/mic (front camera by default)
         newRoom.connect(livekitUrl, token).then(async () => {
-            await newRoom.localParticipant.setCameraEnabled(true);
+            await newRoom.localParticipant.setCameraEnabled(true, {
+                facingMode: 'user' // Front camera
+            });
             await newRoom.localParticipant.setMicrophoneEnabled(true);
         }).catch(err => {
             console.error("[HumanVideoCall] Connection error:", err);
@@ -169,12 +172,29 @@ export default function HumanVideoCall({
         setIsMuted(newMuted);
     };
 
-    // Toggle camera
+    // Toggle camera on/off
     const handleToggleCamera = async () => {
         if (!room) return;
         const newCameraOff = !isCameraOff;
         await room.localParticipant.setCameraEnabled(!newCameraOff);
         setIsCameraOff(newCameraOff);
+    };
+
+    // Switch between front and back camera
+    const handleSwitchCamera = async () => {
+        if (!room || isCameraOff) return;
+        try {
+            const newFacingMode = isFrontCamera ? 'environment' : 'user';
+            // Re-enable camera with new facing mode
+            await room.localParticipant.setCameraEnabled(false);
+            await room.localParticipant.setCameraEnabled(true, {
+                facingMode: newFacingMode
+            });
+            setIsFrontCamera(!isFrontCamera);
+            console.log("[HumanVideoCall] Switched to", newFacingMode, "camera");
+        } catch (error) {
+            console.error("[HumanVideoCall] Error switching camera:", error);
+        }
     };
 
     // End call
@@ -253,6 +273,18 @@ export default function HumanVideoCall({
                         name={isCameraOff ? "videocam-off" : "videocam"}
                         size={24}
                         color={COLORS.textMain}
+                    />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.controlButton, isCameraOff && styles.controlButtonDisabled]}
+                    onPress={handleSwitchCamera}
+                    disabled={isCameraOff}
+                >
+                    <MaterialIcons
+                        name="cameraswitch"
+                        size={24}
+                        color={isCameraOff ? COLORS.textMuted : COLORS.textMain}
                     />
                 </TouchableOpacity>
 
@@ -372,6 +404,9 @@ const styles = StyleSheet.create({
     },
     controlButtonActive: {
         backgroundColor: "rgba(239, 68, 68, 0.8)",
+    },
+    controlButtonDisabled: {
+        opacity: 0.5,
     },
     endCallButton: {
         backgroundColor: COLORS.red500,

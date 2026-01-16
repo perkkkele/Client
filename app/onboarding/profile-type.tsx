@@ -125,7 +125,7 @@ export default function ProfileTypeScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
             {/* Header negro con ilustración */}
             <View style={styles.heroSection}>
                 {/* Decorative backgrounds */}

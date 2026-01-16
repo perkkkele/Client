@@ -10,6 +10,8 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    ActionSheetIOS,
+    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
@@ -68,7 +70,7 @@ export default function CompleteProfileScreen() {
         router.push("/onboarding/success");
     }
 
-    async function handlePickImage() {
+    async function handlePickFromGallery() {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
@@ -78,6 +80,58 @@ export default function CompleteProfileScreen() {
 
         if (!result.canceled && result.assets[0]) {
             setAvatarUri(result.assets[0].uri);
+        }
+    }
+
+    async function handleTakePhoto() {
+        // Request camera permission
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert(
+                "Permiso Requerido",
+                "Necesitamos acceso a tu cámara para tomar una foto.",
+                [{ text: "OK" }]
+            );
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setAvatarUri(result.assets[0].uri);
+        }
+    }
+
+    function showImageOptions() {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+                    cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        handleTakePhoto();
+                    } else if (buttonIndex === 2) {
+                        handlePickFromGallery();
+                    }
+                }
+            );
+        } else {
+            // Android - use Alert with buttons
+            Alert.alert(
+                "Foto de perfil",
+                "¿Cómo quieres añadir tu foto?",
+                [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Tomar foto", onPress: handleTakePhoto },
+                    { text: "Elegir de galería", onPress: handlePickFromGallery },
+                ]
+            );
         }
     }
 
@@ -128,7 +182,7 @@ export default function CompleteProfileScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -154,7 +208,7 @@ export default function CompleteProfileScreen() {
                 </View>
 
                 {/* Avatar picker */}
-                <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+                <TouchableOpacity style={styles.avatarContainer} onPress={showImageOptions}>
                     <View style={styles.avatarWrapper}>
                         {avatarUri ? (
                             <Image source={{ uri: avatarUri }} style={styles.avatar} />

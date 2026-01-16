@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState, useEffect } from "react";
 import { useSubscription, FeatureName } from "../../hooks/useSubscription";
 import UpgradeModal, { RequiredPlan } from "../../components/UpgradeModal";
@@ -134,24 +134,29 @@ export default function ProDashboardScreen() {
         }
     }, [user?.digitalTwin?.isActive]);
 
-    // Load notification unread count
+    // Load notification unread count - refresh when screen gets focus
+    const loadUnreadCount = useCallback(async () => {
+        if (!token || !user?._id) return;
+        try {
+            const count = await notificationsApi.getUnreadCount(token, user._id);
+            setUnreadNotificationCount(count);
+        } catch (error) {
+            console.error("Error loading unread count:", error);
+        }
+    }, [token, user?._id]);
+
+    // Refresh notification count when screen gets focus (e.g., returning from notifications)
+    useFocusEffect(
+        useCallback(() => {
+            loadUnreadCount();
+        }, [loadUnreadCount])
+    );
+
+    // Also refresh count every 30 seconds while on screen
     useEffect(() => {
-        const loadUnreadCount = async () => {
-            if (!token || !user?._id) return;
-            try {
-                const count = await notificationsApi.getUnreadCount(token, user._id);
-                setUnreadNotificationCount(count);
-            } catch (error) {
-                console.error("Error loading unread count:", error);
-            }
-        };
-
-        loadUnreadCount();
-
-        // Refresh count every 30 seconds
         const interval = setInterval(loadUnreadCount, 30000);
         return () => clearInterval(interval);
-    }, [token, user?._id]);
+    }, [loadUnreadCount]);
 
     // Analytics state
     const [analytics, setAnalytics] = useState({
