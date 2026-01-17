@@ -102,7 +102,10 @@ export default function RegisterUserScreen() {
                                     <Text style={styles.logoSubtitle}>Professional Chat</Text>
                                 </View>
                             </View>
-                            <TouchableOpacity style={styles.helpButton}>
+                            <TouchableOpacity
+                                style={styles.helpButton}
+                                onPress={() => router.push("/onboarding/help-register-user")}
+                            >
                                 <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
                             </TouchableOpacity>
                         </View>

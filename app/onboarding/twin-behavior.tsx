@@ -300,7 +300,10 @@ export default function TwinBehaviorScreen() {
                             <View style={styles.stepDot} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton}>
+                    <TouchableOpacity
+                        style={styles.helpButton}
+                        onPress={() => router.push("/onboarding/help-twin-behavior")}
+                    >
                         <Text style={styles.helpText}>Ayuda</Text>
                     </TouchableOpacity>
                 </View>

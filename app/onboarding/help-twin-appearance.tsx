@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const COLORS = {
     primary: "#FFED00",
@@ -31,6 +31,8 @@ const COLORS = {
     blue50: "#EFF6FF",
     blue400: "#60A5FA",
     blue600: "#2563EB",
+    purple50: "#F5F3FF",
+    purple600: "#7C3AED",
 };
 
 interface FAQItem {
@@ -40,28 +42,28 @@ interface FAQItem {
 
 const FAQ_ITEMS: FAQItem[] = [
     {
-        question: "¿Qué es TwinPro?",
-        answer: "TwinPro es una plataforma que conecta usuarios con profesionales a través de gemelos digitales con IA. Puedes chatear con el gemelo digital de un profesional 24/7, o reservar citas para atención personalizada.",
+        question: "¿Qué es un Gemelo Digital?",
+        answer: "Un Gemelo Digital es una representación virtual de ti que utiliza inteligencia artificial. Puede atender consultas de tus clientes 24/7, responder preguntas frecuentes y agendar citas, todo con tu estilo y conocimientos.",
     },
     {
-        question: "¿Cuál es la diferencia entre usuario y profesional?",
-        answer: "Los usuarios buscan ayuda de profesionales y pueden chatear con gemelos digitales o reservar citas. Los profesionales crean su perfil, configuran su gemelo digital con IA, y ofrecen servicios a sus clientes.",
+        question: "¿Qué diferencia hay entre avatar predefinido y entrenado?",
+        answer: "El avatar predefinido usa una imagen del catálogo de TwinPro. El entrenado (Premium) crea un avatar con tu rostro real a partir de un video, logrando máxima autenticidad.",
     },
     {
-        question: "¿Cómo inicio sesión?",
-        answer: "Puedes iniciar sesión con tu email y contraseña, o usar Google Sign-In para acceder rápidamente. Si no tienes cuenta, pulsa 'Registrarse' para crear una nueva.",
+        question: "¿Cómo elijo la voz correcta?",
+        answer: "Las voces estándar son gratuitas y de alta calidad. Elige una que coincida con tu género y estilo. Con Premium, puedes clonar tu propia voz para que tu gemelo suene exactamente como tú.",
     },
     {
-        question: "He olvidado mi contraseña",
-        answer: "Pulsa '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión, introduce tu email y recibirás un código de 6 dígitos para restablecer tu contraseña. El código expira en 15 minutos.",
+        question: "¿Mis clientes sabrán que hablan con IA?",
+        answer: "Sí, siempre mostramos un aviso legal. Es transparente y genera confianza. Además, los clientes pueden solicitar hablar directamente contigo en cualquier momento.",
     },
     {
-        question: "No puedo iniciar sesión con Google",
-        answer: "Asegúrate de tener una conexión a internet estable. Si el problema persiste, intenta iniciar sesión con email y contraseña, o contacta con soporte.",
+        question: "¿Puedo cambiar la apariencia después?",
+        answer: "Sí, puedes cambiar el avatar y la voz desde tu panel profesional cuando quieras. Si tienes Premium, puedes crear varios avatares entrenados.",
     },
     {
-        question: "¿Cómo funciona el gemelo digital?",
-        answer: "Los profesionales crean un gemelo digital que representa su conocimiento y personalidad. Los usuarios pueden chatear con este gemelo 24/7 para obtener respuestas instantáneas, y escalar a atención humana cuando sea necesario.",
+        question: "¿Qué necesito para entrenar un avatar con mi rostro?",
+        answer: "Necesitas grabar un video de 2-3 minutos mirando a la cámara, con buena iluminación y sin interrupciones. El proceso de entrenamiento toma unas horas.",
     },
 ];
 
@@ -73,23 +75,23 @@ interface GuideItem {
 
 const GUIDE_ITEMS: GuideItem[] = [
     {
-        icon: "person-add",
-        title: "Cómo registrarse como usuario",
-        duration: "1 min de lectura",
-    },
-    {
-        icon: "badge",
-        title: "Cómo registrarse como profesional",
+        icon: "face",
+        title: "Cómo elegir el mejor avatar",
         duration: "2 min de lectura",
     },
     {
-        icon: "smart-toy",
-        title: "Qué es un gemelo digital",
+        icon: "record-voice-over",
+        title: "Seleccionar la voz ideal",
         duration: "1:30 min",
+    },
+    {
+        icon: "videocam",
+        title: "Grabar video para avatar entrenado",
+        duration: "3 min de lectura",
     },
 ];
 
-export default function HelpScreen() {
+export default function HelpTwinAppearanceScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
 
@@ -98,11 +100,7 @@ export default function HelpScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro");
-    }
-
-    function handleChatAgent() {
-        // Placeholder for chat with agent functionality
+        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20Gemelo%20Digital");
     }
 
     function toggleFAQ(index: number) {
@@ -123,13 +121,13 @@ export default function HelpScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda para Registro</Text>
+                    <Text style={styles.headerTitle}>Ayuda Gemelo Digital</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    ¿Tienes problemas para crear tu cuenta? Encuentra soluciones rápidas o contacta a nuestro equipo.
+                    Aprende a configurar la apariencia y voz de tu Gemelo Digital.
                 </Text>
             </View>
 
@@ -149,6 +147,17 @@ export default function HelpScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
+                    </View>
+                </View>
+
+                {/* Quick Info Card */}
+                <View style={styles.infoCard}>
+                    <MaterialIcons name="tips-and-updates" size={24} color={COLORS.primaryDark} />
+                    <View style={styles.infoContent}>
+                        <Text style={styles.infoTitle}>Consejo rápido</Text>
+                        <Text style={styles.infoText}>
+                            Elige un avatar y voz que representen tu marca profesional. Los clientes confían más en perfiles bien configurados.
+                        </Text>
                     </View>
                 </View>
 
@@ -181,29 +190,21 @@ export default function HelpScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONTACTAR SOPORTE</Text>
-                    <View style={styles.contactGrid}>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleSendEmail}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconBlue]}>
-                                <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
-                            </View>
-                            <Text style={styles.contactLabel}>Enviar un correo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleChatAgent}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconYellow]}>
-                                <MaterialIcons name="support-agent" size={22} color="#B45309" />
-                            </View>
-                            <Text style={styles.contactLabel}>Chatear con agente</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <TouchableOpacity
+                        style={styles.contactCard}
+                        onPress={handleSendEmail}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.contactIcon, styles.contactIconBlue]}>
+                            <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
+                        </View>
+                        <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Guides */}
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
         color: COLORS.gray400,
         fontSize: 12,
         lineHeight: 18,
-        maxWidth: "80%",
+        maxWidth: "85%",
     },
     // Content
     content: {
@@ -290,7 +291,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cardLight,
         borderRadius: 16,
         padding: 8,
-        marginBottom: 24,
+        marginBottom: 16,
         borderWidth: 1,
         borderColor: COLORS.gray200,
         shadowColor: "#000",
@@ -311,6 +312,31 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         color: COLORS.textLight,
         marginLeft: 8,
+    },
+    // Info Card
+    infoCard: {
+        flexDirection: "row",
+        backgroundColor: "#FFFBEB",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: "#FDE68A",
+        gap: 12,
+    },
+    infoContent: {
+        flex: 1,
+    },
+    infoTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textLight,
+        marginBottom: 4,
+    },
+    infoText: {
+        fontSize: 12,
+        color: COLORS.subtextLight,
+        lineHeight: 18,
     },
     // Sections
     section: {
@@ -357,23 +383,14 @@ const styles = StyleSheet.create({
         paddingTop: 0,
     },
     // Contact
-    contactGrid: {
-        flexDirection: "row",
-        gap: 12,
-    },
     contactCard: {
-        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.cardLight,
         borderRadius: 16,
         padding: 16,
-        alignItems: "center",
         borderWidth: 1,
         borderColor: COLORS.gray200,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     contactIcon: {
         width: 40,
@@ -381,18 +398,23 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 8,
+        marginRight: 12,
     },
     contactIconBlue: {
         backgroundColor: COLORS.blue50,
     },
-    contactIconYellow: {
-        backgroundColor: "rgba(255, 237, 0, 0.2)",
+    contactInfo: {
+        flex: 1,
     },
     contactLabel: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "600",
         color: COLORS.textLight,
+    },
+    contactHint: {
+        fontSize: 12,
+        color: COLORS.subtextLight,
+        marginTop: 2,
     },
     // Guides
     guidesCard: {

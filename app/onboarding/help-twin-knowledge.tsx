@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const COLORS = {
     primary: "#FFED00",
@@ -29,7 +29,6 @@ const COLORS = {
     gray700: "#374151",
     gray800: "#1F2937",
     blue50: "#EFF6FF",
-    blue400: "#60A5FA",
     blue600: "#2563EB",
 };
 
@@ -40,28 +39,32 @@ interface FAQItem {
 
 const FAQ_ITEMS: FAQItem[] = [
     {
-        question: "¿Qué es TwinPro?",
-        answer: "TwinPro es una plataforma que conecta usuarios con profesionales a través de gemelos digitales con IA. Puedes chatear con el gemelo digital de un profesional 24/7, o reservar citas para atención personalizada.",
+        question: "¿Para qué sirve la base de conocimientos?",
+        answer: "Es la información que tu Gemelo Digital usará para responder consultas. Cuanta más información relevante cargues, mejores respuestas dará a tus clientes.",
     },
     {
-        question: "¿Cuál es la diferencia entre usuario y profesional?",
-        answer: "Los usuarios buscan ayuda de profesionales y pueden chatear con gemelos digitales o reservar citas. Los profesionales crean su perfil, configuran su gemelo digital con IA, y ofrecen servicios a sus clientes.",
+        question: "¿Qué tipo de documentos puedo subir?",
+        answer: "Puedes subir archivos PDF, Word (DOC/DOCX) o texto plano (TXT) de hasta 10MB. También puedes añadir URLs de tu web o escribir contenido manualmente.",
     },
     {
-        question: "¿Cómo inicio sesión?",
-        answer: "Puedes iniciar sesión con tu email y contraseña, o usar Google Sign-In para acceder rápidamente. Si no tienes cuenta, pulsa 'Registrarse' para crear una nueva.",
+        question: "¿Qué son las categorías de conocimiento?",
+        answer: "Son áreas temáticas predefinidas: FAQs, Servicios, Precios, Políticas y Resolución de problemas. Organizar la info así ayuda al gemelo a dar respuestas más precisas.",
     },
     {
-        question: "He olvidado mi contraseña",
-        answer: "Pulsa '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión, introduce tu email y recibirás un código de 6 dígitos para restablecer tu contraseña. El código expira en 15 minutos.",
+        question: "¿Puedo añadir información manualmente?",
+        answer: "Sí, cada categoría tiene un botón 'Añadir Manual' para escribir directamente. Es útil para FAQs, listas de precios o políticas que no tengas en documento.",
     },
     {
-        question: "No puedo iniciar sesión con Google",
-        answer: "Asegúrate de tener una conexión a internet estable. Si el problema persiste, intenta iniciar sesión con email y contraseña, o contacta con soporte.",
+        question: "¿Qué diferencia hay entre URL y subir archivo?",
+        answer: "Con URL, el gemelo puede acceder a páginas web públicas. Con archivos, subes documentos privados. Ambos métodos son válidos y complementarios.",
     },
     {
-        question: "¿Cómo funciona el gemelo digital?",
-        answer: "Los profesionales crean un gemelo digital que representa su conocimiento y personalidad. Los usuarios pueden chatear con este gemelo 24/7 para obtener respuestas instantáneas, y escalar a atención humana cuando sea necesario.",
+        question: "¿Puedo activar el gemelo sin subir documentos?",
+        answer: "Sí, pero tu gemelo tendrá información limitada. Recomendamos al menos completar FAQs y servicios para dar respuestas útiles a tus clientes.",
+    },
+    {
+        question: "¿Puedo actualizar la información después?",
+        answer: "Sí, puedes añadir, editar o eliminar documentos desde tu panel profesional en cualquier momento. Los cambios se aplican automáticamente.",
     },
 ];
 
@@ -73,23 +76,23 @@ interface GuideItem {
 
 const GUIDE_ITEMS: GuideItem[] = [
     {
-        icon: "person-add",
-        title: "Cómo registrarse como usuario",
-        duration: "1 min de lectura",
-    },
-    {
-        icon: "badge",
-        title: "Cómo registrarse como profesional",
+        icon: "upload-file",
+        title: "Cómo preparar tus documentos",
         duration: "2 min de lectura",
     },
     {
-        icon: "smart-toy",
-        title: "Qué es un gemelo digital",
+        icon: "quiz",
+        title: "Crear FAQs efectivas",
         duration: "1:30 min",
+    },
+    {
+        icon: "attach-money",
+        title: "Estructurar tu lista de precios",
+        duration: "2 min de lectura",
     },
 ];
 
-export default function HelpScreen() {
+export default function HelpTwinKnowledgeScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
 
@@ -98,11 +101,7 @@ export default function HelpScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro");
-    }
-
-    function handleChatAgent() {
-        // Placeholder for chat with agent functionality
+        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20Base%20de%20Conocimiento");
     }
 
     function toggleFAQ(index: number) {
@@ -123,13 +122,13 @@ export default function HelpScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda para Registro</Text>
+                    <Text style={styles.headerTitle}>Ayuda Base de Conocimiento</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    ¿Tienes problemas para crear tu cuenta? Encuentra soluciones rápidas o contacta a nuestro equipo.
+                    Aprende a entrenar a tu Gemelo Digital con información relevante.
                 </Text>
             </View>
 
@@ -149,6 +148,17 @@ export default function HelpScreen() {
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                         />
+                    </View>
+                </View>
+
+                {/* Tip Card */}
+                <View style={styles.infoCard}>
+                    <MaterialIcons name="tips-and-updates" size={24} color={COLORS.primaryDark} />
+                    <View style={styles.infoContent}>
+                        <Text style={styles.infoTitle}>Consejo de entrenamiento</Text>
+                        <Text style={styles.infoText}>
+                            Empieza con FAQs y precios. Son las preguntas más frecuentes de los clientes.
+                        </Text>
                     </View>
                 </View>
 
@@ -181,29 +191,21 @@ export default function HelpScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONTACTAR SOPORTE</Text>
-                    <View style={styles.contactGrid}>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleSendEmail}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconBlue]}>
-                                <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
-                            </View>
-                            <Text style={styles.contactLabel}>Enviar un correo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleChatAgent}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconYellow]}>
-                                <MaterialIcons name="support-agent" size={22} color="#B45309" />
-                            </View>
-                            <Text style={styles.contactLabel}>Chatear con agente</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <TouchableOpacity
+                        style={styles.contactCard}
+                        onPress={handleSendEmail}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.contactIcon, styles.contactIconBlue]}>
+                            <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
+                        </View>
+                        <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Guides */}
@@ -260,7 +262,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         color: COLORS.textDark,
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: "700",
     },
     closeButton: {
@@ -275,7 +277,7 @@ const styles = StyleSheet.create({
         color: COLORS.gray400,
         fontSize: 12,
         lineHeight: 18,
-        maxWidth: "80%",
+        maxWidth: "85%",
     },
     // Content
     content: {
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.cardLight,
         borderRadius: 16,
         padding: 8,
-        marginBottom: 24,
+        marginBottom: 16,
         borderWidth: 1,
         borderColor: COLORS.gray200,
         shadowColor: "#000",
@@ -311,6 +313,31 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         color: COLORS.textLight,
         marginLeft: 8,
+    },
+    // Info Card
+    infoCard: {
+        flexDirection: "row",
+        backgroundColor: "#FFFBEB",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: "#FDE68A",
+        gap: 12,
+    },
+    infoContent: {
+        flex: 1,
+    },
+    infoTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.textLight,
+        marginBottom: 4,
+    },
+    infoText: {
+        fontSize: 12,
+        color: COLORS.subtextLight,
+        lineHeight: 18,
     },
     // Sections
     section: {
@@ -357,23 +384,14 @@ const styles = StyleSheet.create({
         paddingTop: 0,
     },
     // Contact
-    contactGrid: {
-        flexDirection: "row",
-        gap: 12,
-    },
     contactCard: {
-        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.cardLight,
         borderRadius: 16,
         padding: 16,
-        alignItems: "center",
         borderWidth: 1,
         borderColor: COLORS.gray200,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     contactIcon: {
         width: 40,
@@ -381,18 +399,23 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 8,
+        marginRight: 12,
     },
     contactIconBlue: {
         backgroundColor: COLORS.blue50,
     },
-    contactIconYellow: {
-        backgroundColor: "rgba(255, 237, 0, 0.2)",
+    contactInfo: {
+        flex: 1,
     },
     contactLabel: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "600",
         color: COLORS.textLight,
+    },
+    contactHint: {
+        fontSize: 12,
+        color: COLORS.subtextLight,
+        marginTop: 2,
     },
     // Guides
     guidesCard: {

@@ -560,6 +560,12 @@ export default function ProDashboardScreen() {
                             <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
                         </View>
                     </View>
+                    <TouchableOpacity
+                        style={styles.greetingHelpButton}
+                        onPress={() => router.push("/(settings)/help-pro-dashboard")}
+                    >
+                        <MaterialIcons name="help-outline" size={24} color={COLORS.gray500} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Edit Mode Banner */}
@@ -773,7 +779,11 @@ export default function ProDashboardScreen() {
                                 )}
                                 <View>
                                     <Text style={styles.sideMenuName}>{fullName}</Text>
-                                    <Text style={styles.sideMenuBadge}>Pro Member</Text>
+                                    <Text style={styles.sideMenuBadge}>
+                                        {user?.subscription?.plan === 'premium' ? 'Plan Premium' :
+                                            user?.subscription?.plan === 'professional' ? 'Plan Professional' :
+                                                'Plan Starter'}
+                                    </Text>
                                 </View>
                             </View>
                             <TouchableOpacity onPress={handleCloseMenu}>
@@ -1283,6 +1293,14 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.gray500,
         marginTop: 4,
+    },
+    greetingHelpButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.gray100,
+        alignItems: "center",
+        justifyContent: "center",
     },
     editButton: {
         flexDirection: "row",

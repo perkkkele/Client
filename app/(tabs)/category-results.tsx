@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         borderWidth: 2,
-        borderColor: COLORS.primary,
+        borderColor: "#FFFFFF",
         backgroundColor: COLORS.gray800,
         alignItems: "center",
         justifyContent: "center",

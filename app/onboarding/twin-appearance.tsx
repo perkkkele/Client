@@ -962,7 +962,7 @@ export default function TwinAppearanceScreen() {
                             <View style={styles.stepDot} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton} onPress={() => setShowHelpModal(true)}>
+                    <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/onboarding/help-twin-appearance")}>
                         <Text style={styles.helpText}>Ayuda</Text>
                     </TouchableOpacity>
                 </View>

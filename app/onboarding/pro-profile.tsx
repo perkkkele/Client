@@ -264,7 +264,10 @@ export default function ProProfileScreen() {
                             <View style={styles.stepDot} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton}>
+                    <TouchableOpacity
+                        style={styles.helpButton}
+                        onPress={() => router.push("/onboarding/help-pro-profile")}
+                    >
                         <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
                     </TouchableOpacity>
                 </View>

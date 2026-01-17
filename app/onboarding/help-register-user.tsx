@@ -11,7 +11,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const COLORS = {
     primary: "#FFED00",
@@ -41,27 +41,27 @@ interface FAQItem {
 const FAQ_ITEMS: FAQItem[] = [
     {
         question: "¿Qué es TwinPro?",
-        answer: "TwinPro es una plataforma que conecta usuarios con profesionales a través de gemelos digitales con IA. Puedes chatear con el gemelo digital de un profesional 24/7, o reservar citas para atención personalizada.",
+        answer: "TwinPro es una plataforma que conecta usuarios con profesionales a través de gemelos digitales con IA. Puedes chatear con el gemelo digital de un profesional 24/7 y recibir respuestas inmediatas.",
     },
     {
-        question: "¿Cuál es la diferencia entre usuario y profesional?",
-        answer: "Los usuarios buscan ayuda de profesionales y pueden chatear con gemelos digitales o reservar citas. Los profesionales crean su perfil, configuran su gemelo digital con IA, y ofrecen servicios a sus clientes.",
+        question: "¿Qué puedo hacer como usuario?",
+        answer: "Como usuario puedes buscar profesionales, chatear con sus gemelos digitales, reservar citas, escribir reseñas y guardar tus profesionales favoritos.",
     },
     {
-        question: "¿Cómo inicio sesión?",
-        answer: "Puedes iniciar sesión con tu email y contraseña, o usar Google Sign-In para acceder rápidamente. Si no tienes cuenta, pulsa 'Registrarse' para crear una nueva.",
+        question: "¿Qué datos necesito para crear mi cuenta?",
+        answer: "Solo necesitas tu nombre, un email válido y una contraseña de al menos 6 caracteres. La confirmación de contraseña debe coincidir.",
     },
     {
-        question: "He olvidado mi contraseña",
-        answer: "Pulsa '¿Olvidaste tu contraseña?' en la pantalla de inicio de sesión, introduce tu email y recibirás un código de 6 dígitos para restablecer tu contraseña. El código expira en 15 minutos.",
+        question: "¿Qué es la opción de analítica?",
+        answer: "Es opcional. Si la aceptas, nos ayudas a mejorar la plataforma mediante datos anónimos de uso. No afecta tu experiencia si la rechazas.",
     },
     {
-        question: "No puedo iniciar sesión con Google",
-        answer: "Asegúrate de tener una conexión a internet estable. Si el problema persiste, intenta iniciar sesión con email y contraseña, o contacta con soporte.",
+        question: "¿Puedo usar mi cuenta de Google?",
+        answer: "Sí, puedes registrarte o iniciar sesión con Google para un acceso más rápido sin necesidad de crear una contraseña.",
     },
     {
-        question: "¿Cómo funciona el gemelo digital?",
-        answer: "Los profesionales crean un gemelo digital que representa su conocimiento y personalidad. Los usuarios pueden chatear con este gemelo 24/7 para obtener respuestas instantáneas, y escalar a atención humana cuando sea necesario.",
+        question: "¿Mis datos están seguros?",
+        answer: "Sí. Utilizamos encriptación para proteger tu información. Puedes consultar nuestra Política de Privacidad para más detalles.",
     },
 ];
 
@@ -74,22 +74,22 @@ interface GuideItem {
 const GUIDE_ITEMS: GuideItem[] = [
     {
         icon: "person-add",
-        title: "Cómo registrarse como usuario",
+        title: "Cómo completar tu registro",
         duration: "1 min de lectura",
     },
     {
-        icon: "badge",
-        title: "Cómo registrarse como profesional",
+        icon: "smart-toy",
+        title: "Cómo chatear con un gemelo digital",
         duration: "2 min de lectura",
     },
     {
-        icon: "smart-toy",
-        title: "Qué es un gemelo digital",
+        icon: "calendar-today",
+        title: "Cómo reservar una cita",
         duration: "1:30 min",
     },
 ];
 
-export default function HelpScreen() {
+export default function HelpRegisterUserScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
 
@@ -98,11 +98,7 @@ export default function HelpScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro");
-    }
-
-    function handleChatAgent() {
-        // Placeholder for chat with agent functionality
+        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro%20de%20usuario");
     }
 
     function toggleFAQ(index: number) {
@@ -129,7 +125,7 @@ export default function HelpScreen() {
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    ¿Tienes problemas para crear tu cuenta? Encuentra soluciones rápidas o contacta a nuestro equipo.
+                    Encuentra respuestas sobre cómo crear tu cuenta de usuario en TwinPro.
                 </Text>
             </View>
 
@@ -181,29 +177,21 @@ export default function HelpScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONTACTAR SOPORTE</Text>
-                    <View style={styles.contactGrid}>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleSendEmail}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconBlue]}>
-                                <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
-                            </View>
-                            <Text style={styles.contactLabel}>Enviar un correo</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.contactCard}
-                            onPress={handleChatAgent}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.contactIcon, styles.contactIconYellow]}>
-                                <MaterialIcons name="support-agent" size={22} color="#B45309" />
-                            </View>
-                            <Text style={styles.contactLabel}>Chatear con agente</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <TouchableOpacity
+                        style={styles.contactCard}
+                        onPress={handleSendEmail}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.contactIcon, styles.contactIconBlue]}>
+                            <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
+                        </View>
+                        <View style={styles.contactInfo}>
+                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                        </View>
+                        <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Guides */}
@@ -275,7 +263,7 @@ const styles = StyleSheet.create({
         color: COLORS.gray400,
         fontSize: 12,
         lineHeight: 18,
-        maxWidth: "80%",
+        maxWidth: "85%",
     },
     // Content
     content: {
@@ -357,23 +345,14 @@ const styles = StyleSheet.create({
         paddingTop: 0,
     },
     // Contact
-    contactGrid: {
-        flexDirection: "row",
-        gap: 12,
-    },
     contactCard: {
-        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: COLORS.cardLight,
         borderRadius: 16,
         padding: 16,
-        alignItems: "center",
         borderWidth: 1,
         borderColor: COLORS.gray200,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     contactIcon: {
         width: 40,
@@ -381,18 +360,23 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 8,
+        marginRight: 12,
     },
     contactIconBlue: {
         backgroundColor: COLORS.blue50,
     },
-    contactIconYellow: {
-        backgroundColor: "rgba(255, 237, 0, 0.2)",
+    contactInfo: {
+        flex: 1,
     },
     contactLabel: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "600",
         color: COLORS.textLight,
+    },
+    contactHint: {
+        fontSize: 12,
+        color: COLORS.subtextLight,
+        marginTop: 2,
     },
     // Guides
     guidesCard: {

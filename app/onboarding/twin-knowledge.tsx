@@ -494,7 +494,10 @@ export default function TwinKnowledgeScreen() {
                             <View style={[styles.stepDot, styles.stepDotActive]} />
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.helpButton}>
+                    <TouchableOpacity
+                        style={styles.helpButton}
+                        onPress={() => router.push("/onboarding/help-twin-knowledge")}
+                    >
                         <Text style={styles.helpText}>Ayuda</Text>
                     </TouchableOpacity>
                 </View>
