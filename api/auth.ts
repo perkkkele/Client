@@ -22,8 +22,12 @@ export async function login(email: string, password: string): Promise<LoginRespo
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Error al iniciar sesión");
+        const errorData = await response.json();
+        // Create error with code and reason for suspension handling
+        const error: any = new Error(errorData.message || "Error al iniciar sesión");
+        error.code = errorData.code;
+        error.reason = errorData.reason;
+        throw error;
     }
 
     return response.json();
@@ -81,8 +85,12 @@ export async function loginWithGoogle(
     });
 
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Error al iniciar sesión con Google");
+        const errorData = await response.json();
+        // Create error with code and reason for suspension handling
+        const error: any = new Error(errorData.message || "Error al iniciar sesión con Google");
+        error.code = errorData.code;
+        error.reason = errorData.reason;
+        throw error;
     }
 
     return response.json();

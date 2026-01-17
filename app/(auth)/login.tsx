@@ -82,7 +82,13 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     } catch (error: any) {
       console.log("Google Sign-In error:", error);
-      if (error.code !== "SIGN_IN_CANCELLED") {
+      // Check if account is suspended
+      if (error.code === "ACCOUNT_SUSPENDED") {
+        router.replace({
+          pathname: "/(auth)/account-suspended",
+          params: { reason: error.reason || "" }
+        });
+      } else if (error.code !== "SIGN_IN_CANCELLED") {
         Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
       }
     } finally {
@@ -101,7 +107,15 @@ export default function LoginScreen() {
       await login(email, password);
       router.replace("/(tabs)");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Error al iniciar sesión");
+      // Check if account is suspended
+      if (error.code === "ACCOUNT_SUSPENDED") {
+        router.replace({
+          pathname: "/(auth)/account-suspended",
+          params: { reason: error.reason || "" }
+        });
+      } else {
+        Alert.alert("Error", error.message || "Error al iniciar sesión");
+      }
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
     ScrollView,
     StyleSheet,
@@ -8,11 +8,18 @@ import {
     View,
     RefreshControl,
     ActivityIndicator,
+    Animated,
+    PanResponder,
+    Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { notificationsApi, Notification } from "../../api/notifications";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const SWIPE_THRESHOLD = -80; // How far to swipe to reveal delete button
+
 
 const COLORS = {
     primary: "#137fec",
@@ -129,6 +136,184 @@ export default function ProNotificationsScreen() {
         await notificationsApi.markAllAsRead(token, user._id);
     };
 
+    // Handle notification press - mark as read and navigate to appropriate screen
+    const handleNotificationPress = (notification: Notification) => {
+        // Mark as read
+        markAsRead(notification._id);
+
+        const data = notification.data || {};
+
+        // Navigate based on notification type
+        switch (notification.type) {
+            case "escalation":
+                // Navigate to pro-chats (direct attention)
+                router.push("/(settings)/pro-chats" as any);
+                break;
+
+            case "appointment":
+                // Navigate to appointment details if ID available, otherwise to appointments list
+                if (data.appointmentId) {
+                    router.push(`/appointment-details/${data.appointmentId}` as any);
+                } else {
+                    router.push("/(settings)/pro-appointments" as any);
+                }
+                break;
+
+            case "review":
+                // Navigate to reviews list
+                if (user?._id) {
+                    router.push(`/reviews/${user._id}` as any);
+                }
+                break;
+
+            case "earnings":
+                // Navigate to appointment if available, otherwise to appointments list
+                if (data.appointmentId) {
+                    router.push(`/appointment-details/${data.appointmentId}` as any);
+                } else {
+                    router.push("/(settings)/pro-appointments" as any);
+                }
+                break;
+
+            case "billing":
+                // Navigate to subscription settings
+                router.push("/(settings)/pro-subscription" as any);
+                break;
+
+            case "system":
+            default:
+                // No navigation for system notifications
+                break;
+        }
+    };
+
+    // Delete a notification
+    const deleteNotification = async (id: string) => {
+        if (!token) return;
+
+        // Optimistic update - remove from list
+        setNotifications(prev => prev.filter(n => n._id !== id));
+
+        await notificationsApi.deleteNotification(token, id);
+    };
+
+    // Swipeable notification row component
+    const SwipeableNotificationRow = ({ notification }: { notification: Notification }) => {
+        const translateX = useRef(new Animated.Value(0)).current;
+        const iconStyle = getNotificationIcon(notification.type);
+
+        const panResponder = useRef(
+            PanResponder.create({
+                onStartShouldSetPanResponder: () => false,
+                onMoveShouldSetPanResponder: (_, gestureState) => {
+                    // Only respond to horizontal swipes
+                    return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+                },
+                onPanResponderMove: (_, gestureState) => {
+                    // Only allow swiping left (negative dx)
+                    if (gestureState.dx < 0) {
+                        translateX.setValue(gestureState.dx);
+                    }
+                },
+                onPanResponderRelease: (_, gestureState) => {
+                    const DELETE_THRESHOLD = -120; // Swipe past this to auto-delete
+                    const SHOW_BUTTON_THRESHOLD = -50; // Swipe past this to show delete button
+
+                    // If swiped far enough or with high velocity, delete
+                    if (gestureState.dx < DELETE_THRESHOLD || gestureState.vx < -0.5) {
+                        // Auto-delete with animation
+                        Animated.timing(translateX, {
+                            toValue: -SCREEN_WIDTH,
+                            duration: 200,
+                            useNativeDriver: true,
+                        }).start(() => {
+                            deleteNotification(notification._id);
+                        });
+                    } else if (gestureState.dx < SHOW_BUTTON_THRESHOLD) {
+                        // Snap to show delete button
+                        Animated.spring(translateX, {
+                            toValue: -80,
+                            useNativeDriver: true,
+                        }).start();
+                    } else {
+                        // Snap back
+                        Animated.spring(translateX, {
+                            toValue: 0,
+                            useNativeDriver: true,
+                        }).start();
+                    }
+                },
+            })
+        ).current;
+
+        const handleDelete = () => {
+            // Animate out then delete
+            Animated.timing(translateX, {
+                toValue: -SCREEN_WIDTH,
+                duration: 200,
+                useNativeDriver: true,
+            }).start(() => {
+                deleteNotification(notification._id);
+            });
+        };
+
+        return (
+            <View style={styles.swipeableContainer}>
+                {/* Delete button behind */}
+                <View style={styles.deleteButtonContainer}>
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={handleDelete}
+                    >
+                        <MaterialIcons name="delete" size={24} color={COLORS.white} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Notification card */}
+                <Animated.View
+                    style={[{ transform: [{ translateX }] }]}
+                    {...panResponder.panHandlers}
+                >
+                    <TouchableOpacity
+                        style={[
+                            styles.notificationCard,
+                            !notification.isRead && styles.notificationCardUnread,
+                        ]}
+                        onPress={() => handleNotificationPress(notification)}
+                        activeOpacity={0.7}
+                    >
+                        {!notification.isRead && <View style={styles.unreadDot} />}
+
+                        <View style={[styles.notificationIcon, { backgroundColor: iconStyle.bg }]}>
+                            <MaterialIcons
+                                name={iconStyle.icon as any}
+                                size={22}
+                                color={iconStyle.color}
+                            />
+                        </View>
+
+                        <View style={styles.notificationContent}>
+                            <Text style={[
+                                styles.notificationTitle,
+                                !notification.isRead && styles.notificationTitleUnread
+                            ]}>
+                                {notification.title}
+                            </Text>
+                            <Text style={styles.notificationMessage} numberOfLines={2}>
+                                {notification.message}
+                            </Text>
+                            <Text style={styles.notificationTime}>
+                                {formatTimestamp(notification.createdAt)}
+                            </Text>
+                        </View>
+
+                        <MaterialIcons name="chevron-right" size={20} color={COLORS.gray300} />
+                    </TouchableOpacity>
+                </Animated.View>
+            </View>
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
             {/* Header */}
@@ -182,47 +367,12 @@ export default function ProNotificationsScreen() {
                             </Text>
                         </View>
                     ) : (
-                        notifications.map((notification) => {
-                            const iconStyle = getNotificationIcon(notification.type);
-                            return (
-                                <TouchableOpacity
-                                    key={notification._id}
-                                    style={[
-                                        styles.notificationCard,
-                                        !notification.isRead && styles.notificationCardUnread,
-                                    ]}
-                                    onPress={() => markAsRead(notification._id)}
-                                    activeOpacity={0.7}
-                                >
-                                    {!notification.isRead && <View style={styles.unreadDot} />}
-
-                                    <View style={[styles.notificationIcon, { backgroundColor: iconStyle.bg }]}>
-                                        <MaterialIcons
-                                            name={iconStyle.icon as any}
-                                            size={22}
-                                            color={iconStyle.color}
-                                        />
-                                    </View>
-
-                                    <View style={styles.notificationContent}>
-                                        <Text style={[
-                                            styles.notificationTitle,
-                                            !notification.isRead && styles.notificationTitleUnread
-                                        ]}>
-                                            {notification.title}
-                                        </Text>
-                                        <Text style={styles.notificationMessage} numberOfLines={2}>
-                                            {notification.message}
-                                        </Text>
-                                        <Text style={styles.notificationTime}>
-                                            {formatTimestamp(notification.createdAt)}
-                                        </Text>
-                                    </View>
-
-                                    <MaterialIcons name="chevron-right" size={20} color={COLORS.gray300} />
-                                </TouchableOpacity>
-                            );
-                        })
+                        notifications.map((notification) => (
+                            <SwipeableNotificationRow
+                                key={notification._id}
+                                notification={notification}
+                            />
+                        ))
                     )}
                 </ScrollView>
             )}
@@ -307,7 +457,6 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
         padding: 16,
-        marginBottom: 12,
         gap: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
@@ -356,5 +505,27 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: COLORS.gray400,
         marginTop: 2,
+    },
+    // Swipeable styles
+    swipeableContainer: {
+        position: "relative",
+        marginBottom: 12,
+    },
+    deleteButtonContainer: {
+        position: "absolute",
+        right: 0,
+        top: 0,
+        bottom: 12,
+        width: 80,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: COLORS.red500,
+        borderRadius: 16,
+    },
+    deleteButton: {
+        width: 80,
+        height: "100%",
+        justifyContent: "center",
+        alignItems: "center",
     },
 });

@@ -93,9 +93,17 @@ function RootLayoutNav() {
 
     if (!data) return;
 
+    // === CITAS ===
     if (data.type === "appointment" && data.appointmentId) {
       router.push(`/appointment-details/${data.appointmentId}` as any);
-    } else if (data.type === "video_call" && data.chatId) {
+    }
+    // Citas para profesionales (sin appointmentId específico, ir a agenda)
+    else if (data.type === "appointment" && !data.appointmentId) {
+      router.push("/(settings)/pro-appointments" as any);
+    }
+
+    // === VIDEOLLAMADAS ===
+    else if (data.type === "video_call" && data.chatId) {
       router.push({
         pathname: `/incoming-call/${data.chatId}`,
         params: {
@@ -103,12 +111,41 @@ function RootLayoutNav() {
           callerAvatar: data.callerAvatar || "",
         },
       } as any);
-    } else if (data.type === "escalation" && data.chatId) {
+    }
+
+    // === ESCALACIONES ===
+    else if (data.type === "escalation" && data.chatId) {
       console.log("[Notification] Navigating to Atención directa:", data.chatId);
       router.push("/(settings)/pro-chats" as any);
-    } else if (data.type === "direct_attention" && data.chatId) {
+    }
+    else if (data.type === "direct_attention" && data.chatId) {
       console.log("[Notification] Navigating to Atención directa:", data.chatId);
       router.push("/(settings)/pro-chats" as any);
+    }
+
+    // === PAGOS ===
+    else if (data.type === "payment" && data.appointmentId) {
+      router.push(`/appointment-details/${data.appointmentId}` as any);
+    }
+
+    // === RESEÑAS ===
+    else if (data.type === "review" && data.professionalId) {
+      router.push(`/reviews/${data.professionalId}` as any);
+    }
+
+    // === INGRESOS ===
+    else if (data.type === "earnings") {
+      // Navigate to appointment if available, otherwise to appointments list
+      if (data.appointmentId) {
+        router.push(`/appointment-details/${data.appointmentId}` as any);
+      } else {
+        router.push("/(settings)/pro-appointments" as any);
+      }
+    }
+
+    // === FACTURACIÓN ===
+    else if (data.type === "billing") {
+      router.push("/(settings)/pro-subscription" as any);
     }
   };
 

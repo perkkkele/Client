@@ -194,6 +194,31 @@ export async function updatePreferences(
     }
 }
 
+/**
+ * Eliminar una notificación
+ */
+export async function deleteNotification(
+    token: string,
+    notificationId: string
+): Promise<boolean> {
+    try {
+        const response = await fetch(
+            `${API_URL}/notifications/${notificationId}`,
+            {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response.ok;
+    } catch (error) {
+        console.error("Error deleting notification:", error);
+        return false;
+    }
+}
+
 export const notificationsApi = {
     getNotifications,
     getUnreadCount,
@@ -201,4 +226,5 @@ export const notificationsApi = {
     markAllAsRead,
     getPreferences,
     updatePreferences,
+    deleteNotification,
 };
