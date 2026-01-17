@@ -599,6 +599,7 @@ const styles = StyleSheet.create({
         paddingTop: 50,
         paddingHorizontal: 16,
         paddingBottom: 8,
+        backgroundColor: COLORS.backgroundLight,
     },
     headerContent: {
         flexDirection: "row",
@@ -838,7 +839,7 @@ const styles = StyleSheet.create({
     },
     receivedBubble: {
         backgroundColor: COLORS.surfaceLight,
-        borderTopLeftRadius: 4,
+        borderBottomLeftRadius: 4,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -849,7 +850,7 @@ const styles = StyleSheet.create({
     },
     sentBubble: {
         backgroundColor: COLORS.primary,
-        borderTopRightRadius: 4,
+        borderBottomRightRadius: 4,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.08,

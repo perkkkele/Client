@@ -574,68 +574,77 @@ export default function ClientVideoCallScreen() {
                         </View>
                     )}
 
-                    {/* Post-call actions: Premium review prompt */}
+                    {/* Post-call: Premium overlay with review prompt */}
                     {callEnded && (
-                        <View style={styles.postCallContainer}>
-                            {/* Success checkmark */}
-                            <View style={styles.successCircle}>
-                                <MaterialIcons name="check" size={40} color={COLORS.white} />
-                            </View>
+                        <View style={styles.postCallOverlay}>
+                            {/* Semi-transparent blur backdrop */}
+                            <View style={styles.postCallBackdrop} />
 
-                            <Text style={styles.postCallTitle}>
-                                Llamada finalizada
-                            </Text>
-
-                            <Text style={styles.postCallDuration}>
-                                Duración: {callDuration}
-                            </Text>
-
-                            {/* Review prompt card */}
-                            <View style={styles.reviewCard}>
-                                {/* Star decoration */}
-                                <View style={styles.starsRow}>
-                                    <MaterialIcons name="star" size={24} color={COLORS.gold400} />
-                                    <MaterialIcons name="star" size={28} color={COLORS.gold500} />
-                                    <MaterialIcons name="star" size={32} color={COLORS.gold500} />
-                                    <MaterialIcons name="star" size={28} color={COLORS.gold500} />
-                                    <MaterialIcons name="star" size={24} color={COLORS.gold400} />
+                            {/* Centered content card */}
+                            <View style={styles.postCallCard}>
+                                {/* Success checkmark with glow */}
+                                <View style={styles.successCircleGlow}>
+                                    <View style={styles.successCircle}>
+                                        <MaterialIcons name="check" size={48} color={COLORS.white} />
+                                    </View>
                                 </View>
 
-                                <Text style={styles.reviewCardTitle}>
-                                    ¿Cómo fue tu experiencia?
+                                {/* Thank you message */}
+                                <Text style={styles.postCallThankYou}>
+                                    ¡Gracias por tu tiempo!
                                 </Text>
 
-                                <Text style={styles.reviewCardSubtitle}>
-                                    Tu opinión ayuda a {professionalName} a mejorar y a otros usuarios a elegir
+                                {/* Duration badge */}
+                                <View style={styles.durationBadge}>
+                                    <MaterialIcons name="access-time" size={16} color={COLORS.textMuted} />
+                                    <Text style={styles.durationBadgeText}>{callDuration}</Text>
+                                </View>
+
+                                {/* Review prompt */}
+                                <Text style={styles.postCallQuestion}>
+                                    ¿Cómo ha sido tu experiencia con {professionalName}?
                                 </Text>
 
+                                <Text style={styles.postCallSubtext}>
+                                    Tu reseña ayuda a otras personas a elegir mejor
+                                </Text>
+
+                                {/* Star decoration */}
+                                <View style={styles.starsRowLarge}>
+                                    <MaterialIcons name="star" size={28} color={COLORS.gold400} />
+                                    <MaterialIcons name="star" size={36} color={COLORS.gold500} />
+                                    <MaterialIcons name="star" size={44} color={COLORS.gold500} />
+                                    <MaterialIcons name="star" size={36} color={COLORS.gold500} />
+                                    <MaterialIcons name="star" size={28} color={COLORS.gold400} />
+                                </View>
+
+                                {/* Primary CTA - Review button */}
                                 <TouchableOpacity
-                                    style={styles.reviewButtonPrimary}
+                                    style={styles.reviewButtonLarge}
                                     onPress={() => {
                                         if (professionalId) {
                                             router.push(`/write-review/${professionalId}` as any);
                                         }
                                     }}
                                 >
-                                    <MaterialIcons name="rate-review" size={22} color={COLORS.textMain} />
-                                    <Text style={styles.reviewButtonPrimaryText}>Escribir reseña</Text>
+                                    <MaterialIcons name="rate-review" size={24} color={COLORS.textMain} />
+                                    <Text style={styles.reviewButtonLargeText}>Escribir reseña</Text>
+                                </TouchableOpacity>
+
+                                {/* Secondary link - Ahora no */}
+                                <TouchableOpacity
+                                    style={styles.skipButton}
+                                    onPress={() => {
+                                        if (professionalId) {
+                                            router.replace(`/avatar-chat/${professionalId}` as any);
+                                        } else {
+                                            router.back();
+                                        }
+                                    }}
+                                >
+                                    <Text style={styles.skipButtonText}>Ahora no</Text>
                                 </TouchableOpacity>
                             </View>
-
-                            {/* Return button - secondary style */}
-                            <TouchableOpacity
-                                style={styles.returnButtonSecondary}
-                                onPress={() => {
-                                    if (professionalId) {
-                                        router.replace(`/avatar-chat/${professionalId}` as any);
-                                    } else {
-                                        router.back();
-                                    }
-                                }}
-                            >
-                                <MaterialIcons name="smart-toy" size={18} color={COLORS.textMuted} />
-                                <Text style={styles.returnButtonSecondaryText}>Volver al asistente</Text>
-                            </TouchableOpacity>
                         </View>
                     )}
                 </View>
@@ -1199,6 +1208,101 @@ const styles = StyleSheet.create({
     returnButtonSecondaryText: {
         fontSize: 15,
         color: COLORS.textMuted,
+        fontWeight: "500",
+    },
+    // New premium post-call overlay styles
+    postCallOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 100,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    postCallBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+    },
+    postCallCard: {
+        alignItems: "center",
+        paddingHorizontal: 32,
+        paddingVertical: 40,
+        maxWidth: 360,
+    },
+    successCircleGlow: {
+        marginBottom: 24,
+        padding: 8,
+        borderRadius: 50,
+        backgroundColor: "rgba(34, 197, 94, 0.15)",
+    },
+    postCallThankYou: {
+        fontSize: 26,
+        fontWeight: "800",
+        color: COLORS.textMain,
+        textAlign: "center",
+        marginBottom: 12,
+    },
+    durationBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.gray100,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 6,
+        marginBottom: 28,
+    },
+    durationBadgeText: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        fontWeight: "500",
+    },
+    postCallQuestion: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: COLORS.textMain,
+        textAlign: "center",
+        marginBottom: 8,
+        lineHeight: 26,
+    },
+    postCallSubtext: {
+        fontSize: 14,
+        color: COLORS.textMuted,
+        textAlign: "center",
+        marginBottom: 24,
+        lineHeight: 20,
+    },
+    starsRowLarge: {
+        flexDirection: "row",
+        alignItems: "flex-end",
+        gap: 6,
+        marginBottom: 28,
+    },
+    reviewButtonLarge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 36,
+        paddingVertical: 16,
+        borderRadius: 16,
+        gap: 12,
+        shadowColor: COLORS.gold500,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 6,
+    },
+    reviewButtonLargeText: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.textMain,
+    },
+    skipButton: {
+        marginTop: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+    },
+    skipButtonText: {
+        fontSize: 15,
+        color: COLORS.gray500,
         fontWeight: "500",
     },
     drawerOverlay: {

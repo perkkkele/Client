@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -419,19 +420,43 @@ export default function AvatarChatScreen() {
         }
     };
 
-    // Clear all conversation history
-    const handleClearAllHistory = async () => {
-        if (!token) return;
-        try {
-            for (const conv of conversations) {
-                await chatApi.deleteChat(token, conv.id);
-            }
-            setConversations([]);
-            setCurrentChatId(null);
-            setMessages(INITIAL_MESSAGES);
-        } catch (error) {
-            console.error("Error clearing history:", error);
-        }
+    // Clear all conversation history with confirmation
+    const handleClearAllHistory = () => {
+        Alert.alert(
+            "Borrar todo el historial",
+            "¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.",
+            [
+                {
+                    text: "Cancelar",
+                    style: "cancel"
+                },
+                {
+                    text: "Borrar todo",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            for (const conv of conversations) {
+                                await chatApi.deleteChat(token, conv.id);
+                            }
+                            setConversations([]);
+                            setCurrentChatId(null);
+                            setMessages(INITIAL_MESSAGES);
+                            closeDrawer();
+                        } catch (error) {
+                            console.error("Error clearing history:", error);
+                            Alert.alert("Error", "No se pudo borrar el historial");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    // Navigate to report a problem screen
+    const handleReportProblem = () => {
+        closeDrawer();
+        router.push("/(settings)/send-feedback" as any);
     };
 
     // Select an existing conversation and load its messages
@@ -620,45 +645,14 @@ export default function AvatarChatScreen() {
         loadConversations();
     }, [loadProfessional, loadConversations]);
 
-    // Auto-create or find a chat for session limit tracking
-    useEffect(() => {
-        const ensureChatExists = async () => {
-            // Only create if we don't have a currentChatId and are not in private mode
-            if (currentChatId || !token || !currentUser?._id || !professionalId || isPrivateMode) {
-                return;
-            }
-
-            try {
-                // Try to find existing chat first
-                const chats = await chatApi.getChats(token);
-                const existingChat = chats.find((chat: any) => {
-                    const p1Id = typeof chat.participant_one === 'string' ? chat.participant_one : chat.participant_one?._id;
-                    const p2Id = typeof chat.participant_two === 'string' ? chat.participant_two : chat.participant_two?._id;
-                    const matchesProfessional = p1Id === professionalId || p2Id === professionalId;
-                    const matchesUser = p1Id === currentUser._id || p2Id === currentUser._id;
-                    return matchesProfessional && matchesUser && chat.isAvatarChat;
-                });
-
-                if (existingChat) {
-                    console.log('[ensureChatExists] Found existing chat:', existingChat._id);
-                    setCurrentChatId(existingChat._id);
-                } else {
-                    // Create a new chat for session tracking
-                    console.log('[ensureChatExists] Creating new chat for session tracking');
-                    const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
-                    console.log('[ensureChatExists] Created chat:', newChat._id);
-                    setCurrentChatId(newChat._id);
-                }
-            } catch (error) {
-                console.error('[ensureChatExists] Error ensuring chat exists:', error);
-            }
-        };
-
-        // Only run after professional is loaded
-        if (professional) {
-            ensureChatExists();
-        }
-    }, [professional, token, currentUser?._id, professionalId, isPrivateMode, currentChatId]);
+    // NOTE: Do NOT auto-create or find a chat on screen load.
+    // Each avatar-chat session starts with no currentChatId.
+    // A NEW chat thread is created when the first message is sent.
+    // This allows users to have multiple separate conversation threads in their history.
+    // The chat creation happens in:
+    // - handleSendMessage (for typed messages)
+    // - onTranscription callback (for avatar responses)
+    // - onUserTranscription callback (for voice messages)
 
 
     // Initialize LiveAvatar session when professional is loaded
@@ -1405,11 +1399,28 @@ export default function AvatarChatScreen() {
                                         setMessages(prev => [...prev, newMessage]);
                                         console.log('Avatar says:', trimmedText);
 
-                                        // Save avatar response to chat (if chat exists and not in private mode)
-                                        if (currentChatId && token && !isPrivateMode) {
-                                            chatMessageApi.sendTextMessage(token, currentChatId, trimmedText, true)
-                                                .then(() => console.log('[Avatar] Response saved to chat'))
-                                                .catch(err => console.error('[Avatar] Error saving response:', err));
+                                        // Save avatar response to chat (auto-create chat if needed)
+                                        if (token && !isPrivateMode && professionalId && currentUser?._id) {
+                                            (async () => {
+                                                try {
+                                                    let chatIdToUse = currentChatId;
+
+                                                    // Auto-create chat if this is a new conversation
+                                                    if (!chatIdToUse) {
+                                                        console.log('[Avatar] Auto-creating chat for new conversation');
+                                                        const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
+                                                        chatIdToUse = newChat._id;
+                                                        setCurrentChatId(newChat._id);
+                                                        console.log('[Avatar] Chat created:', newChat._id);
+                                                    }
+
+                                                    // Save the bot message
+                                                    await chatMessageApi.sendTextMessage(token, chatIdToUse, trimmedText, true);
+                                                    console.log('[Avatar] Response saved to chat');
+                                                } catch (err) {
+                                                    console.error('[Avatar] Error saving response:', err);
+                                                }
+                                            })();
                                         }
 
                                         // Scroll to bottom
@@ -1449,6 +1460,30 @@ export default function AvatarChatScreen() {
                                         };
                                         setMessages(prev => [...prev, newMessage]);
                                         console.log('User said:', trimmedText);
+
+                                        // Save voice message to chat (auto-create chat if needed)
+                                        if (token && !isPrivateMode && professionalId && currentUser?._id) {
+                                            (async () => {
+                                                try {
+                                                    let chatIdToUse = currentChatId;
+
+                                                    // Auto-create chat if this is a new conversation
+                                                    if (!chatIdToUse) {
+                                                        console.log('[Voice] Auto-creating chat for new conversation');
+                                                        const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
+                                                        chatIdToUse = newChat._id;
+                                                        setCurrentChatId(newChat._id);
+                                                        console.log('[Voice] Chat created:', newChat._id);
+                                                    }
+
+                                                    // Save the user voice message
+                                                    await chatMessageApi.sendTextMessage(token, chatIdToUse, trimmedText, false);
+                                                    console.log('[Voice] Message saved to chat');
+                                                } catch (err) {
+                                                    console.error('[Voice] Error saving message:', err);
+                                                }
+                                            })();
+                                        }
 
                                         // Scroll to bottom
                                         setTimeout(() => {
@@ -2685,13 +2720,9 @@ export default function AvatarChatScreen() {
 
                         {/* Drawer Footer */}
                         <View style={styles.drawerFooter}>
-                            <TouchableOpacity style={styles.drawerFooterOption}>
+                            <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
                                 <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
                                 <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.drawerFooterOption}>
-                                <MaterialIcons name="notifications-off" size={20} color={COLORS.gray400} />
-                                <Text style={styles.drawerFooterOptionText}>Silenciar notificaciones</Text>
                             </TouchableOpacity>
                             <View style={styles.drawerDivider} />
                             <TouchableOpacity style={styles.drawerHistoryToggle}>
