@@ -2438,17 +2438,8 @@ export default function AvatarChatScreen() {
                                     {/* Professional label for human messages */}
                                     {message.isFromProfessional && (
                                         <View style={styles.proBadgeInMessage}>
-                                            {isHumanSession && isVideoCallMode ? (
-                                                <>
-                                                    <View style={styles.proBadgeDot} />
-                                                    <Text style={styles.proBadgeText}>EN VIVO</Text>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <MaterialIcons name="person" size={10} color={COLORS.primary} />
-                                                    <Text style={styles.proBadgeTextAsync}>Profesional</Text>
-                                                </>
-                                            )}
+                                            <MaterialIcons name="person" size={10} color={COLORS.primary} />
+                                            <Text style={styles.proBadgeTextAsync}>Profesional</Text>
                                         </View>
                                     )}
                                     <Text style={[
