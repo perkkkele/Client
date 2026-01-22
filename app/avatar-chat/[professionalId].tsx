@@ -21,10 +21,15 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
-import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi } from "../../api";
+import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi, voiceSessionApi } from "../../api";
+import * as customTwinApi from "../../api/customTwin";
+import { useCustomTwinEngine, useEngineMode } from "../../hooks/useCustomTwinEngine";
+import { useStreamingVoice } from "../../hooks/useStreamingVoice";
+import { useLiveAvatarAudio } from "../../hooks/useLiveAvatarAudio";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
+import ChatMemorySettings from "../../components/ChatMemorySettings";
 import { WebView } from "react-native-webview";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -210,6 +215,7 @@ export default function AvatarChatScreen() {
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);
     const [loadingConversations, setLoadingConversations] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+    const sendAudioRef = useRef<((audioBase64: string, sampleRate: number, text?: string) => void) | null>(null);
 
     // Appointment Booking State
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -227,8 +233,11 @@ export default function AvatarChatScreen() {
     const [sessionError, setSessionError] = useState<string | null>(null);
     const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
     const [livekitToken, setLivekitToken] = useState<string | null>(null);
+    const [livekitAgentToken, setLivekitAgentToken] = useState<string | null>(null); // For server-side audio agent
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [sessionToken, setSessionToken] = useState<string | null>(null);
+    const [avatarWsUrl, setAvatarWsUrl] = useState<string | null>(null); // WebSocket for audio in CUSTOM mode
+    const [ownRoomName, setOwnRoomName] = useState<string | null>(null); // Room name for v2 (our own LiveKit room)
 
     // Human video calls are now handled by dedicated client-video-call screen
     // This constant maintains compatibility with existing render conditions
@@ -253,6 +262,151 @@ export default function AvatarChatScreen() {
 
     // Remaining minutes for countdown warning
     const [remainingMinutes, setRemainingMinutes] = useState<number | null>(null);
+
+    // Custom Twin Engine State
+    const [dynamicQuickReplies, setDynamicQuickReplies] = useState<string[]>(QUICK_REPLIES);
+
+    // Check engine mode (FULL or CUSTOM)
+    const { engineMode, isLoading: engineModeLoading } = useEngineMode(professionalId);
+    const isCustomMode = engineMode === 'CUSTOM';
+
+    // Custom Twin Engine Hook (only active when mode is CUSTOM)
+    const customEngine = useCustomTwinEngine({
+        professionalId,
+        chatId: currentChatId || '',
+        clientId: currentUser?._id || '',
+        enabled: isCustomMode && !!currentChatId && !!currentUser?._id,
+        onQuickRepliesUpdated: (replies) => {
+            console.log('[CustomTwin] Quick replies updated:', replies);
+            setDynamicQuickReplies(replies);
+        },
+        onEscalationNeeded: (reason) => {
+            console.log('[CustomTwin] Escalation needed:', reason);
+            setActiveInfoBubble('escalation_keyword');
+        },
+        onError: (error) => {
+            console.error('[CustomTwin] Engine error:', error);
+        },
+    });
+
+    // Real-time streaming voice for CUSTOM mode
+    const streamingVoice = useStreamingVoice({
+        professionalId: professionalId as string,
+        clientId: currentUser?._id || '',
+        chatId: currentChatId || '',
+        enabled: isCustomMode && sessionStatus === 'active' && !!currentChatId && !!currentUser?._id,
+        // Agent mode: Server-side audio via LiveKit with WebRTC AEC
+        // This provides better echo cancellation than client-side capture
+        livekitUrl: livekitUrl || undefined,
+        livekitAgentToken: livekitAgentToken || undefined,
+        onUserMessage: async (transcription) => {
+            console.log('[StreamingVoice] User message:', transcription);
+
+            // Add user message to chat
+            const userMsg: Message = {
+                id: `voice-user-${Date.now()}`,
+                type: 'text',
+                content: transcription,
+                isUser: true,
+                timestamp: new Date().toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+            };
+            setMessages(prev => [...prev, userMsg]);
+
+            // Scroll to bottom
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        },
+        onPartialTranscript: (transcript) => {
+            // Could display partial transcript in UI if desired
+            console.log('[StreamingVoice] Partial:', transcript);
+        },
+        onPartialResponse: (text) => {
+            // Could stream response in UI word by word
+            console.log('[StreamingVoice] Response chunk:', text);
+        },
+        onResponseComplete: (response) => {
+            console.log('[StreamingVoice] Response complete:', response);
+
+            // Add twin response to chat
+            if (response && response.trim()) {
+                const twinMsg: Message = {
+                    id: `voice-twin-${Date.now()}`,
+                    type: 'text',
+                    content: response,
+                    isUser: false,
+                    timestamp: new Date().toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                };
+                setMessages(prev => [...prev, twinMsg]);
+
+                // Scroll to bottom
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+
+            // Signal end of speaking
+            console.log('[StreamingVoice] Response complete, sending speak_end');
+            if (liveAvatarAudio?.endSpeaking) {
+                liveAvatarAudio.endSpeaking();
+            }
+        },
+        onAudioChunk: (audioData) => {
+            // Send audio to LiveAvatar's WebSocket for lip-sync (agent.speak events)
+            // The audio is PCM 16-bit 24kHz in Base64 format
+            // Note: We trust AEC for echo cancellation, no mic pause needed
+            if (audioData.data && sendAudioRef.current) {
+                console.log('[StreamingVoice] Sending audio to LiveAvatar WebSocket, size:', audioData.data.length);
+                sendAudioRef.current(audioData.data, audioData.sampleRate || 24000, audioData.text);
+            }
+        },
+        onError: (error) => {
+            console.error('[StreamingVoice] Error:', error);
+        },
+    });
+
+    // LiveAvatar audio WebSocket for CUSTOM mode (sends agent.speak events)
+    const [avatarIsSpeaking, setAvatarIsSpeaking] = useState(false);
+
+    const liveAvatarAudio = useLiveAvatarAudio({
+        wsUrl: isCustomMode ? avatarWsUrl : null,
+        enabled: isCustomMode && sessionStatus === 'active' && !!avatarWsUrl,
+        onError: (error) => {
+            console.error('[LiveAvatarAudio] Error:', error);
+        },
+        onSpeakingChange: (speaking) => {
+            console.log('[AvatarChat] Avatar speaking changed:', speaking);
+            setAvatarIsSpeaking(speaking);
+        },
+    });
+
+    // Update sendAudioRef to use the LiveAvatar audio WebSocket
+    useEffect(() => {
+        if (isCustomMode && liveAvatarAudio.isConnected) {
+            console.log('[AvatarChat] LiveAvatar audio WebSocket connected, ready to send audio');
+            sendAudioRef.current = (audioBase64: string, sampleRate: number, text?: string) => {
+                console.log('[AvatarChat] Calling sendAudioChunk with audio size:', audioBase64.length);
+                liveAvatarAudio.sendAudioChunk(audioBase64);
+            };
+        }
+    }, [isCustomMode, liveAvatarAudio.isConnected, liveAvatarAudio.sendAudioChunk]);
+
+
+    // Barge-in: When user starts speaking during avatar playback, interrupt the avatar
+    // We trust AEC to filter out echo - only real user speech will trigger this
+    useEffect(() => {
+        if (isCustomMode && avatarIsSpeaking && streamingVoice.isSpeaking) {
+            // User started talking while avatar is speaking - send interrupt!
+            console.log('[AvatarChat] Barge-in detected! User speaking while avatar is playing');
+            liveAvatarAudio.interrupt();
+        }
+    }, [isCustomMode, avatarIsSpeaking, streamingVoice.isSpeaking, liveAvatarAudio.interrupt]);
 
     // Mark session as checked when professional has no limit configured
     useEffect(() => {
@@ -757,12 +911,155 @@ export default function AvatarChatScreen() {
         }
     }, [professional]);
 
+    // Initialize LiveAvatar session in CUSTOM mode (for external audio lip-sync)
+    const initializeCustomModeLiveAvatar = useCallback(async () => {
+        if (!professional?.digitalTwin?.isActive || isSessionExpired) {
+            console.log("[AvatarChat] CUSTOM mode: Twin not active or session expired");
+            return;
+        }
+
+        const avatarId = professional.digitalTwin.appearance?.liveAvatarId;
+        if (!avatarId) {
+            console.log("[AvatarChat] CUSTOM mode: No avatar ID configured, using static preview");
+            // Still mark as active so the UI shows the static preview
+            setSessionStatus('active');
+            return;
+        }
+
+        console.log("[AvatarChat] CUSTOM mode: Initializing LiveAvatar with external audio...");
+        setSessionStatus('connecting');
+        setSessionError(null);
+
+        try {
+            const configuredLanguage = professional?.language || "es";
+
+            // ==== V2 FLOW: Try using our own LiveKit room with Turn Detector ====
+            // This enables intelligent end-of-turn detection (~0.5-2s vs ~3.5s latency)
+            let useV2Flow = false;
+            let v2SessionData: any = null;
+
+            try {
+                console.log("[AvatarChat] CUSTOM mode: Trying V2 flow (own LiveKit room)...");
+
+                // Ensure we have a chat ID first (needed for room naming)
+                let chatIdToUse = currentChatId;
+                if (!chatIdToUse && token && currentUser?._id && professionalId) {
+                    console.log("[AvatarChat] V2: Creating chat for voice streaming...");
+                    const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId as string);
+                    chatIdToUse = newChat._id;
+                    setCurrentChatId(newChat._id);
+                    console.log("[AvatarChat] V2: Chat created:", newChat._id);
+                }
+
+                if (chatIdToUse && token) {
+                    // Step 1: Start V2 session (creates our own LiveKit room)
+                    const v2Result = await voiceSessionApi.startVoiceSessionV2(token, professionalId as string, chatIdToUse);
+
+                    if (v2Result.success && v2Result.data) {
+                        v2SessionData = v2Result.data;
+                        console.log("[AvatarChat] V2: Got our own room:", v2SessionData.roomName);
+
+                        // Step 2: Create LiveAvatar session using livekit_config to send avatar to our room
+                        const tokenResponse = await liveAvatarApi.createCustomSessionWithOwnRoom({
+                            avatarId,
+                            language: configuredLanguage,
+                            livekitUrl: v2SessionData.livekitUrl,
+                            livekitRoom: v2SessionData.roomName,
+                            livekitClientToken: v2SessionData.heygenToken, // Token for HeyGen to join our room
+                        });
+                        console.log("[AvatarChat] V2: LiveAvatar session created:", tokenResponse.session_id);
+
+                        // Step 3: Start the session
+                        const startResponse = await liveAvatarApi.startCustomSession(tokenResponse.session_token);
+                        console.log("[AvatarChat] V2: Session started with our own room");
+
+                        // Store our room's LiveKit credentials (not HeyGen's)
+                        setLivekitUrl(v2SessionData.livekitUrl);
+                        setLivekitToken(v2SessionData.clientToken); // Our token, not HeyGen's
+                        setLivekitAgentToken(v2SessionData.agentToken); // For Turn Detector agent
+                        setOwnRoomName(v2SessionData.roomName);
+                        setSessionId(startResponse.session_id);
+                        setSessionToken(tokenResponse.session_token);
+                        if (startResponse.ws_url) {
+                            setAvatarWsUrl(startResponse.ws_url);
+                        }
+                        setSessionStatus('active');
+
+                        useV2Flow = true;
+                        console.log("[AvatarChat] ✅ V2 flow active! Using Turn Detector for low-latency end-of-turn detection");
+                    }
+                }
+            } catch (v2Error: any) {
+                console.warn("[AvatarChat] V2 flow failed, falling back to legacy:", v2Error.message);
+                // Continue to legacy flow
+            }
+
+            // ==== LEGACY FLOW: Use HeyGen's LiveKit room (fallback) ====
+            if (!useV2Flow) {
+                console.log("[AvatarChat] CUSTOM mode: Using legacy flow (HeyGen's room)...");
+
+                // Step 1: Create CUSTOM mode session token
+                const tokenResponse = await liveAvatarApi.createCustomSessionToken({
+                    avatarId,
+                    language: configuredLanguage,
+                });
+                console.log("[AvatarChat] Legacy: Session token created:", tokenResponse.session_id);
+
+                // Step 2: Start session with audio input type
+                const startResponse = await liveAvatarApi.startCustomSession(tokenResponse.session_token);
+                console.log("[AvatarChat] Legacy: Session started:", startResponse);
+
+                // Step 3: Store LiveKit credentials
+                setLivekitUrl(startResponse.livekit_url);
+                setLivekitToken(startResponse.livekit_client_token);
+                if (startResponse.livekit_agent_token) {
+                    setLivekitAgentToken(startResponse.livekit_agent_token);
+                }
+                setSessionId(startResponse.session_id);
+                setSessionToken(tokenResponse.session_token);
+                if (startResponse.ws_url) {
+                    setAvatarWsUrl(startResponse.ws_url);
+                }
+                setSessionStatus('active');
+
+                console.log("[AvatarChat] Legacy flow active (HeyGen's room)");
+
+                // Create chat if needed
+                if (!currentChatId && token && currentUser?._id && professionalId) {
+                    try {
+                        const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId as string);
+                        setCurrentChatId(newChat._id);
+                        console.log("[AvatarChat] Legacy: Chat created:", newChat._id);
+                    } catch (chatError: any) {
+                        console.error("[AvatarChat] Legacy: Failed to create chat:", chatError);
+                    }
+                }
+            }
+
+        } catch (error: any) {
+            console.error("[AvatarChat] CUSTOM mode error:", error);
+            // Fall back to static preview on error
+            setSessionError(error.message || "Error conectando con el avatar");
+            setSessionStatus('active'); // Still allow chat to work
+        }
+    }, [professional, isSessionExpired, currentChatId, token, currentUser, professionalId]);
+
     // Start session when professional is loaded (only if session not expired and status checked)
     useEffect(() => {
-        if (professional && !isLoading && sessionStatus === 'idle' && sessionStatusChecked && !isSessionExpired) {
-            initializeLiveAvatarSession();
+        // Wait for engine mode to be determined before starting session
+        if (professional && !isLoading && !engineModeLoading && sessionStatus === 'idle' && sessionStatusChecked && !isSessionExpired) {
+            console.log('[AvatarChat] Engine mode loaded:', engineMode, 'isCustomMode:', isCustomMode);
+            if (isCustomMode) {
+                // Initialize LiveAvatar in CUSTOM mode (external audio for lip-sync)
+                initializeCustomModeLiveAvatar();
+            } else {
+                // Initialize LiveAvatar in FULL mode (LiveAvatar handles everything)
+                initializeLiveAvatarSession();
+            }
         }
-    }, [professional, isLoading, sessionStatus, sessionStatusChecked, isSessionExpired, initializeLiveAvatarSession]);
+    }, [professional, isLoading, engineModeLoading, engineMode, sessionStatus, sessionStatusChecked, isSessionExpired, initializeLiveAvatarSession, initializeCustomModeLiveAvatar, isCustomMode]);
+
+
 
     // Track processed transcript entries to avoid duplicates
     const processedTranscriptCountRef = useRef(0);
@@ -962,41 +1259,72 @@ export default function AvatarChatScreen() {
             scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
 
-        // FIRST: Send text to LiveAvatar via data channel if available (don't block on DB)
-        // Skip LiveAvatar entirely when twin is disabled - messages go directly to professional
+        // FIRST: Send text to avatar - different logic for FULL vs CUSTOM mode
+        // Skip entirely when twin is disabled - messages go directly to professional
         if (!isTwinEffectivelyDisabled) {
-            if (sessionStatus === 'active' && sendTextToAvatarRef.current) {
+            if (isCustomMode) {
+                // CUSTOM MODE: Use our custom twin engine
+                console.log('[handleSendMessage] Using CUSTOM engine mode');
                 try {
-                    // Store the typed message to prevent duplicate from user.transcription event
-                    lastTypedMessageRef.current = messageText;
-
-                    console.log('Sending text to LiveAvatar via data channel:', messageText);
-                    sendTextToAvatarRef.current(messageText);
-                    console.log('Text sent to LiveAvatar successfully');
-                    // The avatar's response will come through the onTranscription callback
+                    const response = await customEngine.sendMessage(messageText);
+                    if (response) {
+                        // Add the twin's written response to the chat
+                        const twinMessage: Message = {
+                            id: `twin-${Date.now()}`,
+                            type: "text",
+                            content: response.content,
+                            isUser: false,
+                            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        };
+                        setMessages(prev => [...prev, twinMessage]);
+                        console.log('[CustomTwin] Response added to chat');
+                    }
                 } catch (error: any) {
-                    console.error('Error sending text to LiveAvatar:', error);
-                    // Show error as a system message
+                    console.error('[CustomTwin] Error sending message:', error);
                     const errorMessage: Message = {
-                        id: (Date.now() + 1).toString(),
+                        id: `error-${Date.now()}`,
                         type: "text",
-                        content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                        content: "Error al procesar tu mensaje. Por favor intenta de nuevo.",
                         isUser: false,
                         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                     };
                     setMessages(prev => [...prev, errorMessage]);
                 }
             } else {
-                console.log('Session not active or data channel not ready, cannot send message to avatar');
-                // If session is not active, show a message (only when twin is enabled but not connected)
-                const infoMessage: Message = {
-                    id: (Date.now() + 1).toString(),
-                    type: "text",
-                    content: "El avatar no está conectado. Espera a que se establezca la conexión.",
-                    isUser: false,
-                    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                };
-                setMessages(prev => [...prev, infoMessage]);
+                // FULL MODE: Use LiveAvatar directly via data channel
+                if (sessionStatus === 'active' && sendTextToAvatarRef.current) {
+                    try {
+                        // Store the typed message to prevent duplicate from user.transcription event
+                        lastTypedMessageRef.current = messageText;
+
+                        console.log('Sending text to LiveAvatar via data channel:', messageText);
+                        sendTextToAvatarRef.current(messageText);
+                        console.log('Text sent to LiveAvatar successfully');
+                        // The avatar's response will come through the onTranscription callback
+                    } catch (error: any) {
+                        console.error('Error sending text to LiveAvatar:', error);
+                        // Show error as a system message
+                        const errorMessage: Message = {
+                            id: (Date.now() + 1).toString(),
+                            type: "text",
+                            content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                            isUser: false,
+                            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        };
+                        setMessages(prev => [...prev, errorMessage]);
+                    }
+                } else {
+                    console.log('Session not active or data channel not ready, cannot send message to avatar');
+                    // If session is not active, show a message (only when twin is enabled but not connected)
+                    const infoMessage: Message = {
+                        id: (Date.now() + 1).toString(),
+                        type: "text",
+                        content: "El avatar no está conectado. Espera a que se establezca la conexión.",
+                        isUser: false,
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                    };
+                    setMessages(prev => [...prev, infoMessage]);
+                }
             }
         } else {
             // Twin is disabled - messages go directly to professional (no LiveAvatar interaction)
@@ -1375,6 +1703,16 @@ export default function AvatarChatScreen() {
                                 }}
                                 onError={(error) => {
                                     console.error('LiveKit error:', error);
+                                }}
+                                onSendAudioReady={(sendAudio) => {
+                                    // In CUSTOM mode, we use the useLiveAvatarAudio hook's WebSocket instead
+                                    // Only use this for FULL mode where LiveAvatar handles everything
+                                    if (!isCustomMode) {
+                                        console.log('[LiveAvatar] sendAudio function ready for FULL mode');
+                                        sendAudioRef.current = sendAudio;
+                                    } else {
+                                        console.log('[LiveAvatar] CUSTOM mode: ignoring LiveKit audio sender, using WebSocket');
+                                    }
                                 }}
                                 onTranscription={(text, isFinal) => {
                                     // Ignore avatar responses when communication is paused
@@ -2521,7 +2859,7 @@ export default function AvatarChatScreen() {
                     style={styles.quickRepliesContainer}
                     contentContainerStyle={styles.quickRepliesContent}
                 >
-                    {QUICK_REPLIES.map((reply, index) => (
+                    {dynamicQuickReplies.map((reply, index) => (
                         <TouchableOpacity
                             key={index}
                             style={styles.quickReplyButton}
@@ -2561,6 +2899,47 @@ export default function AvatarChatScreen() {
                     </View>
                 )}
 
+                {/* Voice Streaming Indicator for CUSTOM mode */}
+                {isCustomMode && (streamingVoice.isConnected || streamingVoice.isProcessing) && (
+                    <View style={[
+                        styles.recordingIndicator,
+                        streamingVoice.isSpeaking && { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                        streamingVoice.isProcessing && { backgroundColor: 'rgba(249, 245, 6, 0.15)' }
+                    ]}>
+                        <View style={[
+                            styles.recordingDot,
+                            streamingVoice.isSpeaking && { backgroundColor: '#ef4444' },
+                            streamingVoice.isReady && !streamingVoice.isSpeaking && { backgroundColor: '#22c55e' },
+                            streamingVoice.isProcessing && { backgroundColor: COLORS.primary }
+                        ]} />
+                        <Text style={[
+                            styles.recordingText,
+                            streamingVoice.isSpeaking && { color: '#ef4444' },
+                            streamingVoice.isReady && !streamingVoice.isSpeaking && { color: '#22c55e' },
+                            streamingVoice.isProcessing && { color: COLORS.primary }
+                        ]}>
+                            {streamingVoice.isProcessing
+                                ? 'Procesando...'
+                                : streamingVoice.isSpeaking
+                                    ? 'Escuchando...'
+                                    : streamingVoice.isReady
+                                        ? 'Listo para escuchar'
+                                        : 'Conectando...'}
+                        </Text>
+                        {streamingVoice.partialTranscript && (
+                            <Text style={{ color: COLORS.gray600, fontSize: 12, marginLeft: 8 }}>
+                                "{streamingVoice.partialTranscript}"
+                            </Text>
+                        )}
+                        <TouchableOpacity
+                            onPress={() => streamingVoice.disconnect()}
+                            style={styles.recordingCancelButton}
+                        >
+                            <MaterialIcons name="mic-off" size={18} color={COLORS.gray500} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {/* Input Row */}
                 <View style={styles.inputRow}>
                     <TouchableOpacity style={styles.addButton}>
@@ -2583,14 +2962,52 @@ export default function AvatarChatScreen() {
                     </View>
 
                     <TouchableOpacity
-                        style={styles.voiceButton}
-                        onPress={handleSendMessage}
+                        style={[
+                            styles.voiceButton,
+                            // Green when ready, red when speaking, yellow when processing
+                            isCustomMode && streamingVoice.isReady && !streamingVoice.isSpeaking && { backgroundColor: '#22c55e' },
+                            isCustomMode && streamingVoice.isSpeaking && { backgroundColor: '#ef4444' },
+                            isCustomMode && streamingVoice.isProcessing && { backgroundColor: COLORS.primary }
+                        ]}
+                        onPress={() => {
+                            // If there's text, send it
+                            if (inputText.trim()) {
+                                handleSendMessage();
+                                return;
+                            }
+
+                            // In CUSTOM mode, toggle voice connection
+                            if (isCustomMode) {
+                                if (streamingVoice.isConnected) {
+                                    streamingVoice.disconnect();
+                                } else {
+                                    streamingVoice.connect();
+                                }
+                                return;
+                            }
+
+                            // In FULL mode, the mic button does nothing (voice is always on via LiveKit)
+                            handleSendMessage();
+                        }}
+                        disabled={streamingVoice.isProcessing}
                     >
-                        <MaterialIcons
-                            name={inputText.trim() ? "send" : "graphic-eq"}
-                            size={28}
-                            color={inputText.trim() ? COLORS.primary : COLORS.white}
-                        />
+                        {streamingVoice.isProcessing ? (
+                            <ActivityIndicator size="small" color={COLORS.textMain} />
+                        ) : (
+                            <MaterialIcons
+                                name={
+                                    inputText.trim()
+                                        ? "send"
+                                        : isCustomMode && streamingVoice.isConnected
+                                            ? "mic"
+                                            : isCustomMode
+                                                ? "mic-off"
+                                                : "graphic-eq"
+                                }
+                                size={28}
+                                color={inputText.trim() ? COLORS.primary : COLORS.white}
+                            />
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -2711,6 +3128,13 @@ export default function AvatarChatScreen() {
 
                         {/* Drawer Footer */}
                         <View style={styles.drawerFooter}>
+                            {/* Memory Settings - RAG Fase 2 */}
+                            <ChatMemorySettings
+                                chatId={currentChatId}
+                                professionalName={professional?.publicName || professional?.firstname}
+                                onClose={closeDrawer}
+                            />
+                            <View style={styles.drawerDivider} />
                             <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
                                 <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
                                 <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
@@ -4481,6 +4905,40 @@ const styles = StyleSheet.create({
     personalAttentionSecondaryText: {
         fontSize: 14,
         color: COLORS.primary,
+        fontWeight: "500",
+    },
+    // Recording indicator styles for CUSTOM mode
+    recordingIndicator: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        marginHorizontal: 16,
+        marginBottom: 8,
+        gap: 8,
+    },
+    recordingDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#ef4444",
+    },
+    recordingText: {
+        color: "#ef4444",
+        fontSize: 14,
+        fontWeight: "500",
+        flex: 1,
+    },
+    recordingCancelButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+    },
+    recordingCancelText: {
+        color: COLORS.gray500,
+        fontSize: 13,
         fontWeight: "500",
     },
 });

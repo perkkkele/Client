@@ -92,12 +92,18 @@ export interface DigitalTwinAppearance {
     liveVoiceLanguage?: string | null;
 }
 
+export interface DigitalTwinTtsConfig {
+    voice?: string;  // OpenAI TTS voice: alloy, nova, shimmer, echo, fable, onyx
+    speed?: number;  // TTS speed: 0.25 to 4.0
+}
+
 export interface DigitalTwin {
     appearance?: DigitalTwinAppearance;
     personality?: DigitalTwinPersonality;
     behavior?: DigitalTwinBehavior;
     guardrails?: DigitalTwinGuardrails;
     knowledge?: DigitalTwinKnowledge;
+    ttsConfig?: DigitalTwinTtsConfig;  // OpenAI TTS configuration for CUSTOM mode
     liveAvatarContextId?: string | null;
     contextNeedsSync?: boolean;  // Flag to trigger context regeneration
     isActive?: boolean;

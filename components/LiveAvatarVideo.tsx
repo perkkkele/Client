@@ -15,6 +15,7 @@ interface LiveAvatarVideoProps {
     onTranscription?: (text: string, isFinal: boolean) => void;
     onUserTranscription?: (text: string, isFinal: boolean) => void;
     onSendTextReady?: (sendText: (text: string) => void) => void;
+    onSendAudioReady?: (sendAudio: (audioBase64: string, sampleRate: number, text?: string) => void) => void;
     muted?: boolean;
     style?: any;
 }
@@ -42,16 +43,24 @@ try {
         }).catch(() => { });
 
         // Configure for communication mode with speaker output for better volume
+        // Enable AEC (echo cancellation), noise suppression, and auto gain control
         AudioSession.configureAudio({
             android: {
-                audioMode: 'communication',  // Better volume for voice
+                audioMode: 'communication',  // Better volume for voice + enables AEC
                 audioFocusMode: 'gain',
                 audioAttributesUsage: 'voiceCommunication',
                 audioAttributesContentType: 'speech',
                 preferredOutputList: ['speaker'],  // Force speaker output
+                // Audio processing for echo cancellation
+                audioTypeOptions: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                },
             },
             ios: {
                 defaultOutput: 'speaker',  // Force speaker on iOS
+                // iOS handles AEC automatically in voice communication mode
             },
         }).catch((e: any) => {
             console.log('AudioSession configure error:', e);
@@ -200,6 +209,56 @@ function TextSender({
     return null;
 }
 
+// Component to send audio/text to avatar via LiveKit data channel (for CUSTOM mode lip-sync)
+// In CUSTOM mode, we use 'avatar.speak' with task_type 'repeat' to make the avatar speak
+function AudioSender({
+    onSendAudioReady
+}: {
+    onSendAudioReady?: (sendAudio: (audioBase64: string, sampleRate: number, text?: string) => void) => void;
+}) {
+    const { useDataChannel } = LiveKitModule;
+    const sendReadyCalledRef = useRef(false);
+
+    // Get the data channel for agent-control topic
+    const dataChannel = useDataChannel ? useDataChannel('agent-control') : null;
+
+    useEffect(() => {
+        if (dataChannel && dataChannel.send && onSendAudioReady && !sendReadyCalledRef.current) {
+            sendReadyCalledRef.current = true;
+
+            // Create the sendAudio function - in CUSTOM mode, we send the text for avatar to speak
+            const sendAudio = (audioBase64: string, sampleRate: number = 24000, text?: string) => {
+                try {
+                    // If we have text, use avatar.speak with task_type 'repeat'
+                    // This makes the avatar speak the text with HeyGen's TTS for proper lip-sync
+                    if (text && text.trim()) {
+                        const event = {
+                            event_type: 'avatar.speak',
+                            text: text.trim(),
+                            task_type: 'repeat',  // Repeat exactly what we say
+                        };
+                        const message = JSON.stringify(event);
+                        console.log('[AudioSender] Sending text to avatar for lip-sync:', text.substring(0, 50) + '...');
+
+                        const encoder = new TextEncoder();
+                        const data = encoder.encode(message);
+                        dataChannel.send(data);
+                        console.log('[AudioSender] Text sent to avatar successfully');
+                    } else {
+                        console.log('[AudioSender] No text provided, skipping speak command');
+                    }
+                } catch (error: any) {
+                    console.error('[AudioSender] Error sending to avatar:', error);
+                }
+            };
+
+            onSendAudioReady(sendAudio);
+        }
+    }, [dataChannel, onSendAudioReady]);
+
+    return null;
+}
+
 // Component to control audio mute state
 function AudioMuter({ muted }: { muted?: boolean }) {
     const { useRemoteParticipants } = LiveKitModule;
@@ -239,12 +298,14 @@ function VideoRenderer({
     onTranscription,
     onUserTranscription,
     onSendTextReady,
+    onSendAudioReady,
     muted
 }: {
     style?: any;
     onTranscription?: (text: string, isFinal: boolean) => void;
     onUserTranscription?: (text: string, isFinal: boolean) => void;
     onSendTextReady?: (sendText: (text: string) => void) => void;
+    onSendAudioReady?: (sendAudio: (audioBase64: string, sampleRate: number, text?: string) => void) => void;
     muted?: boolean;
 }) {
     const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
@@ -261,9 +322,10 @@ function VideoRenderer({
     if (!videoTrack) {
         return (
             <View style={[styles.loadingContainer, style]}>
-                <ActivityIndicator size="small" color="#f9f506" />
+                <ActivityIndicator size="small" color="#137fec" />
                 <Text style={styles.loadingText}>Esperando avatar...</Text>
                 <TextSender onSendTextReady={onSendTextReady} />
+                <AudioSender onSendAudioReady={onSendAudioReady} />
             </View>
         );
     }
@@ -280,6 +342,7 @@ function VideoRenderer({
                 onUserTranscription={onUserTranscription}
             />
             <TextSender onSendTextReady={onSendTextReady} />
+            <AudioSender onSendAudioReady={onSendAudioReady} />
             <AudioMuter muted={muted} />
         </View>
     );
@@ -294,6 +357,7 @@ function LiveKitVideoPlayer({
     onTranscription,
     onUserTranscription,
     onSendTextReady,
+    onSendAudioReady,
     muted,
     style
 }: LiveAvatarVideoProps) {
@@ -332,7 +396,7 @@ function LiveKitVideoPlayer({
         >
             {!isConnected ? (
                 <View style={[styles.loadingContainer, style]}>
-                    <ActivityIndicator size="large" color="#f9f506" />
+                    <ActivityIndicator size="large" color="#137fec" />
                     <Text style={styles.loadingText}>Conectando video...</Text>
                 </View>
             ) : (
@@ -341,6 +405,7 @@ function LiveKitVideoPlayer({
                     onTranscription={onTranscription}
                     onUserTranscription={onUserTranscription}
                     onSendTextReady={onSendTextReady}
+                    onSendAudioReady={onSendAudioReady}
                     muted={muted}
                 />
             )}

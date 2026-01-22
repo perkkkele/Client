@@ -239,7 +239,8 @@ export default function TwinAppearanceScreen() {
     async function loadPublicVoices() {
         setLoadingVoices(true);
         try {
-            const voices = await liveAvatarApi.getPublicVoices();
+            // Use OpenAI TTS voices for CUSTOM mode compatibility
+            const voices = liveAvatarApi.getOpenAIVoices();
             setPublicVoices(voices);
         } catch (error) {
             console.error("Error loading voices:", error);
@@ -709,6 +710,11 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
                     updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
                     updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
+                    // Also save to ttsConfig for OpenAI TTS in CUSTOM mode
+                    updateData.digitalTwin.ttsConfig = {
+                        voice: selectedVoice.id,
+                        speed: user?.digitalTwin?.ttsConfig?.speed || 1.0,
+                    };
                 }
 
                 // If a private/cloned voice is selected, save its data
@@ -843,6 +849,7 @@ export default function TwinAppearanceScreen() {
     function renderVoiceItem({ item }: { item: PublicVoice }) {
         const isSelected = selectedVoice?.id === item.id;
         const isPlaying = playingVoiceId === item.id;
+        const genderLabel = item.gender === 'male' ? 'Masculina' : item.gender === 'female' ? 'Femenina' : 'Neutral';
 
         return (
             <TouchableOpacity
@@ -853,7 +860,7 @@ export default function TwinAppearanceScreen() {
                 <View style={styles.voiceItemContent}>
                     <View style={[styles.voiceIcon, isSelected && styles.voiceIconSelected]}>
                         <MaterialIcons
-                            name={item.gender?.toLowerCase() === 'female' ? 'person-2' : 'person'}
+                            name={item.gender === 'female' ? 'person-2' : item.gender === 'male' ? 'person' : 'record-voice-over'}
                             size={24}
                             color={isSelected ? COLORS.primaryDark : COLORS.gray500}
                         />
@@ -862,8 +869,8 @@ export default function TwinAppearanceScreen() {
                         <Text style={[styles.voiceItemName, isSelected && styles.voiceItemNameSelected]} numberOfLines={1}>
                             {item.name || "Voz"}
                         </Text>
-                        <Text style={styles.voiceItemMeta}>
-                            {item.gender || "Neutral"} • {item.language || "ES"}
+                        <Text style={styles.voiceItemMeta} numberOfLines={2}>
+                            {item.description || `${genderLabel} • ${item.language || "Multilingüe"}`}
                         </Text>
                     </View>
                 </View>

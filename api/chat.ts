@@ -370,3 +370,83 @@ export async function updateSessionTime(
 
     return response.json();
 }
+
+// =========================================
+// RAG Fase 2: Memoria Conversacional
+// =========================================
+
+export interface MemoryStatus {
+    clientMemoryEnabled: boolean;
+    lastVectorizedAt?: string;
+    vectorizedMessageCount: number;
+}
+
+/**
+ * Get memory status for a chat
+ */
+export async function getMemoryStatus(
+    token: string,
+    chatId: string
+): Promise<MemoryStatus> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/memory`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al obtener estado de memoria");
+    }
+
+    return response.json();
+}
+
+/**
+ * Toggle memory preference for a chat (client controls this)
+ */
+export async function toggleMemory(
+    token: string,
+    chatId: string,
+    enabled: boolean
+): Promise<{ message: string; clientMemoryEnabled: boolean }> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/memory`, {
+        method: "PATCH",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al actualizar memoria");
+    }
+
+    return response.json();
+}
+
+/**
+ * GDPR: Delete all vectorized memory for the client (forget me)
+ */
+export async function forgetMe(
+    token: string,
+    chatId: string
+): Promise<{ message: string; deletedVectors: number; updatedMessages: number }> {
+    const response = await fetch(`${API_URL}/chat/${chatId}/forget-me`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al eliminar memoria");
+    }
+
+    return response.json();
+}
+

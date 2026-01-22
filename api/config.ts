@@ -22,7 +22,13 @@ export const API_URL = IS_PRODUCTION
     ? `${API_PROTOCOL}://${API_HOST}/api`
     : `${API_PROTOCOL}://${API_HOST}:${API_PORT}/api`;
 
+// Socket.io URL - uses HTTP protocol, the library handles WebSocket upgrade internally
 export const SOCKET_URL = IS_PRODUCTION
+    ? `${API_PROTOCOL}://${API_HOST}`
+    : `${API_PROTOCOL}://${API_HOST}:${API_PORT}`;
+
+// WebSocket URL for native WebSocket connections (not socket.io)
+export const WS_URL = IS_PRODUCTION
     ? `${WS_PROTOCOL}://${API_HOST}`
     : `${WS_PROTOCOL}://${API_HOST}:${API_PORT}`;
 

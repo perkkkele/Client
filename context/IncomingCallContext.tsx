@@ -68,9 +68,17 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
 
         console.log("[IncomingCall] Connecting to socket:", SOCKET_URL);
 
+        // In production (Railway), WebSocket works fine
+        // In development (Windows), use polling to avoid firewall issues
+        const transportOptions = __DEV__ ? ["polling"] : ["websocket", "polling"];
+
         const socket = io(SOCKET_URL, {
-            transports: ["websocket"],
+            transports: transportOptions,
             autoConnect: true,
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            timeout: 20000,
         });
 
         socket.on("connect", () => {
@@ -87,6 +95,11 @@ export function IncomingCallProvider({ children }: { children: React.ReactNode }
 
         socket.on("connect_error", (error) => {
             console.error("[IncomingCall] Socket connection error:", error.message);
+            console.error("[IncomingCall] Error details:", JSON.stringify(error, null, 2));
+        });
+
+        socket.on("error", (error) => {
+            console.error("[IncomingCall] Socket error event:", error);
         });
 
         // Listen for incoming calls

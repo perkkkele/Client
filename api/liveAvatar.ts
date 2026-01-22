@@ -28,7 +28,9 @@ export interface SessionTokenResponse {
 export interface SessionStartResponse {
     livekit_url: string;
     livekit_client_token: string;
+    livekit_agent_token?: string; // Token for server-side agent to join room
     session_id: string;
+    ws_url?: string; // WebSocket URL for audio streaming in CUSTOM mode
 }
 
 // Public avatar from LiveAvatar catalog
@@ -319,6 +321,70 @@ export interface PublicVoice {
     sample_url?: string;
     provider?: string;
     description?: string;
+}
+
+/**
+ * OpenAI TTS Voices for CUSTOM mode
+ * These voices are used when the digital twin operates in CUSTOM mode
+ * with OpenAI's gpt-4o-mini-tts model
+ */
+export const OPENAI_TTS_VOICES: PublicVoice[] = [
+    {
+        id: 'alloy',
+        name: 'Alloy',
+        gender: 'neutral',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz neutral y versátil, ideal para asistentes profesionales',
+    },
+    {
+        id: 'nova',
+        name: 'Nova',
+        gender: 'female',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz femenina cálida y amigable',
+    },
+    {
+        id: 'shimmer',
+        name: 'Shimmer',
+        gender: 'female',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz femenina expresiva y dinámica',
+    },
+    {
+        id: 'echo',
+        name: 'Echo',
+        gender: 'male',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz masculina profunda y resonante',
+    },
+    {
+        id: 'fable',
+        name: 'Fable',
+        gender: 'male',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz masculina narradora, perfecta para explicaciones',
+    },
+    {
+        id: 'onyx',
+        name: 'Onyx',
+        gender: 'male',
+        language: 'multi',
+        provider: 'openai',
+        description: 'Voz masculina autoritaria y profesional',
+    },
+];
+
+/**
+ * Get OpenAI TTS voices for CUSTOM mode
+ * Returns the static list of available OpenAI TTS voices
+ */
+export function getOpenAIVoices(): PublicVoice[] {
+    return OPENAI_TTS_VOICES;
 }
 
 /**
@@ -657,6 +723,122 @@ export async function createSessionToken(config: AvatarConfig): Promise<SessionT
     return responseData;
 }
 
+/**
+ * Create a LiveAvatar session token in CUSTOM mode
+ * CUSTOM mode allows sending external audio for lip-sync (doesn't use LiveAvatar's LLM/TTS)
+ */
+export async function createCustomSessionToken(config: { avatarId: string; language?: string }): Promise<SessionTokenResponse> {
+    if (!config.avatarId) {
+        throw new Error("Se requiere un avatar configurado para iniciar la sesión.");
+    }
+
+    const requestBody: any = {
+        mode: "CUSTOM",
+        avatar_id: config.avatarId,
+        avatar_persona: {
+            language: config.language || "es",
+        },
+    };
+
+    console.log("LiveAvatar CUSTOM mode request:", JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(`${LIVEAVATAR_API_URL}/sessions/token`, {
+        method: "POST",
+        headers: {
+            "X-API-KEY": LIVEAVATAR_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("LiveAvatar CUSTOM token error:", error);
+        throw new Error(error.message || `Error creating CUSTOM session: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log("LiveAvatar CUSTOM token response:", responseData);
+
+    if (responseData.data) {
+        return responseData.data;
+    }
+    return responseData;
+}
+
+/**
+ * Create a LiveAvatar session token in CUSTOM mode using OUR OWN LiveKit room.
+ * 
+ * This uses the livekit_config parameter to send the HeyGen avatar to our
+ * LiveKit Cloud room, allowing us to use the @livekit/agents framework
+ * with Turn Detector for intelligent end-of-turn detection.
+ * 
+ * @param config - Configuration including avatarId and LiveKit room details
+ * @returns Session token response
+ */
+export interface OwnRoomConfig {
+    avatarId: string;
+    language?: string;
+    livekitUrl: string;      // Our LiveKit Cloud URL
+    livekitRoom: string;     // Room name in our account
+    livekitClientToken: string;  // Token for the HeyGen avatar to join
+}
+
+export async function createCustomSessionWithOwnRoom(config: OwnRoomConfig): Promise<SessionTokenResponse> {
+    if (!config.avatarId) {
+        throw new Error("Se requiere un avatar configurado para iniciar la sesión.");
+    }
+
+    if (!config.livekitUrl || !config.livekitRoom || !config.livekitClientToken) {
+        throw new Error("Se requieren las credenciales de LiveKit para usar nuestro propio room.");
+    }
+
+    const requestBody: any = {
+        mode: "CUSTOM",
+        avatar_id: config.avatarId,
+        avatar_persona: {
+            language: config.language || "es",
+        },
+        // This is the key addition - send avatar to our LiveKit room
+        livekit_config: {
+            livekit_url: config.livekitUrl,
+            livekit_room: config.livekitRoom,
+            livekit_client_token: config.livekitClientToken,
+        },
+    };
+
+    console.log("[LiveAvatar] Creating CUSTOM session with OUR OWN LiveKit room");
+    console.log("[LiveAvatar] livekit_config:", {
+        url: config.livekitUrl,
+        room: config.livekitRoom,
+        token: config.livekitClientToken.substring(0, 20) + "...",
+    });
+
+    const response = await fetch(`${LIVEAVATAR_API_URL}/sessions/token`, {
+        method: "POST",
+        headers: {
+            "X-API-KEY": LIVEAVATAR_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("[LiveAvatar] Own room session token error:", error);
+        throw new Error(error.message || `Error creating session with own room: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log("[LiveAvatar] Own room session token created:", responseData.data?.session_id);
+
+    if (responseData.data) {
+        return responseData.data;
+    }
+    return responseData;
+}
 
 /**
  * Start a LiveAvatar session
@@ -682,6 +864,40 @@ export async function startSession(sessionToken: string): Promise<SessionStartRe
     console.log("LiveAvatar start response:", responseData);
 
     // API returns { code, data: { ... }, message }
+    if (responseData.data) {
+        return responseData.data;
+    }
+    return responseData;
+}
+
+/**
+ * Start a LiveAvatar session in CUSTOM mode with external audio input
+ * This allows us to send our own TTS audio for lip-sync
+ */
+export async function startCustomSession(sessionToken: string): Promise<SessionStartResponse> {
+    console.log("Starting CUSTOM session with audio input...");
+
+    const response = await fetch(`${LIVEAVATAR_API_URL}/sessions/start`, {
+        method: "POST",
+        headers: {
+            "Accept": "application/json",
+            "Authorization": `Bearer ${sessionToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            input_type: "audio",  // External audio input for lip-sync
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error("LiveAvatar CUSTOM start error:", error);
+        throw new Error(error.message || `Error starting CUSTOM session: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    console.log("LiveAvatar CUSTOM start response:", responseData);
+
     if (responseData.data) {
         return responseData.data;
     }

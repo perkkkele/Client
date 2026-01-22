@@ -42,7 +42,7 @@ export default function CalendarConnectedScreen() {
 
     return (
         <View style={styles.container}>
-            <ActivityIndicator size="large" color="#f9f506" />
+            <ActivityIndicator size="large" color="#137fec" />
             <Text style={styles.text}>
                 {success === "true"
                     ? `✓ ${provider === "google" ? "Google Calendar" : "Outlook"} conectado`
