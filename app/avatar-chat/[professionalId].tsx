@@ -83,16 +83,9 @@ interface Message {
     duration?: string;
 }
 
-// Mock messages
-const INITIAL_MESSAGES: Message[] = [
-    {
-        id: "1",
-        type: "text",
-        content: "Hola, ¿en qué puedo ayudarte hoy con tu salud? Estoy aquí para responder tus dudas.",
-        isUser: false,
-        timestamp: "10:23 AM",
-    },
-];
+// Initial messages - now empty since greeting comes from server via TTS
+// The twin will proactively speak its greeting when session starts
+const INITIAL_MESSAGES: Message[] = [];
 
 const QUICK_REPLIES = [
     "¿Cuál es mi diagnóstico?",
