@@ -1,12 +1,12 @@
 ﻿**********************
 Inicio de la transcripción de Windows PowerShell
-Hora de inicio: 20260121231705
+Hora de inicio: 20260125173742
 Nombre de usuario: SURFACEPRO4JAVI\Javier Ubeda Sosa
 Usuario RunAs: SURFACEPRO4JAVI\Javier Ubeda Sosa
 Nombre de la configuración: 
 Máquina: SURFACEPRO4JAVI (Microsoft Windows NT 10.0.19045.0)
 Aplicación host: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-Id. de proceso: 18328
+Id. de proceso: 19684
 PSVersion: 5.1.19041.6456
 PSEdition: Desktop
 PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
@@ -17,8 +17,3 @@ PSRemotingProtocolVersion: 2.3
 SerializationVersion: 1.1.0.1
 **********************
 La transcripción ha comenzado. El archivo de salida es metro.log
-
-**********************
-Fin de la transcripción de Windows PowerShell
-Hora de finalización: 20260122010254
-**********************

@@ -27,9 +27,11 @@ interface UseStreamingVoiceOptions {
     onPartialTranscript?: (transcript: string) => void;
     onPartialResponse?: (text: string) => void;
     onResponseComplete?: (response: string) => void;
+    onQuickReplies?: (replies: string[]) => void;
     onAudioChunk?: (audioData: { format: string; data: string; sampleRate: number; text: string }) => void;
     onError?: (error: Error) => void;
     onAvatarSpeakingChange?: (speaking: boolean) => void;
+    onInterrupted?: () => void;  // Called when server detects barge-in and interrupts response
 }
 
 interface UseStreamingVoiceReturn {
@@ -44,6 +46,7 @@ interface UseStreamingVoiceReturn {
     disconnect: () => void;
     interrupt: () => void;      // Stop AI response
     setAvatarSpeaking: (speaking: boolean) => void;  // Notify server of avatar speaking state (for barge-in)
+    sendTextMessage: (text: string) => void;  // Send text message for LLM+TTS processing (quick replies)
 }
 
 // Audio configuration for streaming
@@ -67,8 +70,10 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
         onPartialTranscript,
         onPartialResponse,
         onResponseComplete,
+        onQuickReplies,
         onAudioChunk,
         onError,
+        onInterrupted,
     } = options;
 
     // Determine if we're using agent mode (server-side audio with AEC)
@@ -273,11 +278,13 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
                 break;
 
             case 'response_interrupted':
-                console.log('[StreamingVoice] Response interrupted');
+                console.log('[StreamingVoice] Response interrupted by server (barge-in detected)');
                 setIsProcessing(false);
                 partialResponseRef.current = '';
                 setPartialResponse('');
                 stopAudioPlayback();
+                // Notify avatar-chat to interrupt LiveAvatar
+                onInterrupted?.();
                 break;
 
             case 'audio':
@@ -300,8 +307,15 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
                 setIsConnected(false);
                 setIsReady(false);
                 break;
+
+            case 'quick_replies':
+                console.log('[StreamingVoice] Quick replies received:', data.quickReplies, 'source:', data.source);
+                if (data.quickReplies && Array.isArray(data.quickReplies)) {
+                    onQuickReplies?.(data.quickReplies);
+                }
+                break;
         }
-    }, [onUserMessage, onPartialTranscript, onPartialResponse, onResponseComplete, onAudioChunk, onError]);
+    }, [onUserMessage, onPartialTranscript, onPartialResponse, onResponseComplete, onQuickReplies, onAudioChunk, onError, onInterrupted]);
 
     /**
      * Start streaming audio from microphone
@@ -442,6 +456,27 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
         }
     }, []);
 
+    /**
+     * Send a text message to be processed by LLM and TTS
+     * Used for quick replies and text input in voice mode
+     */
+    const sendTextMessage = useCallback((text: string) => {
+        if (!text.trim()) return;
+
+        console.log('[StreamingVoice] Sending text message:', text);
+
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+                type: 'text_message',
+                message: text.trim()
+            }));
+            // Trigger processing state immediately for UI feedback
+            setIsProcessing(true);
+        } else {
+            console.warn('[StreamingVoice] Cannot send text - WebSocket not connected');
+        }
+    }, []);
+
     return {
         isConnected,
         isReady,
@@ -454,6 +489,7 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
         disconnect,
         interrupt,
         setAvatarSpeaking,
+        sendTextMessage,
     };
 }
 

@@ -216,6 +216,7 @@ export default function AvatarChatScreen() {
     const [loadingConversations, setLoadingConversations] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
     const sendAudioRef = useRef<((audioBase64: string, sampleRate: number, text?: string) => void) | null>(null);
+    const interruptAvatarRef = useRef<(() => void) | null>(null); // For server-triggered barge-in to stop LiveAvatar
 
     // Appointment Booking State
     const [selectedDate, setSelectedDate] = useState<string>("");
@@ -302,6 +303,14 @@ export default function AvatarChatScreen() {
         onUserMessage: async (transcription) => {
             console.log('[StreamingVoice] User message:', transcription);
 
+            // Check if this message was already added (from quick reply or text input via sendTextMessage)
+            // This prevents duplicate messages
+            if (lastTypedMessageRef.current === transcription) {
+                console.log('[StreamingVoice] Skipping duplicate user message (already added from text input)');
+                lastTypedMessageRef.current = null; // Clear the ref
+                return;
+            }
+
             // Add user message to chat
             const userMsg: Message = {
                 id: `voice-user-${Date.now()}`,
@@ -366,8 +375,17 @@ export default function AvatarChatScreen() {
                 sendAudioRef.current(audioData.data, audioData.sampleRate || 24000, audioData.text);
             }
         },
+        onQuickReplies: (replies) => {
+            console.log('[AvatarChat] Quick replies received, updating UI:', replies);
+            setDynamicQuickReplies(replies);
+        },
         onError: (error) => {
             console.error('[StreamingVoice] Error:', error);
+        },
+        onInterrupted: () => {
+            // Server detected barge-in - interrupt the LiveAvatar!
+            console.log('[AvatarChat] Server barge-in detected, interrupting LiveAvatar');
+            interruptAvatarRef.current?.();
         },
     });
 
@@ -386,7 +404,7 @@ export default function AvatarChatScreen() {
         },
     });
 
-    // Update sendAudioRef to use the LiveAvatar audio WebSocket
+    // Update sendAudioRef and interruptAvatarRef to use the LiveAvatar audio WebSocket
     useEffect(() => {
         if (isCustomMode && liveAvatarAudio.isConnected) {
             console.log('[AvatarChat] LiveAvatar audio WebSocket connected, ready to send audio');
@@ -394,8 +412,13 @@ export default function AvatarChatScreen() {
                 console.log('[AvatarChat] Calling sendAudioChunk with audio size:', audioBase64.length);
                 liveAvatarAudio.sendAudioChunk(audioBase64);
             };
+            // Connect interrupt ref for server-triggered barge-in
+            interruptAvatarRef.current = () => {
+                console.log('[AvatarChat] Interrupting LiveAvatar via ref');
+                liveAvatarAudio.interrupt();
+            };
         }
-    }, [isCustomMode, liveAvatarAudio.isConnected, liveAvatarAudio.sendAudioChunk]);
+    }, [isCustomMode, liveAvatarAudio.isConnected, liveAvatarAudio.sendAudioChunk, liveAvatarAudio.interrupt]);
 
 
     // Barge-in: When user starts speaking during avatar playback, interrupt the avatar
@@ -1263,32 +1286,42 @@ export default function AvatarChatScreen() {
         // Skip entirely when twin is disabled - messages go directly to professional
         if (!isTwinEffectivelyDisabled) {
             if (isCustomMode) {
-                // CUSTOM MODE: Use our custom twin engine
-                console.log('[handleSendMessage] Using CUSTOM engine mode');
-                try {
-                    const response = await customEngine.sendMessage(messageText);
-                    if (response) {
-                        // Add the twin's written response to the chat
-                        const twinMessage: Message = {
-                            id: `twin-${Date.now()}`,
+                // CUSTOM MODE: Prefer streaming voice for LLM+TTS when connected
+                if (streamingVoice.isConnected && sessionStatus === 'active') {
+                    // Send through streaming voice - avatar will speak the response
+                    console.log('[handleSendMessage] Using streaming voice for LLM+TTS');
+                    // Mark as sent via text to prevent duplicate in onUserMessage callback
+                    lastTypedMessageRef.current = messageText;
+                    streamingVoice.sendTextMessage(messageText);
+                    // Response will come through onResponseComplete callback
+                } else {
+                    // Fallback to text-only custom engine when voice not connected
+                    console.log('[handleSendMessage] Using CUSTOM engine (text-only fallback)');
+                    try {
+                        const response = await customEngine.sendMessage(messageText);
+                        if (response) {
+                            // Add the twin's written response to the chat
+                            const twinMessage: Message = {
+                                id: `twin-${Date.now()}`,
+                                type: "text",
+                                content: response.content,
+                                isUser: false,
+                                timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                            };
+                            setMessages(prev => [...prev, twinMessage]);
+                            console.log('[CustomTwin] Response added to chat');
+                        }
+                    } catch (error: any) {
+                        console.error('[CustomTwin] Error sending message:', error);
+                        const errorMessage: Message = {
+                            id: `error-${Date.now()}`,
                             type: "text",
-                            content: response.content,
+                            content: "Error al procesar tu mensaje. Por favor intenta de nuevo.",
                             isUser: false,
                             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         };
-                        setMessages(prev => [...prev, twinMessage]);
-                        console.log('[CustomTwin] Response added to chat');
+                        setMessages(prev => [...prev, errorMessage]);
                     }
-                } catch (error: any) {
-                    console.error('[CustomTwin] Error sending message:', error);
-                    const errorMessage: Message = {
-                        id: `error-${Date.now()}`,
-                        type: "text",
-                        content: "Error al procesar tu mensaje. Por favor intenta de nuevo.",
-                        isUser: false,
-                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                    };
-                    setMessages(prev => [...prev, errorMessage]);
                 }
             } else {
                 // FULL MODE: Use LiveAvatar directly via data channel
@@ -1358,7 +1391,38 @@ export default function AvatarChatScreen() {
     };
 
     const handleQuickReply = (text: string) => {
-        setInputText(text);
+        // If streaming voice is connected in CUSTOM mode, send directly for LLM+TTS
+        // This makes the avatar speak the response
+        if (isCustomMode && streamingVoice.isConnected && sessionStatus === 'active') {
+            console.log('[handleQuickReply] Sending via streaming voice:', text);
+
+            // Add user message to chat immediately
+            const userMsg: Message = {
+                id: `quick-${Date.now()}`,
+                type: 'text',
+                content: text,
+                isUser: true,
+                timestamp: new Date().toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+            };
+            setMessages(prev => [...prev, userMsg]);
+
+            // Mark this message as sent via text (to prevent duplicate in onUserMessage callback)
+            lastTypedMessageRef.current = text;
+
+            // Send through streaming voice for LLM+TTS processing
+            streamingVoice.sendTextMessage(text);
+
+            // Scroll to bottom
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        } else {
+            // Fallback: put text in input field
+            setInputText(text);
+        }
     };
 
     const handleViewProfile = () => {

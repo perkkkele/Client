@@ -16,6 +16,7 @@ interface LiveAvatarVideoProps {
     onUserTranscription?: (text: string, isFinal: boolean) => void;
     onSendTextReady?: (sendText: (text: string) => void) => void;
     onSendAudioReady?: (sendAudio: (audioBase64: string, sampleRate: number, text?: string) => void) => void;
+    onAvatarSpeakingChange?: (speaking: boolean) => void;  // For barge-in detection
     muted?: boolean;
     style?: any;
 }
@@ -160,6 +161,72 @@ function TranscriptionCapture({
             // Silently ignore parse errors
         }
     }, [dataChannel?.message, dataChannel?.payload, onTranscription, onUserTranscription]);
+
+    return null;
+}
+
+// Component to capture avatar speaking state for barge-in detection
+// HeyGen LiveAvatar sends 'avatar.started_speaking' and 'avatar.stopped_speaking' events
+function SpeakingStateCapture({
+    onAvatarSpeakingChange
+}: {
+    onAvatarSpeakingChange?: (speaking: boolean) => void;
+}) {
+    const { useDataChannel } = LiveKitModule;
+    const lastSpeakingStateRef = useRef<boolean | null>(null);
+
+    // Subscribe to agent-response topic for avatar events
+    const dataChannel = useDataChannel ? useDataChannel('agent-response') : null;
+
+    useEffect(() => {
+        if (!dataChannel || !onAvatarSpeakingChange) return;
+
+        const rawMessage = dataChannel.message || dataChannel.payload;
+        if (!rawMessage) return;
+
+        try {
+            let messageStr = '';
+            if (typeof rawMessage === 'string') {
+                messageStr = rawMessage;
+            } else if (rawMessage instanceof ArrayBuffer) {
+                messageStr = new TextDecoder().decode(rawMessage);
+            } else if (rawMessage instanceof Uint8Array) {
+                messageStr = new TextDecoder().decode(rawMessage);
+            } else if (rawMessage.payload) {
+                messageStr = typeof rawMessage.payload === 'string'
+                    ? rawMessage.payload
+                    : new TextDecoder().decode(rawMessage.payload);
+            }
+
+            if (!messageStr || messageStr.length === 0) return;
+
+            const event = JSON.parse(messageStr);
+
+            // HeyGen sends these events when avatar starts/stops speaking
+            // Also check for task events that indicate speaking
+            if (event.event_type === 'avatar.started_speaking' ||
+                event.event_type === 'avatar.speak_started' ||
+                event.event_type === 'task.started') {
+                if (lastSpeakingStateRef.current !== true) {
+                    lastSpeakingStateRef.current = true;
+                    console.log('[SpeakingState] Avatar STARTED speaking');
+                    onAvatarSpeakingChange(true);
+                }
+            } else if (event.event_type === 'avatar.stopped_speaking' ||
+                event.event_type === 'avatar.speak_ended' ||
+                event.event_type === 'avatar.speak_stopped' ||
+                event.event_type === 'task.completed' ||
+                event.event_type === 'task.stopped') {
+                if (lastSpeakingStateRef.current !== false) {
+                    lastSpeakingStateRef.current = false;
+                    console.log('[SpeakingState] Avatar STOPPED speaking');
+                    onAvatarSpeakingChange(false);
+                }
+            }
+        } catch (e: any) {
+            // Silently ignore parse errors
+        }
+    }, [dataChannel?.message, dataChannel?.payload, onAvatarSpeakingChange]);
 
     return null;
 }

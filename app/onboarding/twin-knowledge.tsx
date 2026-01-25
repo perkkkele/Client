@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useAuth } from "../../context";
-import { userApi, liveAvatarApi } from "../../api";
+import { userApi, liveAvatarApi, customTwinApi } from "../../api";
 import { KnowledgeDocument } from "../../api/user";
 import { getCategoryInstruction } from "../../constants/digitalTwinPresets";
 
@@ -464,6 +464,16 @@ export default function TwinKnowledgeScreen() {
                     activatedAt: new Date().toISOString()
                 }
             });
+
+            // Sincronizar conocimiento con la base de datos vectorial (RAG)
+            console.log("Syncing knowledge vectors...");
+            try {
+                const syncResult = await customTwinApi.syncKnowledge(freshUser._id);
+                console.log("RAG Sync result:", syncResult);
+            } catch (syncError) {
+                console.error("Error syncing knowledge vectors:", syncError);
+                // No bloqueamos el flujo principal si el RAG falla, pero informamos
+            }
 
             if (refreshUser) {
                 await refreshUser();
