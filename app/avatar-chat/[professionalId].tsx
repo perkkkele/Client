@@ -3247,7 +3247,7 @@ const styles = StyleSheet.create({
     },
     disclaimerBanner: {
         position: "absolute",
-        bottom: 52,
+        bottom: 0,
         left: 8,
         right: 8,
         backgroundColor: "rgba(0,0,0,0.75)",
