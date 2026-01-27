@@ -138,6 +138,13 @@ export interface User {
     createdAt?: string;
     lastActive?: string;
 
+    // Preferencias de notificación para usuarios normales
+    clientNotificationPreferences?: {
+        appointments?: boolean;
+        reminders?: boolean;
+        payments?: boolean;
+    };
+
     // === Campos profesionales ===
     publicName?: string | null;
     profession?: string | null;
@@ -258,6 +265,13 @@ export interface UserUpdateData {
     lastname?: string;
     interests?: string[];
     language?: 'es' | 'en' | 'fr' | 'de';  // Idioma preferido del usuario
+
+    // Preferencias de notificación para usuarios normales
+    clientNotificationPreferences?: {
+        appointments?: boolean;
+        reminders?: boolean;
+        payments?: boolean;
+    };
 
     // Cambio a profesional
     userType?: UserType;

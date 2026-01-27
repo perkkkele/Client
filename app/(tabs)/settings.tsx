@@ -138,6 +138,13 @@ export default function SettingsScreen() {
 
     const personalizationItems: SettingsItem[] = [
         {
+            icon: "notifications",
+            iconColor: COLORS.blue600,
+            iconBg: COLORS.blue100,
+            label: "Notificaciones",
+            onPress: () => router.push("/(settings)/client-notification-settings"),
+        },
+        {
             icon: "language",
             iconColor: COLORS.orange600,
             iconBg: COLORS.orange100,
