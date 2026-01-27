@@ -5,38 +5,52 @@ import { getAssetUrl } from "../../api";
 export const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export const COLORS = {
-    primary: "#137fec",
-    backgroundLight: "#f6f7f8",
+    // === SLATE PRO PALETTE ===
+    // Base colors - sophisticated dark slate
+    primary: "#1e293b",           // Slate Pro primary (dark slate blue)
+    accent: "#d4af37",            // Gold accent for highlights
+    accentLight: "#f5e6c8",       // Light gold for backgrounds
+
+    // Backgrounds
+    backgroundLight: "#f1f5f9",   // Slightly cooler neutral
     surfaceLight: "#ffffff",
-    textMain: "#111418",
-    gray100: "#e5e7eb",
-    gray200: "#d1d5db",
-    gray300: "#d1d5db",
-    gray400: "#9ca3af",
-    gray500: "#6b7280",
-    gray600: "#4b5563",
-    gray700: "#374151",
-    gray800: "#1f2937",
+
+    // Text
+    textMain: "#0f172a",          // Deep slate for text
+
+    // Grays - slate undertone
+    gray100: "#e2e8f0",
+    gray200: "#cbd5e1",
+    gray300: "#94a3b8",
+    gray400: "#64748b",
+    gray500: "#475569",
+    gray600: "#334155",
+    gray700: "#1e293b",
+    gray800: "#0f172a",
+
+    // Unified accent colors (reduced variety, cohesive feel)
     green400: "#4ade80",
     green500: "#22c55e",
     green600: "#16a34a",
     green50: "#f0fdf4",
-    purple600: "#9333ea",
-    purple50: "#faf5ff",
-    orange600: "#ea580c",
-    orange50: "#fff7ed",
-    blue50: "#eff6ff",
-    blue600: "#2563eb",
-    yellow50: "#fefce8",
-    yellow600: "#ca8a04",
-    indigo50: "#eef2ff",
-    indigo600: "#4f46e5",
-    teal50: "#f0fdfa",
-    teal600: "#0d9488",
-    rose50: "#fff1f2",
-    rose600: "#e11d48",
-    cyan50: "#ecfeff",
-    cyan600: "#0891b2",
+
+    // Using gold/amber tones instead of rainbow
+    purple600: "#d4af37",         // Gold instead of purple
+    purple50: "#fef9e7",          // Light gold bg
+    orange600: "#b8860b",         // Dark gold instead of orange
+    orange50: "#fef9e7",
+    blue50: "#f1f5f9",            // Slate blue light
+    blue600: "#1e293b",           // Primary slate
+    yellow50: "#fef9e7",
+    yellow600: "#d4af37",
+    indigo50: "#f1f5f9",
+    indigo600: "#334155",
+    teal50: "#f1f5f9",
+    teal600: "#475569",
+    rose50: "#fef9e7",
+    rose600: "#b8860b",
+    cyan50: "#f1f5f9",
+    cyan600: "#64748b",
     red50: "#fef2f2",
     red600: "#dc2626",
 };
