@@ -23,6 +23,7 @@ import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
 import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi, voiceSessionApi } from "../../api";
 import * as customTwinApi from "../../api/customTwin";
+import { generateQuickReplies as fetchQuickReplies } from "../../api/quickReplies";
 import { useCustomTwinEngine, useEngineMode } from "../../hooks/useCustomTwinEngine";
 import { useStreamingVoice } from "../../hooks/useStreamingVoice";
 import { useLiveAvatarAudio } from "../../hooks/useLiveAvatarAudio";
@@ -516,6 +517,9 @@ export default function AvatarChatScreen() {
 
     // Ref to track last typed message to prevent duplicates from user.transcription events
     const lastTypedMessageRef = useRef<string | null>(null);
+
+    // Ref to track last user message for FULL mode quick reply generation
+    const lastUserMessageForQRRef = useRef<string | null>(null);
 
     // Ref to track conversation start time for analytics
     const conversationStartTimeRef = useRef<number | null>(null);
@@ -1322,6 +1326,8 @@ export default function AvatarChatScreen() {
                     try {
                         // Store the typed message to prevent duplicate from user.transcription event
                         lastTypedMessageRef.current = messageText;
+                        // Track for quick reply context
+                        lastUserMessageForQRRef.current = messageText;
 
                         console.log('Sending text to LiveAvatar via data channel:', messageText);
                         sendTextToAvatarRef.current(messageText);
@@ -1384,11 +1390,7 @@ export default function AvatarChatScreen() {
     };
 
     const handleQuickReply = (text: string) => {
-        // If streaming voice is connected in CUSTOM mode, send directly for LLM+TTS
-        // This makes the avatar speak the response
-        if (isCustomMode && streamingVoice.isConnected && sessionStatus === 'active') {
-            console.log('[handleQuickReply] Sending via streaming voice:', text);
-
+        if (sessionStatus === 'active') {
             // Add user message to chat immediately
             const userMsg: Message = {
                 id: `quick-${Date.now()}`,
@@ -1402,18 +1404,51 @@ export default function AvatarChatScreen() {
             };
             setMessages(prev => [...prev, userMsg]);
 
+            // Hide quick replies immediately to prevent spamming while avatar responds
+            // New quick replies will appear after the avatar's next response
+            setDynamicQuickReplies([]);
+
             // Mark this message as sent via text (to prevent duplicate in onUserMessage callback)
             lastTypedMessageRef.current = text;
 
-            // Send through streaming voice for LLM+TTS processing
-            streamingVoice.sendTextMessage(text);
+            if (isCustomMode && streamingVoice.isConnected) {
+                // CUSTOM MODE: Send through streaming voice for LLM+TTS
+                console.log('[handleQuickReply] Sending via streaming voice:', text);
+                streamingVoice.sendTextMessage(text);
+            } else if (!isCustomMode && sendTextToAvatarRef.current) {
+                // FULL MODE: Send directly to LiveAvatar via data channel
+                console.log('[handleQuickReply] Sending to LiveAvatar (FULL mode):', text);
+                lastUserMessageForQRRef.current = text;
+                sendTextToAvatarRef.current(text);
+            } else {
+                // Fallback: put text in input field
+                setInputText(text);
+                return; // Don't scroll or save since we're just setting input
+            }
 
             // Scroll to bottom
             setTimeout(() => {
                 scrollViewRef.current?.scrollToEnd({ animated: true });
             }, 100);
+
+            // Save to database in background
+            if (!isPrivateMode && token && professionalId && currentUser?._id) {
+                (async () => {
+                    try {
+                        let chatIdToUse = currentChatId;
+                        if (!chatIdToUse) {
+                            const newChat = await chatApi.createAvatarChat(token, currentUser._id, professionalId);
+                            chatIdToUse = newChat._id;
+                            setCurrentChatId(newChat._id);
+                        }
+                        await chatMessageApi.sendTextMessage(token, chatIdToUse, text, false);
+                    } catch (err) {
+                        console.error('[handleQuickReply] Error saving to DB:', err);
+                    }
+                })();
+            }
         } else {
-            // Fallback: put text in input field
+            // Session not active: put text in input field
             setInputText(text);
         }
     };
@@ -1791,8 +1826,29 @@ export default function AvatarChatScreen() {
                                                 minute: '2-digit'
                                             }),
                                         };
+                                        // Simply append avatar message
                                         setMessages(prev => [...prev, newMessage]);
                                         console.log('Avatar says:', trimmedText);
+
+                                        // FULL MODE: Generate quick replies after avatar response
+                                        if (!isCustomMode) {
+                                            (async () => {
+                                                try {
+                                                    console.log('[FULL Mode] Requesting quick replies for avatar response');
+                                                    const qrResult = await fetchQuickReplies(
+                                                        professionalId,
+                                                        trimmedText,
+                                                        lastUserMessageForQRRef.current || undefined
+                                                    );
+                                                    if (qrResult.quickReplies && qrResult.quickReplies.length > 0) {
+                                                        console.log('[FULL Mode] Quick replies received:', qrResult.quickReplies, 'source:', qrResult.source);
+                                                        setDynamicQuickReplies(qrResult.quickReplies);
+                                                    }
+                                                } catch (err) {
+                                                    console.error('[FULL Mode] Error fetching quick replies:', err);
+                                                }
+                                            })();
+                                        }
 
                                         // Save avatar response to chat (auto-create chat if needed)
                                         if (token && !isPrivateMode && professionalId && currentUser?._id) {
@@ -1842,6 +1898,9 @@ export default function AvatarChatScreen() {
                                             lastTypedMessageRef.current = null; // Clear after checking
                                             return;
                                         }
+
+                                        // Track user message for FULL mode quick reply generation
+                                        lastUserMessageForQRRef.current = trimmedText;
 
                                         const newMessage: Message = {
                                             id: `user-voice-${Date.now()}`,
