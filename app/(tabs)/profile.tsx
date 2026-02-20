@@ -2,12 +2,14 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { userApi, getAssetUrl } from "../../api";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 export default function ProfileScreen() {
   const { user, token, logout, updateUserProfile } = useAuth();
+  const { showAlert } = useAlert();
   const [updatingAvatar, setUpdatingAvatar] = useState(false);
 
   // Build full URL for avatar from server path
@@ -24,7 +26,7 @@ export default function ProfileScreen() {
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para cambiar tu foto.");
+      showAlert({ type: 'warning', title: 'Permiso requerido', message: 'Necesitamos acceso a tu galería para cambiar tu foto. Puedes habilitarlo en los ajustes de tu dispositivo.' });
       return;
     }
 
@@ -43,7 +45,7 @@ export default function ProfileScreen() {
 
   async function handleChangeAvatar(imageUri: string) {
     if (!token) {
-      Alert.alert("Error", "No hay sesión activa");
+      showAlert({ type: 'error', title: 'Sesión no activa', message: 'Tu sesión ha expirado. Inicia sesión de nuevo para continuar.' });
       return;
     }
 
@@ -52,11 +54,11 @@ export default function ProfileScreen() {
       console.log("Attempting to upload avatar from:", imageUri);
       const updatedUser = await userApi.updateAvatar(token, imageUri);
       await updateUserProfile(updatedUser);
-      Alert.alert("Éxito", "Foto de perfil actualizada correctamente");
+      showAlert({ type: 'success', title: '¡Foto actualizada!', message: 'Tu foto de perfil se ha actualizado correctamente.' });
     } catch (error: any) {
       console.error("Error updating avatar:", error.message || error);
       const errorMessage = error.message || "No se pudo actualizar la foto de perfil";
-      Alert.alert("Error", errorMessage);
+      showAlert({ type: 'error', title: 'Error al subir foto', message: errorMessage });
     } finally {
       setUpdatingAvatar(false);
     }

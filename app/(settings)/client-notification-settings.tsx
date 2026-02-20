@@ -7,13 +7,12 @@ import {
     TouchableOpacity,
     View,
     Switch,
-    ActivityIndicator,
-    Alert,
-} from "react-native";
+    ActivityIndicator,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#137fec",
@@ -85,6 +84,7 @@ const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
 
 export default function ClientNotificationSettingsScreen() {
     const { user, token, updateUserProfile } = useAuth();
+  const { showAlert } = useAlert();
     const [preferences, setPreferences] = useState<ClientNotificationPreferences>({
         appointments: true,
         reminders: true,
@@ -121,10 +121,11 @@ export default function ClientNotificationSettingsScreen() {
         // If disabling reminders, show warning
         const category = NOTIFICATION_CATEGORIES.find(c => c.key === key);
         if (!value && category?.warningOnDisable) {
-            Alert.alert(
-                "⚠️ ¿Estás seguro?",
-                category.warningOnDisable,
-                [
+            showAlert({
+    type: 'warning',
+    title: '⚠️ ¿Estás seguro?',
+    message: '',
+    buttons: [
                     {
                         text: "Mantener activo",
                         style: "cancel",
@@ -135,7 +136,7 @@ export default function ClientNotificationSettingsScreen() {
                         onPress: () => performToggle(key, value),
                     },
                 ]
-            );
+});
             return;
         }
 
@@ -163,7 +164,7 @@ export default function ClientNotificationSettingsScreen() {
             console.error("Error updating preference:", error);
             // Revert on failure
             setPreferences(prev => ({ ...prev, [key]: !value }));
-            Alert.alert("Error", "No se pudo actualizar la preferencia");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo actualizar la preferencia' });
         } finally {
             setSaving(false);
         }

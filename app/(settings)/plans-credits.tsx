@@ -12,9 +12,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
+    ActivityIndicator,    RefreshControl,
     Modal,
     TextInput,
 } from "react-native";
@@ -25,6 +23,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "../../context/AuthContext";
 import { subscriptionApi } from "../../api";
 import type { SubscriptionStatus, SubscriptionPlan } from "../../api/subscription";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#137fec",
@@ -60,6 +59,7 @@ const PLAN_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
 
 export default function PlansCreditsScreen() {
     const { token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<SubscriptionStatus | null>(null);
@@ -126,7 +126,7 @@ export default function PlansCreditsScreen() {
 
         // Don't allow subscribing to current plan
         if (status?.plan === planId) {
-            Alert.alert("Info", "Ya tienes este plan activo");
+            showAlert({ type: 'info', title: 'Info', message: 'Ya tienes este plan activo' });
             return;
         }
 
@@ -147,12 +147,9 @@ export default function PlansCreditsScreen() {
                 await loadData();
                 if (refreshUser) await refreshUser();
 
-                Alert.alert(
-                    result.isUpgrade ? "¡Plan mejorado!" : "Plan cambiado",
-                    result.isUpgrade
+                showAlert({ type: 'success', title: result.isUpgrade ? "¡Plan mejorado!" : "Plan cambiado", message: result.isUpgrade
                         ? `Has actualizado de ${result.previousPlan} a ${result.newPlan}. El cambio se aplica inmediatamente.`
-                        : `Has cambiado de ${result.previousPlan} a ${result.newPlan}. El ajuste se reflejará en tu próxima factura.`
-                );
+                        : `Has cambiado de ${result.previousPlan} a ${result.newPlan}. El ajuste se reflejará en tu próxima factura.` })
             } else {
                 // New subscription - use checkout
                 const session = await subscriptionApi.createCheckoutSession(
@@ -182,10 +179,10 @@ export default function PlansCreditsScreen() {
                         if (refreshUser) await refreshUser();
                     }
                 } catch (checkoutError: any) {
-                    Alert.alert("Error", checkoutError.message || "Error al procesar la suscripción");
+                    showAlert({ type: 'error', title: 'Error', message: checkoutError.message || "Error al procesar la suscripción" });
                 }
             } else {
-                Alert.alert("Error", error.message || "Error al procesar la suscripción");
+                showAlert({ type: 'error', title: 'Error', message: error.message || "Error al procesar la suscripción" });
             }
         } finally {
             setCheckoutLoading(null);
@@ -193,10 +190,11 @@ export default function PlansCreditsScreen() {
     };
 
     const handleCancelSubscription = () => {
-        Alert.alert(
-            "Cancelar suscripción",
-            "Si cancelas, mantendrás acceso a tu plan actual hasta el final del período facturado. Después volverás al plan Starter.",
-            [
+        showAlert({
+    type: 'info',
+    title: 'Cancelar suscripción',
+    message: 'Si cancelas, mantendrás acceso a tu plan actual hasta el final del período facturado. Después volverás al plan Starter.',
+    buttons: [
                 { text: "No, mantener", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -216,23 +214,20 @@ export default function PlansCreditsScreen() {
                                 })
                                 : 'el final del período';
 
-                            Alert.alert(
-                                "Suscripción cancelada",
-                                `Tu plan se mantendrá activo hasta ${cancelDate}. Después volverás automáticamente al plan Starter.`
-                            );
+                            showAlert({ type: 'info', title: 'Suscripción cancelada', message: `Tu plan se mantendrá activo hasta ${cancelDate}. Después volverás automáticamente al plan Starter.` });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message);
+                            showAlert({ type: 'error', title: "Error", message: error.message })
                         }
                     },
                 },
             ]
-        );
+});
     };
 
     const handleSubmitVerification = async () => {
         if (!token) return;
         if (!verificationData.declarationAccepted) {
-            Alert.alert("Error", "Debes aceptar la declaración jurada");
+            showAlert({ type: 'error', title: 'Error', message: 'Debes aceptar la declaración jurada' });
             return;
         }
 
@@ -242,9 +237,9 @@ export default function PlansCreditsScreen() {
             setVerificationModalVisible(false);
             await loadData();
             if (refreshUser) await refreshUser();
-            Alert.alert("¡Verificación completada!", "Has obtenido el badge de Profesional Verificado.");
+            showAlert({ type: 'warning', title: '¡Verificación completada!', message: 'Has obtenido el badge de Profesional Verificado.' });
         } catch (error: any) {
-            Alert.alert("Error", error.message);
+            showAlert({ type: 'error', title: "Error", message: error.message })
         } finally {
             setVerificationLoading(false);
         }

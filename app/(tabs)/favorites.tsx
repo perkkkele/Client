@@ -9,13 +9,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Alert,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import * as userApi from "../../api/user";
 import { getAssetUrl } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -53,6 +53,7 @@ interface Favorite {
 
 export default function FavoritesScreen() {
     const { token, user } = useAuth();
+    const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
     const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -87,7 +88,7 @@ export default function FavoritesScreen() {
             await userApi.removeFavorite(token, professionalId);
             setFavorites(prev => prev.filter(f => f._id !== professionalId));
         } catch (error: any) {
-            Alert.alert("Error", "No se pudo eliminar de favoritos");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar de favoritos. Inténtalo de nuevo.' });
         }
     };
 

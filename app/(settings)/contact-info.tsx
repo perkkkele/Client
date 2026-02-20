@@ -1,8 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-    Alert,
-    ScrollView,
+import {ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -15,6 +13,7 @@ import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -52,6 +51,7 @@ interface SocialLink {
 }
 
 export default function ContactInfoScreen() {
+    const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
 
     // Contact info state
@@ -132,12 +132,12 @@ export default function ContactInfoScreen() {
                     await refreshUser();
                 }
 
-                Alert.alert("Éxito", "Datos de contacto actualizados", [
+                showAlert({ type: 'success', title: "Éxito", message: "Datos de contacto actualizados", buttons: [
                     { text: "OK", onPress: () => router.back() }
-                ]);
+                ] })
             }
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar los datos");
+            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar los datos" })
         } finally {
             setIsSaving(false);
         }

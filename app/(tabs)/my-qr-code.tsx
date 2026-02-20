@@ -10,9 +10,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,
-    Alert,
-} from "react-native";
+    ActivityIndicator,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
@@ -23,6 +21,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Print from "expo-print";
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -65,6 +64,7 @@ const TwinProLogo = () => (
 
 export default function MyQRCodeScreen() {
     const { user } = useAuth();
+  const { showAlert } = useAlert();
     const qrRef = useRef<any>(null);
     const viewShotRef = useRef<ViewShot>(null);
     const [isSharing, setIsSharing] = useState(false);
@@ -133,15 +133,12 @@ ${qrData}
             // Request media library permissions
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert(
-                    "Permiso Requerido",
-                    "Necesitamos acceso a tu galería para guardar el código QR."
-                );
+                showAlert({ type: 'warning', title: 'Permiso Requerido', message: 'Necesitamos acceso a tu galería para guardar el código QR.' });
                 return;
             }
 
             if (!viewShotRef.current) {
-                Alert.alert("Error", "No se pudo capturar la imagen");
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo capturar la imagen' });
                 return;
             }
 
@@ -152,20 +149,17 @@ ${qrData}
             const asset = await MediaLibrary.createAssetAsync(uri);
             await MediaLibrary.createAlbumAsync("TwinPro", asset, false);
 
-            Alert.alert(
-                "¡Guardado!",
-                "Tu código QR se ha guardado en la galería (álbum TwinPro)"
-            );
+            showAlert({ type: 'success', title: '¡Guardado!', message: 'Tu código QR se ha guardado en la galería (álbum TwinPro)' });
         } catch (error) {
             console.error("Error saving QR:", error);
-            Alert.alert("Error", "No se pudo guardar el código QR");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar el código QR' });
         }
     }
 
     async function handlePrint() {
         try {
             if (!viewShotRef.current) {
-                Alert.alert("Error", "No se pudo capturar la imagen para imprimir");
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo capturar la imagen para imprimir' });
                 return;
             }
 
@@ -221,7 +215,7 @@ ${qrData}
             await Print.printAsync({ html });
         } catch (error) {
             console.error("Error printing QR:", error);
-            Alert.alert("Error", "No se pudo imprimir el código QR");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo imprimir el código QR' });
         }
     }
 

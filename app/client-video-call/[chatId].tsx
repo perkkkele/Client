@@ -18,9 +18,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Dimensions,
-    Animated,
-    Alert,
-    Linking,
+    Animated,    Linking,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -28,6 +26,7 @@ import { useAuth } from "../../context";
 import { videoCallApi, getAssetUrl, chatApi } from "../../api";
 import { useIncomingCall } from "../../context/IncomingCallContext";
 import HumanVideoCall from "../../components/HumanVideoCall";
+import { useAlert } from "../../components/TwinProAlert";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // Same as avatar-chat
@@ -90,6 +89,7 @@ export default function ClientVideoCallScreen() {
     const professionalId = params.professionalId;
 
     const { token, user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
     const { subscribeToMessages } = useIncomingCall();
     const insets = useSafeAreaInsets();
     const scrollViewRef = useRef<ScrollView>(null);
@@ -325,10 +325,11 @@ export default function ClientVideoCallScreen() {
     }, []);
 
     const handleClearAllHistory = useCallback(() => {
-        Alert.alert(
-            "Borrar historial",
-            "¿Estás seguro de que quieres borrar todo el historial de videollamadas con este profesional? Esta acción no se puede deshacer.",
-            [
+        showAlert({
+    type: 'warning',
+    title: 'Borrar historial',
+    message: '¿Estás seguro de que quieres borrar todo el historial de videollamadas con este profesional? Esta acción no se puede deshacer.',
+    buttons: [
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Borrar",
@@ -344,22 +345,23 @@ export default function ClientVideoCallScreen() {
                             // Clear local state and close drawer
                             setConversationThreads([]);
                             closeDrawer();
-                            Alert.alert("Historial borrado", "Se ha eliminado todo el historial de videollamadas.");
+                            showAlert({ type: 'info', title: 'Historial borrado', message: 'Se ha eliminado todo el historial de videollamadas.' });
                         } catch (error) {
                             console.error("[ClientVideoCall] Error deleting history:", error);
-                            Alert.alert("Error", "No se pudo borrar el historial. Inténtalo de nuevo.");
+                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar el historial. Inténtalo de nuevo.' });
                         }
                     }
                 }
             ]
-        );
+});
     }, [token, conversationThreads, closeDrawer]);
 
     const handleDeleteThread = useCallback((threadId: string, threadTitle: string) => {
-        Alert.alert(
-            "Borrar conversación",
-            `¿Estás seguro de que quieres borrar "${threadTitle}"?`,
-            [
+        showAlert({
+    type: 'info',
+    title: 'Borrar conversación',
+    message: '',
+    buttons: [
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Borrar",
@@ -372,12 +374,12 @@ export default function ClientVideoCallScreen() {
                             setConversationThreads(prev => prev.filter(t => t.id !== threadId));
                         } catch (error) {
                             console.error("[ClientVideoCall] Error deleting thread:", error);
-                            Alert.alert("Error", "No se pudo borrar la conversación.");
+                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar la conversación.' });
                         }
                     }
                 }
             ]
-        );
+});
     }, [token]);
 
     // Avatar URL helper

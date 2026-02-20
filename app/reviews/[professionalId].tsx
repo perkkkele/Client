@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -18,6 +17,7 @@ import { useAuth } from "../../context";
 import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
 import { Review as APIReview } from "../../api/review";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -89,6 +89,7 @@ interface DisplayReview {
 export default function ProfessionalReviewsScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token, user } = useAuth();
+    const { showAlert } = useAlert();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
@@ -228,7 +229,7 @@ export default function ProfessionalReviewsScreen() {
     // Handle sending a reply to a review (owner only)
     const handleSendReply = async (reviewId: string) => {
         if (!token || !replyText.trim()) {
-            Alert.alert("Error", "Por favor escribe una respuesta");
+            showAlert({ type: 'warning', title: 'Respuesta vacía', message: 'Escribe una respuesta antes de enviar.' });
             return;
         }
 
@@ -245,9 +246,9 @@ export default function ProfessionalReviewsScreen() {
 
             setReplyingTo(null);
             setReplyText("");
-            Alert.alert("✓ Éxito", "Tu respuesta ha sido publicada");
+            showAlert({ type: 'success', title: '¡Respuesta publicada!', message: 'Tu respuesta ya es visible para todos los usuarios.' });
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo enviar la respuesta");
+            showAlert({ type: 'error', title: 'No se pudo enviar', message: error.message || 'Ocurrió un problema al enviar tu respuesta. Inténtalo de nuevo.' });
         } finally {
             setIsSendingReply(false);
         }

@@ -11,9 +11,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
+    ActivityIndicator,    RefreshControl,
     Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +19,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "../../context";
 import { stripeConnectApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -54,6 +53,7 @@ interface ConnectStatus {
 
 export default function StripeOnboardingScreen() {
     const { token, user, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -90,13 +90,10 @@ export default function StripeOnboardingScreen() {
         try {
             const opened = await stripeConnectApi.openOnboarding(token);
             if (!opened) {
-                Alert.alert(
-                    "Error",
-                    "No se pudo abrir la página de Stripe. Inténtalo de nuevo."
-                );
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir la página de Stripe. Inténtalo de nuevo.' });
             }
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error iniciando el proceso");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error iniciando el proceso" });
         } finally {
             setActionLoading(false);
         }
@@ -109,13 +106,10 @@ export default function StripeOnboardingScreen() {
         try {
             const opened = await stripeConnectApi.openStripeDashboard(token);
             if (!opened) {
-                Alert.alert(
-                    "Error",
-                    "No se pudo abrir el dashboard de Stripe."
-                );
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el dashboard de Stripe.' });
             }
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error abriendo dashboard");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error abriendo dashboard" });
         } finally {
             setActionLoading(false);
         }

@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
+    ActivityIndicator,    KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
@@ -17,6 +15,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, STATIC_URL } from "../../api";
 import { normalizeProfession } from "../../constants/professionNormalizer";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FDE047",
@@ -62,6 +61,7 @@ type AliasStatus = "idle" | "checking" | "valid" | "invalid" | "taken";
 export default function ProProfileScreen() {
     const { token, refreshUser } = useAuth();
 
+  const { showAlert } = useAlert();
     // Alias state
     const [alias, setAlias] = useState("");
     const [aliasStatus, setAliasStatus] = useState<AliasStatus>("idle");
@@ -177,23 +177,23 @@ export default function ProProfileScreen() {
 
     async function handleContinue() {
         if (!alias.trim()) {
-            Alert.alert("Error", "Por favor ingresa un alias para tu perfil");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa un alias para tu perfil' });
             return;
         }
         if (aliasStatus !== "valid") {
-            Alert.alert("Error", "El alias no es válido o ya está en uso");
+            showAlert({ type: 'error', title: 'Error', message: 'El alias no es válido o ya está en uso' });
             return;
         }
         if (!publicName.trim()) {
-            Alert.alert("Error", "Por favor ingresa tu nombre público");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa tu nombre público' });
             return;
         }
         if (!profession.trim()) {
-            Alert.alert("Error", "Por favor ingresa tu profesión");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa tu profesión' });
             return;
         }
         if (!category) {
-            Alert.alert("Error", "Por favor selecciona una categoría");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor selecciona una categoría' });
             return;
         }
 
@@ -224,7 +224,7 @@ export default function ProProfileScreen() {
 
             router.push("/onboarding/pro-contact");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar el perfil");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar el perfil" });
         } finally {
             setIsLoading(false);
         }

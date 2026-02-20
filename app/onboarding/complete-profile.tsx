@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -18,6 +16,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFE600",
@@ -55,6 +54,7 @@ const INTERESTS: Interest[] = [
 
 export default function CompleteProfileScreen() {
     const { token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [displayName, setDisplayName] = useState("");
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
     const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -87,11 +87,12 @@ export default function CompleteProfileScreen() {
         // Request camera permission
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert(
-                "Permiso Requerido",
-                "Necesitamos acceso a tu cámara para tomar una foto.",
-                [{ text: "OK" }]
-            );
+            showAlert({
+    type: 'warning',
+    title: 'Permiso Requerido',
+    message: 'Necesitamos acceso a tu cámara para tomar una foto.',
+    buttons: [{ text: "OK" }]
+});
             return;
         }
 
@@ -123,15 +124,16 @@ export default function CompleteProfileScreen() {
             );
         } else {
             // Android - use Alert with buttons
-            Alert.alert(
-                "Foto de perfil",
-                "¿Cómo quieres añadir tu foto?",
-                [
+            showAlert({
+    type: 'warning',
+    title: 'Foto de perfil',
+    message: '¿Cómo quieres añadir tu foto?',
+    buttons: [
                     { text: "Cancelar", style: "cancel" },
                     { text: "Tomar foto", onPress: handleTakePhoto },
                     { text: "Elegir de galería", onPress: handlePickFromGallery },
                 ]
-            );
+});
         }
     }
 
@@ -175,7 +177,7 @@ export default function CompleteProfileScreen() {
 
             router.push("/onboarding/success");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar el perfil");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar el perfil" });
         } finally {
             setIsLoading(false);
         }

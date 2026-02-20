@@ -8,12 +8,11 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Platform,
-    Alert,
-} from "react-native";
+    Platform,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context";
 import * as ImagePicker from "expo-image-picker";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -45,6 +44,7 @@ try {
 
 export default function QRScannerScreen() {
     const { user } = useAuth();
+  const { showAlert } = useAlert();
     const [hasCamera, setHasCamera] = useState(CameraView !== null);
     const [permission, setPermission] = useState<any>(null);
     const [scanned, setScanned] = useState(false);
@@ -100,10 +100,11 @@ export default function QRScannerScreen() {
         // Check for deep link format: twinpro://user/{userId}
         if (data.startsWith("twinpro://user/")) {
             const professionalId = data.replace("twinpro://user/", "");
-            Alert.alert(
-                "Código Escaneado",
-                "¿Deseas iniciar un chat con este profesional?",
-                [
+            showAlert({
+    type: 'warning',
+    title: 'Código Escaneado',
+    message: '¿Deseas iniciar un chat con este profesional?',
+    buttons: [
                     {
                         text: "Cancelar",
                         onPress: () => setScanned(false),
@@ -116,7 +117,7 @@ export default function QRScannerScreen() {
                         },
                     },
                 ]
-            );
+});
             return;
         }
 
@@ -136,25 +137,28 @@ export default function QRScannerScreen() {
                     // Navigate directly to chat without confirmation
                     router.replace(`/avatar-chat/${professional._id}`);
                 } else {
-                    Alert.alert(
-                        "Profesional No Encontrado",
-                        `No se encontró un profesional con el usuario @${username}.`,
-                        [{ text: "OK", onPress: () => setScanned(false) }]
-                    );
+                    showAlert({
+    type: 'info',
+    title: 'Profesional No Encontrado',
+    message: '',
+    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+});
                 }
             } catch (error) {
-                Alert.alert(
-                    "Error de Conexión",
-                    "No se pudo verificar el profesional. Comprueba tu conexión.",
-                    [{ text: "OK", onPress: () => setScanned(false) }]
-                );
+                showAlert({
+    type: 'error',
+    title: 'Error de Conexión',
+    message: 'No se pudo verificar el profesional. Comprueba tu conexión.',
+    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+});
             }
         } else {
-            Alert.alert(
-                "Código No Válido",
-                "Este código QR no pertenece a un profesional de TwinPro.",
-                [{ text: "OK", onPress: () => setScanned(false) }]
-            );
+            showAlert({
+    type: 'warning',
+    title: 'Código No Válido',
+    message: 'Este código QR no pertenece a un profesional de TwinPro.',
+    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+});
         }
     };
 
@@ -166,11 +170,12 @@ export default function QRScannerScreen() {
     // NOTE: Gallery QR scanning is temporarily disabled
     // expo-barcode-scanner was removed due to being deprecated and causing build failures
     const pickImageFromGallery = async () => {
-        Alert.alert(
-            "Función Temporalmente Deshabilitada",
-            "El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.",
-            [{ text: "OK" }]
-        );
+        showAlert({
+    type: 'info',
+    title: 'Función Temporalmente Deshabilitada',
+    message: 'El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.',
+    buttons: [{ text: "OK" }]
+});
     };
 
     // Si la cámara no está disponible (Expo Go sin development build)

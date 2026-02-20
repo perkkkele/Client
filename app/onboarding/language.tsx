@@ -6,13 +6,12 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,
-    Alert,
-} from "react-native";
+    ActivityIndicator,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFEA00",
@@ -41,6 +40,7 @@ const LANGUAGES: Language[] = [
 
 export default function LanguageScreen() {
     const { token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [selectedLanguage, setSelectedLanguage] = useState<'es' | 'en' | 'fr' | 'de'>("es");
     const [isSaving, setIsSaving] = useState(false);
 
@@ -63,7 +63,7 @@ export default function LanguageScreen() {
             router.push("/onboarding/profile-type");
         } catch (error: any) {
             console.error("Error saving language:", error);
-            Alert.alert("Error", "No se pudo guardar el idioma. Inténtalo de nuevo.");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar el idioma. Inténtalo de nuevo.' });
         } finally {
             setIsSaving(false);
         }

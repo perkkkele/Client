@@ -1,8 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState, useRef } from "react";
-import {
-    Alert,
-    ScrollView,
+import {    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -18,6 +16,7 @@ import QRCode from "react-native-qrcode-svg";
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import { useAuth } from "../../context";
 import { usernameApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -84,6 +83,7 @@ const TwinProLogo = () => (
 
 export default function MyQRCodeScreen() {
     const { token, user, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [username, setUsername] = useState(user?.username || "");
     const [isEditing, setIsEditing] = useState(!user?.username);
     const [isSaving, setIsSaving] = useState(false);
@@ -126,9 +126,9 @@ export default function MyQRCodeScreen() {
             await usernameApi.updateUsername(token, username.trim());
             if (refreshUser) await refreshUser();
             setIsEditing(false);
-            Alert.alert("¡Éxito!", "Tu código QR está listo para compartir");
+            showAlert({ type: 'success', title: '¡Éxito!', message: 'Tu código QR está listo para compartir' });
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo guardar el username");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo guardar el username" });
         } finally {
             setIsSaving(false);
         }
@@ -150,7 +150,7 @@ export default function MyQRCodeScreen() {
     function handleCopyLink() {
         if (!qrUrl) return;
         Clipboard.setString(qrUrl);
-        Alert.alert("¡Copiado!", "El enlace se ha copiado al portapapeles");
+        showAlert({ type: 'info', title: '¡Copiado!', message: 'El enlace se ha copiado al portapapeles' });
     }
 
     const isUsernameValid = /^[a-z0-9_-]{3,30}$/.test(username.toLowerCase());

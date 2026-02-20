@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -16,6 +15,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -39,6 +39,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 }
 
 export default function EditProfileScreen() {
+    const { showAlert } = useAlert();
     const { user, token, updateUserProfile } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -67,16 +68,14 @@ export default function EditProfileScreen() {
     }
 
     function pickImage() {
-        Alert.alert(
-            "Cambiar foto de perfil",
-            "¿Cómo quieres añadir tu foto?",
-            [
+        showAlert({
+            type: 'info', title: "Cambiar foto de perfil", message: "¿Cómo quieres añadir tu foto?", buttons: [
                 {
                     text: "Cámara",
                     onPress: async () => {
                         const { status } = await ImagePicker.requestCameraPermissionsAsync();
                         if (status !== "granted") {
-                            Alert.alert("Permiso denegado", "Necesitamos acceso a la cámara");
+                            showAlert({ type: 'warning', title: 'Permiso denegado', message: 'Necesitamos acceso a la cámara' });
                             return;
                         }
                         const result = await ImagePicker.launchCameraAsync({
@@ -94,7 +93,7 @@ export default function EditProfileScreen() {
                     onPress: async () => {
                         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                         if (status !== "granted") {
-                            Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería.");
+                            showAlert({ type: 'warning', title: 'Permiso requerido', message: 'Necesitamos acceso a tu galería.' });
                             return;
                         }
                         const result = await ImagePicker.launchImageLibraryAsync({
@@ -113,12 +112,12 @@ export default function EditProfileScreen() {
                     style: "cancel",
                 },
             ]
-        );
+        })
     }
 
     async function handleChangeAvatar(imageUri: string) {
         if (!token) {
-            Alert.alert("Error", "No hay sesión activa");
+            showAlert({ type: 'error', title: "Error", message: "No hay sesión activa" })
             return;
         }
 
@@ -127,7 +126,7 @@ export default function EditProfileScreen() {
             const updatedUser = await userApi.updateAvatar(token, imageUri);
             await updateUserProfile(updatedUser);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo actualizar la foto de perfil");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo actualizar la foto de perfil" })
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -135,7 +134,7 @@ export default function EditProfileScreen() {
 
     async function handleSave() {
         if (!token) {
-            Alert.alert("Error", "No hay sesión activa");
+            showAlert({ type: 'error', title: "Error", message: "No hay sesión activa" })
             return;
         }
 
@@ -147,11 +146,13 @@ export default function EditProfileScreen() {
                 phone: phone.trim() || undefined,
             });
             await updateUserProfile(updatedUser);
-            Alert.alert("Éxito", "Perfil actualizado correctamente", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            showAlert({
+                type: 'success', title: "Éxito", message: "Perfil actualizado correctamente", buttons: [
+                    { text: "OK", onPress: () => router.back() }
+                ]
+            })
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo actualizar el perfil");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo actualizar el perfil" })
         } finally {
             setIsLoading(false);
         }

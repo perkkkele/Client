@@ -6,9 +6,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    TextInput,
-    Alert,
-    ActivityIndicator,
+    TextInput,    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
 } from "react-native";
@@ -16,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#137fec",
@@ -103,6 +102,7 @@ const getCategoryLabel = (category: string) => {
 
 export default function TwinScopeScreen() {
     const { user, token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [disclaimer, setDisclaimer] = useState("");
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -116,14 +116,15 @@ export default function TwinScopeScreen() {
 
     const handleBack = () => {
         if (hasChanges) {
-            Alert.alert(
-                "Cambios sin guardar",
-                "¿Quieres descartar los cambios?",
-                [
+            showAlert({
+    type: 'warning',
+    title: 'Cambios sin guardar',
+    message: '¿Quieres descartar los cambios?',
+    buttons: [
                     { text: "Cancelar", style: "cancel" },
                     { text: "Descartar", style: "destructive", onPress: () => router.back() },
                 ]
-            );
+});
         } else {
             router.back();
         }
@@ -134,10 +135,11 @@ export default function TwinScopeScreen() {
         const template = DISCLAIMER_TEMPLATES[category] || DISCLAIMER_TEMPLATES.otros;
 
         if (disclaimer.trim() && disclaimer !== template) {
-            Alert.alert(
-                "Usar plantilla",
-                `¿Quieres reemplazar el texto actual con la plantilla para "${getCategoryLabel(category)}"?`,
-                [
+            showAlert({
+    type: 'info',
+    title: 'Usar plantilla',
+    message: '',
+    buttons: [
                     { text: "Cancelar", style: "cancel" },
                     {
                         text: "Reemplazar",
@@ -147,7 +149,7 @@ export default function TwinScopeScreen() {
                         }
                     },
                 ]
-            );
+});
         } else {
             setDisclaimer(template);
             setHasChanges(true);
@@ -167,10 +169,10 @@ export default function TwinScopeScreen() {
             });
             await refreshUser();
             setHasChanges(false);
-            Alert.alert("Guardado", "El descargo de responsabilidad se ha actualizado correctamente");
+            showAlert({ type: 'success', title: 'Guardado', message: 'El descargo de responsabilidad se ha actualizado correctamente' });
         } catch (error) {
             console.error("Error saving disclaimer:", error);
-            Alert.alert("Error", "No se pudo guardar. Inténtalo de nuevo.");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar. Inténtalo de nuevo.' });
         } finally {
             setSaving(false);
         }

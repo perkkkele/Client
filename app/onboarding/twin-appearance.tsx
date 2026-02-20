@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect, useRef } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,6 +19,7 @@ import { userApi, liveAvatarApi, getAssetUrl } from "../../api";
 import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar } from "../../api/liveAvatar";
 import { useSubscription } from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Video requirements constants
 const VIDEO_REQUIREMENTS = {
@@ -84,6 +83,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 
 export default function TwinAppearanceScreen() {
     const { user, token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     // Inicializar con valores guardados del usuario o defaults sensatos
     const [videoType, setVideoType] = useState<"predefined" | "trained">(
         user?.digitalTwin?.appearance?.videoType || "predefined"
@@ -217,7 +217,7 @@ export default function TwinAppearanceScreen() {
             setPublicAvatars(avatars);
         } catch (error) {
             console.error("Error loading avatars:", error);
-            Alert.alert("Error", "No se pudieron cargar los avatares");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar los avatares' });
         } finally {
             setLoadingAvatars(false);
         }
@@ -230,7 +230,7 @@ export default function TwinAppearanceScreen() {
             setCustomAvatars(avatars);
         } catch (error) {
             console.error("Error loading custom avatars:", error);
-            Alert.alert("Error", "No se pudieron cargar los avatares personalizados");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar los avatares personalizados' });
         } finally {
             setLoadingCustomAvatars(false);
         }
@@ -244,7 +244,7 @@ export default function TwinAppearanceScreen() {
             setPublicVoices(voices);
         } catch (error) {
             console.error("Error loading voices:", error);
-            Alert.alert("Error", "No se pudieron cargar las voces");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las voces' });
         } finally {
             setLoadingVoices(false);
         }
@@ -257,7 +257,7 @@ export default function TwinAppearanceScreen() {
             setPrivateVoices(voices);
         } catch (error) {
             console.error("Error loading private voices:", error);
-            Alert.alert("Error", "No se pudieron cargar las voces privadas");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las voces privadas' });
         } finally {
             setLoadingPrivateVoices(false);
         }
@@ -265,7 +265,7 @@ export default function TwinAppearanceScreen() {
 
     async function playVoicePreview(voice: PublicVoice) {
         if (!Audio) {
-            Alert.alert("No disponible", "La reproducción de audio requiere un build de desarrollo");
+            showAlert({ type: 'warning', title: 'No disponible', message: 'La reproducción de audio requiere un build de desarrollo' });
             return;
         }
 
@@ -286,7 +286,7 @@ export default function TwinAppearanceScreen() {
 
         if (!previewUrl) {
             setPlayingVoiceId(null);
-            Alert.alert("Sin muestra", "Esta voz no tiene una muestra de audio disponible");
+            showAlert({ type: 'warning', title: 'Sin muestra', message: 'Esta voz no tiene una muestra de audio disponible' });
             return;
         }
 
@@ -320,7 +320,7 @@ export default function TwinAppearanceScreen() {
         } catch (error) {
             console.error("Error playing voice preview:", error);
             setPlayingVoiceId(null);
-            Alert.alert("Error", "No se pudo reproducir la muestra de voz");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo reproducir la muestra de voz' });
         }
     }
 
@@ -345,12 +345,12 @@ export default function TwinAppearanceScreen() {
         }
 
         if (!Audio) {
-            Alert.alert("No disponible", "La reproducción de audio requiere un build de desarrollo");
+            showAlert({ type: 'warning', title: 'No disponible', message: 'La reproducción de audio requiere un build de desarrollo' });
             return;
         }
 
         if (!selectedVoice) {
-            Alert.alert("Selecciona una voz", "Primero elige una voz del catálogo para escuchar la vista previa");
+            showAlert({ type: 'warning', title: 'Selecciona una voz', message: 'Primero elige una voz del catálogo para escuchar la vista previa' });
             return;
         }
 
@@ -388,7 +388,7 @@ export default function TwinAppearanceScreen() {
         } catch (error) {
             console.error("Error fetching voice details:", error);
             setIsPreviewPlaying(false);
-            Alert.alert("Error", "No se pudo obtener la muestra de voz");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo obtener la muestra de voz' });
             return;
         }
 
@@ -396,15 +396,12 @@ export default function TwinAppearanceScreen() {
         // LiveAvatar API doesn't provide sample audio for voices
         if (!previewUrl) {
             setIsPreviewPlaying(false);
-            Alert.alert(
-                "Vista Previa No Disponible",
-                `La voz "${selectedVoice.name}" no tiene una muestra de audio disponible.\n\n` +
-                `Información de la voz:\n` +
-                `• Género: ${selectedVoice.gender === 'male' ? 'Masculino' : selectedVoice.gender === 'female' ? 'Femenino' : 'No especificado'}\n` +
-                `• Idioma: ${selectedVoice.language === 'es' ? 'Español' : selectedVoice.language === 'en' ? 'Inglés' : selectedVoice.language || 'No especificado'}\n\n` +
-                `Esta voz se usará cuando tu Gemelo Digital responda a los clientes.`,
-                [{ text: "Entendido" }]
-            );
+            showAlert({
+    type: 'warning',
+    title: 'Vista Previa No Disponible',
+    message: '',
+    buttons: [{ text: "Entendido" }]
+});
             return;
         }
 
@@ -426,7 +423,7 @@ export default function TwinAppearanceScreen() {
         } catch (error) {
             console.error("Error playing preview:", error);
             setIsPreviewPlaying(false);
-            Alert.alert("Error", "No se pudo reproducir la vista previa");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo reproducir la vista previa' });
         }
     }
 
@@ -464,19 +461,21 @@ export default function TwinAppearanceScreen() {
     // Handler for selecting a custom/trained avatar
     function handleCustomAvatarSelect(avatar: UserAvatar) {
         if (avatar.status === 'processing' || avatar.status === 'pending') {
-            Alert.alert(
-                "Avatar en Proceso",
-                "Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.",
-                [{ text: "Entendido" }]
-            );
+            showAlert({
+    type: 'success',
+    title: 'Avatar en Proceso',
+    message: 'Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.',
+    buttons: [{ text: "Entendido" }]
+});
             return;
         }
         if (avatar.status === 'failed') {
-            Alert.alert(
-                "Avatar Fallido",
-                "Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.",
-                [{ text: "Entendido" }]
-            );
+            showAlert({
+    type: 'error',
+    title: 'Avatar Fallido',
+    message: 'Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.',
+    buttons: [{ text: "Entendido" }]
+});
             return;
         }
         setSelectedAvatar({
@@ -506,10 +505,7 @@ export default function TwinAppearanceScreen() {
             const microphonePermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
             if (cameraPermission.status !== 'granted') {
-                Alert.alert(
-                    "Permiso Requerido",
-                    "Necesitamos acceso a la cámara para grabar tu video de entrenamiento."
-                );
+                showAlert({ type: 'warning', title: 'Permiso Requerido', message: 'Necesitamos acceso a la cámara para grabar tu video de entrenamiento.' });
                 return;
             }
 
@@ -530,11 +526,12 @@ export default function TwinAppearanceScreen() {
 
             // Validate minimum duration
             if (durationSeconds < VIDEO_REQUIREMENTS.minDurationSeconds) {
-                Alert.alert(
-                    "Video Demasiado Corto",
-                    `El video debe tener al menos ${VIDEO_REQUIREMENTS.minDurationSeconds / 60} minutos de duración. Tu video tiene ${Math.floor(durationSeconds / 60)} minutos y ${Math.floor(durationSeconds % 60)} segundos.`,
-                    [{ text: "Reintentar", onPress: handleRecordFromCamera }]
-                );
+                showAlert({
+    type: 'info',
+    title: 'Video Demasiado Corto',
+    message: '',
+    buttons: [{ text: "Reintentar", onPress: handleRecordFromCamera }]
+});
                 return;
             }
 
@@ -542,7 +539,7 @@ export default function TwinAppearanceScreen() {
             await uploadVideoForAvatar(videoAsset.uri);
         } catch (error: any) {
             console.error("Error recording video:", error);
-            Alert.alert("Error", error.message || "No se pudo grabar el video");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo grabar el video" });
         }
     }
 
@@ -569,14 +566,15 @@ export default function TwinAppearanceScreen() {
             setUploadProgress("");
 
             if (avatarResponse.status === 'processing' || avatarResponse.status === 'pending') {
-                Alert.alert(
-                    "¡Avatar en Proceso!",
-                    "Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.",
-                    [
+                showAlert({
+    type: 'success',
+    title: '¡Avatar en Proceso!',
+    message: 'Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.',
+    buttons: [
                         { text: "Continuar con Predefinido", onPress: () => setShowAvatarModal(true) },
                         { text: "Esperar", style: "cancel" }
                     ]
-                );
+});
             } else if (avatarResponse.status === 'ready') {
                 // Avatar is ready, update selection
                 setSelectedAvatar({
@@ -584,15 +582,16 @@ export default function TwinAppearanceScreen() {
                     name: avatarResponse.name || `Avatar Personalizado`,
                     preview_url: avatarResponse.preview_url || "",
                 });
-                Alert.alert("¡Éxito!", "Tu avatar personalizado ha sido creado correctamente.");
+                showAlert({ type: 'success', title: '¡Éxito!', message: 'Tu avatar personalizado ha sido creado correctamente.' });
             }
         } catch (error: any) {
             console.error("Error uploading video for avatar:", error);
-            Alert.alert(
-                "Error al Crear Avatar",
-                error.message || "No se pudo crear el avatar. Por favor, inténtalo de nuevo.",
-                [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
-            );
+            showAlert({
+    type: 'error',
+    title: 'Error al Crear Avatar',
+    message: '',
+    buttons: [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
+});
         } finally {
             setUploadingVideo(false);
             setUploadProgress("");
@@ -601,20 +600,22 @@ export default function TwinAppearanceScreen() {
 
     // Handle Google Drive (coming soon)
     function handleGoogleDrive() {
-        Alert.alert(
-            "Próximamente",
-            "La integración con Google Drive estará disponible pronto.",
-            [{ text: "Entendido" }]
-        );
+        showAlert({
+    type: 'warning',
+    title: 'Próximamente',
+    message: 'La integración con Google Drive estará disponible pronto.',
+    buttons: [{ text: "Entendido" }]
+});
     }
 
     // Handle AWS S3 (coming soon)
     function handleAwsS3() {
-        Alert.alert(
-            "Próximamente",
-            "La integración con AWS S3 estará disponible pronto.",
-            [{ text: "Entendido" }]
-        );
+        showAlert({
+    type: 'warning',
+    title: 'Próximamente',
+    message: 'La integración con AWS S3 estará disponible pronto.',
+    buttons: [{ text: "Entendido" }]
+});
     }
 
     function handleAvatarSelect(avatar: PublicAvatar) {
@@ -737,7 +738,7 @@ export default function TwinAppearanceScreen() {
 
             router.push("/onboarding/twin-behavior");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
         } finally {
             setIsLoading(false);
         }

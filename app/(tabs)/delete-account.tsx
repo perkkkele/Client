@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { useState, useRef } from "react";
 import {
-    Alert,
     StyleSheet,
     Text,
     TextInput,
@@ -16,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -40,6 +40,7 @@ export default function DeleteAccountScreen() {
     const { token, logout } = useAuth();
     const [confirmText, setConfirmText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const { showAlert } = useAlert();
 
     const canDelete = confirmText.toUpperCase() === "ELIMINAR";
 
@@ -53,12 +54,12 @@ export default function DeleteAccountScreen() {
 
     async function handleDeleteAccount() {
         if (!canDelete) {
-            Alert.alert("Error", "Escribe ELIMINAR para confirmar");
+            showAlert({ type: 'warning', title: 'Confirmación requerida', message: 'Escribe ELIMINAR en el campo de texto para confirmar la eliminación de tu cuenta.' });
             return;
         }
 
         if (!token) {
-            Alert.alert("Error", "No se encontró el token de autenticación");
+            showAlert({ type: 'error', title: 'Sesión no válida', message: 'Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.' });
             return;
         }
 
@@ -77,7 +78,7 @@ export default function DeleteAccountScreen() {
                 logout();
             }, 100);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo eliminar la cuenta");
+            showAlert({ type: 'error', title: 'No se pudo eliminar', message: error.message || 'Ocurrió un problema al eliminar tu cuenta. Inténtalo de nuevo más tarde.' });
         } finally {
             setIsLoading(false);
         }

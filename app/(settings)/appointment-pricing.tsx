@@ -1,8 +1,6 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
-import {
-    Alert,
-    ScrollView,
+import {    ScrollView,
     StyleSheet,
     Switch,
     Text,
@@ -15,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -41,6 +40,7 @@ const DURATIONS = [15, 30, 45, 60, 90];
 
 export default function AppointmentPricingScreen() {
     const { user, token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [saving, setSaving] = useState(false);
 
     // Enable/Disable appointment types
@@ -121,10 +121,10 @@ export default function AppointmentPricingScreen() {
             });
 
             if (refreshUser) await refreshUser();
-            Alert.alert("✓ Guardado", "Tarifas actualizadas correctamente");
+            showAlert({ type: 'success', title: '✓ Guardado', message: 'Tarifas actualizadas correctamente' });
         } catch (error) {
             console.error("Error saving prices:", error);
-            Alert.alert("Error", "No se pudieron guardar las tarifas");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron guardar las tarifas' });
         } finally {
             setSaving(false);
         }

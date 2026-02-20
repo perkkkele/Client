@@ -1,9 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -32,6 +30,7 @@ import { User } from "../../api/user";
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
 import ChatMemorySettings from "../../components/ChatMemorySettings";
 import { WebView } from "react-native-webview";
+import { useAlert } from "../../components/TwinProAlert";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -190,6 +189,7 @@ export default function AvatarChatScreen() {
 
 
     const { token, user: currentUser } = useAuth();
+  const { showAlert } = useAlert();
     const { subscribeToMessages } = useIncomingCall();
     const insets = useSafeAreaInsets();
     const [professional, setProfessional] = useState<User | null>(null);
@@ -596,10 +596,11 @@ export default function AvatarChatScreen() {
 
     // Clear all conversation history with confirmation
     const handleClearAllHistory = () => {
-        Alert.alert(
-            "Borrar todo el historial",
-            "¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.",
-            [
+        showAlert({
+    type: 'warning',
+    title: 'Borrar todo el historial',
+    message: '¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.',
+    buttons: [
                 {
                     text: "Cancelar",
                     style: "cancel"
@@ -619,12 +620,12 @@ export default function AvatarChatScreen() {
                             closeDrawer();
                         } catch (error) {
                             console.error("Error clearing history:", error);
-                            Alert.alert("Error", "No se pudo borrar el historial");
+                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar el historial' });
                         }
                     }
                 }
             ]
-        );
+});
     };
 
     // Navigate to report a problem screen

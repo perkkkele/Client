@@ -8,9 +8,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
-    Alert,
-} from "react-native";
+    View,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
@@ -21,6 +19,7 @@ import {
     Appointment,
 } from "../../api/appointment";
 import { createCheckoutSession } from "../../api/payment";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#137fec",
@@ -123,6 +122,7 @@ function getStatusConfig(status: string) {
 export default function AppointmentDetailsScreen() {
     const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
     const { token, user } = useAuth();
+  const { showAlert } = useAlert();
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCancelling, setIsCancelling] = useState(false);
@@ -136,7 +136,7 @@ export default function AppointmentDetailsScreen() {
             setAppointment(data);
         } catch (error) {
             console.error("Error loading appointment:", error);
-            Alert.alert("Error", "No se pudo cargar la cita");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo cargar la cita' });
         } finally {
             setIsLoading(false);
         }
@@ -157,7 +157,7 @@ export default function AppointmentDetailsScreen() {
 
     const handleCall = () => {
         if (!appointment?.professional.phone) {
-            Alert.alert("Sin teléfono", "Este profesional no tiene teléfono registrado");
+            showAlert({ type: 'info', title: 'Sin teléfono', message: 'Este profesional no tiene teléfono registrado' });
             return;
         }
         Linking.openURL(`tel:${appointment.professional.phone}`);
@@ -165,7 +165,7 @@ export default function AppointmentDetailsScreen() {
 
     const handleJoinMeeting = () => {
         if (!appointment?.meetingLink) {
-            Alert.alert("Sin enlace", "No hay enlace de reunión disponible");
+            showAlert({ type: 'warning', title: 'Sin enlace', message: 'No hay enlace de reunión disponible' });
             return;
         }
         Linking.openURL(appointment.meetingLink);
@@ -180,11 +180,11 @@ export default function AppointmentDetailsScreen() {
             if (canOpen) {
                 await Linking.openURL(session.url);
             } else {
-                Alert.alert("Error", "No se pudo abrir el enlace de pago");
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
             }
         } catch (error: any) {
             console.error("Payment error:", error);
-            Alert.alert("Error", error.message || "No se pudo iniciar el pago");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo iniciar el pago" });
         }
     };
 
@@ -195,10 +195,11 @@ export default function AppointmentDetailsScreen() {
     };
 
     const handleCancel = () => {
-        Alert.alert(
-            "Cancelar Cita",
-            "¿Estás seguro de que deseas cancelar esta cita?",
-            [
+        showAlert({
+    type: 'warning',
+    title: 'Cancelar Cita',
+    message: '¿Estás seguro de que deseas cancelar esta cita?',
+    buttons: [
                 { text: "No", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -209,16 +210,16 @@ export default function AppointmentDetailsScreen() {
                         try {
                             await cancelAppointment(token, appointmentId);
                             await loadAppointment();
-                            Alert.alert("Cita Cancelada", "La cita ha sido cancelada correctamente");
+                            showAlert({ type: 'info', title: 'Cita Cancelada', message: 'La cita ha sido cancelada correctamente' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo cancelar la cita");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cancelar la cita" });
                         } finally {
                             setIsCancelling(false);
                         }
                     },
                 },
             ]
-        );
+});
     };
 
     if (isLoading) {

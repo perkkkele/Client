@@ -13,9 +13,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
+    ActivityIndicator,    RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -23,6 +21,7 @@ import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
 import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#4F46E5",
@@ -74,6 +73,7 @@ function getClientInitials(client: Appointment["client"] | undefined): string {
 
 export default function PendingConfirmationsScreen() {
     const { token } = useAuth();
+  const { showAlert } = useAlert();
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +94,7 @@ export default function PendingConfirmationsScreen() {
             setAppointments(pending);
         } catch (error: any) {
             console.error("[PendingConfirmations] Error:", error);
-            Alert.alert("Error", "No se pudieron cargar las citas pendientes");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las citas pendientes' });
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -119,9 +119,9 @@ export default function PendingConfirmationsScreen() {
         try {
             await appointmentApi.confirmAppointment(token, appointmentId);
             setAppointments(prev => prev.filter(apt => apt._id !== appointmentId));
-            Alert.alert("Éxito", "Cita confirmada correctamente. El cliente ha sido notificado.");
+            showAlert({ type: 'success', title: 'Éxito', message: 'Cita confirmada correctamente. El cliente ha sido notificado.' });
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo confirmar la cita");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo confirmar la cita" });
         } finally {
             setActionLoading(null);
         }
@@ -130,10 +130,11 @@ export default function PendingConfirmationsScreen() {
     const handleReject = async (appointmentId: string) => {
         if (!token) return;
 
-        Alert.alert(
-            "Rechazar Cita",
-            "¿Estás seguro de que quieres rechazar esta cita? El cliente será notificado.",
-            [
+        showAlert({
+    type: 'warning',
+    title: 'Rechazar Cita',
+    message: '¿Estás seguro de que quieres rechazar esta cita? El cliente será notificado.',
+    buttons: [
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Rechazar",
@@ -143,16 +144,16 @@ export default function PendingConfirmationsScreen() {
                         try {
                             await appointmentApi.cancelAppointment(token, appointmentId);
                             setAppointments(prev => prev.filter(apt => apt._id !== appointmentId));
-                            Alert.alert("Cita rechazada", "El cliente ha sido notificado.");
+                            showAlert({ type: 'info', title: 'Cita rechazada', message: 'El cliente ha sido notificado.' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo rechazar la cita");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo rechazar la cita" });
                         } finally {
                             setActionLoading(null);
                         }
                     },
                 },
             ]
-        );
+});
     };
 
     return (

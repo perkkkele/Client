@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -17,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFED00",
@@ -36,6 +35,7 @@ const COLORS = {
 
 export default function RegisterUserScreen() {
     const { login } = useAuth();
+  const { showAlert } = useAlert();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -54,7 +54,7 @@ export default function RegisterUserScreen() {
 
     async function handleRegister() {
         if (!canSubmit) {
-            Alert.alert("Error", "Por favor completa todos los campos correctamente");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor completa todos los campos correctamente' });
             return;
         }
 
@@ -69,7 +69,7 @@ export default function RegisterUserScreen() {
             // Registro e inicio de sesión exitoso, continuar al siguiente paso
             router.push("/onboarding/notifications");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al crear la cuenta");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al crear la cuenta" });
         } finally {
             setIsLoading(false);
         }

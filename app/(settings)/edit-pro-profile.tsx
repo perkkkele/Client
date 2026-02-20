@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -18,6 +17,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -51,6 +51,7 @@ const CATEGORIES = [
 ];
 
 export default function EditProProfileScreen() {
+    const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
     const [isLoadingData, setIsLoadingData] = useState(true);
 
@@ -111,16 +112,14 @@ export default function EditProProfileScreen() {
     }
 
     function handlePickImage() {
-        Alert.alert(
-            "Cambiar foto de perfil",
-            "¿Cómo quieres añadir tu foto?",
-            [
+        showAlert({
+            type: 'info', title: "Cambiar foto de perfil", message: "¿Cómo quieres añadir tu foto?", buttons: [
                 {
                     text: "Cámara",
                     onPress: async () => {
                         const { status } = await ImagePicker.requestCameraPermissionsAsync();
                         if (status !== "granted") {
-                            Alert.alert("Permiso denegado", "Necesitamos acceso a la cámara");
+                            showAlert({ type: 'warning', title: 'Permiso denegado', message: 'Necesitamos acceso a la cámara' });
                             return;
                         }
                         const result = await ImagePicker.launchCameraAsync({
@@ -152,7 +151,7 @@ export default function EditProProfileScreen() {
                     style: "cancel",
                 },
             ]
-        );
+        })
     }
 
     function addSpecialty() {
@@ -168,11 +167,11 @@ export default function EditProProfileScreen() {
 
     async function handleSave() {
         if (!publicName.trim()) {
-            Alert.alert("Error", "Por favor ingresa tu nombre público");
+            showAlert({ type: 'error', title: "Error", message: "Por favor ingresa tu nombre público" })
             return;
         }
         if (!profession.trim()) {
-            Alert.alert("Error", "Por favor ingresa tu profesión");
+            showAlert({ type: 'error', title: "Error", message: "Por favor ingresa tu profesión" })
             return;
         }
 
@@ -198,11 +197,13 @@ export default function EditProProfileScreen() {
                 }
             }
 
-            Alert.alert("Éxito", "Perfil actualizado correctamente", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            showAlert({
+                type: 'success', title: "Éxito", message: "Perfil actualizado correctamente", buttons: [
+                    { text: "OK", onPress: () => router.back() }
+                ]
+            })
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar el perfil");
+            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar el perfil" })
         } finally {
             setIsLoading(false);
         }

@@ -15,7 +15,6 @@ import {
     TouchableOpacity,
     View,
     ActivityIndicator,
-    Alert,
     RefreshControl,
     TextInput,
     Modal,
@@ -32,6 +31,7 @@ import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
 import { createChat } from "../../api/chat";
 import * as calendarApi from "../../api/calendar";
+import { useAlert } from "../../components/TwinProAlert";
 
 // =============================================================================
 // COLORS
@@ -167,6 +167,7 @@ type TabType = "past" | "today" | "upcoming";
 // MAIN COMPONENT
 // =============================================================================
 export default function ManageAppointmentsScreen() {
+    const { showAlert } = useAlert();
     const { user, token } = useAuth();
 
     // Data states
@@ -207,7 +208,7 @@ export default function ManageAppointmentsScreen() {
             const { url } = await calendarApi.getGoogleAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Google Calendar" })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -220,29 +221,31 @@ export default function ManageAppointmentsScreen() {
             const { url } = await calendarApi.getOutlookAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Outlook" })
         } finally {
             setIsConnectingCalendar(false);
         }
     };
 
     const handleDisconnectCalendar = () => {
-        Alert.alert("Desconectar", "¿Desconectar calendario?", [
-            { text: "Cancelar", style: "cancel" },
-            {
-                text: "Desconectar",
-                style: "destructive",
-                onPress: async () => {
-                    if (!token) return;
-                    try {
-                        await calendarApi.disconnectCalendar(token);
-                        // User context will be refreshed on focus
-                    } catch (error: any) {
-                        Alert.alert("Error", error.message);
-                    }
+        showAlert({
+            type: 'warning', title: "Desconectar", message: "¿Desconectar calendario?", buttons: [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Desconectar",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            await calendarApi.disconnectCalendar(token);
+                            // User context will be refreshed on focus
+                        } catch (error: any) {
+                            showAlert({ type: 'error', title: 'Error', message: error.message });
+                        }
+                    },
                 },
-            },
-        ]);
+            ]
+        })
     };
 
     // =========================================================================
@@ -261,7 +264,7 @@ export default function ManageAppointmentsScreen() {
             setAppointments(sorted);
         } catch (error: any) {
             console.error("[ManageAppointments] Error loading:", error);
-            Alert.alert("Error", "No se pudieron cargar las citas");
+            showAlert({ type: 'error', title: "Error", message: "No se pudieron cargar las citas" })
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -362,10 +365,8 @@ export default function ManageAppointmentsScreen() {
     const handleConfirm = async (appointmentId: string) => {
         if (!token) return;
 
-        Alert.alert(
-            "Confirmar Cita",
-            "¿Estás seguro de que quieres confirmar esta cita?",
-            [
+        showAlert({
+            type: 'info', title: "Confirmar Cita", message: "¿Estás seguro de que quieres confirmar esta cita?", buttons: [
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Confirmar",
@@ -380,25 +381,23 @@ export default function ManageAppointmentsScreen() {
                                         : apt
                                 )
                             );
-                            Alert.alert("Éxito", "Cita confirmada correctamente");
+                            showAlert({ type: 'success', title: 'Éxito', message: 'Cita confirmada correctamente' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo confirmar la cita");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo confirmar la cita' });
                         } finally {
                             setActionLoading(null);
                         }
                     },
                 },
             ]
-        );
+        })
     };
 
     const handleCancel = async (appointmentId: string) => {
         if (!token) return;
 
-        Alert.alert(
-            "Cancelar Cita",
-            "¿Estás seguro de que quieres cancelar esta cita? Se notificará al cliente y se eliminará del calendario.",
-            [
+        showAlert({
+            type: 'info', title: "Cancelar Cita", message: "¿Estás seguro de que quieres cancelar esta cita? Se notificará al cliente y se eliminará del calendario.", buttons: [
                 { text: "No", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -414,16 +413,16 @@ export default function ManageAppointmentsScreen() {
                                         : apt
                                 )
                             );
-                            Alert.alert("Cita cancelada", "La cita ha sido cancelada y el cliente ha sido notificado");
+                            showAlert({ type: 'success', title: 'Cita cancelada', message: 'La cita ha sido cancelada y el cliente ha sido notificado' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo cancelar la cita");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo cancelar la cita' });
                         } finally {
                             setActionLoading(null);
                         }
                     },
                 },
             ]
-        );
+        })
     };
 
     const handleViewDetails = (appointmentId: string) => {
@@ -437,7 +436,7 @@ export default function ManageAppointmentsScreen() {
             const chat = await createChat(token, user._id, appointment.client._id);
             router.push(`/pro-chat/${chat._id}?startVideoCall=true` as any);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo iniciar la videollamada" })
         }
     };
 
@@ -465,12 +464,12 @@ export default function ManageAppointmentsScreen() {
         const { appointment, newDateStr, newTime, comments } = rescheduleModal;
 
         if (!newDateStr || !newTime) {
-            Alert.alert("Datos incompletos", "Por favor introduce la fecha y hora");
+            showAlert({ type: 'warning', title: "Datos incompletos", message: "Por favor introduce la fecha y hora" })
             return;
         }
 
         if (newDateStr === appointment.date && newTime === appointment.time) {
-            Alert.alert("Sin cambios", "Selecciona una nueva fecha u hora diferente");
+            showAlert({ type: 'warning', title: "Sin cambios", message: "Selecciona una nueva fecha u hora diferente" })
             return;
         }
 
@@ -489,9 +488,9 @@ export default function ManageAppointmentsScreen() {
                         : apt
                 )
             );
-            Alert.alert("Cita reprogramada", `La cita ha sido movida al ${formatDateFull(newDateStr)} a las ${newTime}. El cliente será notificado.`);
+            showAlert({ type: 'info', title: "Cita reprogramada", message: `La cita ha sido movida al ${formatDateFull(newDateStr)} a las ${newTime}. El cliente será notificado.` })
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo reprogramar la cita");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo reprogramar la cita" })
         } finally {
             setActionLoading(null);
         }

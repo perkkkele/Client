@@ -1,9 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     Linking,
     RefreshControl,
     ScrollView,
@@ -18,6 +16,7 @@ import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
 import { Appointment, getAppointments, cancelAppointment } from "../../api/appointment";
 import { createCheckoutSession } from "../../api/payment";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#137fec",
@@ -139,6 +138,7 @@ function getStatusConfig(
 export default function MyAppointmentsScreen() {
     const { tab } = useLocalSearchParams<{ tab?: string }>();
     const { token } = useAuth();
+  const { showAlert } = useAlert();
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -186,10 +186,11 @@ export default function MyAppointmentsScreen() {
     };
 
     const handleCancel = (appointment: Appointment) => {
-        Alert.alert(
-            "Cancelar Cita",
-            `¿Estás seguro de que deseas cancelar tu cita con ${appointment.professional.publicName || appointment.professional.firstname}?`,
-            [
+        showAlert({
+    type: 'info',
+    title: 'Cancelar Cita',
+    message: '',
+    buttons: [
                 { text: "No", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -200,16 +201,16 @@ export default function MyAppointmentsScreen() {
                         try {
                             await cancelAppointment(token, appointment._id);
                             await loadAppointments();
-                            Alert.alert("Éxito", "La cita ha sido cancelada");
+                            showAlert({ type: 'success', title: 'Éxito', message: 'La cita ha sido cancelada' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo cancelar la cita");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cancelar la cita" });
                         } finally {
                             setCancellingId(null);
                         }
                     },
                 },
             ]
-        );
+});
     };
 
     const handlePayNow = async (appointmentId: string) => {
@@ -221,11 +222,11 @@ export default function MyAppointmentsScreen() {
             if (canOpen) {
                 await Linking.openURL(session.url);
             } else {
-                Alert.alert("Error", "No se pudo abrir el enlace de pago");
+                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
             }
         } catch (error: any) {
             console.error("Payment error:", error);
-            Alert.alert("Error", error.message || "No se pudo iniciar el pago");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo iniciar el pago" });
         }
     };
 

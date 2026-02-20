@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
+    ActivityIndicator,    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -16,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { authApi } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -38,6 +37,7 @@ const COLORS = {
 
 export default function ChangePasswordScreen() {
     const { token } = useAuth();
+  const { showAlert } = useAlert();
     const [isLoading, setIsLoading] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -68,25 +68,26 @@ export default function ChangePasswordScreen() {
 
     async function handleChangePassword() {
         if (!isValid) {
-            Alert.alert("Error", "Por favor, completa todos los requisitos");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor, completa todos los requisitos' });
             return;
         }
 
         if (!token) {
-            Alert.alert("Error", "No hay sesión activa");
+            showAlert({ type: 'error', title: 'Error', message: 'No hay sesión activa' });
             return;
         }
 
         setIsLoading(true);
         try {
             await authApi.changePassword(token, currentPassword, newPassword);
-            Alert.alert(
-                "Éxito",
-                "Tu contraseña ha sido actualizada correctamente",
-                [{ text: "OK", onPress: () => router.back() }]
-            );
+            showAlert({
+    type: 'success',
+    title: 'Éxito',
+    message: 'Tu contraseña ha sido actualizada correctamente',
+    buttons: [{ text: "OK", onPress: () => router.back() }]
+});
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo cambiar la contraseña");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cambiar la contraseña" });
         } finally {
             setIsLoading(false);
         }

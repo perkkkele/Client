@@ -5,12 +5,12 @@ import {
     Switch,
     TouchableOpacity,
     StyleSheet,
-    Alert,
     ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import * as chatApi from '../api/chat';
+import { useAlert } from './TwinProAlert';
 
 interface ChatMemorySettingsProps {
     chatId: string | null;
@@ -33,6 +33,7 @@ const COLORS = {
  */
 export default function ChatMemorySettings({ chatId, professionalName, onClose }: ChatMemorySettingsProps) {
     const { token } = useAuth();
+    const { showAlert } = useAlert();
     const [memoryEnabled, setMemoryEnabled] = useState(true);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -63,19 +64,20 @@ export default function ChatMemorySettings({ chatId, professionalName, onClose }
             await chatApi.toggleMemory(token, chatId, value);
         } catch (error) {
             setMemoryEnabled(!value);
-            Alert.alert('Error', 'No se pudo actualizar la configuración');
+            showAlert({ type: 'error', title: 'Error de configuración', message: 'No se pudo actualizar la memoria del gemelo. Inténtalo de nuevo.' });
         }
     };
 
     const handleForgetMe = () => {
-        Alert.alert(
-            'Eliminar memoria',
-            `¿Eliminar lo que el gemelo ha aprendido de tus conversaciones con ${professionalName || 'este profesional'}?`,
-            [
+        showAlert({
+            type: 'warning',
+            title: 'Eliminar memoria',
+            message: `¿Eliminar lo que el gemelo ha aprendido de tus conversaciones con ${professionalName || 'este profesional'}?`,
+            buttons: [
                 { text: 'Cancelar', style: 'cancel' },
                 { text: 'Eliminar', style: 'destructive', onPress: confirmForgetMe },
             ]
-        );
+        });
     };
 
     const confirmForgetMe = async () => {
@@ -83,9 +85,9 @@ export default function ChatMemorySettings({ chatId, professionalName, onClose }
         setIsDeleting(true);
         try {
             await chatApi.forgetMe(token, chatId);
-            Alert.alert('Listo', 'Tu memoria ha sido eliminada');
+            showAlert({ type: 'success', title: '¡Listo!', message: 'La memoria del gemelo sobre tus conversaciones ha sido eliminada.' });
         } catch (error) {
-            Alert.alert('Error', 'No se pudo eliminar la memoria');
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar la memoria. Inténtalo de nuevo más tarde.' });
         } finally {
             setIsDeleting(false);
         }

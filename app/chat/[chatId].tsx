@@ -4,7 +4,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -20,10 +19,12 @@ import { chatApi, chatMessageApi, liveAvatarApi, SOCKET_URL, getAssetUrl } from 
 import type { Chat } from "../../api/chat";
 import type { ChatMessage } from "../../api/chatMessage";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 export default function ChatScreen() {
   const { chatId } = useLocalSearchParams<{ chatId: string }>();
   const { token, user } = useAuth();
+  const { showAlert } = useAlert();
   const [chat, setChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -132,7 +133,7 @@ export default function ChatScreen() {
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tu galería para enviar imágenes.");
+      showAlert({ type: 'warning', title: 'Permiso requerido', message: 'Necesitamos acceso a tu galería para enviar imágenes. Puedes habilitarlo desde los ajustes de tu dispositivo.' });
       return;
     }
 
@@ -156,7 +157,7 @@ export default function ChatScreen() {
       await chatMessageApi.sendImage(token, chatId, imageUri);
     } catch (error: any) {
       console.log("Error sending image:", error);
-      Alert.alert("Error", error.message || "No se pudo enviar la imagen");
+      showAlert({ type: 'error', title: 'Imagen no enviada', message: error.message || 'No se pudo enviar la imagen. Comprueba tu conexión e inténtalo de nuevo.' });
     } finally {
       setSending(false);
     }

@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { getAssetUrl, reviewApi } from "../../api";
 import type { Review as APIReview } from "../../api/review";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFED00",
@@ -106,6 +105,7 @@ const FILTERS: { label: string; value: SortOption }[] = [
 
 export default function ManageReviewsScreen() {
     const { user, token } = useAuth();
+  const { showAlert } = useAlert();
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -150,7 +150,7 @@ export default function ManageReviewsScreen() {
             setRatingCount(response.ratingCount || 0);
         } catch (error) {
             console.error("Error loading reviews:", error);
-            Alert.alert("Error", "No se pudieron cargar las reseñas");
+            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las reseñas' });
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -172,7 +172,7 @@ export default function ManageReviewsScreen() {
 
     const handleSendReply = async (reviewId: string) => {
         if (!token || !replyText.trim()) {
-            Alert.alert("Error", "Por favor escribe una respuesta");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor escribe una respuesta' });
             return;
         }
 
@@ -189,9 +189,9 @@ export default function ManageReviewsScreen() {
 
             setReplyingTo(null);
             setReplyText("");
-            Alert.alert("✓ Éxito", "Tu respuesta ha sido publicada");
+            showAlert({ type: 'success', title: '✓ Éxito', message: 'Tu respuesta ha sido publicada' });
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo enviar la respuesta");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo enviar la respuesta" });
         } finally {
             setIsSendingReply(false);
         }

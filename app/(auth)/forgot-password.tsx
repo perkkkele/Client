@@ -2,7 +2,6 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -16,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../../api/config";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFED00",
@@ -36,17 +36,18 @@ export default function ForgotPasswordScreen() {
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
+    const { showAlert } = useAlert();
 
     async function handleRequestReset() {
         if (!email) {
-            Alert.alert("Error", "Por favor introduce tu email");
+            showAlert({ type: 'warning', title: 'Email requerido', message: 'Introduce tu dirección de correo electrónico para recuperar tu contraseña.' });
             return;
         }
 
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert("Error", "Por favor introduce un email válido");
+            showAlert({ type: 'warning', title: 'Email no válido', message: 'Introduce una dirección de correo electrónico válida (ej: nombre@ejemplo.com).' });
             return;
         }
 
@@ -63,11 +64,11 @@ export default function ForgotPasswordScreen() {
             if (response.ok) {
                 setIsSent(true);
             } else {
-                Alert.alert("Error", data.message || "Error al solicitar recuperación");
+                showAlert({ type: 'error', title: 'No se pudo enviar', message: data.message || 'No se pudo procesar la solicitud. Comprueba el email e inténtalo de nuevo.' });
             }
         } catch (error) {
             console.error("Forgot password error:", error);
-            Alert.alert("Error", "Error de conexión. Inténtalo de nuevo.");
+            showAlert({ type: 'error', title: 'Sin conexión', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.' });
         } finally {
             setIsLoading(false);
         }

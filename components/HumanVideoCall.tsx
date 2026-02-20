@@ -6,7 +6,6 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
-    Alert,
     Animated,
     Linking,
     Platform,
@@ -27,6 +26,7 @@ import {
     createLocalVideoTrack,
 } from "livekit-client";
 import { VideoView } from "@livekit/react-native";
+import { useAlert } from "./TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -66,6 +66,7 @@ export default function HumanVideoCall({
     const [localVideoTrack, setLocalVideoTrack] = useState<VideoTrack | null>(null);
     const [callDuration, setCallDuration] = useState(0);
     const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
+    const { showAlert } = useAlert();
 
     // Force re-render counter - incremented when tracks change
     const [trackUpdateCounter, setTrackUpdateCounter] = useState(0);
@@ -202,14 +203,15 @@ export default function HumanVideoCall({
 
             if (cameraStatus !== 'granted' || micStatus !== 'granted') {
                 console.error(`[HumanVideoCall][${participantId}] Permissions denied`);
-                Alert.alert(
-                    'Permisos necesarios',
-                    'Para la videollamada necesitamos acceso a tu cámara y micrófono. Por favor, habilita los permisos en la configuración de la aplicación.',
-                    [
+                showAlert({
+                    type: 'warning',
+                    title: 'Permisos necesarios',
+                    message: 'Para la videollamada necesitamos acceso a tu cámara y micrófono. Habilita los permisos en la configuración de la aplicación.',
+                    buttons: [
                         { text: 'Cancelar', style: 'cancel' },
                         { text: 'Abrir Configuración', onPress: () => Linking.openSettings() }
                     ]
-                );
+                });
                 return;
             }
 
@@ -237,11 +239,11 @@ export default function HumanVideoCall({
             } catch (cameraError: any) {
                 console.error(`[HumanVideoCall][${participantId}] Camera error (continuing anyway):`, cameraError.message || cameraError);
                 // Even if local camera fails, we can still receive and display remote video
-                Alert.alert(
-                    'Error de cámara',
-                    'No se pudo activar tu cámara, pero puedes continuar viendo y escuchando al otro participante.',
-                    [{ text: 'Entendido' }]
-                );
+                showAlert({
+                    type: 'info',
+                    title: 'Error de cámara',
+                    message: 'No se pudo activar tu cámara, pero puedes continuar viendo y escuchando al otro participante.',
+                });
             }
         }).catch(err => {
             console.error("[HumanVideoCall] Connection error:", err);

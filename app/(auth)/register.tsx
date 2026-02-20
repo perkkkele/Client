@@ -2,7 +2,6 @@ import { Link, router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -17,20 +17,21 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
+  const { showAlert } = useAlert();
 
   async function handleRegister() {
     if (!email || !password || !confirmPassword) {
-      Alert.alert("Error", "Por favor, completa todos los campos");
+      showAlert({ type: 'warning', title: 'Campos incompletos', message: 'Por favor, completa todos los campos para crear tu cuenta.' });
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden");
+      showAlert({ type: 'warning', title: 'Contraseñas distintas', message: 'Las contraseñas que has introducido no coinciden. Revísalas e inténtalo de nuevo.' });
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
+      showAlert({ type: 'warning', title: 'Contraseña muy corta', message: 'Tu contraseña debe tener al menos 6 caracteres.' });
       return;
     }
 
@@ -39,7 +40,7 @@ export default function RegisterScreen() {
       await register(email, password);
       router.replace("/(tabs)");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Error al registrar usuario");
+      showAlert({ type: 'error', title: 'Registro no completado', message: error.message || 'Ocurrió un problema al crear tu cuenta. Inténtalo de nuevo.' });
     } finally {
       setIsLoading(false);
     }

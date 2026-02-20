@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
+    ActivityIndicator,    KeyboardAvoidingView,
     Modal,
     Platform,
     ScrollView,
@@ -20,6 +18,7 @@ import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, customTwinApi } from "../../api";
 import { KnowledgeDocument } from "../../api/user";
 import { getCategoryInstruction } from "../../constants/digitalTwinPresets";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FDE047",
@@ -144,6 +143,7 @@ function buildContextLinks(categories: KnowledgeCategory[], otherUrl: string): {
 
 export default function TwinKnowledgeScreen() {
     const { user, token, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [categories, setCategories] = useState(INITIAL_CATEGORIES);
     const [otherUrl, setOtherUrl] = useState("");
     const [trainingProgress] = useState(5); // 5% por defecto
@@ -202,7 +202,7 @@ export default function TwinKnowledgeScreen() {
 
     async function handleUpload(categoryId: string) {
         if (!token) {
-            Alert.alert("Error", "Debes estar autenticado para subir documentos");
+            showAlert({ type: 'error', title: 'Error', message: 'Debes estar autenticado para subir documentos' });
             return;
         }
 
@@ -228,7 +228,7 @@ export default function TwinKnowledgeScreen() {
 
             // Validate file size (10MB max)
             if (file.size && file.size > 10 * 1024 * 1024) {
-                Alert.alert("Archivo muy grande", "El tamaño máximo es 10MB");
+                showAlert({ type: 'info', title: 'Archivo muy grande', message: 'El tamaño máximo es 10MB' });
                 return;
             }
 
@@ -256,11 +256,11 @@ export default function TwinKnowledgeScreen() {
                 count: response.documents.filter(d => d.category === cat.id).length
             })));
 
-            Alert.alert("Éxito", `Documento "${file.name}" subido correctamente`);
+            showAlert({ type: 'success', title: 'Éxito', message: `Documento "${file.name}" subido correctamente` });
 
         } catch (error: any) {
             console.error("Upload error:", error);
-            Alert.alert("Error", error.message || "No se pudo subir el documento");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo subir el documento" });
         } finally {
             setIsUploading(false);
         }
@@ -269,10 +269,11 @@ export default function TwinKnowledgeScreen() {
     async function handleDeleteDocument(documentId: string) {
         if (!token) return;
 
-        Alert.alert(
-            "Eliminar documento",
-            "¿Estás seguro de que quieres eliminar este documento?",
-            [
+        showAlert({
+    type: 'warning',
+    title: 'Eliminar documento',
+    message: '¿Estás seguro de que quieres eliminar este documento?',
+    buttons: [
                 { text: "Cancelar", style: "cancel" },
                 {
                     text: "Eliminar",
@@ -286,14 +287,14 @@ export default function TwinKnowledgeScreen() {
                                 ...cat,
                                 count: response.documents.filter(d => d.category === cat.id).length
                             })));
-                            Alert.alert("Éxito", "Documento eliminado");
+                            showAlert({ type: 'success', title: 'Éxito', message: 'Documento eliminado' });
                         } catch (error: any) {
-                            Alert.alert("Error", error.message || "No se pudo eliminar el documento");
+                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo eliminar el documento" });
                         }
                     }
                 }
             ]
-        );
+});
     }
 
     function handleManualAdd(categoryId: string) {
@@ -434,7 +435,7 @@ export default function TwinKnowledgeScreen() {
             } catch (contextError: any) {
                 console.error("Error with LiveAvatar context:", contextError);
                 console.error("Error details:", contextError?.message, contextError?.stack);
-                Alert.alert("Aviso", `Error al crear contexto: ${contextError?.message || 'Error desconocido'}. El gemelo se activará igualmente.`);
+                showAlert({ type: 'info', title: 'Aviso', message: `Error al crear contexto: ${contextError?.message || 'Error desconocido'}. El gemelo se activará igualmente.` });
                 // Continue anyway - the twin can still be activated
             }
 
@@ -482,7 +483,7 @@ export default function TwinKnowledgeScreen() {
             router.push("/onboarding/pro-success");
         } catch (error: any) {
             console.error("Error activating twin:", error);
-            Alert.alert("Error", error.message || "Error al activar el gemelo");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al activar el gemelo" });
         } finally {
             setIsLoading(false);
         }

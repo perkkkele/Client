@@ -3,7 +3,6 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
 import { chatApi, userApi, getAssetUrl } from "../../api";
 import type { User } from "../../api/user";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Helper to build avatar URL from server path
 function getAvatarUrl(avatarPath: string | undefined): string | null {
@@ -23,6 +23,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 
 export default function ExploreScreen() {
   const { token, user } = useAuth();
+  const { showAlert } = useAlert();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,7 +61,7 @@ export default function ExploreScreen() {
       await chatApi.createChat(token, userId, user._id);
       router.push(`/avatar-chat/${userId}`);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "No se pudo crear el chat");
+      showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo crear el chat" });
     } finally {
       setCreatingChat(null);
     }

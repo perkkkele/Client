@@ -1,9 +1,7 @@
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +15,7 @@ import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl, chatApi, analyticsApi } from "../../api";
 import { User } from "../../api/user";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -43,6 +42,7 @@ const COLORS = {
 export default function ProfessionalProfileScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token, user } = useAuth();
+  const { showAlert } = useAlert();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -102,11 +102,12 @@ export default function ProfessionalProfileScreen() {
 
         // Check if professional accepts appointments
         if (!professional.appointmentsEnabled) {
-            Alert.alert(
-                "Citas no disponibles",
-                `${professional.publicName || professional.firstname || "Este profesional"} actualmente no acepta citas online. Puedes contactarle directamente a través del chat o sus datos de contacto.`,
-                [{ text: "Entendido", style: "default" }]
-            );
+            showAlert({
+    type: 'warning',
+    title: 'Citas no disponibles',
+    message: '',
+    buttons: [{ text: "Entendido", style: "default" }]
+});
             return;
         }
 
@@ -233,11 +234,12 @@ export default function ProfessionalProfileScreen() {
                         {professional.verification?.professionalVerified && (
                             <TouchableOpacity
                                 style={styles.verifiedBadge}
-                                onPress={() => Alert.alert(
-                                    "✓ Profesional Verificado",
-                                    "Este profesional ha verificado su actividad profesional mediante declaración jurada.\n\nTwinPro ha comprobado su identidad y profesión para ofrecerte una experiencia segura y fiable.",
-                                    [{ text: "Entendido", style: "default" }]
-                                )}
+                                onPress={() => showAlert({
+    type: 'success',
+    title: '✓ Profesional Verificado',
+    message: 'Este profesional ha verificado su actividad profesional mediante declaración jurada.\n\nTwinPro ha comprobado su identidad y profesión para ofrecerte una experiencia segura y fiable.',
+    buttons: [{ text: "Entendido", style: "default" }]
+})}
                             >
                                 <MaterialIcons name="workspace-premium" size={16} color={COLORS.blue500} />
                                 <Text style={styles.verifiedText}>Profesional Verificado</Text>

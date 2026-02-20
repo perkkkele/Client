@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
+    ActivityIndicator,    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -17,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Native Google Sign-In
 let GoogleSignin: any = null;
@@ -52,6 +51,7 @@ const COLORS = {
 
 export default function RegisterProScreen() {
     const { login, loginWithGoogle } = useAuth();
+  const { showAlert } = useAlert();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -72,7 +72,7 @@ export default function RegisterProScreen() {
     // Handle native Google Sign-In for professionals
     async function handleGoogleSignIn() {
         if (!isGoogleSignInAvailable || !GoogleSignin) {
-            Alert.alert("Error", "Google Sign-In no está disponible en esta versión");
+            showAlert({ type: 'error', title: 'Error', message: 'Google Sign-In no está disponible en esta versión' });
             return;
         }
 
@@ -94,7 +94,7 @@ export default function RegisterProScreen() {
         } catch (error: any) {
             console.log("Google Sign-In error:", error);
             if (error.code !== "SIGN_IN_CANCELLED") {
-                Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+                showAlert({ type: 'error', title: 'Error', message: error.message || "Error al iniciar sesión con Google" });
             }
         } finally {
             setIsGoogleLoading(false);
@@ -103,7 +103,7 @@ export default function RegisterProScreen() {
 
     async function handleRegister() {
         if (!canSubmit) {
-            Alert.alert("Error", "Por favor completa todos los campos correctamente");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor completa todos los campos correctamente' });
             return;
         }
 
@@ -118,7 +118,7 @@ export default function RegisterProScreen() {
             // Registro e inicio de sesión exitoso, continuar al perfil profesional
             router.push("/onboarding/pro-profile");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al crear la cuenta");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al crear la cuenta" });
         } finally {
             setIsLoading(false);
         }

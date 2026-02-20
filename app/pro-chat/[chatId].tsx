@@ -10,7 +10,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    Alert,
     Dimensions,
     Image,
 } from "react-native";
@@ -22,6 +21,7 @@ import { getMessages, ChatMessage } from "../../api/chatMessage";
 import { createVideoCall, getVideoCallToken } from "../../api/videoCall";
 import { getAssetUrl } from "../../api";
 import HumanVideoCall from "../../components/HumanVideoCall";
+import { useAlert } from "../../components/TwinProAlert";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -69,6 +69,7 @@ export default function ProChatScreen() {
     const insets = useSafeAreaInsets();
     const scrollViewRef = useRef<ScrollView>(null);
     const autoStartAttempted = useRef(false);
+    const { showAlert } = useAlert();
 
     // Chat state
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -126,7 +127,7 @@ export default function ProChatScreen() {
             setMessages(msgs);
         } catch (error) {
             console.error("Error loading chat:", error);
-            Alert.alert("Error", "No se pudo cargar la conversación");
+            showAlert({ type: 'error', title: 'Error de carga', message: 'No se pudo cargar la conversación. Comprueba tu conexión e inténtalo de nuevo.' });
         } finally {
             setLoading(false);
         }
@@ -143,17 +144,15 @@ export default function ProChatScreen() {
 
             // Check premium subscription before auto-starting
             if (user?.subscription?.plan !== 'premium') {
-                Alert.alert(
-                    "Función Premium",
-                    "Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.",
-                    [
-                        { text: "Entendido", style: "cancel" },
-                        {
-                            text: "Ver planes",
-                            onPress: () => router.push("/(settings)/plans-credits")
-                        }
+                showAlert({
+                    type: 'info',
+                    title: 'Función Premium',
+                    message: 'Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.',
+                    buttons: [
+                        { text: 'Entendido', style: 'cancel' },
+                        { text: 'Ver planes', onPress: () => router.push('/(settings)/plans-credits') }
                     ]
-                );
+                });
                 return;
             }
 
@@ -168,7 +167,7 @@ export default function ProChatScreen() {
                     setIsInCall(true);
                 } catch (error: any) {
                     console.error("Error auto-starting video call:", error);
-                    Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
+                    showAlert({ type: 'error', title: 'Videollamada fallida', message: error.message || 'No se pudo iniciar la videollamada. Inténtalo de nuevo.' });
                 } finally {
                     setStartingCall(false);
                 }
@@ -250,7 +249,7 @@ export default function ProChatScreen() {
             setMessages(prev => [...prev, newMessage]);
         } catch (error) {
             console.error("Error sending message:", error);
-            Alert.alert("Error", "No se pudo enviar el mensaje");
+            showAlert({ type: 'error', title: 'Envío fallido', message: 'No se pudo enviar el mensaje. Comprueba tu conexión e inténtalo de nuevo.' });
             setInputText(messageText);
         } finally {
             setSending(false);
@@ -259,19 +258,20 @@ export default function ProChatScreen() {
 
     function handleBack() {
         if (isInCall) {
-            Alert.alert(
-                "Llamada en curso",
-                "¿Deseas colgar la llamada y salir?",
-                [
-                    { text: "Cancelar", style: "cancel" },
+            showAlert({
+                type: 'warning',
+                title: 'Llamada en curso',
+                message: '¿Deseas colgar la llamada y salir?',
+                buttons: [
+                    { text: 'Cancelar', style: 'cancel' },
                     {
-                        text: "Colgar", style: "destructive", onPress: () => {
+                        text: 'Colgar', style: 'destructive', onPress: () => {
                             setIsInCall(false);
                             router.back();
                         }
                     }
                 ]
-            );
+            });
         } else {
             router.back();
         }
@@ -285,27 +285,26 @@ export default function ProChatScreen() {
 
         // Check premium subscription
         if (!isPremium) {
-            Alert.alert(
-                "Función Premium",
-                "Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.\n\n¿Quieres mejorar tu plan?",
-                [
-                    { text: "Ahora no", style: "cancel" },
-                    {
-                        text: "Ver planes",
-                        onPress: () => router.push("/(settings)/plans-credits")
-                    }
+            showAlert({
+                type: 'info',
+                title: 'Función Premium',
+                message: 'Las videollamadas en tiempo real están disponibles exclusivamente para profesionales con el plan Premium.\n\n¿Quieres mejorar tu plan?',
+                buttons: [
+                    { text: 'Ahora no', style: 'cancel' },
+                    { text: 'Ver planes', onPress: () => router.push('/(settings)/plans-credits') }
                 ]
-            );
+            });
             return;
         }
 
-        Alert.alert(
-            "Iniciar videollamada",
-            `¿Quieres iniciar una videollamada con ${clientName}?`,
-            [
-                { text: "Cancelar", style: "cancel" },
+        showAlert({
+            type: 'info',
+            title: 'Iniciar videollamada',
+            message: `¿Quieres iniciar una videollamada con ${clientName}?`,
+            buttons: [
+                { text: 'Cancelar', style: 'cancel' },
                 {
-                    text: "Iniciar",
+                    text: 'Iniciar',
                     onPress: async () => {
                         setStartingCall(true);
                         try {
@@ -316,14 +315,14 @@ export default function ProChatScreen() {
                             setIsInCall(true);
                         } catch (error: any) {
                             console.error("Error starting call:", error);
-                            Alert.alert("Error", error.message || "No se pudo iniciar la videollamada");
+                            showAlert({ type: 'error', title: 'Videollamada fallida', message: error.message || 'No se pudo iniciar la videollamada. Inténtalo de nuevo.' });
                         } finally {
                             setStartingCall(false);
                         }
                     }
                 }
             ]
-        );
+        });
     };
 
     const handleEndCall = () => {

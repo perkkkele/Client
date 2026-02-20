@@ -6,11 +6,10 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Linking,
-    Alert,
-} from "react-native";
+    Linking,} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -43,6 +42,7 @@ const SUPPORT_TOPICS = [
 
 export default function ContactSupportScreen() {
     const [selectedTopic, setSelectedTopic] = useState(SUPPORT_TOPICS[0]);
+  const { showAlert } = useAlert();
     const [showPicker, setShowPicker] = useState(false);
 
     function handleBack() {
@@ -55,7 +55,7 @@ export default function ContactSupportScreen() {
     }
 
     function handleLiveChat() {
-        Alert.alert("Chat en Vivo", "El chat en vivo estará disponible próximamente.");
+        showAlert({ type: 'warning', title: 'Chat en Vivo', message: 'El chat en vivo estará disponible próximamente.' });
     }
 
     function handleCallSupport() {

@@ -5,15 +5,14 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
-    Alert,
-    KeyboardAvoidingView,
+    View,    KeyboardAvoidingView,
     Platform,
     ScrollView,
     ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -37,6 +36,7 @@ const FEEDBACK_TYPES = [
 
 export default function SendFeedbackScreen() {
     const [feedbackType, setFeedbackType] = useState("sugerencia");
+  const { showAlert } = useAlert();
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
@@ -47,7 +47,7 @@ export default function SendFeedbackScreen() {
 
     async function handleSubmit() {
         if (!message.trim()) {
-            Alert.alert("Error", "Por favor, escribe tu comentario.");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor, escribe tu comentario.' });
             return;
         }
 
@@ -55,11 +55,12 @@ export default function SendFeedbackScreen() {
         // Simulate API call
         setTimeout(() => {
             setIsLoading(false);
-            Alert.alert(
-                "¡Gracias!",
-                "Tu comentario ha sido enviado correctamente. Lo revisaremos lo antes posible.",
-                [{ text: "OK", onPress: () => router.back() }]
-            );
+            showAlert({
+    type: 'info',
+    title: '¡Gracias!',
+    message: 'Tu comentario ha sido enviado correctamente. Lo revisaremos lo antes posible.',
+    buttons: [{ text: "OK", onPress: () => router.back() }]
+});
         }, 1500);
     }
 

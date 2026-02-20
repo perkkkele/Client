@@ -10,7 +10,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    Alert,
     Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +19,7 @@ import { getVideoCallToken, endVideoCall } from "../../api/videoCall";
 import { getChat } from "../../api/chat";
 import { getMessages, sendTextMessage, ChatMessage } from "../../api/chatMessage";
 import ProCallVideo, { VideoCallControls } from "../../components/ProCallVideo";
+import { useAlert } from "../../components/TwinProAlert";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -41,6 +41,7 @@ const COLORS = {
 export default function VideoCallScreen() {
     const { chatId } = useLocalSearchParams<{ chatId: string }>();
     const { user, token } = useAuth();
+    const { showAlert } = useAlert();
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Video call state
@@ -127,14 +128,15 @@ export default function VideoCallScreen() {
 
     // Handle end call
     const handleEndCall = async () => {
-        Alert.alert(
-            "Finalizar llamada",
-            "¿Estás seguro de que deseas terminar la videollamada?",
-            [
-                { text: "Cancelar", style: "cancel" },
+        showAlert({
+            type: 'warning',
+            title: 'Finalizar llamada',
+            message: '¿Estás seguro de que deseas terminar la videollamada?',
+            buttons: [
+                { text: 'Cancelar', style: 'cancel' },
                 {
-                    text: "Finalizar",
-                    style: "destructive",
+                    text: 'Finalizar',
+                    style: 'destructive',
                     onPress: async () => {
                         if (token && chatId) {
                             try {
@@ -147,7 +149,7 @@ export default function VideoCallScreen() {
                     }
                 }
             ]
-        );
+        });
     };
 
     // Handle send message

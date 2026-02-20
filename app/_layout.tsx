@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, View, Linking } from "react-native";
 import { AuthProvider, useAuth, IncomingCallProvider } from "../context";
+import { AlertProvider } from "../components/TwinProAlert";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
@@ -317,9 +318,11 @@ function RootLayoutNav() {
 export default Sentry.wrap(function RootLayout() {
   return (
     <AuthProvider>
-      <IncomingCallProvider>
-        <RootLayoutNav />
-      </IncomingCallProvider>
+      <AlertProvider>
+        <IncomingCallProvider>
+          <RootLayoutNav />
+        </IncomingCallProvider>
+      </AlertProvider>
     </AuthProvider>
   );
 });

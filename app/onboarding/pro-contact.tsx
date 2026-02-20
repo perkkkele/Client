@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
+    ActivityIndicator,    FlatList,
     KeyboardAvoidingView,
     Linking,
     Modal,
@@ -21,6 +19,7 @@ import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import * as calendarApi from "../../api/calendar";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FDE047",
@@ -65,6 +64,7 @@ const TIME_OPTIONS = [
 
 export default function ProContactScreen() {
     const { token, user, refreshUser } = useAuth();
+  const { showAlert } = useAlert();
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
     const [website, setWebsite] = useState("");
@@ -143,7 +143,7 @@ export default function ProContactScreen() {
             const { url } = await calendarApi.getGoogleAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo conectar con Google Calendar" });
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -156,7 +156,7 @@ export default function ProContactScreen() {
             const { url } = await calendarApi.getOutlookAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo conectar con Outlook" });
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -242,7 +242,7 @@ export default function ProContactScreen() {
                 router.push("/onboarding/pro-complete");
             }
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
         } finally {
             setIsLoading(false);
         }

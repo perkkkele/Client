@@ -12,9 +12,7 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    TextInput,
-    Alert,
-    Clipboard,
+    TextInput,    Clipboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -23,6 +21,7 @@ import { useAuth } from "../../context";
 import { useSubscription } from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
 import { getAssetUrl } from "../../api";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -55,6 +54,7 @@ interface WidgetConfig {
 
 export default function WidgetSettingsScreen() {
     const { user, token } = useAuth();
+  const { showAlert } = useAlert();
     const { canAccess } = useSubscription();
 
     const [config, setConfig] = useState<WidgetConfig>({
@@ -97,11 +97,12 @@ export default function WidgetSettingsScreen() {
         const code = generateEmbedCode();
         Clipboard.setString(code);
         setCopied(true);
-        Alert.alert(
-            "¡Código copiado!",
-            "Pega este código justo antes de </body> en tu sitio web.",
-            [{ text: "Entendido" }]
-        );
+        showAlert({
+    type: 'info',
+    title: '¡Código copiado!',
+    message: 'Pega este código justo antes de </body> en tu sitio web.',
+    buttons: [{ text: "Entendido" }]
+});
 
         setTimeout(() => setCopied(false), 3000);
     };

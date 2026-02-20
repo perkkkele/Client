@@ -1,9 +1,7 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
+    ActivityIndicator,    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -15,6 +13,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { getPresetForProfessional } from "../../constants/digitalTwinPresets";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FDE047",
@@ -112,6 +111,7 @@ const segmentStyles = StyleSheet.create({
 
 export default function TwinBehaviorScreen() {
     const { token, refreshUser, user } = useAuth();
+  const { showAlert } = useAlert();
     const [formality, setFormality] = useState(1);
     const [depth, setDepth] = useState(1);
     const [tone, setTone] = useState(0);
@@ -279,7 +279,7 @@ export default function TwinBehaviorScreen() {
 
             router.push("/onboarding/twin-knowledge");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
         } finally {
             setIsLoading(false);
         }

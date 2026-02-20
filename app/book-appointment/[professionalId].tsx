@@ -6,9 +6,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
-    Alert,
-    Linking,
+    View,    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -23,6 +21,7 @@ import {
     ServiceType,
 } from "../../api/appointment";
 import { createCheckoutSession } from "../../api/payment";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -89,6 +88,7 @@ export default function BookAppointmentScreen() {
         prefilledTime?: string;  // Format: HH:MM from chat bubble
     }>();
     const { token, user } = useAuth();
+  const { showAlert } = useAlert();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -304,7 +304,7 @@ export default function BookAppointmentScreen() {
 
     const handleConfirmAppointment = async () => {
         if (!selectedDate || !selectedTime || !token || !professionalId) {
-            Alert.alert("Error", "Por favor selecciona una fecha y hora");
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor selecciona una fecha y hora' });
             return;
         }
 
@@ -336,30 +336,32 @@ export default function BookAppointmentScreen() {
                     const session = await createCheckoutSession(token, appointment._id);
                     const canOpen = await Linking.canOpenURL(session.url);
                     if (canOpen) {
-                        Alert.alert(
-                            "¡Cita Agendada!",
-                            `Se abrirá la página de pago (${formatPrice(price)}) para confirmar tu cita.`,
-                            [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
-                        );
+                        showAlert({
+    type: 'info',
+    title: '¡Cita Agendada!',
+    message: '',
+    buttons: [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
+});
                     } else {
-                        Alert.alert("Error", "No se pudo abrir el enlace de pago");
+                        showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
                         router.replace(`/appointment-details/${appointment._id}` as any);
                     }
                 } catch (payError: any) {
                     console.error("Payment error:", payError);
-                    Alert.alert("Error", "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.");
+                    showAlert({ type: 'error', title: 'Error', message: 'No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.' });
                     router.replace(`/appointment-details/${appointment._id}` as any);
                 }
             } else {
                 // Pago in situ - el profesional cobra directamente
-                Alert.alert(
-                    "¡Cita Agendada!",
-                    "Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.",
-                    [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
-                );
+                showAlert({
+    type: 'info',
+    title: '¡Cita Agendada!',
+    message: 'Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.',
+    buttons: [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
+});
             }
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo agendar la cita. Inténtalo de nuevo.");
+            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo agendar la cita. Inténtalo de nuevo." });
         } finally {
             setIsSubmitting(false);
         }

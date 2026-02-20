@@ -1,7 +1,6 @@
 import { router } from "expo-router";
 import { useState, useCallback } from "react";
 import {
-    Alert,
     Modal,
     ScrollView,
     StyleSheet,
@@ -18,6 +17,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import * as calendarApi from "../../api/calendar";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -74,6 +74,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = ["00", "15", "30", "45"];
 
 export default function WorkScheduleScreen() {
+    const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -97,7 +98,7 @@ export default function WorkScheduleScreen() {
             const { url } = await calendarApi.getGoogleAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Google Calendar");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Google Calendar" })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -110,29 +111,31 @@ export default function WorkScheduleScreen() {
             const { url } = await calendarApi.getOutlookAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "No se pudo conectar con Outlook");
+            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Outlook" })
         } finally {
             setIsConnectingCalendar(false);
         }
     };
 
     const handleDisconnectCalendar = () => {
-        Alert.alert("Desconectar", "¿Desconectar calendario?", [
-            { text: "Cancelar", style: "cancel" },
-            {
-                text: "Desconectar",
-                style: "destructive",
-                onPress: async () => {
-                    if (!token) return;
-                    try {
-                        await calendarApi.disconnectCalendar(token);
-                        if (refreshUser) await refreshUser();
-                    } catch (error: any) {
-                        Alert.alert("Error", error.message);
-                    }
+        showAlert({
+            type: 'warning', title: "Desconectar", message: "¿Desconectar calendario?", buttons: [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Desconectar",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            await calendarApi.disconnectCalendar(token);
+                            if (refreshUser) await refreshUser();
+                        } catch (error: any) {
+                            showAlert({ type: 'error', title: 'Error', message: error.message });
+                        }
+                    },
                 },
-            },
-        ]);
+            ]
+        })
     };
 
     // Time picker modal state
@@ -364,11 +367,13 @@ export default function WorkScheduleScreen() {
             if (refreshUser) {
                 await refreshUser();
             }
-            Alert.alert("Éxito", "Horario actualizado correctamente", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            showAlert({
+                type: 'success', title: "Éxito", message: "Horario actualizado correctamente", buttons: [
+                    { text: "OK", onPress: () => router.back() }
+                ]
+            })
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Error al guardar el horario");
+            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar el horario" })
         } finally {
             setIsSaving(false);
         }
@@ -471,11 +476,7 @@ export default function WorkScheduleScreen() {
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.upgradeButton}
-                                    onPress={() => Alert.alert(
-                                        "Plan Premium",
-                                        "Actualiza a Premium para sincronizar tu calendario con Google o Outlook.",
-                                        [{ text: "OK" }]
-                                    )}
+                                    onPress={() => showAlert({ type: 'info', title: "Plan Premium", message: "Actualiza a Premium para sincronizar tu calendario con Google o Outlook.", buttons: [{ text: "OK" }] })}
                                 >
                                     <MaterialIcons name="workspace-premium" size={16} color="#f59e0b" />
                                     <Text style={styles.upgradeButtonText}>Mejorar a Premium</Text>

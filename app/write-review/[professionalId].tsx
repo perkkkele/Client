@@ -9,7 +9,6 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    Alert,
     KeyboardAvoidingView,
     Platform,
 } from "react-native";
@@ -18,6 +17,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#f9f506",
@@ -55,6 +55,7 @@ const MAX_COMMENT_LENGTH = 300;
 export default function WriteReviewScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token } = useAuth();
+    const { showAlert } = useAlert();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,17 +109,17 @@ export default function WriteReviewScreen() {
 
     const handleSubmit = async () => {
         if (!token) {
-            Alert.alert("Error", "Debes iniciar sesión para escribir una reseña.");
+            showAlert({ type: 'warning', title: 'Sesión requerida', message: 'Inicia sesión para poder publicar tu reseña.' });
             return;
         }
 
         if (rating === 0) {
-            Alert.alert("Valoración requerida", "Por favor, selecciona una valoración de estrellas.");
+            showAlert({ type: 'warning', title: 'Valoración requerida', message: 'Selecciona una puntuación de estrellas antes de publicar.' });
             return;
         }
 
         if (comment.trim().length < 10) {
-            Alert.alert("Reseña muy corta", "Por favor, escribe al menos 10 caracteres en tu reseña.");
+            showAlert({ type: 'warning', title: 'Reseña muy corta', message: 'Escribe al menos 10 caracteres para que tu opinión sea útil.' });
             return;
         }
 
@@ -144,7 +145,7 @@ export default function WriteReviewScreen() {
             router.replace(`/review-success/${professionalId}?rating=${rating}&comment=${encodeURIComponent(comment)}&tags=${encodeURIComponent(tagsString)}`);
         } catch (error: any) {
             console.error("Error submitting review:", error);
-            Alert.alert("Error", error.message || "No se pudo publicar la reseña. Intenta de nuevo.");
+            showAlert({ type: 'error', title: 'No se pudo publicar', message: error.message || 'Ocurrió un problema al publicar tu reseña. Inténtalo de nuevo.' });
             setIsSubmitting(false);
         }
     };

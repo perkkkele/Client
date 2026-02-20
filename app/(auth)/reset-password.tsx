@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -16,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../../api/config";
+import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
     primary: "#FFED00",
@@ -41,20 +41,21 @@ export default function ResetPasswordScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const { showAlert } = useAlert();
 
     async function handleResetPassword() {
         if (!code || code.length !== 6) {
-            Alert.alert("Error", "Introduce el código de 6 dígitos");
+            showAlert({ type: 'warning', title: 'Código incompleto', message: 'Introduce el código de 6 dígitos que recibiste por email.' });
             return;
         }
 
         if (!newPassword || newPassword.length < 6) {
-            Alert.alert("Error", "La contraseña debe tener al menos 6 caracteres");
+            showAlert({ type: 'warning', title: 'Contraseña demasiado corta', message: 'Tu nueva contraseña debe tener al menos 6 caracteres.' });
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            Alert.alert("Error", "Las contraseñas no coinciden");
+            showAlert({ type: 'warning', title: 'Las contraseñas no coinciden', message: 'Asegúrate de que ambas contraseñas sean iguales.' });
             return;
         }
 
@@ -75,11 +76,11 @@ export default function ResetPasswordScreen() {
             if (response.ok) {
                 setIsSuccess(true);
             } else {
-                Alert.alert("Error", data.message || "Error al restablecer contraseña");
+                showAlert({ type: 'error', title: 'No se pudo restablecer', message: data.message || 'El código podría ser incorrecto o haber expirado. Solicita uno nuevo.' });
             }
         } catch (error) {
             console.error("Reset password error:", error);
-            Alert.alert("Error", "Error de conexión. Inténtalo de nuevo.");
+            showAlert({ type: 'error', title: 'Sin conexión', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.' });
         } finally {
             setIsLoading(false);
         }

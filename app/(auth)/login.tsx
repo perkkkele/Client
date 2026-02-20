@@ -2,7 +2,6 @@ import { Link, router } from "expo-router";
 import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { useAlert } from "../../components/TwinProAlert";
 
 // Native Google Sign-In
 let GoogleSignin: any = null;
@@ -56,11 +56,12 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
+  const { showAlert } = useAlert();
 
   // Handle native Google Sign-In
   async function handleGoogleSignIn() {
     if (!isGoogleSignInAvailable || !GoogleSignin) {
-      Alert.alert("Error", "Google Sign-In no está disponible en esta versión");
+      showAlert({ type: 'error', title: 'Error', message: 'Google Sign-In no está disponible en esta versión' });
       return;
     }
 
@@ -89,7 +90,7 @@ export default function LoginScreen() {
           params: { reason: error.reason || "" }
         });
       } else if (error.code !== "SIGN_IN_CANCELLED") {
-        Alert.alert("Error", error.message || "Error al iniciar sesión con Google");
+        showAlert({ type: 'error', title: 'Error', message: error.message || 'Error al iniciar sesión con Google' });
       }
     } finally {
       setIsGoogleLoading(false);
@@ -98,7 +99,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      Alert.alert("Error", "Por favor, completa todos los campos");
+      showAlert({ type: 'warning', title: 'Campos incompletos', message: 'Por favor, completa todos los campos' });
       return;
     }
 
@@ -114,7 +115,7 @@ export default function LoginScreen() {
           params: { reason: error.reason || "" }
         });
       } else {
-        Alert.alert("Error", error.message || "Error al iniciar sesión");
+        showAlert({ type: 'error', title: 'Error', message: error.message || 'Error al iniciar sesión' });
       }
     } finally {
       setIsLoading(false);
