@@ -89,6 +89,11 @@ export default function PaymentSuccessScreen() {
                         Recibirás una notificación como recordatorio antes de tu cita.
                     </Text>
                 )}
+                {!isConfirming && (
+                    <Text style={styles.fiscalNote}>
+                        Para solicitar factura, contacta directamente con el profesional.
+                    </Text>
+                )}
 
                 {/* Buttons - Only show when not confirming */}
                 {!isConfirming && (
@@ -159,7 +164,14 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.textMuted,
         textAlign: "center",
+        marginBottom: 8,
+    },
+    fiscalNote: {
+        fontSize: 12,
+        color: COLORS.textMuted,
+        textAlign: "center",
         marginBottom: 40,
+        fontStyle: "italic",
     },
     buttonContainer: {
         width: "100%",

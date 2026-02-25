@@ -61,7 +61,6 @@ export default function SettingsScreen() {
     const displayName = user?.firstname
         ? `${user.firstname}${user.lastname ? ` ${user.lastname}` : ""}`
         : "Usuario Anónimo";
-    const username = user?.email?.split("@")[0] || "usuario";
 
     function handleBack() {
         router.back();
@@ -293,7 +292,6 @@ export default function SettingsScreen() {
                         </View>
                     </TouchableOpacity>
                     <Text style={styles.displayName}>{displayName}</Text>
-                    <Text style={styles.username}>@{username}</Text>
                     <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
                         <Text style={styles.editProfileButtonText}>Editar perfil</Text>
                     </TouchableOpacity>
@@ -400,11 +398,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "bold",
         color: COLORS.textMain,
-        marginBottom: 4,
-    },
-    username: {
-        fontSize: 14,
-        color: COLORS.gray500,
         marginBottom: 16,
     },
     editProfileButton: {

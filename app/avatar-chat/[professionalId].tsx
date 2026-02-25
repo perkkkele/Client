@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -31,6 +32,8 @@ import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatar
 import ChatMemorySettings from "../../components/ChatMemorySettings";
 import { WebView } from "react-native-webview";
 import { useAlert } from "../../components/TwinProAlert";
+import ActionCard from "../../components/chat/ActionCard";
+import type { ActionCardData, AppointmentPayload } from "../../components/chat/ActionCard";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // 4:3 aspect ratio
@@ -75,12 +78,24 @@ type InfoBubbleType = "profile" | "contact" | "location" | "share" | "private" |
 
 interface Message {
     id: string;
-    type: "text" | "audio" | "typing";
+    type: "text" | "audio" | "typing" | "action_card" | "appointment_proposal";
     content?: string;
     isUser: boolean;
     isFromProfessional?: boolean; // Added for real professional messages
     timestamp: string;
     duration?: string;
+    /** @deprecated Use actionCardData instead */
+    appointmentData?: {
+        date: string;
+        time: string;
+        type: string;
+        duration?: number | null;
+        professionalId: string;
+        clientId: string;
+        chatId: string;
+        status?: 'proposed' | 'confirmed' | 'expired' | 'error';
+    };
+    actionCardData?: ActionCardData;
 }
 
 // Initial messages - now empty since greeting comes from server via TTS
@@ -189,7 +204,7 @@ export default function AvatarChatScreen() {
 
 
     const { token, user: currentUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const { subscribeToMessages } = useIncomingCall();
     const insets = useSafeAreaInsets();
     const [professional, setProfessional] = useState<User | null>(null);
@@ -373,6 +388,30 @@ export default function AvatarChatScreen() {
             console.log('[AvatarChat] Quick replies received, updating UI:', replies);
             setDynamicQuickReplies(replies);
         },
+        onAppointmentProposal: (proposalData) => {
+            console.log('[AvatarChat] 📅 Appointment proposal received:', proposalData);
+            const proposalMsg: Message = {
+                id: `appointment-${Date.now()}`,
+                type: 'action_card',
+                content: `Propuesta de cita: ${proposalData.date} a las ${proposalData.time}`,
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                actionCardData: {
+                    cardType: 'appointment',
+                    payload: proposalData as AppointmentPayload,
+                },
+                // Keep for backward compat with DB messages
+                appointmentData: proposalData,
+            };
+            setMessages(prev => [...prev, proposalMsg]);
+            // Scroll to bottom
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        },
         onError: (error) => {
             console.error('[StreamingVoice] Error:', error);
         },
@@ -426,15 +465,21 @@ export default function AvatarChatScreen() {
     }, [isCustomMode, avatarIsSpeaking, streamingVoice.isSpeaking, liveAvatarAudio.interrupt]);
 
     // Mark session as checked when professional has no limit configured
+    // OR when there's a limit but no chat yet (to avoid deadlock with initializeCustomModeLiveAvatar)
     useEffect(() => {
         if (professional && !sessionStatusChecked) {
             const sessionLimit = professional?.digitalTwin?.sessionLimitMinutes || 0;
             if (sessionLimit === 0) {
                 console.log('[SessionLimit] No limit configured, marking as checked');
                 setSessionStatusChecked(true);
+            } else if (!currentChatId) {
+                // When there IS a session limit but NO chat yet, allow session init to proceed.
+                // The limit will be checked once the chat is created inside initializeCustomModeLiveAvatar.
+                console.log('[SessionLimit] Limit configured but no chat yet, allowing session init');
+                setSessionStatusChecked(true);
             }
         }
-    }, [professional, sessionStatusChecked]);
+    }, [professional, sessionStatusChecked, currentChatId]);
 
     // Session time limit tracking - runs every 60 seconds when chat is active
     useEffect(() => {
@@ -504,6 +549,24 @@ export default function AvatarChatScreen() {
             clearInterval(intervalId);
         };
     }, [currentChatId, token, isTwinDisabled, isSessionExpired, professional?.digitalTwin?.sessionLimitMinutes]);
+
+    // Disconnect all active voice/LiveKit connections when session expires
+    useEffect(() => {
+        if (isSessionExpired) {
+            console.log('[SessionLimit] Session expired — disconnecting voice and LiveKit/LiveAvatar');
+            // Disconnect the streaming voice WebSocket (LiveKit agent + Deepgram)
+            if (streamingVoice?.disconnect) {
+                streamingVoice.disconnect();
+            }
+            // Clear LiveKit and avatar WebSocket URLs so hooks' enabled flags go false
+            setLivekitUrl(null);
+            setLivekitToken(null);
+            setLivekitAgentToken(null);
+            setAvatarWsUrl(null);
+            // Mark session as no longer active
+            setSessionStatus('idle');
+        }
+    }, [isSessionExpired]);
 
     // Animation values
     const waveAnims = useRef(Array.from({ length: 10 }, () => new Animated.Value(0))).current;
@@ -597,10 +660,10 @@ export default function AvatarChatScreen() {
     // Clear all conversation history with confirmation
     const handleClearAllHistory = () => {
         showAlert({
-    type: 'warning',
-    title: 'Borrar todo el historial',
-    message: '¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.',
-    buttons: [
+            type: 'warning',
+            title: 'Borrar todo el historial',
+            message: '¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.',
+            buttons: [
                 {
                     text: "Cancelar",
                     style: "cancel"
@@ -609,11 +672,9 @@ export default function AvatarChatScreen() {
                     text: "Borrar todo",
                     style: "destructive",
                     onPress: async () => {
-                        if (!token) return;
+                        if (!token || !professionalId) return;
                         try {
-                            for (const conv of conversations) {
-                                await chatApi.deleteChat(token, conv.id);
-                            }
+                            await chatApi.deleteAllAvatarChats(token, professionalId);
                             setConversations([]);
                             setCurrentChatId(null);
                             setMessages(INITIAL_MESSAGES);
@@ -625,7 +686,7 @@ export default function AvatarChatScreen() {
                     }
                 }
             ]
-});
+        });
     };
 
     // Navigate to report a problem screen
@@ -698,52 +759,27 @@ export default function AvatarChatScreen() {
         setLoadingConversations(true);
         console.log('[loadConversations] Loading conversations for professional:', professionalId);
         try {
-            const chats = await chatApi.getChats(token);
-            console.log('[loadConversations] All chats from API:', chats.length);
+            // Use the optimized endpoint with role=client to get pre-enriched data
+            const result = await chatApi.getAvatarChats(token, professionalId, { role: 'client' });
+            const serverConversations = result.conversations;
+            console.log('[loadConversations] Conversations from API:', serverConversations.length);
 
-            // Filter avatar chats that involve this professional
-            const professionalChats = chats.filter((chat: any) => {
-                const p1Id = typeof chat.participant_one === 'string' ? chat.participant_one : chat.participant_one?._id;
-                const p2Id = typeof chat.participant_two === 'string' ? chat.participant_two : chat.participant_two?._id;
-                const matchesProfessional = p1Id === professionalId || p2Id === professionalId;
-                const isAvatarChat = chat.isAvatarChat === true;
-                console.log('[loadConversations] Chat:', chat._id, 'isAvatarChat:', isAvatarChat, 'matchesPro:', matchesProfessional);
-                return matchesProfessional && isAvatarChat;
+            const formattedConversations: Conversation[] = serverConversations.map((conv, index) => {
+                const date = new Date(conv.lastMessageDate || conv.updatedAt);
+                const today = new Date();
+                const isToday = date.toDateString() === today.toDateString();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const isYesterday = date.toDateString() === yesterday.toDateString();
+
+                return {
+                    id: conv._id,
+                    title: `Conversación ${serverConversations.length - index}`,
+                    preview: conv.preview || conv.lastMessage || 'Sin mensajes',
+                    date: isToday ? 'Hoy' : isYesterday ? 'Ayer' : date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+                    isActive: false,
+                };
             });
-
-            console.log('[loadConversations] Filtered professional chats:', professionalChats.length);
-
-            // Format for drawer display (use setCurrentChatId state to get latest value)
-            setConversations([]); // Clear first
-            const formattedConversations: Conversation[] = await Promise.all(
-                professionalChats.map(async (chat: any, index: number) => {
-                    try {
-                        const lastMsg = await chatMessageApi.getLastMessage(token, chat._id);
-                        const date = new Date(chat.updatedAt || chat.createdAt);
-                        const today = new Date();
-                        const isToday = date.toDateString() === today.toDateString();
-                        const yesterday = new Date(today);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const isYesterday = date.toDateString() === yesterday.toDateString();
-
-                        return {
-                            id: chat._id,
-                            title: `Conversación ${professionalChats.length - index}`,
-                            preview: lastMsg?.message || 'Sin mensajes',
-                            date: isToday ? 'Hoy' : isYesterday ? 'Ayer' : date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
-                            isActive: false, // Will be updated when rendering based on current state
-                        };
-                    } catch {
-                        return {
-                            id: chat._id,
-                            title: `Conversación ${professionalChats.length - index}`,
-                            preview: 'Sin mensajes',
-                            date: new Date(chat.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
-                            isActive: false,
-                        };
-                    }
-                })
-            );
 
             console.log('[loadConversations] Formatted conversations:', formattedConversations.length);
             setConversations(formattedConversations);
@@ -922,6 +958,13 @@ export default function AvatarChatScreen() {
             // Start tracking conversation duration
             conversationStartTimeRef.current = Date.now();
 
+            // Record conversationStart for analytics
+            if (token && professionalId) {
+                analyticsApi.recordEvent(token, professionalId, "conversationStart", {
+                    source: "app"
+                }).catch(() => { });
+            }
+
             console.log("LiveAvatar session active!");
             console.log("LiveKit URL:", startResponse.livekit_url);
 
@@ -1006,6 +1049,14 @@ export default function AvatarChatScreen() {
                         }
                         setSessionStatus('active');
 
+                        // Start tracking conversation duration + record analytics
+                        conversationStartTimeRef.current = Date.now();
+                        if (token && professionalId) {
+                            analyticsApi.recordEvent(token, professionalId, "conversationStart", {
+                                source: "app"
+                            }).catch(() => { });
+                        }
+
                         useV2Flow = true;
                         console.log("[AvatarChat] ✅ V2 flow active! Using Turn Detector for low-latency end-of-turn detection");
                     }
@@ -1042,6 +1093,14 @@ export default function AvatarChatScreen() {
                     setAvatarWsUrl(startResponse.ws_url);
                 }
                 setSessionStatus('active');
+
+                // Start tracking conversation duration + record analytics
+                conversationStartTimeRef.current = Date.now();
+                if (token && professionalId) {
+                    analyticsApi.recordEvent(token, professionalId, "conversationStart", {
+                        source: "app"
+                    }).catch(() => { });
+                }
 
                 console.log("[AvatarChat] Legacy flow active (HeyGen's room)");
 
@@ -2500,321 +2559,346 @@ export default function AvatarChatScreen() {
                                     </View>
                                 </View>
                             </View>
-                        ) : activeInfoBubble === "share" && professional ? (
-                            <View style={styles.shareContent}>
-                                {/* Share Grid */}
-                                <View style={styles.shareGrid}>
-                                    {/* WhatsApp */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            const message = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
-                                            Linking.openURL(`whatsapp://send?text=${encodeURIComponent(message)}`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, { backgroundColor: "#25D366" }]}>
-                                            <FontAwesome5 name="whatsapp" size={24} color={COLORS.white} />
-                                        </View>
-                                        <Text style={styles.shareLabel}>WhatsApp</Text>
-                                    </TouchableOpacity>
+                        ) : activeInfoBubble === "share" && professional ? (() => {
+                            // Build deep link URL for this professional
+                            const shareUrl = professional.username
+                                ? `https://twinpro.app/@${professional.username}`
+                                : `https://twinpro.app/user/${professional._id}`;
 
-                                    {/* Facebook */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            Linking.openURL(`https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(`¡Mira este profesional! ${professional.publicName || professional.firstname}`)}`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, { backgroundColor: "#1877F2" }]}>
-                                            <FontAwesome5 name="facebook-f" size={24} color={COLORS.white} />
-                                        </View>
-                                        <Text style={styles.shareLabel}>Facebook</Text>
-                                    </TouchableOpacity>
+                            // Build share message from professional data
+                            const name = professional.publicName || professional.firstname || "Profesional";
+                            const profession = professional.profession;
+                            const bio = professional.bio || null;
 
-                                    {/* Instagram */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            Linking.openURL(`instagram://`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, styles.shareIconInstagram]}>
-                                            <FontAwesome5 name="instagram" size={24} color={COLORS.white} />
-                                        </View>
-                                        <Text style={styles.shareLabel}>Instagram</Text>
-                                    </TouchableOpacity>
+                            // Clean message: card-like format with professional info
+                            const shareMessage = [
+                                `👋 Te recomiendo que veas esto`,
+                                ``,
+                                `${name}${profession ? ` · ${profession}` : ""}`,
+                                bio ? `\n${bio}` : null,
+                                ``,
+                                `Puedes hablar con su gemelo digital aquí 👇`,
+                                shareUrl,
+                            ].filter(line => line !== null).join("\n");
 
-                                    {/* X (Twitter) */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            const text = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
-                                            Linking.openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, { backgroundColor: COLORS.black }]}>
-                                            <Text style={{ fontSize: 20, fontWeight: "900", color: COLORS.white }}>𝕏</Text>
-                                        </View>
-                                        <Text style={styles.shareLabel}>X</Text>
-                                    </TouchableOpacity>
+                            // Short version for X/Twitter (max ~280 chars)
+                            const twitterMessage = `👋 Te recomiendo que veas esto — ${name}${profession ? ` (${profession})` : ""}. Puedes hablar con su gemelo digital aquí 👇 ${shareUrl}`;
 
-                                    {/* LinkedIn */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            Linking.openURL(`https://www.linkedin.com/sharing/share-offsite/`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, { backgroundColor: "#0A66C2" }]}>
-                                            <FontAwesome5 name="linkedin-in" size={22} color={COLORS.white} />
-                                        </View>
-                                        <Text style={styles.shareLabel}>LinkedIn</Text>
-                                    </TouchableOpacity>
-
-                                    {/* Telegram */}
-                                    <TouchableOpacity
-                                        style={styles.shareButton}
-                                        onPress={() => {
-                                            const text = `¡Mira este profesional! ${professional.publicName || professional.firstname}`;
-                                            Linking.openURL(`https://t.me/share/url?text=${encodeURIComponent(text)}`);
-                                        }}
-                                    >
-                                        <View style={[styles.shareIconContainer, { backgroundColor: "#229ED9" }]}>
-                                            <FontAwesome5 name="telegram-plane" size={22} color={COLORS.white} />
-                                        </View>
-                                        <Text style={styles.shareLabel}>Telegram</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        ) : activeInfoBubble === "appointments" && professional ? (
-                            <View style={styles.appointmentBubbleContent}>
-                                {/* Header */}
-                                <View style={styles.appointmentHeader}>
-                                    <View>
-                                        <Text style={styles.appointmentTitle}>Agendar Cita</Text>
-                                        <View style={styles.appointmentScheduleRow}>
-                                            <MaterialIcons name="schedule" size={14} color={COLORS.gray400} />
-                                            <Text style={styles.appointmentScheduleText}>
-                                                Horario: {professional.appointmentHours?.start || "09:00"} - {professional.appointmentHours?.end || "18:00"}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.appointmentCloseButton}
-                                        onPress={() => setActiveInfoBubble(null)}
-                                    >
-                                        <MaterialIcons name="close" size={18} color={COLORS.gray400} />
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Date Selector */}
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.appointmentDateScroll}
-                                    contentContainerStyle={styles.appointmentDateContainer}
-                                >
-                                    {generateNextDays().map((day) => (
+                            return (
+                                <View style={styles.shareContent}>
+                                    {/* Share Grid */}
+                                    <View style={styles.shareGrid}>
+                                        {/* WhatsApp */}
                                         <TouchableOpacity
-                                            key={day.date}
-                                            style={[
-                                                styles.appointmentDateButton,
-                                                selectedDate === day.date && styles.appointmentDateButtonActive
-                                            ]}
-                                            onPress={() => handleDateSelect(day.date)}
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMessage)}`);
+                                            }}
                                         >
-                                            <Text style={[
-                                                styles.appointmentDateDayName,
-                                                selectedDate === day.date && styles.appointmentDateTextActive
-                                            ]}>
-                                                {day.dayName}
-                                            </Text>
-                                            <Text style={[
-                                                styles.appointmentDateDayNum,
-                                                selectedDate === day.date && styles.appointmentDateTextActive
-                                            ]}>
-                                                {day.dayNum}
+                                            <View style={[styles.shareIconContainer, { backgroundColor: "#25D366" }]}>
+                                                <FontAwesome5 name="whatsapp" size={24} color={COLORS.white} />
+                                            </View>
+                                            <Text style={styles.shareLabel}>WhatsApp</Text>
+                                        </TouchableOpacity>
+
+                                        {/* Facebook */}
+                                        <TouchableOpacity
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                const quote = `👋 Te recomiendo que veas esto — ${name}${profession ? ` (${profession})` : ""}. Puedes hablar con su gemelo digital aquí.`;
+                                                Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(quote)}`);
+                                            }}
+                                        >
+                                            <View style={[styles.shareIconContainer, { backgroundColor: "#1877F2" }]}>
+                                                <FontAwesome5 name="facebook-f" size={24} color={COLORS.white} />
+                                            </View>
+                                            <Text style={styles.shareLabel}>Facebook</Text>
+                                        </TouchableOpacity>
+
+                                        {/* Instagram */}
+                                        <TouchableOpacity
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                Linking.openURL(`instagram://`);
+                                            }}
+                                        >
+                                            <View style={[styles.shareIconContainer, styles.shareIconInstagram]}>
+                                                <FontAwesome5 name="instagram" size={24} color={COLORS.white} />
+                                            </View>
+                                            <Text style={styles.shareLabel}>Instagram</Text>
+                                        </TouchableOpacity>
+
+                                        {/* X (Twitter) */}
+                                        <TouchableOpacity
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                Linking.openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterMessage)}`);
+                                            }}
+                                        >
+                                            <View style={[styles.shareIconContainer, { backgroundColor: COLORS.black }]}>
+                                                <Text style={{ fontSize: 20, fontWeight: "900", color: COLORS.white }}>𝕏</Text>
+                                            </View>
+                                            <Text style={styles.shareLabel}>X</Text>
+                                        </TouchableOpacity>
+
+                                        {/* LinkedIn */}
+                                        <TouchableOpacity
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                Linking.openURL(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`);
+                                            }}
+                                        >
+                                            <View style={[styles.shareIconContainer, { backgroundColor: "#0A66C2" }]}>
+                                                <FontAwesome5 name="linkedin-in" size={22} color={COLORS.white} />
+                                            </View>
+                                            <Text style={styles.shareLabel}>LinkedIn</Text>
+                                        </TouchableOpacity>
+
+                                        {/* Telegram */}
+                                        <TouchableOpacity
+                                            style={styles.shareButton}
+                                            onPress={() => {
+                                                Linking.openURL(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareMessage)}`);
+                                            }}
+                                        >
+                                            <View style={[styles.shareIconContainer, { backgroundColor: "#229ED9" }]}>
+                                                <FontAwesome5 name="telegram-plane" size={22} color={COLORS.white} />
+                                            </View>
+                                            <Text style={styles.shareLabel}>Telegram</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            );
+                        })()
+                            : activeInfoBubble === "appointments" && professional ? (
+                                <View style={styles.appointmentBubbleContent}>
+                                    {/* Header */}
+                                    <View style={styles.appointmentHeader}>
+                                        <View>
+                                            <Text style={styles.appointmentTitle}>Agendar Cita</Text>
+                                            <View style={styles.appointmentScheduleRow}>
+                                                <MaterialIcons name="schedule" size={14} color={COLORS.gray400} />
+                                                <Text style={styles.appointmentScheduleText}>
+                                                    Horario: {professional.appointmentHours?.start || "09:00"} - {professional.appointmentHours?.end || "18:00"}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <TouchableOpacity
+                                            style={styles.appointmentCloseButton}
+                                            onPress={() => setActiveInfoBubble(null)}
+                                        >
+                                            <MaterialIcons name="close" size={18} color={COLORS.gray400} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* Date Selector */}
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.appointmentDateScroll}
+                                        contentContainerStyle={styles.appointmentDateContainer}
+                                    >
+                                        {generateNextDays().map((day) => (
+                                            <TouchableOpacity
+                                                key={day.date}
+                                                style={[
+                                                    styles.appointmentDateButton,
+                                                    selectedDate === day.date && styles.appointmentDateButtonActive
+                                                ]}
+                                                onPress={() => handleDateSelect(day.date)}
+                                            >
+                                                <Text style={[
+                                                    styles.appointmentDateDayName,
+                                                    selectedDate === day.date && styles.appointmentDateTextActive
+                                                ]}>
+                                                    {day.dayName}
+                                                </Text>
+                                                <Text style={[
+                                                    styles.appointmentDateDayNum,
+                                                    selectedDate === day.date && styles.appointmentDateTextActive
+                                                ]}>
+                                                    {day.dayNum}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+
+                                    {/* Time Slots Grid */}
+                                    <View style={styles.appointmentSlotsContainer}>
+                                        {loadingSlots ? (
+                                            <View style={styles.appointmentSlotsLoading}>
+                                                <ActivityIndicator size="small" color={COLORS.primary} />
+                                                <Text style={styles.appointmentSlotsLoadingText}>Cargando horarios...</Text>
+                                            </View>
+                                        ) : availableSlots.length === 0 ? (
+                                            <Text style={styles.appointmentNoSlots}>No hay horarios disponibles</Text>
+                                        ) : (
+                                            <View style={styles.appointmentSlotsGrid}>
+                                                {availableSlots.map((slot) => (
+                                                    <TouchableOpacity
+                                                        key={slot.time}
+                                                        style={[
+                                                            styles.appointmentSlotButton,
+                                                            !slot.available && styles.appointmentSlotDisabled,
+                                                            selectedTime === slot.time && styles.appointmentSlotSelected
+                                                        ]}
+                                                        disabled={!slot.available}
+                                                        onPress={() => setSelectedTime(slot.time)}
+                                                    >
+                                                        <Text style={[
+                                                            styles.appointmentSlotText,
+                                                            !slot.available && styles.appointmentSlotTextDisabled,
+                                                            selectedTime === slot.time && styles.appointmentSlotTextSelected
+                                                        ]}>
+                                                            {slot.time}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    {/* Continue to Booking Button */}
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.appointmentConfirmButton,
+                                            (!selectedDate || !selectedTime) && styles.appointmentConfirmButtonDisabled
+                                        ]}
+                                        disabled={!selectedDate || !selectedTime}
+                                        onPress={handleConfirmAppointment}
+                                    >
+                                        <Text style={styles.appointmentConfirmText}>CONTINUAR</Text>
+                                        <MaterialIcons name="arrow-forward" size={16} color={COLORS.black} />
+                                    </TouchableOpacity>
+
+                                    {/* Info */}
+                                    <Text style={styles.appointmentTerms}>
+                                        Selecciona el tipo de cita y duración en la siguiente pantalla.
+                                    </Text>
+                                </View>
+                            ) : activeInfoBubble === "escalation" ? (
+                                /* Escalation Confirmation Dialog */
+                                <View style={styles.escalationDialogContent}>
+                                    <Text style={styles.escalationDialogText}>
+                                        {INFO_BUBBLE_CONTENT.escalation.content}
+                                    </Text>
+
+                                    <Text style={styles.escalationDialogQuestion}>
+                                        ¿Qué quieres hacer?
+                                    </Text>
+
+                                    {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
+                                    {professional?.appointmentsEnabled && (
+                                        <TouchableOpacity
+                                            style={styles.escalationDialogButtonPrimary}
+                                            onPress={() => {
+                                                setActiveInfoBubble(null);
+                                                if (professionalId) {
+                                                    router.push(`/book-appointment/${professionalId}` as any);
+                                                }
+                                            }}
+                                        >
+                                            <MaterialIcons name="event" size={18} color={COLORS.textMain} />
+                                            <Text style={styles.escalationDialogButtonPrimaryText}>
+                                                Reservar una cita
                                             </Text>
                                         </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-
-                                {/* Time Slots Grid */}
-                                <View style={styles.appointmentSlotsContainer}>
-                                    {loadingSlots ? (
-                                        <View style={styles.appointmentSlotsLoading}>
-                                            <ActivityIndicator size="small" color={COLORS.primary} />
-                                            <Text style={styles.appointmentSlotsLoadingText}>Cargando horarios...</Text>
-                                        </View>
-                                    ) : availableSlots.length === 0 ? (
-                                        <Text style={styles.appointmentNoSlots}>No hay horarios disponibles</Text>
-                                    ) : (
-                                        <View style={styles.appointmentSlotsGrid}>
-                                            {availableSlots.map((slot) => (
-                                                <TouchableOpacity
-                                                    key={slot.time}
-                                                    style={[
-                                                        styles.appointmentSlotButton,
-                                                        !slot.available && styles.appointmentSlotDisabled,
-                                                        selectedTime === slot.time && styles.appointmentSlotSelected
-                                                    ]}
-                                                    disabled={!slot.available}
-                                                    onPress={() => setSelectedTime(slot.time)}
-                                                >
-                                                    <Text style={[
-                                                        styles.appointmentSlotText,
-                                                        !slot.available && styles.appointmentSlotTextDisabled,
-                                                        selectedTime === slot.time && styles.appointmentSlotTextSelected
-                                                    ]}>
-                                                        {slot.time}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
                                     )}
+
+                                    {/* Escalate - Secondary action */}
+                                    <TouchableOpacity
+                                        style={styles.escalationDialogButtonSecondary}
+                                        onPress={() => {
+                                            setActiveInfoBubble(null);
+                                            handleEscalation();
+                                        }}
+                                        disabled={isEscalating}
+                                    >
+                                        <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
+                                        <Text style={styles.escalationDialogButtonSecondaryText}>
+                                            {isEscalating ? 'Contactando...' : 'Escalar y esperar respuesta'}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    {/* Continue with Twin - Tertiary action */}
+                                    <TouchableOpacity
+                                        style={styles.escalationDialogButtonTertiary}
+                                        onPress={() => setActiveInfoBubble(null)}
+                                    >
+                                        <Text style={styles.escalationDialogButtonTertiaryText}>
+                                            Seguir con el gemelo digital
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
+                            ) : activeInfoBubble === "escalation_keyword" ? (
+                                /* Keyword-Triggered Escalation Dialog */
+                                <View style={styles.escalationDialogContent}>
+                                    <Text style={styles.escalationDialogText}>
+                                        {INFO_BUBBLE_CONTENT.escalation_keyword.content}
+                                    </Text>
 
-                                {/* Continue to Booking Button */}
-                                <TouchableOpacity
-                                    style={[
-                                        styles.appointmentConfirmButton,
-                                        (!selectedDate || !selectedTime) && styles.appointmentConfirmButtonDisabled
-                                    ]}
-                                    disabled={!selectedDate || !selectedTime}
-                                    onPress={handleConfirmAppointment}
-                                >
-                                    <Text style={styles.appointmentConfirmText}>CONTINUAR</Text>
-                                    <MaterialIcons name="arrow-forward" size={16} color={COLORS.black} />
-                                </TouchableOpacity>
+                                    {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
+                                    {professional?.appointmentsEnabled && (
+                                        <TouchableOpacity
+                                            style={styles.escalationDialogButtonPrimary}
+                                            onPress={() => {
+                                                setActiveInfoBubble(null);
+                                                if (professionalId) {
+                                                    router.push(`/book-appointment/${professionalId}` as any);
+                                                }
+                                            }}
+                                        >
+                                            <MaterialIcons name="event" size={18} color={COLORS.textMain} />
+                                            <Text style={styles.escalationDialogButtonPrimaryText}>
+                                                Reservar cita con el profesional
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
 
-                                {/* Info */}
-                                <Text style={styles.appointmentTerms}>
-                                    Selecciona el tipo de cita y duración en la siguiente pantalla.
-                                </Text>
-                            </View>
-                        ) : activeInfoBubble === "escalation" ? (
-                            /* Escalation Confirmation Dialog */
-                            <View style={styles.escalationDialogContent}>
-                                <Text style={styles.escalationDialogText}>
-                                    {INFO_BUBBLE_CONTENT.escalation.content}
-                                </Text>
-
-                                <Text style={styles.escalationDialogQuestion}>
-                                    ¿Qué quieres hacer?
-                                </Text>
-
-                                {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
-                                {professional?.appointmentsEnabled && (
+                                    {/* Escalate - Secondary action */}
                                     <TouchableOpacity
-                                        style={styles.escalationDialogButtonPrimary}
+                                        style={styles.escalationDialogButtonSecondary}
                                         onPress={() => {
                                             setActiveInfoBubble(null);
-                                            if (professionalId) {
-                                                router.push(`/book-appointment/${professionalId}` as any);
-                                            }
+                                            handleEscalation();
                                         }}
+                                        disabled={isEscalating}
                                     >
-                                        <MaterialIcons name="event" size={18} color={COLORS.textMain} />
-                                        <Text style={styles.escalationDialogButtonPrimaryText}>
-                                            Reservar una cita
+                                        <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
+                                        <Text style={styles.escalationDialogButtonSecondaryText}>
+                                            {isEscalating ? 'Contactando...' : 'Escalar conversación y esperar respuesta'}
                                         </Text>
                                     </TouchableOpacity>
-                                )}
 
-                                {/* Escalate - Secondary action */}
-                                <TouchableOpacity
-                                    style={styles.escalationDialogButtonSecondary}
-                                    onPress={() => {
-                                        setActiveInfoBubble(null);
-                                        handleEscalation();
-                                    }}
-                                    disabled={isEscalating}
-                                >
-                                    <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
-                                    <Text style={styles.escalationDialogButtonSecondaryText}>
-                                        {isEscalating ? 'Contactando...' : 'Escalar y esperar respuesta'}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {/* Continue with Twin - Tertiary action */}
-                                <TouchableOpacity
-                                    style={styles.escalationDialogButtonTertiary}
-                                    onPress={() => setActiveInfoBubble(null)}
-                                >
-                                    <Text style={styles.escalationDialogButtonTertiaryText}>
-                                        Seguir con el gemelo digital
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : activeInfoBubble === "escalation_keyword" ? (
-                            /* Keyword-Triggered Escalation Dialog */
-                            <View style={styles.escalationDialogContent}>
-                                <Text style={styles.escalationDialogText}>
-                                    {INFO_BUBBLE_CONTENT.escalation_keyword.content}
-                                </Text>
-
-                                {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
-                                {professional?.appointmentsEnabled && (
+                                    {/* Continue with Twin - Tertiary action */}
                                     <TouchableOpacity
-                                        style={styles.escalationDialogButtonPrimary}
-                                        onPress={() => {
-                                            setActiveInfoBubble(null);
-                                            if (professionalId) {
-                                                router.push(`/book-appointment/${professionalId}` as any);
-                                            }
-                                        }}
+                                        style={styles.escalationDialogButtonTertiary}
+                                        onPress={() => setActiveInfoBubble(null)}
                                     >
-                                        <MaterialIcons name="event" size={18} color={COLORS.textMain} />
-                                        <Text style={styles.escalationDialogButtonPrimaryText}>
-                                            Reservar cita con el profesional
+                                        <Text style={styles.escalationDialogButtonTertiaryText}>
+                                            Seguir con el gemelo digital
                                         </Text>
                                     </TouchableOpacity>
-                                )}
-
-                                {/* Escalate - Secondary action */}
-                                <TouchableOpacity
-                                    style={styles.escalationDialogButtonSecondary}
-                                    onPress={() => {
-                                        setActiveInfoBubble(null);
-                                        handleEscalation();
-                                    }}
-                                    disabled={isEscalating}
-                                >
-                                    <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
-                                    <Text style={styles.escalationDialogButtonSecondaryText}>
-                                        {isEscalating ? 'Contactando...' : 'Escalar conversación y esperar respuesta'}
+                                </View>
+                            ) : (
+                                <>
+                                    <Text style={[
+                                        styles.infoBubbleContent,
+                                        activeInfoBubble === "private" && styles.infoBubbleContentDark
+                                    ]}>
+                                        {INFO_BUBBLE_CONTENT[activeInfoBubble].content}
                                     </Text>
-                                </TouchableOpacity>
-
-                                {/* Continue with Twin - Tertiary action */}
-                                <TouchableOpacity
-                                    style={styles.escalationDialogButtonTertiary}
-                                    onPress={() => setActiveInfoBubble(null)}
-                                >
-                                    <Text style={styles.escalationDialogButtonTertiaryText}>
-                                        Seguir con el gemelo digital
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : (
-                            <>
-                                <Text style={[
-                                    styles.infoBubbleContent,
-                                    activeInfoBubble === "private" && styles.infoBubbleContentDark
-                                ]}>
-                                    {INFO_BUBBLE_CONTENT[activeInfoBubble].content}
-                                </Text>
-                                {activeInfoBubble === "profile" && (
-                                    <TouchableOpacity
-                                        style={styles.infoBubbleAction}
-                                        onPress={handleViewProfile}
-                                    >
-                                        <Text style={styles.infoBubbleActionText}>Ver perfil completo</Text>
-                                        <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
-                                    </TouchableOpacity>
-                                )}
-                            </>
-                        )}
+                                    {activeInfoBubble === "profile" && (
+                                        <TouchableOpacity
+                                            style={styles.infoBubbleAction}
+                                            onPress={handleViewProfile}
+                                        >
+                                            <Text style={styles.infoBubbleActionText}>Ver perfil completo</Text>
+                                            <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
+                                        </TouchableOpacity>
+                                    )}
+                                </>
+                            )}
                     </Animated.View>
                 </>
             )}
@@ -2935,6 +3019,60 @@ export default function AvatarChatScreen() {
                                     </View>
                                 </View>
                             )}
+                            {/* ActionCard: new action_card type + legacy appointment_proposal */}
+                            {(message.type === "action_card" && message.actionCardData) ? (
+                                <ActionCard
+                                    data={message.actionCardData}
+                                    token={token || ''}
+                                    professional={professional ? {
+                                        requirePaymentOnBooking: professional.requirePaymentOnBooking,
+                                        appointmentPrices: professional.appointmentPrices,
+                                        appointmentDuration: professional.appointmentDuration,
+                                    } : undefined}
+                                    onAction={(result) => {
+                                        console.log('[AvatarChat] ActionCard result:', result);
+                                        if (result.type === 'appointment_confirmed') {
+                                            const farewellMsg: Message = {
+                                                id: `farewell-${Date.now()}`,
+                                                type: 'text',
+                                                content: '¡Cita reservada! Ha sido un placer, nos vemos pronto. 😊',
+                                                isUser: false,
+                                                timestamp: new Date().toLocaleTimeString('es-ES', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }),
+                                            };
+                                            setMessages(prev => [...prev, farewellMsg]);
+                                        }
+                                    }}
+                                />
+                            ) : (message.type === "appointment_proposal" && message.appointmentData) ? (
+                                <ActionCard
+                                    data={{ cardType: 'appointment', payload: message.appointmentData }}
+                                    token={token || ''}
+                                    professional={professional ? {
+                                        requirePaymentOnBooking: professional.requirePaymentOnBooking,
+                                        appointmentPrices: professional.appointmentPrices,
+                                        appointmentDuration: professional.appointmentDuration,
+                                    } : undefined}
+                                    onAction={(result) => {
+                                        console.log('[AvatarChat] ActionCard result:', result);
+                                        if (result.type === 'appointment_confirmed') {
+                                            const farewellMsg: Message = {
+                                                id: `farewell-${Date.now()}`,
+                                                type: 'text',
+                                                content: '¡Cita reservada! Ha sido un placer, nos vemos pronto. 😊',
+                                                isUser: false,
+                                                timestamp: new Date().toLocaleTimeString('es-ES', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }),
+                                            };
+                                            setMessages(prev => [...prev, farewellMsg]);
+                                        }
+                                    }}
+                                />
+                            ) : null}
                             <Text style={styles.messageTime}>{message.timestamp}</Text>
                         </View>
                     </View>
@@ -3246,31 +3384,26 @@ export default function AvatarChatScreen() {
                         {/* Drawer Footer */}
                         <View style={styles.drawerFooter}>
                             {/* Memory Settings - RAG Fase 2 */}
-                            <ChatMemorySettings
-                                chatId={currentChatId}
-                                professionalName={professional?.publicName || professional?.firstname}
-                                onClose={closeDrawer}
-                            />
+                            {isPrivateMode ? (
+                                <View style={styles.drawerPrivateBanner}>
+                                    <MaterialIcons name="lock" size={16} color="#F59E0B" />
+                                    <Text style={styles.drawerPrivateBannerText}>
+                                        Modo privado · No se guardará esta conversación
+                                    </Text>
+                                </View>
+                            ) : (
+                                <ChatMemorySettings
+                                    chatId={currentChatId}
+                                    professionalName={professional?.publicName || professional?.firstname}
+                                    onClose={closeDrawer}
+                                />
+                            )}
                             <View style={styles.drawerDivider} />
                             <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
                                 <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
                                 <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
                             </TouchableOpacity>
                             <View style={styles.drawerDivider} />
-                            <TouchableOpacity style={styles.drawerHistoryToggle}>
-                                <View style={styles.drawerHistoryToggleLeft}>
-                                    <View style={styles.drawerHistoryIcon}>
-                                        <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
-                                    </View>
-                                    <View>
-                                        <Text style={styles.drawerHistoryTitle}>Historial</Text>
-                                        <Text style={styles.drawerHistorySubtitle}>Visible y guardado</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.drawerHistoryToggleSwitch}>
-                                    <View style={styles.drawerHistoryToggleDot} />
-                                </View>
-                            </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.drawerDeleteAllButton}
                                 onPress={handleClearAllHistory}
@@ -4637,54 +4770,22 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.gray200,
         marginVertical: 8,
     },
-    drawerHistoryToggle: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: COLORS.white,
-        padding: 12,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: COLORS.gray200,
-        marginBottom: 8,
-    },
-    drawerHistoryToggleLeft: {
+    drawerPrivateBanner: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-    },
-    drawerHistoryIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: `${COLORS.primary}20`,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    drawerHistoryTitle: {
-        fontSize: 14,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    drawerHistorySubtitle: {
-        fontSize: 10,
-        fontWeight: "500",
-        color: COLORS.gray500,
-    },
-    drawerHistoryToggleSwitch: {
-        width: 36,
-        height: 20,
+        gap: 8,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        backgroundColor: "#FEF3C720",
         borderRadius: 10,
-        backgroundColor: "#22C55E",
-        justifyContent: "center",
-        alignItems: "flex-end",
-        paddingHorizontal: 2,
+        borderWidth: 1,
+        borderColor: "#F59E0B30",
     },
-    drawerHistoryToggleDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: COLORS.white,
+    drawerPrivateBannerText: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#F59E0B",
+        flex: 1,
     },
     drawerDeleteAllButton: {
         flexDirection: "row",

@@ -26,6 +26,7 @@ export interface PlanFeatures {
     widget: boolean;
     qrCode: boolean;
     analytics: boolean;
+    advancedReports: boolean;
     calendarSync: boolean;
     searchPriority: boolean;
 }

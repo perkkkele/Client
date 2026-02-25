@@ -61,7 +61,6 @@ export default function EditProfileScreen() {
     }, [user]);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
-    const username = user?.email?.split("@")[0] || "usuario";
 
     function handleBack() {
         router.back();
@@ -213,21 +212,6 @@ export default function EditProfileScreen() {
 
                 {/* Form Fields */}
                 <View style={styles.formSection}>
-                    {/* Username (readonly) */}
-                    <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>NOMBRE DE USUARIO</Text>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.atSymbol}>@</Text>
-                            <TextInput
-                                style={[styles.input, styles.inputWithPrefix]}
-                                value={username}
-                                editable={false}
-                                placeholder="nombre_usuario"
-                                placeholderTextColor={COLORS.gray400}
-                            />
-                        </View>
-                        <Text style={styles.inputHint}>Este es tu identificador único en la plataforma.</Text>
-                    </View>
 
                     {/* Display Name (Firstname) */}
                     <View style={styles.inputGroup}>
@@ -438,18 +422,6 @@ const styles = StyleSheet.create({
         letterSpacing: 0.8,
         paddingHorizontal: 4,
     },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    atSymbol: {
-        position: "absolute",
-        left: 16,
-        fontSize: 16,
-        fontWeight: "500",
-        color: COLORS.gray400,
-        zIndex: 1,
-    },
     input: {
         flex: 1,
         backgroundColor: COLORS.surfaceLight,
@@ -466,17 +438,9 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 1,
     },
-    inputWithPrefix: {
-        paddingLeft: 32,
-    },
     inputDisabled: {
         backgroundColor: COLORS.gray100,
         color: COLORS.gray500,
-    },
-    inputHint: {
-        fontSize: 11,
-        color: COLORS.gray400,
-        paddingHorizontal: 4,
     },
     // Change Password
     changePasswordButton: {

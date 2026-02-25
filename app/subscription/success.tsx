@@ -28,9 +28,25 @@ export default function SubscriptionSuccessScreen() {
     const { refreshUser } = useAuth();
 
     // Refresh user data to get updated subscription
+    // Uses polling to handle race condition with Stripe webhook
     useEffect(() => {
-        refreshUser?.();
-    }, [refreshUser]);
+        let cancelled = false;
+
+        async function syncSubscription() {
+            // First immediate attempt
+            await refreshUser?.();
+
+            // Retry to allow webhook time to process (max 3 retries, 2s apart)
+            for (let i = 0; i < 3; i++) {
+                if (cancelled) return;
+                await new Promise(r => setTimeout(r, 2000));
+                await refreshUser?.();
+            }
+        }
+
+        syncSubscription();
+        return () => { cancelled = true; };
+    }, []);
 
     const handleViewPlans = () => {
         router.replace("/(settings)/plans-credits" as any);

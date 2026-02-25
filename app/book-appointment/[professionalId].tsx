@@ -6,7 +6,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,    Linking,
+    View,
+    Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -72,14 +73,7 @@ interface ServiceOption {
     description: string;
 }
 
-// Default prices (in cents) - used if professional hasn't configured pricing
-const DEFAULT_PRICES: Record<number, number> = {
-    15: 2500,
-    30: 5000,
-    45: 7500,
-    60: 9000,
-    90: 12000,
-};
+// Professional must configure their own pricing — no fallback defaults
 
 export default function BookAppointmentScreen() {
     const { professionalId, prefilledDate, prefilledTime } = useLocalSearchParams<{
@@ -88,7 +82,7 @@ export default function BookAppointmentScreen() {
         prefilledTime?: string;  // Format: HH:MM from chat bubble
     }>();
     const { token, user } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -115,11 +109,8 @@ export default function BookAppointmentScreen() {
         console.log('[BookAppointment] Building service options, professional:', professional?._id, 'prices:', professional?.appointmentPrices);
 
         if (!professional) {
-            console.log('[BookAppointment] No professional data yet, using defaults');
-            return [
-                { id: "30min", label: "Consulta 30 min", duration: 30, price: DEFAULT_PRICES[30], description: "Consulta básica" },
-                { id: "60min", label: "Consulta 60 min", duration: 60, price: DEFAULT_PRICES[60], description: "Consulta completa" },
-            ];
+            console.log('[BookAppointment] No professional data yet');
+            return [];
         }
 
         const priceData = professional.appointmentPrices;
@@ -161,13 +152,10 @@ export default function BookAppointmentScreen() {
             }
         }
 
-        // If no prices configured, show defaults
+        // If no prices configured, return empty — UI will show a message
         if (options.length === 0) {
-            console.log('[BookAppointment] No configured prices, using defaults');
-            return [
-                { id: "30min", label: "Consulta 30 min", duration: 30, price: DEFAULT_PRICES[30], description: "Consulta básica" },
-                { id: "60min", label: "Consulta 60 min", duration: 60, price: DEFAULT_PRICES[60], description: "Consulta completa" },
-            ];
+            console.log('[BookAppointment] No configured prices for this type');
+            return [];
         }
 
         console.log('[BookAppointment] Built options:', options);
@@ -337,11 +325,11 @@ export default function BookAppointmentScreen() {
                     const canOpen = await Linking.canOpenURL(session.url);
                     if (canOpen) {
                         showAlert({
-    type: 'info',
-    title: '¡Cita Agendada!',
-    message: '',
-    buttons: [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
-});
+                            type: 'info',
+                            title: '¡Cita Agendada!',
+                            message: '',
+                            buttons: [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
+                        });
                     } else {
                         showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
                         router.replace(`/appointment-details/${appointment._id}` as any);
@@ -354,11 +342,11 @@ export default function BookAppointmentScreen() {
             } else {
                 // Pago in situ - el profesional cobra directamente
                 showAlert({
-    type: 'info',
-    title: '¡Cita Agendada!',
-    message: 'Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.',
-    buttons: [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
-});
+                    type: 'info',
+                    title: '¡Cita Agendada!',
+                    message: 'Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.',
+                    buttons: [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
+                });
             }
         } catch (error: any) {
             showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo agendar la cita. Inténtalo de nuevo." });
@@ -579,7 +567,14 @@ export default function BookAppointmentScreen() {
                 <View style={styles.card}>
                     <Text style={styles.sectionLabel}>Tarifas del Profesional</Text>
                     <View style={styles.ratesContainer}>
-                        {SERVICE_OPTIONS.map((service) => (
+                        {SERVICE_OPTIONS.length === 0 ? (
+                            <View style={{ padding: 24, alignItems: "center" }}>
+                                <MaterialIcons name="info-outline" size={32} color="#9CA3AF" />
+                                <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginTop: 8 }}>
+                                    Este profesional no ha configurado tarifas para este tipo de cita.
+                                </Text>
+                            </View>
+                        ) : SERVICE_OPTIONS.map((service) => (
                             <TouchableOpacity
                                 key={service.duration}
                                 style={[
@@ -621,10 +616,10 @@ export default function BookAppointmentScreen() {
                 <TouchableOpacity
                     style={[
                         styles.confirmButton,
-                        (!selectedDate || !selectedTime) && styles.confirmButtonDisabled,
+                        (!selectedDate || !selectedTime || !selectedDuration) && styles.confirmButtonDisabled,
                     ]}
                     onPress={handleConfirmAppointment}
-                    disabled={!selectedDate || !selectedTime || isSubmitting}
+                    disabled={!selectedDate || !selectedTime || !selectedDuration || isSubmitting}
                 >
                     {isSubmitting ? (
                         <ActivityIndicator color={COLORS.textMain} />
@@ -639,6 +634,14 @@ export default function BookAppointmentScreen() {
                 <Text style={styles.termsText}>
                     Al confirmar, aceptas los términos y condiciones de la consulta.
                 </Text>
+
+                {/* Aviso fiscal para el cliente */}
+                <View style={styles.fiscalNotice}>
+                    <MaterialIcons name="info-outline" size={14} color={COLORS.gray400} />
+                    <Text style={styles.fiscalNoticeText}>
+                        El servicio es prestado por {displayName}. Para solicitar factura, contacta directamente con el profesional. TwinPro actúa como intermediario de pagos.
+                    </Text>
+                </View>
 
                 {/* Bottom Padding */}
                 <View style={{ height: 100 }} />
@@ -1029,7 +1032,20 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: COLORS.gray400,
         textAlign: "center",
+        marginBottom: 8,
+    },
+    fiscalNotice: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 6,
+        paddingHorizontal: 4,
         marginBottom: 16,
+    },
+    fiscalNoticeText: {
+        flex: 1,
+        fontSize: 10,
+        color: COLORS.gray400,
+        lineHeight: 15,
     },
     // Bottom Navigation
     bottomNav: {

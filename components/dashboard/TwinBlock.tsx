@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Switch, StyleSheet, TextInput } from "rea
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "./constants";
+import { useSubscription } from "../../hooks/useSubscription";
 
 interface User {
     _id?: string;
@@ -37,6 +38,7 @@ export default function TwinBlock({
 }: TwinBlockProps) {
     const [showEscalationConfig, setShowEscalationConfig] = useState(false);
     const [keywordInput, setKeywordInput] = useState("");
+    const { minutesUsed, minutesIncluded, extraMinutesUsed } = useSubscription();
 
     const handleTestGemini = () => {
         if (user?._id) {
@@ -123,6 +125,40 @@ export default function TwinBlock({
                         <Text style={styles.configureButtonText}>Configurar Gemelo</Text>
                     </View>
                     <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+
+                {/* Minutes Usage Bar */}
+                <TouchableOpacity
+                    style={styles.usageSection}
+                    onPress={() => router.push("/(settings)/plans-credits" as any)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.usageRow}>
+                        <MaterialIcons name="timer" size={16} color="rgba(255,255,255,0.7)" />
+                        <Text style={styles.usageText}>
+                            {minutesUsed} / {minutesIncluded} min
+                        </Text>
+                        <MaterialIcons name="chevron-right" size={18} color="rgba(255,255,255,0.4)" />
+                    </View>
+                    <View style={styles.usageBarBg}>
+                        <View
+                            style={[
+                                styles.usageBarFill,
+                                {
+                                    width: `${Math.min(100, (minutesUsed / Math.max(minutesIncluded, 1)) * 100)}%`,
+                                },
+                                minutesUsed > minutesIncluded && styles.usageBarOver,
+                            ]}
+                        />
+                    </View>
+                    {extraMinutesUsed > 0 && (
+                        <View style={styles.usageWarningRow}>
+                            <MaterialIcons name="info-outline" size={13} color="#fbbf24" />
+                            <Text style={styles.usageWarningText}>
+                                {extraMinutesUsed} min extra consumidos
+                            </Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
 
                 {/* Escalation Section */}
@@ -507,5 +543,48 @@ const styles = StyleSheet.create({
     sessionLimitLabel: {
         fontSize: 14,
         color: "rgba(255,255,255,0.7)",
+    },
+    // Minutes Usage Bar
+    usageSection: {
+        backgroundColor: "rgba(255,255,255,0.08)",
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 16,
+    },
+    usageRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 10,
+    },
+    usageText: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "600",
+        color: "rgba(255,255,255,0.85)",
+    },
+    usageBarBg: {
+        height: 6,
+        backgroundColor: "rgba(255,255,255,0.12)",
+        borderRadius: 3,
+        overflow: "hidden",
+    },
+    usageBarFill: {
+        height: "100%",
+        backgroundColor: "#d4af37",
+        borderRadius: 3,
+    },
+    usageBarOver: {
+        backgroundColor: "#ef4444",
+    },
+    usageWarningRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        marginTop: 8,
+    },
+    usageWarningText: {
+        fontSize: 12,
+        color: "#fbbf24",
     },
 });

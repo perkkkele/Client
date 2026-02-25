@@ -1,7 +1,13 @@
 import { API_URL } from "./config";
 
 export type UserType = 'user' | 'userpro';
-export type CategoryType = 'legal' | 'salud' | 'hogar' | 'educacion' | 'fitness' | 'tecnologia' | 'diseno' | 'bienestar' | 'inmobiliario' | 'estetica' | 'empleo' | 'finanzas' | 'energia' | 'otros';
+export type CategoryType =
+    | 'legal' | 'salud' | 'educacion' | 'finanzas' | 'fitness' | 'tecnologia'
+    | 'hogar' | 'bienestar' | 'viajes' | 'coaching' | 'mantenimiento' | 'reformas'
+    | 'marketing' | 'gestoria' | 'energia' | 'empleo' | 'arte' | 'eventos'
+    | 'mascotas' | 'belleza' | 'economia' | 'inmobiliaria' | 'otro'
+    // Legacy IDs (backward compatibility)
+    | 'diseno' | 'estetica' | 'inmobiliario' | 'otros';
 
 // Interfaces auxiliares
 export interface ScheduleDay {
@@ -151,6 +157,7 @@ export interface User {
     businessName?: string | null;  // Nombre de empresa/marca profesional
     businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro' | null;
     category?: CategoryType | null;
+    customCategory?: string | null;  // Free-text when category === 'otro'
     specialties?: string[];
     bio?: string | null;
     username?: string | null;  // Para QR code URL: twinpro.app/@username
@@ -208,6 +215,8 @@ export interface User {
     };
     autoConfirmAppointments?: boolean;
     requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
+    fiscalDisclaimerAccepted?: boolean;  // Si aceptó el aviso de obligación fiscal
+    fiscalDisclaimerAcceptedAt?: string | null;
 
     // === Gemelo Digital ===
     digitalTwin?: DigitalTwin;
@@ -282,6 +291,7 @@ export interface UserUpdateData {
     businessName?: string;  // Nombre de empresa/marca profesional
     businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro';
     category?: CategoryType;
+    customCategory?: string;  // Free-text when category === 'otro'
     specialties?: string[];
     bio?: string;
     username?: string;  // Alias único para URL: twinpro.app/@username
@@ -334,6 +344,8 @@ export interface UserUpdateData {
     };
     autoConfirmAppointments?: boolean;
     requirePaymentOnBooking?: boolean;  // Si citas presenciales requieren pago al agendar
+    fiscalDisclaimerAccepted?: boolean;
+    fiscalDisclaimerAcceptedAt?: string;
 
     // Gemelo Digital
     digitalTwin?: DigitalTwin;

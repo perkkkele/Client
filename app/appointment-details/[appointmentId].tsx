@@ -8,7 +8,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,} from "react-native";
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
@@ -122,7 +123,7 @@ function getStatusConfig(status: string) {
 export default function AppointmentDetailsScreen() {
     const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
     const { token, user } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCancelling, setIsCancelling] = useState(false);
@@ -196,10 +197,10 @@ export default function AppointmentDetailsScreen() {
 
     const handleCancel = () => {
         showAlert({
-    type: 'warning',
-    title: 'Cancelar Cita',
-    message: '¿Estás seguro de que deseas cancelar esta cita?',
-    buttons: [
+            type: 'warning',
+            title: 'Cancelar Cita',
+            message: '¿Estás seguro de que deseas cancelar esta cita?',
+            buttons: [
                 { text: "No", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -219,7 +220,7 @@ export default function AppointmentDetailsScreen() {
                     },
                 },
             ]
-});
+        });
     };
 
     if (isLoading) {
@@ -477,6 +478,16 @@ export default function AppointmentDetailsScreen() {
                             <MaterialIcons name="check-circle" size={20} color={COLORS.green700} />
                             <Text style={styles.paidBadgeText}>Pago Completado</Text>
                         </View>
+                    </View>
+                )}
+
+                {/* Fiscal notice - shown when payment has been made */}
+                {(appointment.paymentStatus === 'paid' || (appointment?.paymentStatus as any) === 'authorized') && (
+                    <View style={styles.fiscalNotice}>
+                        <MaterialIcons name="info-outline" size={14} color={COLORS.gray400} />
+                        <Text style={styles.fiscalNoticeText}>
+                            El servicio es prestado por {displayName}. Para solicitar factura, contacta directamente con el profesional. TwinPro actúa como intermediario de pagos.
+                        </Text>
                     </View>
                 )}
 
@@ -950,5 +961,18 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         color: COLORS.primary,
+    },
+    fiscalNotice: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 6,
+        paddingHorizontal: 20,
+        paddingVertical: 8,
+    },
+    fiscalNoticeText: {
+        flex: 1,
+        fontSize: 11,
+        color: COLORS.gray400,
+        lineHeight: 16,
     },
 });

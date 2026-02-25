@@ -1,7 +1,7 @@
 import { router } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-    ScrollView,
+    FlatList,
     StyleSheet,
     Text,
     TextInput,
@@ -37,6 +37,7 @@ const COLORS = {
 };
 
 const FILTERS = ["Hoy", "Últimos 7 días", "Último mes", "Todos"];
+const PAGE_SIZE = 20;
 
 // Helper to get gradient color based on index
 const getAvatarColor = (index: number) => {
@@ -101,14 +102,27 @@ export default function TwinHistoryScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [conversations, setConversations] = useState<AvatarConversation[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const nextCursorRef = useRef<string | undefined>(undefined);
 
-    const loadConversations = useCallback(async () => {
+    const loadConversations = useCallback(async (isRefresh = false) => {
         if (!token || !user?._id) return;
 
         try {
-            const data = await getAvatarChats(token, user._id);
-            setConversations(data);
+            if (isRefresh) {
+                nextCursorRef.current = undefined;
+            }
+
+            const result = await getAvatarChats(token, user._id, {
+                limit: PAGE_SIZE,
+                cursor: isRefresh ? undefined : undefined,
+            });
+
+            setConversations(result.conversations);
+            setHasMore(result.hasMore);
+            nextCursorRef.current = result.nextCursor;
         } catch (error) {
             console.error("Error loading avatar conversations:", error);
         } finally {
@@ -117,20 +131,40 @@ export default function TwinHistoryScreen() {
         }
     }, [token, user?._id]);
 
+    const loadMore = useCallback(async () => {
+        if (!token || !user?._id || !hasMore || loadingMore) return;
+
+        setLoadingMore(true);
+        try {
+            const result = await getAvatarChats(token, user._id, {
+                limit: PAGE_SIZE,
+                cursor: nextCursorRef.current,
+            });
+
+            setConversations(prev => [...prev, ...result.conversations]);
+            setHasMore(result.hasMore);
+            nextCursorRef.current = result.nextCursor;
+        } catch (error) {
+            console.error("Error loading more conversations:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [token, user?._id, hasMore, loadingMore]);
+
     useEffect(() => {
         loadConversations();
     }, [loadConversations]);
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
-        loadConversations();
+        loadConversations(true);
     }, [loadConversations]);
 
     function handleBack() {
         router.back();
     }
 
-    // Filter and search conversations
+    // Filter and search conversations (applied client-side over loaded data)
     const filteredConversations = filterByDateRange(conversations, activeFilter)
         .filter(conv => {
             if (!searchQuery) return true;
@@ -140,6 +174,63 @@ export default function TwinHistoryScreen() {
                 conv.preview.toLowerCase().includes(query)
             );
         });
+
+    const renderConversationItem = useCallback(({ item, index }: { item: AvatarConversation; index: number }) => (
+        <TouchableOpacity
+            key={item._id}
+            style={styles.conversationCard}
+            onPress={() => {
+                console.log("View conversation:", item._id);
+            }}
+        >
+            <View style={[styles.avatar, { backgroundColor: getAvatarColor(index) }]}>
+                <Text style={styles.avatarText}>{item.client.initials}</Text>
+            </View>
+            <View style={styles.conversationContent}>
+                <View style={styles.conversationHeader}>
+                    <Text style={styles.conversationName}>{item.client.name}</Text>
+                    <Text style={styles.conversationTime}>
+                        {formatDate(item.lastMessageDate)}
+                    </Text>
+                </View>
+                <Text style={styles.conversationPreview} numberOfLines={2}>
+                    {item.preview}
+                </Text>
+                <View style={styles.conversationFooter}>
+                    <View style={[
+                        styles.statusBadge,
+                        item.status === "resolved" ? styles.statusResolved : styles.statusEscalated
+                    ]}>
+                        <MaterialIcons
+                            name={item.status === "resolved" ? "smart-toy" : "warning"}
+                            size={12}
+                            color={item.status === "resolved" ? COLORS.green400 : COLORS.orange400}
+                        />
+                        <Text style={[
+                            styles.statusText,
+                            { color: item.status === "resolved" ? COLORS.green400 : COLORS.orange400 }
+                        ]}>
+                            {item.status === "resolved" ? "Resuelto por IA" : "Escalado"}
+                        </Text>
+                    </View>
+                    <Text style={styles.messageCount}>
+                        {item.messageCount} mensajes
+                    </Text>
+                </View>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
+        </TouchableOpacity>
+    ), []);
+
+    const renderFooter = useCallback(() => {
+        if (!loadingMore) return null;
+        return (
+            <View style={styles.loadingMoreContainer}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingMoreText}>Cargando más...</Text>
+            </View>
+        );
+    }, [loadingMore]);
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
@@ -164,11 +255,7 @@ export default function TwinHistoryScreen() {
                         onChangeText={setSearchQuery}
                     />
                 </View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filtersContent}
-                >
+                <View style={styles.filtersRow}>
                     {FILTERS.map((filter, index) => (
                         <TouchableOpacity
                             key={index}
@@ -186,7 +273,7 @@ export default function TwinHistoryScreen() {
                             </Text>
                         </TouchableOpacity>
                     ))}
-                </ScrollView>
+                </View>
             </View>
 
             {/* Conversations List */}
@@ -210,9 +297,15 @@ export default function TwinHistoryScreen() {
                     </Text>
                 </View>
             ) : (
-                <ScrollView
+                <FlatList
+                    data={filteredConversations}
+                    renderItem={renderConversationItem}
+                    keyExtractor={item => item._id}
                     style={styles.scrollView}
                     showsVerticalScrollIndicator={false}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={renderFooter}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -220,55 +313,7 @@ export default function TwinHistoryScreen() {
                             tintColor={COLORS.primary}
                         />
                     }
-                >
-                    {filteredConversations.map((conversation, index) => (
-                        <TouchableOpacity
-                            key={conversation._id}
-                            style={styles.conversationCard}
-                            onPress={() => {
-                                // Navigate to chat detail - could be implemented
-                                console.log("View conversation:", conversation._id);
-                            }}
-                        >
-                            <View style={[styles.avatar, { backgroundColor: getAvatarColor(index) }]}>
-                                <Text style={styles.avatarText}>{conversation.client.initials}</Text>
-                            </View>
-                            <View style={styles.conversationContent}>
-                                <View style={styles.conversationHeader}>
-                                    <Text style={styles.conversationName}>{conversation.client.name}</Text>
-                                    <Text style={styles.conversationTime}>
-                                        {formatDate(conversation.lastMessageDate)}
-                                    </Text>
-                                </View>
-                                <Text style={styles.conversationPreview} numberOfLines={2}>
-                                    {conversation.preview}
-                                </Text>
-                                <View style={styles.conversationFooter}>
-                                    <View style={[
-                                        styles.statusBadge,
-                                        conversation.status === "resolved" ? styles.statusResolved : styles.statusEscalated
-                                    ]}>
-                                        <MaterialIcons
-                                            name={conversation.status === "resolved" ? "smart-toy" : "warning"}
-                                            size={12}
-                                            color={conversation.status === "resolved" ? COLORS.green400 : COLORS.orange400}
-                                        />
-                                        <Text style={[
-                                            styles.statusText,
-                                            { color: conversation.status === "resolved" ? COLORS.green400 : COLORS.orange400 }
-                                        ]}>
-                                            {conversation.status === "resolved" ? "Resuelto por IA" : "Escalado"}
-                                        </Text>
-                                    </View>
-                                    <Text style={styles.messageCount}>
-                                        {conversation.messageCount} mensajes
-                                    </Text>
-                                </View>
-                            </View>
-                            <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                />
             )}
         </SafeAreaView>
     );
@@ -327,7 +372,8 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.textMain,
     },
-    filtersContent: {
+    filtersRow: {
+        flexDirection: "row",
         paddingHorizontal: 16,
         gap: 8,
     },
@@ -362,6 +408,17 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 14,
+        color: COLORS.textSecondary,
+    },
+    loadingMoreContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 16,
+        gap: 8,
+    },
+    loadingMoreText: {
+        fontSize: 12,
         color: COLORS.textSecondary,
     },
     emptyContainer: {

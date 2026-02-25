@@ -23,6 +23,7 @@ import { useAuth } from "../../context";
 import { userApi, analyticsApi, getAssetUrl } from "../../api";
 import { notificationsApi } from "../../api/notifications";
 import { ProfileBlock, TwinBlock, StatsBlock, AdvancedStatsBlock, AppointmentsBlock, EarningsBlock } from "../../components/dashboard";
+import { useAlert } from "../../components/TwinProAlert";
 import type { AdvancedAnalytics } from "../../api/analytics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -89,6 +90,7 @@ interface MenuSection {
 export default function ProDashboardScreen() {
     const { user, logout, token, refreshUser } = useAuth();
     const { canAccess, getRequiredPlan } = useSubscription();
+    const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
     // Initialize with false until user data loads, then sync with user.digitalTwin.isActive
     const [geminiActive, setGeminiActive] = useState(false);
@@ -327,11 +329,47 @@ export default function ProDashboardScreen() {
     async function handleToggleAppointments(value: boolean) {
         if (!token) return;
 
+        // When enabling, check that prices are configured
+        if (value) {
+            const prices = user?.appointmentPrices;
+            const videoEnabled = user?.appointmentTypesEnabled?.videoconference !== false;
+            const presencialEnabled = user?.appointmentTypesEnabled?.presencial !== false;
+            const hasVideoPrice = videoEnabled && prices?.videoconference &&
+                Object.values(prices.videoconference).some((p: any) => typeof p === 'number' && p > 0);
+            const hasPresencialPrice = presencialEnabled && prices?.presencial &&
+                Object.values(prices.presencial).some((p: any) => typeof p === 'number' && p > 0);
+
+            if (!hasVideoPrice && !hasPresencialPrice) {
+                showAlert({
+                    type: 'warning',
+                    title: 'Configura tus tarifas',
+                    message: 'Antes de activar las citas, debes configurar al menos una tarifa con precio.',
+                    buttons: [
+                        {
+                            text: 'Ir a Tarifas',
+                            style: 'default',
+                            onPress: () => router.push('/(settings)/appointment-pricing'),
+                        },
+                        { text: 'Cancelar', style: 'cancel' },
+                    ],
+                });
+                return;
+            }
+        }
+
+        await doToggleAppointments(value);
+    }
+
+    async function doToggleAppointments(value: boolean) {
+        if (!token) return;
+
         try {
-            await userApi.updateUser(token, {
+            const updateData: Record<string, any> = {
                 appointmentsEnabled: value,
                 appointmentHours: value ? { start: "09:00", end: "18:00" } : undefined,
-            });
+            };
+
+            await userApi.updateUser(token, updateData);
             if (refreshUser) await refreshUser();
         } catch (error) {
             console.error("Error toggling appointments:", error);
@@ -353,6 +391,38 @@ export default function ProDashboardScreen() {
 
     async function handleTogglePaymentRequired(value: boolean) {
         if (!token) return;
+
+        // Show fiscal disclaimer when enabling payment on booking
+        if (value && !user?.fiscalDisclaimerAccepted) {
+            showAlert({
+                type: "warning",
+                title: "Aviso de Obligación Fiscal",
+                message: "Al activar el cobro al reservar, recuerda que como profesional es tu responsabilidad emitir factura a tus clientes por los servicios prestados.\n\nTwinPro actúa como intermediario de pagos y no emite facturas en tu nombre.\n\nDebes utilizar un software de facturación homologado conforme a la normativa vigente.",
+                buttons: [
+                    {
+                        text: "Acepto y activo cobro",
+                        style: "default",
+                        onPress: async () => {
+                            try {
+                                await userApi.updateUser(token, {
+                                    requirePaymentOnBooking: true,
+                                    fiscalDisclaimerAccepted: true,
+                                    fiscalDisclaimerAcceptedAt: new Date().toISOString(),
+                                });
+                                if (refreshUser) await refreshUser();
+                            } catch (error) {
+                                console.error("Error toggling payment required:", error);
+                            }
+                        },
+                    },
+                    {
+                        text: "Cancelar",
+                        style: "cancel",
+                    },
+                ],
+            });
+            return;
+        }
 
         try {
             await userApi.updateUser(token, {

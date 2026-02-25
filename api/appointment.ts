@@ -4,7 +4,7 @@ import { Location } from "./user";
 // Tipos de cita
 export type AppointmentType = "presencial" | "videoconference";
 export type ServiceType = "30min" | "60min" | "custom";
-export type AppointmentStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type AppointmentStatus = "pending" | "pending_payment" | "confirmed" | "cancelled" | "completed";
 
 export interface Appointment {
     _id: string;
@@ -48,6 +48,8 @@ export interface Appointment {
     paidAt?: string | null;
     refundedAt?: string | null;
     chat?: string;  // Associated chat ID for video call navigation
+    requiresPayment?: boolean;  // Returned by createAppointment when payment is needed
+    paymentExpiresAt?: string | null;  // TTL for pending_payment appointments
 }
 
 export interface TimeSlot {
@@ -69,6 +71,7 @@ export interface CreateAppointmentData {
     time: string;
     type: AppointmentType;
     serviceType: ServiceType;
+    duration?: number;
     price: number;
     notes?: string;
 }

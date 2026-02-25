@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
 import {
-    ActivityIndicator,    KeyboardAvoidingView,
+    ActivityIndicator,
+    KeyboardAvoidingView,
     Platform,
     ScrollView,
     StyleSheet,
@@ -48,7 +49,21 @@ const CATEGORIES = [
     { id: "tecnologia", label: "Tecnología" },
     { id: "hogar", label: "Hogar" },
     { id: "bienestar", label: "Bienestar" },
-    { id: "otros", label: "Otros" },
+    { id: "viajes", label: "Viajes" },
+    { id: "coaching", label: "Coaching" },
+    { id: "mantenimiento", label: "Mantenimiento" },
+    { id: "reformas", label: "Reformas" },
+    { id: "marketing", label: "Marketing" },
+    { id: "gestoria", label: "Gestoría" },
+    { id: "energia", label: "Energía" },
+    { id: "empleo", label: "Empleo" },
+    { id: "arte", label: "Arte" },
+    { id: "eventos", label: "Eventos" },
+    { id: "mascotas", label: "Mascotas" },
+    { id: "belleza", label: "Belleza" },
+    { id: "economia", label: "Economía" },
+    { id: "inmobiliaria", label: "Inmobiliaria" },
+    { id: "otro", label: "Otro" },
 ];
 
 // Alias validation rules
@@ -61,7 +76,7 @@ type AliasStatus = "idle" | "checking" | "valid" | "invalid" | "taken";
 export default function ProProfileScreen() {
     const { token, refreshUser } = useAuth();
 
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     // Alias state
     const [alias, setAlias] = useState("");
     const [aliasStatus, setAliasStatus] = useState<AliasStatus>("idle");
@@ -73,6 +88,7 @@ export default function ProProfileScreen() {
     const [businessType, setBusinessType] = useState<string>("");
     const [showBusinessTypePicker, setShowBusinessTypePicker] = useState(false);
     const [category, setCategory] = useState("");
+    const [customCategory, setCustomCategory] = useState("");
     const [specialties, setSpecialties] = useState<string[]>([]);
     const [newSpecialty, setNewSpecialty] = useState("");
     const [bio, setBio] = useState("");
@@ -196,6 +212,10 @@ export default function ProProfileScreen() {
             showAlert({ type: 'error', title: 'Error', message: 'Por favor selecciona una categoría' });
             return;
         }
+        if (category === 'otro' && !customCategory.trim()) {
+            showAlert({ type: 'error', title: 'Error', message: 'Por favor describe tu categoría profesional' });
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -213,6 +233,7 @@ export default function ProProfileScreen() {
                     businessName: businessName.trim() || undefined,
                     businessType: (businessType || undefined) as 'Autónomo' | 'Empresa' | 'Clínica/Centro' | undefined,
                     category: category as any,
+                    customCategory: category === 'otro' ? customCategory.trim() : undefined,
                     specialties: specialties,
                     bio: bio.trim() || undefined,
                 });
@@ -451,20 +472,38 @@ export default function ProProfileScreen() {
                         </TouchableOpacity>
                         {showCategoryPicker && (
                             <View style={styles.categoryPicker}>
-                                {CATEGORIES.map((cat) => (
-                                    <TouchableOpacity
-                                        key={cat.id}
-                                        style={[styles.categoryOption, category === cat.id && styles.categoryOptionSelected]}
-                                        onPress={() => {
-                                            setCategory(cat.id);
-                                            setShowCategoryPicker(false);
-                                        }}
-                                    >
-                                        <Text style={[styles.categoryOptionText, category === cat.id && styles.categoryOptionTextSelected]}>
-                                            {cat.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                <ScrollView style={{ maxHeight: 250 }} nestedScrollEnabled>
+                                    {CATEGORIES.map((cat) => (
+                                        <TouchableOpacity
+                                            key={cat.id}
+                                            style={[styles.categoryOption, category === cat.id && styles.categoryOptionSelected]}
+                                            onPress={() => {
+                                                setCategory(cat.id);
+                                                setShowCategoryPicker(false);
+                                                if (cat.id !== 'otro') {
+                                                    setCustomCategory('');
+                                                }
+                                            }}
+                                        >
+                                            <Text style={[styles.categoryOptionText, category === cat.id && styles.categoryOptionTextSelected]}>
+                                                {cat.label}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+                        {category === 'otro' && (
+                            <View style={[styles.inputContainer, { marginTop: 8 }]}>
+                                <MaterialIcons name="edit" size={18} color={COLORS.gray400} style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Describe tu categoría..."
+                                    placeholderTextColor={COLORS.gray400}
+                                    value={customCategory}
+                                    onChangeText={setCustomCategory}
+                                    maxLength={50}
+                                />
                             </View>
                         )}
                     </View>

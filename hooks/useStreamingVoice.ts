@@ -28,6 +28,7 @@ interface UseStreamingVoiceOptions {
     onPartialResponse?: (text: string) => void;
     onResponseComplete?: (response: string) => void;
     onQuickReplies?: (replies: string[]) => void;
+    onAppointmentProposal?: (data: { date: string; time: string; type: string; professionalId: string; clientId: string; chatId: string }) => void;
     onAudioChunk?: (audioData: { format: string; data: string; sampleRate: number; text: string }) => void;
     onError?: (error: Error) => void;
     onAvatarSpeakingChange?: (speaking: boolean) => void;
@@ -71,6 +72,7 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
         onPartialResponse,
         onResponseComplete,
         onQuickReplies,
+        onAppointmentProposal,
         onAudioChunk,
         onError,
         onInterrupted,
@@ -92,6 +94,7 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
     // Refs
     const wsRef = useRef<WebSocket | null>(null);
     const soundRef = useRef<Audio.Sound | null>(null);
+    const handleServerMessageRef = useRef<(data: any) => void>(() => { });
     const audioQueueRef = useRef<ArrayBuffer[]>([]);
     const isStreamingRef = useRef(false);
     const partialResponseRef = useRef('');
@@ -182,7 +185,7 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
                     // JSON control message
                     try {
                         const data = JSON.parse(event.data);
-                        handleServerMessage(data);
+                        handleServerMessageRef.current(data);
                     } catch (e) {
                         console.error('[StreamingVoice] Error parsing message:', e);
                     }
@@ -271,7 +274,8 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
 
             case 'response_complete':
                 setIsProcessing(false);
-                const fullResponse = partialResponseRef.current;
+                // Strip any [CITA:] markers from accumulated text (system-only, not for display)
+                const fullResponse = partialResponseRef.current.replace(/\[CITA:.*?\]/g, '').trim();
                 setPartialResponse('');
                 partialResponseRef.current = '';
                 onResponseComplete?.(fullResponse);
@@ -314,8 +318,26 @@ export function useStreamingVoice(options: UseStreamingVoiceOptions): UseStreami
                     onQuickReplies?.(data.quickReplies);
                 }
                 break;
+
+            case 'appointment_proposal':
+                console.log('[StreamingVoice] 📅 Appointment proposal received:', data);
+                onAppointmentProposal?.({
+                    date: data.date,
+                    time: data.time,
+                    type: data.appointmentType,
+                    duration: data.duration || null,
+                    professionalId: data.professionalId,
+                    clientId: data.clientId,
+                    chatId: data.chatId,
+                });
+                break;
         }
-    }, [onUserMessage, onPartialTranscript, onPartialResponse, onResponseComplete, onQuickReplies, onAudioChunk, onError, onInterrupted]);
+    }, [onUserMessage, onPartialTranscript, onPartialResponse, onResponseComplete, onQuickReplies, onAppointmentProposal, onAudioChunk, onError, onInterrupted]);
+
+    // Keep the ref always pointing to the latest handler to avoid stale closures
+    useEffect(() => {
+        handleServerMessageRef.current = handleServerMessage;
+    }, [handleServerMessage]);
 
     /**
      * Start streaming audio from microphone

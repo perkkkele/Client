@@ -123,7 +123,7 @@ export default function ClientVideoCallScreen() {
 
         setLoadingThreads(true);
         try {
-            const conversations = await chatApi.getAvatarChats(token, professionalId);
+            const { conversations } = await chatApi.getAvatarChats(token, professionalId);
 
             const threads: ConversationThread[] = conversations.map((conv: any) => ({
                 id: conv._id,

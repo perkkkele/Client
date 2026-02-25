@@ -96,14 +96,34 @@ export default function AppointmentPricingScreen() {
 
     const handleSave = async () => {
         if (!token) return;
+
+        // Build price objects first for validation
+        const videoP: Record<number, number> = {};
+        const presencialP: Record<number, number> = {};
+        DURATIONS.forEach(d => {
+            videoP[d] = parseFloat(videoPrices[d]) || 0;
+            presencialP[d] = parseFloat(presencialPrices[d]) || 0;
+        });
+
+        // Validate: enabled types must have at least one price > 0
+        const missingTypes: string[] = [];
+        if (videoEnabled && !Object.values(videoP).some(p => p > 0)) {
+            missingTypes.push("Video-cita");
+        }
+        if (presencialEnabled && !Object.values(presencialP).some(p => p > 0)) {
+            missingTypes.push("Cita presencial");
+        }
+        if (missingTypes.length > 0) {
+            showAlert({
+                type: 'error',
+                title: 'Tarifas incompletas',
+                message: `Debes configurar al menos un precio para: ${missingTypes.join(", ")}. Introduce el precio en euros para la duración que ofreces.`,
+            });
+            return;
+        }
+
         setSaving(true);
         try {
-            const videoP: Record<number, number> = {};
-            const presencialP: Record<number, number> = {};
-            DURATIONS.forEach(d => {
-                videoP[d] = parseFloat(videoPrices[d]) || 0;
-                presencialP[d] = parseFloat(presencialPrices[d]) || 0;
-            });
 
             await userApi.updateUser(token, {
                 appointmentTypesEnabled: {

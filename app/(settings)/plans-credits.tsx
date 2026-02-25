@@ -12,7 +12,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,    RefreshControl,
+    ActivityIndicator,
+    RefreshControl,
     Modal,
     TextInput,
 } from "react-native";
@@ -59,7 +60,7 @@ const PLAN_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
 
 export default function PlansCreditsScreen() {
     const { token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<SubscriptionStatus | null>(null);
@@ -147,9 +148,11 @@ export default function PlansCreditsScreen() {
                 await loadData();
                 if (refreshUser) await refreshUser();
 
-                showAlert({ type: 'success', title: result.isUpgrade ? "¡Plan mejorado!" : "Plan cambiado", message: result.isUpgrade
+                showAlert({
+                    type: 'success', title: result.isUpgrade ? "¡Plan mejorado!" : "Plan cambiado", message: result.isUpgrade
                         ? `Has actualizado de ${result.previousPlan} a ${result.newPlan}. El cambio se aplica inmediatamente.`
-                        : `Has cambiado de ${result.previousPlan} a ${result.newPlan}. El ajuste se reflejará en tu próxima factura.` })
+                        : `Has cambiado de ${result.previousPlan} a ${result.newPlan}. El ajuste se reflejará en tu próxima factura.`
+                })
             } else {
                 // New subscription - use checkout
                 const session = await subscriptionApi.createCheckoutSession(
@@ -158,11 +161,11 @@ export default function PlansCreditsScreen() {
                 );
 
                 if (session.url) {
-                    const result = await WebBrowser.openBrowserAsync(session.url);
-                    if (result.type === "cancel" || result.type === "dismiss") {
-                        await loadData();
-                        if (refreshUser) await refreshUser();
-                    }
+                    await WebBrowser.openBrowserAsync(session.url);
+                    // Always refresh after returning from checkout
+                    // (whether completed, canceled, or dismissed)
+                    await loadData();
+                    if (refreshUser) await refreshUser();
                 }
             }
         } catch (error: any) {
@@ -175,6 +178,7 @@ export default function PlansCreditsScreen() {
                     );
                     if (session.url) {
                         await WebBrowser.openBrowserAsync(session.url);
+                        // Always refresh after returning from checkout
                         await loadData();
                         if (refreshUser) await refreshUser();
                     }
@@ -191,10 +195,10 @@ export default function PlansCreditsScreen() {
 
     const handleCancelSubscription = () => {
         showAlert({
-    type: 'info',
-    title: 'Cancelar suscripción',
-    message: 'Si cancelas, mantendrás acceso a tu plan actual hasta el final del período facturado. Después volverás al plan Starter.',
-    buttons: [
+            type: 'info',
+            title: 'Cancelar suscripción',
+            message: 'Si cancelas, mantendrás acceso a tu plan actual hasta el final del período facturado. Después volverás al plan Starter.',
+            buttons: [
                 { text: "No, mantener", style: "cancel" },
                 {
                     text: "Sí, cancelar",
@@ -221,7 +225,7 @@ export default function PlansCreditsScreen() {
                     },
                 },
             ]
-});
+        });
     };
 
     const handleSubmitVerification = async () => {
@@ -353,18 +357,19 @@ export default function PlansCreditsScreen() {
         const planIcon = PLAN_ICONS[plan.id] || "star";
 
         const featuresList = [
-            { key: "directoryListing", label: "Aparecer en directorio", icon: "public" },
-            { key: "catalogAvatar", label: "Avatar del catálogo", icon: "face" },
+            { key: "directoryListing", label: "Presencia en el directorio profesional", icon: "public" },
+            { key: "catalogAvatar", label: "Acceso a avatares de catálogo", icon: "face" },
             { key: "customAvatar", label: "Avatar personalizado", icon: "auto-fix-high" },
             { key: "escalation", label: "Escalado a profesional", icon: "support-agent" },
-            { key: "appointments", label: "Agendar citas", icon: "event" },
-            { key: "videoAppointments", label: "Video-citas", icon: "videocam" },
-            { key: "integratedPayments", label: "Cobros integrados", icon: "payments" },
-            { key: "widget", label: "Widget web", icon: "widgets" },
+            { key: "appointments", label: "Sistema de reserva de citas", icon: "event" },
+            { key: "videoAppointments", label: "Videollamadas integradas", icon: "videocam" },
+            { key: "integratedPayments", label: "Pasarela de pagos integrada", icon: "payments" },
+            { key: "widget", label: "Widget web para Chatbot", icon: "widgets" },
             { key: "qrCode", label: "Código QR personalizado", icon: "qr-code-2" },
             { key: "analytics", label: "Analíticas", icon: "analytics" },
+            { key: "advancedReports", label: "Informes y métricas avanzadas", icon: "assessment" },
             { key: "calendarSync", label: "Sincronización calendario", icon: "calendar-month" },
-            { key: "searchPriority", label: "Prioridad en buscador", icon: "trending-up" },
+            { key: "searchPriority", label: "Posicionamiento prioritario", icon: "trending-up" },
         ];
 
         return (
@@ -414,25 +419,27 @@ export default function PlansCreditsScreen() {
                     })}
                 </View>
 
-                {!isCurrentPlan && plan.id !== "starter" && (
-                    <TouchableOpacity
-                        style={[styles.subscribeButton, { backgroundColor: planColor }]}
-                        onPress={() => handleSubscribe(plan.id)}
-                        disabled={checkoutLoading !== null}
-                    >
-                        {checkoutLoading === plan.id ? (
-                            <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                            <Text style={styles.subscribeButtonText}>
-                                {status?.plan && status.plan !== 'starter' && status.status === 'active'
-                                    ? `Cambiar a ${plan.name}`
-                                    : `Suscribirse a ${plan.name}`
-                                }
-                            </Text>
-                        )}
-                    </TouchableOpacity>
-                )}
-            </View>
+                {
+                    !isCurrentPlan && plan.id !== "starter" && (
+                        <TouchableOpacity
+                            style={[styles.subscribeButton, { backgroundColor: planColor }]}
+                            onPress={() => handleSubscribe(plan.id)}
+                            disabled={checkoutLoading !== null}
+                        >
+                            {checkoutLoading === plan.id ? (
+                                <ActivityIndicator color="#FFFFFF" />
+                            ) : (
+                                <Text style={styles.subscribeButtonText}>
+                                    {status?.plan && status.plan !== 'starter' && status.status === 'active'
+                                        ? `Cambiar a ${plan.name}`
+                                        : `Suscribirse a ${plan.name}`
+                                    }
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    )
+                }
+            </View >
         );
     };
 

@@ -182,14 +182,25 @@ export interface AvatarConversation {
 
 interface GetAvatarChatsResponse {
     conversations: AvatarConversation[];
+    hasMore: boolean;
+    nextCursor?: string;
 }
 
-// Get all avatar chat conversations for a professional's digital twin
+// Get avatar chat conversations with cursor-based pagination
 export async function getAvatarChats(
     token: string,
-    professionalId: string
-): Promise<AvatarConversation[]> {
-    const response = await fetch(`${API_URL}/avatar-chats/${professionalId}`, {
+    professionalId: string,
+    options?: { cursor?: string; limit?: number; role?: 'client' | 'professional' }
+): Promise<GetAvatarChatsResponse> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.cursor) params.set('cursor', options.cursor);
+    if (options?.role) params.set('role', options.role);
+
+    const queryString = params.toString();
+    const url = `${API_URL}/avatar-chats/${professionalId}${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
         method: "GET",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -202,7 +213,31 @@ export async function getAvatarChats(
     }
 
     const data: GetAvatarChatsResponse = await response.json();
-    return data.conversations || [];
+    return {
+        conversations: data.conversations || [],
+        hasMore: data.hasMore || false,
+        nextCursor: data.nextCursor
+    };
+}
+
+// Batch delete all avatar chats between user and a professional
+export async function deleteAllAvatarChats(
+    token: string,
+    professionalId: string
+): Promise<{ deletedChats: number; deletedMessages: number }> {
+    const response = await fetch(`${API_URL}/avatar-chats/${professionalId}/all`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Error al eliminar el historial");
+    }
+
+    return response.json();
 }
 
 // Interface for professional chat list
