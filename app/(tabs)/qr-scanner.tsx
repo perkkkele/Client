@@ -8,11 +8,14 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Platform,} from "react-native";
+    Platform,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../context";
 import * as ImagePicker from "expo-image-picker";
 import { useAlert } from "../../components/TwinProAlert";
+import useSubscription from "../../hooks/useSubscription";
+import UpgradeModal from "../../components/UpgradeModal";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -44,13 +47,24 @@ try {
 
 export default function QRScannerScreen() {
     const { user } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { canAccess, getRequiredPlan } = useSubscription();
     const [hasCamera, setHasCamera] = useState(CameraView !== null);
     const [permission, setPermission] = useState<any>(null);
     const [scanned, setScanned] = useState(false);
     const [flashOn, setFlashOn] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const scanLineAnim = useRef(new Animated.Value(0)).current;
     const isProfessional = user?.userType === 'userpro';
+    const hasQrAccess = canAccess('qrCode');
+
+    function handleMyQRCode() {
+        if (!hasQrAccess) {
+            setShowUpgradeModal(true);
+            return;
+        }
+        router.push("/(tabs)/my-qr-code");
+    }
 
     // Usar hook de permisos solo si la cámara está disponible
     const cameraPermission = useCameraPermissions ? useCameraPermissions() : [null, () => { }];
@@ -101,10 +115,10 @@ export default function QRScannerScreen() {
         if (data.startsWith("twinpro://user/")) {
             const professionalId = data.replace("twinpro://user/", "");
             showAlert({
-    type: 'warning',
-    title: 'Código Escaneado',
-    message: '¿Deseas iniciar un chat con este profesional?',
-    buttons: [
+                type: 'warning',
+                title: 'Código Escaneado',
+                message: '¿Deseas iniciar un chat con este profesional?',
+                buttons: [
                     {
                         text: "Cancelar",
                         onPress: () => setScanned(false),
@@ -117,7 +131,7 @@ export default function QRScannerScreen() {
                         },
                     },
                 ]
-});
+            });
             return;
         }
 
@@ -138,27 +152,27 @@ export default function QRScannerScreen() {
                     router.replace(`/avatar-chat/${professional._id}`);
                 } else {
                     showAlert({
-    type: 'info',
-    title: 'Profesional No Encontrado',
-    message: '',
-    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
-});
+                        type: 'info',
+                        title: 'Profesional No Encontrado',
+                        message: '',
+                        buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+                    });
                 }
             } catch (error) {
                 showAlert({
-    type: 'error',
-    title: 'Error de Conexión',
-    message: 'No se pudo verificar el profesional. Comprueba tu conexión.',
-    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
-});
+                    type: 'error',
+                    title: 'Error de Conexión',
+                    message: 'No se pudo verificar el profesional. Comprueba tu conexión.',
+                    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+                });
             }
         } else {
             showAlert({
-    type: 'warning',
-    title: 'Código No Válido',
-    message: 'Este código QR no pertenece a un profesional de TwinPro.',
-    buttons: [{ text: "OK", onPress: () => setScanned(false) }]
-});
+                type: 'warning',
+                title: 'Código No Válido',
+                message: 'Este código QR no pertenece a un profesional de TwinPro.',
+                buttons: [{ text: "OK", onPress: () => setScanned(false) }]
+            });
         }
     };
 
@@ -171,11 +185,11 @@ export default function QRScannerScreen() {
     // expo-barcode-scanner was removed due to being deprecated and causing build failures
     const pickImageFromGallery = async () => {
         showAlert({
-    type: 'info',
-    title: 'Función Temporalmente Deshabilitada',
-    message: 'El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.',
-    buttons: [{ text: "OK" }]
-});
+            type: 'info',
+            title: 'Función Temporalmente Deshabilitada',
+            message: 'El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.',
+            buttons: [{ text: "OK" }]
+        });
     };
 
     // Si la cámara no está disponible (Expo Go sin development build)
@@ -256,15 +270,27 @@ export default function QRScannerScreen() {
                         </TouchableOpacity>
 
                         {isProfessional && (
-                            <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
+                            <TouchableOpacity style={styles.actionButton} onPress={handleMyQRCode}>
                                 <View style={styles.actionIconContainer}>
                                     <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
+                                    {!hasQrAccess && (
+                                        <View style={styles.proBadge}>
+                                            <Text style={styles.proBadgeText}>PRO</Text>
+                                        </View>
+                                    )}
                                 </View>
                                 <Text style={styles.actionLabel}>Mi Código</Text>
                             </TouchableOpacity>
                         )}
                     </View>
                 </SafeAreaView>
+
+                <UpgradeModal
+                    visible={showUpgradeModal}
+                    onClose={() => setShowUpgradeModal(false)}
+                    featureName="Código QR Personalizado"
+                    requiredPlan={getRequiredPlan('qrCode') || 'professional'}
+                />
             </View>
         );
     }
@@ -379,15 +405,27 @@ export default function QRScannerScreen() {
                     </TouchableOpacity>
 
                     {isProfessional && (
-                        <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/(tabs)/my-qr-code")}>
+                        <TouchableOpacity style={styles.actionButton} onPress={handleMyQRCode}>
                             <View style={styles.actionIconContainer}>
                                 <MaterialIcons name="qr-code" size={24} color={COLORS.white} />
+                                {!hasQrAccess && (
+                                    <View style={styles.proBadge}>
+                                        <Text style={styles.proBadgeText}>PRO</Text>
+                                    </View>
+                                )}
                             </View>
                             <Text style={styles.actionLabel}>Mi Código</Text>
                         </TouchableOpacity>
                     )}
                 </View>
             </SafeAreaView>
+
+            <UpgradeModal
+                visible={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                featureName="Código QR Personalizado"
+                requiredPlan={getRequiredPlan('qrCode') || 'professional'}
+            />
         </View>
     );
 }
@@ -647,6 +685,23 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: "500",
         color: COLORS.slate300,
+    },
+    proBadge: {
+        position: "absolute",
+        top: -4,
+        right: -4,
+        backgroundColor: "#3b82f6",
+        paddingHorizontal: 5,
+        paddingVertical: 1,
+        borderRadius: 6,
+        minWidth: 28,
+        alignItems: "center",
+    },
+    proBadgeText: {
+        fontSize: 9,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+        letterSpacing: 0.5,
     },
 
     // Pantalla de permisos

@@ -614,9 +614,6 @@ export default function TwinProHomeScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>RECIENTES</Text>
-                <TouchableOpacity>
-                  <Text style={styles.sectionLink}>Marcar leídos</Text>
-                </TouchableOpacity>
               </View>
               {/* Mostrar contenido de bienvenida SOLO si no hay ningún chat */}
               {chats.length === 0 ? (

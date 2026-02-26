@@ -18,6 +18,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import useSubscription from "../../hooks/useSubscription";
+import UpgradeModal from "../../components/UpgradeModal";
 
 const COLORS = {
     primary: "#f9f506",
@@ -53,7 +55,18 @@ const CATEGORIES = [
 export default function EditProProfileScreen() {
     const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
+    const { canAccess, getRequiredPlan } = useSubscription();
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const hasQrAccess = canAccess('qrCode');
+
+    function handleViewQR() {
+        if (!hasQrAccess) {
+            setShowUpgradeModal(true);
+            return;
+        }
+        router.push("/(tabs)/my-qr-code");
+    }
 
     // Initialize with existing user data
     const getAvatarUrl = (avatar: string | null | undefined) => {
@@ -266,10 +279,15 @@ export default function EditProProfileScreen() {
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.qrButton}
-                                    onPress={() => router.push("/(tabs)/my-qr-code")}
+                                    onPress={handleViewQR}
                                 >
                                     <MaterialIcons name="qr-code-2" size={16} color={COLORS.gray500} />
                                     <Text style={styles.qrButtonText}>Ver mi código QR</Text>
+                                    {!hasQrAccess && (
+                                        <View style={styles.proBadge}>
+                                            <Text style={styles.proBadgeText}>PRO</Text>
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -409,6 +427,13 @@ export default function EditProProfileScreen() {
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <UpgradeModal
+                visible={showUpgradeModal}
+                onClose={() => setShowUpgradeModal(false)}
+                featureName="Código QR Personalizado"
+                requiredPlan={getRequiredPlan('qrCode') || 'professional'}
+            />
         </SafeAreaView>
     );
 }
@@ -546,6 +571,19 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "500",
         color: COLORS.gray500,
+    },
+    proBadge: {
+        backgroundColor: "#3b82f6",
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 6,
+        marginLeft: 4,
+    },
+    proBadgeText: {
+        fontSize: 9,
+        fontWeight: "bold",
+        color: "#FFFFFF",
+        letterSpacing: 0.5,
     },
     section: {
         marginBottom: 24,
