@@ -1,6 +1,6 @@
 /**
  * Widget Settings Screen
- * 
+ *
  * Allows professionals to configure and get embed code for their website widget.
  * Feature gated to Professional and Premium plans.
  */
@@ -12,7 +12,7 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    TextInput,    Clipboard,
+    Clipboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -20,7 +20,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../context";
 import { useSubscription } from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
-import { getAssetUrl } from "../../api";
+import { getAssetUrl, userApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
 
 const COLORS = {
@@ -52,9 +52,11 @@ interface WidgetConfig {
     useAvatar: boolean;
 }
 
+type EmbedType = 'script' | 'iframe';
+
 export default function WidgetSettingsScreen() {
-    const { user, token } = useAuth();
-  const { showAlert } = useAlert();
+    const { user, token, refreshUser } = useAuth();
+    const { showAlert } = useAlert();
     const { canAccess } = useSubscription();
 
     const [config, setConfig] = useState<WidgetConfig>({
@@ -66,16 +68,87 @@ export default function WidgetSettingsScreen() {
 
     const [copied, setCopied] = useState(false);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [embedType, setEmbedType] = useState<EmbedType>('script');
 
-    // Generate embed code
+    // Widget channel configuration
+    const [textEnabled, setTextEnabled] = useState(true);
+    const [voiceEnabled, setVoiceEnabled] = useState(true);
+    const [widgetTheme, setWidgetTheme] = useState<'dark' | 'light'>('dark');
+
+    // Sync channel state and theme from user data
+    useEffect(() => {
+        if (user?.digitalTwin?.widgetChannels) {
+            setTextEnabled(user.digitalTwin.widgetChannels.text ?? true);
+            setVoiceEnabled(user.digitalTwin.widgetChannels.voice ?? true);
+        }
+        if (user?.digitalTwin?.widgetTheme) {
+            setWidgetTheme(user.digitalTwin.widgetTheme);
+        }
+    }, [user?.digitalTwin?.widgetChannels, user?.digitalTwin?.widgetTheme]);
+
+    // Save channel config to backend
+    const handleChannelToggle = async (channel: 'text' | 'voice', value: boolean) => {
+        // Prevent disabling both channels
+        if (channel === 'text' && !value && !voiceEnabled) {
+            showAlert({
+                type: 'warning',
+                title: 'Al menos un canal',
+                message: 'Debes mantener al menos un canal de comunicación habilitado.',
+                buttons: [{ text: 'Entendido' }],
+            });
+            return;
+        }
+        if (channel === 'voice' && !value && !textEnabled) {
+            showAlert({
+                type: 'warning',
+                title: 'Al menos un canal',
+                message: 'Debes mantener al menos un canal de comunicación habilitado.',
+                buttons: [{ text: 'Entendido' }],
+            });
+            return;
+        }
+
+        // Update local state
+        if (channel === 'text') setTextEnabled(value);
+        else setVoiceEnabled(value);
+
+        // Save to backend
+        if (!token) return;
+        try {
+            await userApi.updateUser(token, {
+                digitalTwin: {
+                    widgetChannels: {
+                        text: channel === 'text' ? value : textEnabled,
+                        voice: channel === 'voice' ? value : voiceEnabled,
+                    },
+                },
+            });
+            if (refreshUser) await refreshUser();
+        } catch (error) {
+            console.error('Error saving widget channels:', error);
+            // Revert on error
+            if (channel === 'text') setTextEnabled(!value);
+            else setVoiceEnabled(!value);
+        }
+    };
+
+    // Generate embed code based on type
     const generateEmbedCode = () => {
+        if (embedType === 'iframe') {
+            return generateIframeCode();
+        }
+        return generateScriptCode();
+    };
+
+    const generateScriptCode = () => {
         const avatarUrl = config.useAvatar ? getAssetUrl(user?.avatar) : null;
 
         let code = `<script src="${WIDGET_BASE_URL}/widget.js"
     data-professional-id="${user?.username || user?._id}"
     data-position="${config.position}"
     data-primary-color="${config.primaryColor}"
-    data-button-size="${config.buttonSize}"`;
+    data-button-size="${config.buttonSize}"
+    data-widget-theme="${widgetTheme}"`;
 
         if (avatarUrl) {
             code += `
@@ -88,6 +161,17 @@ export default function WidgetSettingsScreen() {
         return code;
     };
 
+    const generateIframeCode = () => {
+        const username = user?.username || user?._id;
+        return `<iframe
+    src="${WIDGET_BASE_URL}/embed/${username}?theme=${widgetTheme}"
+    width="400"
+    height="700"
+    allow="microphone; camera"
+    style="border: none; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+</iframe>`;
+    };
+
     const handleCopyCode = async () => {
         if (!canAccess('widget')) {
             setShowUpgradeModal(true);
@@ -98,11 +182,11 @@ export default function WidgetSettingsScreen() {
         Clipboard.setString(code);
         setCopied(true);
         showAlert({
-    type: 'info',
-    title: '¡Código copiado!',
-    message: 'Pega este código justo antes de </body> en tu sitio web.',
-    buttons: [{ text: "Entendido" }]
-});
+            type: 'info',
+            title: '¡Código copiado!',
+            message: 'Pega este código justo antes de </body> en tu sitio web.',
+            buttons: [{ text: "Entendido" }]
+        });
 
         setTimeout(() => setCopied(false), 3000);
     };
@@ -221,11 +305,126 @@ export default function WidgetSettingsScreen() {
                             <View style={[styles.toggleThumb, config.useAvatar && styles.toggleThumbActive]} />
                         </View>
                     </TouchableOpacity>
+                    <View style={{ height: 8 }} />
+                    <TouchableOpacity
+                        style={styles.toggleRow}
+                        onPress={async () => {
+                            const newTheme = widgetTheme === 'dark' ? 'light' : 'dark';
+                            setWidgetTheme(newTheme);
+                            if (!token) return;
+                            try {
+                                await userApi.updateUser(token, {
+                                    digitalTwin: { widgetTheme: newTheme },
+                                });
+                                if (refreshUser) await refreshUser();
+                            } catch (error) {
+                                console.error('Error saving widget theme:', error);
+                                setWidgetTheme(widgetTheme); // revert
+                            }
+                        }}
+                    >
+                        <View style={styles.toggleInfo}>
+                            <MaterialIcons
+                                name={widgetTheme === 'dark' ? 'dark-mode' : 'light-mode'}
+                                size={20}
+                                color={COLORS.textMain}
+                            />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.toggleLabel}>
+                                    Modo {widgetTheme === 'dark' ? 'Oscuro' : 'Claro'}
+                                </Text>
+                                <Text style={styles.toggleDescription}>
+                                    Cambia la apariencia del widget
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={[styles.toggle, widgetTheme === 'light' && styles.toggleActive]}>
+                            <View style={[styles.toggleThumb, widgetTheme === 'light' && styles.toggleThumbActive]} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Channel Configuration */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>CANALES DE COMUNICACIÓN</Text>
+                    <TouchableOpacity
+                        style={styles.toggleRow}
+                        onPress={() => handleChannelToggle('text', !textEnabled)}
+                    >
+                        <View style={styles.toggleInfo}>
+                            <MaterialIcons name="chat" size={20} color={COLORS.textMain} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.toggleLabel}>Chat de texto</Text>
+                                <Text style={styles.toggleDescription}>
+                                    Permite interactuar por escrito
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={[styles.toggle, textEnabled && styles.toggleActive]}>
+                            <View style={[styles.toggleThumb, textEnabled && styles.toggleThumbActive]} />
+                        </View>
+                    </TouchableOpacity>
+                    <View style={{ height: 8 }} />
+                    <TouchableOpacity
+                        style={styles.toggleRow}
+                        onPress={() => handleChannelToggle('voice', !voiceEnabled)}
+                    >
+                        <View style={styles.toggleInfo}>
+                            <MaterialIcons name="mic" size={20} color={COLORS.textMain} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.toggleLabel}>Conversación de voz</Text>
+                                <Text style={styles.toggleDescription}>
+                                    Permite hablar con tu gemelo digital
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={[styles.toggle, voiceEnabled && styles.toggleActive]}>
+                            <View style={[styles.toggleThumb, voiceEnabled && styles.toggleThumbActive]} />
+                        </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Embed Code */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>CÓDIGO DE INTEGRACIÓN</Text>
+
+                    {/* Tab selector */}
+                    <View style={styles.tabRow}>
+                        <TouchableOpacity
+                            style={[styles.tab, embedType === 'script' && styles.tabActive]}
+                            onPress={() => setEmbedType('script')}
+                        >
+                            <MaterialIcons
+                                name="code"
+                                size={16}
+                                color={embedType === 'script' ? COLORS.blue500 : COLORS.gray400}
+                            />
+                            <Text style={[styles.tabText, embedType === 'script' && styles.tabTextActive]}>
+                                Script
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, embedType === 'iframe' && styles.tabActive]}
+                            onPress={() => setEmbedType('iframe')}
+                        >
+                            <MaterialIcons
+                                name="web"
+                                size={16}
+                                color={embedType === 'iframe' ? COLORS.blue500 : COLORS.gray400}
+                            />
+                            <Text style={[styles.tabText, embedType === 'iframe' && styles.tabTextActive]}>
+                                Iframe
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Description */}
+                    <Text style={styles.embedDescription}>
+                        {embedType === 'script'
+                            ? 'Burbuja flotante que se abre al hacer clic. Recomendado para la mayoría de webs.'
+                            : 'Chat integrado directamente en tu página. Ideal para páginas de contacto o landing pages.'}
+                    </Text>
+
                     <View style={styles.codeContainer}>
                         <ScrollView
                             horizontal
@@ -422,10 +621,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
+        flex: 1,
     },
     toggleLabel: {
         fontSize: 14,
         color: COLORS.textMain,
+    },
+    toggleDescription: {
+        fontSize: 12,
+        color: COLORS.textMuted,
+        marginTop: 2,
     },
     toggle: {
         width: 50,
@@ -515,5 +720,40 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.textMuted,
         flex: 1,
+    },
+    tabRow: {
+        flexDirection: "row",
+        gap: 8,
+        marginBottom: 12,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: COLORS.gray100,
+        borderWidth: 2,
+        borderColor: "transparent",
+    },
+    tabActive: {
+        backgroundColor: COLORS.blue50,
+        borderColor: COLORS.blue500,
+    },
+    tabText: {
+        fontSize: 13,
+        fontWeight: "600" as const,
+        color: COLORS.gray400,
+    },
+    tabTextActive: {
+        color: COLORS.blue500,
+    },
+    embedDescription: {
+        fontSize: 12,
+        color: COLORS.textMuted,
+        lineHeight: 17,
+        marginBottom: 12,
     },
 });
