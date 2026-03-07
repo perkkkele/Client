@@ -121,6 +121,13 @@ export default function SettingsScreen() {
     // Appointments section items
     const appointmentItems: SettingsItem[] = [
         {
+            icon: "support-agent",
+            iconColor: COLORS.orange600,
+            iconBg: COLORS.orange100,
+            label: "Mis Consultas",
+            onPress: () => router.push("/my-escalated-chats" as any),
+        },
+        {
             icon: "event-available",
             iconColor: COLORS.green600,
             iconBg: COLORS.green100,

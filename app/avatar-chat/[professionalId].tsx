@@ -28,6 +28,10 @@ import { useStreamingVoice } from "../../hooks/useStreamingVoice";
 import { useLiveAvatarAudio } from "../../hooks/useLiveAvatarAudio";
 import { TimeSlot } from "../../api/appointment";
 import { User } from "../../api/user";
+
+// Toggle to show/hide voice detection debug UI elements.
+// Set to true to re-enable during development.
+const SHOW_VOICE_DEBUG = false;
 import LiveAvatarVideo, { isLiveKitAvailable } from "../../components/LiveAvatarVideo";
 import ChatMemorySettings from "../../components/ChatMemorySettings";
 import { WebView } from "react-native-webview";
@@ -2116,13 +2120,35 @@ export default function AvatarChatScreen() {
                                 <View style={[styles.personalAttentionIcon, { backgroundColor: '#FEF3C7' }]}>
                                     <MaterialIcons name="schedule" size={40} color="#F59E0B" />
                                 </View>
-                                <Text style={styles.personalAttentionTitle}>Tiempo agotado</Text>
+                                <Text style={styles.personalAttentionTitle}>Tu tiempo con el gemelo digital ha terminado</Text>
                                 <Text style={styles.personalAttentionText}>
-                                    El tiempo disponible de hoy con el gemelo digital ha finalizado. Puedes continuar mañana o dejar algún mensaje al profesional.
+                                    Has utilizado todo el tiempo disponible en esta sesión. Si tu consulta no ha quedado resuelta, puedes enviarla directamente al profesional.
                                 </Text>
+
+                                {/* Option 1: Send to professional */}
+                                {professional?.escalation?.enabled && currentChatId && escalationStatus === 'none' && (
+                                    <TouchableOpacity
+                                        style={[styles.personalAttentionButton, { backgroundColor: '#137fec', marginTop: 12 }]}
+                                        onPress={async () => {
+                                            if (!token || !currentChatId) return;
+                                            try {
+                                                await chatApi.escalateChat(token, currentChatId, 'session_expired' as any);
+                                                setEscalationStatus('pending');
+                                                setShowPersonalAttentionOverlay(false);
+                                            } catch (err) {
+                                                console.error('[SessionExpired] Escalation error:', err);
+                                            }
+                                        }}
+                                    >
+                                        <MaterialIcons name="chat" size={16} color="#FFFFFF" />
+                                        <Text style={[styles.personalAttentionButtonText, { color: '#FFFFFF' }]}>Enviar al profesional</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Option 2: Book appointment */}
                                 {professional?.appointmentsEnabled && (professional?.subscription?.plan === 'professional' || professional?.subscription?.plan === 'premium') && (
                                     <TouchableOpacity
-                                        style={styles.personalAttentionButton}
+                                        style={[styles.personalAttentionButton, { marginTop: 8 }]}
                                         onPress={() => {
                                             if (professionalId) {
                                                 router.push(`/book-appointment/${professionalId}` as any);
@@ -2130,9 +2156,19 @@ export default function AvatarChatScreen() {
                                         }}
                                     >
                                         <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                        <Text style={styles.personalAttentionButtonText}>Reservar cita</Text>
+                                        <Text style={styles.personalAttentionButtonText}>Agendar una cita</Text>
                                     </TouchableOpacity>
                                 )}
+
+                                {/* Option 3: Dismiss */}
+                                <TouchableOpacity
+                                    onPress={() => setShowPersonalAttentionOverlay(false)}
+                                    style={{ marginTop: 12, paddingVertical: 6 }}
+                                >
+                                    <Text style={{ fontSize: 13, color: COLORS.gray500, textDecorationLine: 'underline' }}>
+                                        Ya resolví mi duda
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
                         )}
 
@@ -3154,8 +3190,8 @@ export default function AvatarChatScreen() {
                     </View>
                 )}
 
-                {/* Voice Streaming Indicator for CUSTOM mode */}
-                {isCustomMode && (streamingVoice.isConnected || streamingVoice.isProcessing) && (
+                {/* Voice Streaming Indicator for CUSTOM mode (debug only) */}
+                {SHOW_VOICE_DEBUG && isCustomMode && (streamingVoice.isConnected || streamingVoice.isProcessing) && (
                     <View style={[
                         styles.recordingIndicator,
                         streamingVoice.isSpeaking && { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
@@ -3314,10 +3350,12 @@ export default function AvatarChatScreen() {
 
                         {/* Conversations List */}
                         <ScrollView style={styles.drawerConversationsList} showsVerticalScrollIndicator={false}>
-                            {/* Debug info - remove later */}
-                            <Text style={{ color: COLORS.gray400, fontSize: 10, textAlign: 'center', marginBottom: 8 }}>
-                                {loadingConversations ? 'Cargando...' : `${conversations.length} conversaciones encontradas`}
-                            </Text>
+                            {/* Debug info - toggle via SHOW_VOICE_DEBUG */}
+                            {SHOW_VOICE_DEBUG && (
+                                <Text style={{ color: COLORS.gray400, fontSize: 10, textAlign: 'center', marginBottom: 8 }}>
+                                    {loadingConversations ? 'Cargando...' : `${conversations.length} conversaciones encontradas`}
+                                </Text>
+                            )}
 
                             {loadingConversations ? (
                                 <View style={{ padding: 40, alignItems: 'center' }}>

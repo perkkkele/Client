@@ -99,6 +99,7 @@ export async function getProfessionalsByCategory(
         sortBy?: 'relevance' | 'distance' | 'price' | 'reviews';
         userLat?: number;
         userLng?: number;
+        maxDistance?: number;
     }
 ): Promise<Professional[]> {
     const params = new URLSearchParams();
@@ -111,6 +112,9 @@ export async function getProfessionalsByCategory(
     }
     if (options?.userLng) {
         params.append('userLng', options.userLng.toString());
+    }
+    if (options?.maxDistance) {
+        params.append('maxDistance', options.maxDistance.toString());
     }
 
     const queryString = params.toString();

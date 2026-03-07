@@ -18,7 +18,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getAssetUrl, chatApi, professionalApi } from "../../api";
-import type { Chat } from "../../api/chat";
+import type { Chat, EscalatedChat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
 import { useAuth } from "../../context";
 
@@ -133,6 +133,7 @@ export default function TwinProHomeScreen() {
   const insets = useSafeAreaInsets();
   const [chats, setChats] = useState<Chat[]>([]);
   const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
+  const [escalatedChats, setEscalatedChats] = useState<EscalatedChat[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -167,9 +168,10 @@ export default function TwinProHomeScreen() {
   const loadData = useCallback(async () => {
     if (!token || !user) return;
     try {
-      const [chatsData, professionalsData] = await Promise.all([
+      const [chatsData, professionalsData, escalatedData] = await Promise.all([
         chatApi.getChats(token),
         professionalApi.getFeaturedProfessionals(token),
+        chatApi.getMyEscalatedChats(token).catch(() => [] as EscalatedChat[]),
       ]);
 
       // Group chats by unique contact (participant) and keep only the most recent per contact
@@ -196,6 +198,7 @@ export default function TwinProHomeScreen() {
 
       setChats(filteredChats);
       setFeaturedProfessionals(professionalsData);
+      setEscalatedChats(escalatedData);
     } catch (error) {
       console.log("Error loading data:", error);
     } finally {
@@ -610,6 +613,101 @@ export default function TwinProHomeScreen() {
           </View>
         ) : (
           <>
+            {/* Mis Consultas — Escalated chats section */}
+            {escalatedChats.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <MaterialIcons name="support-agent" size={14} color="#EA580C" />
+                    <Text style={styles.sectionTitle}>MIS CONSULTAS</Text>
+                  </View>
+                  {escalatedChats.length > 3 && (
+                    <TouchableOpacity onPress={() => router.push('/my-escalated-chats')}>
+                      <Text style={styles.sectionLink}>Ver todo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 4, gap: 12 }}
+                >
+                  {escalatedChats.map((item) => {
+                    const avatarUrl = getAvatarUrl(item.professional.avatar);
+                    const isResponded = item.escalation.status === 'accepted' && item.isLastFromProfessional;
+
+                    return (
+                      <TouchableOpacity
+                        key={item._id}
+                        style={styles.escalatedCard}
+                        activeOpacity={0.9}
+                        onPress={() => {
+                          if (item.professional._id) {
+                            router.push(`/escalated-chat/${item._id}` as any);
+                          }
+                        }}
+                        onLongPress={() => {
+                          Alert.alert(
+                            'Eliminar consulta',
+                            '¿Quieres eliminar esta consulta escalada?',
+                            [
+                              { text: 'Cancelar', style: 'cancel' },
+                              {
+                                text: 'Eliminar',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    if (token) {
+                                      await chatApi.deleteChat(token, item._id);
+                                      setEscalatedChats(prev => prev.filter(c => c._id !== item._id));
+                                    }
+                                  } catch (err) {
+                                    console.error('[Home] Error deleting escalated chat:', err);
+                                  }
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                        delayLongPress={600}
+                      >
+                        <View style={styles.escalatedCardHeader}>
+                          <View style={styles.escalatedAvatar}>
+                            {avatarUrl ? (
+                              <Image source={{ uri: avatarUrl }} style={styles.escalatedAvatarImage} />
+                            ) : (
+                              <MaterialIcons name="person" size={20} color={COLORS.gray} />
+                            )}
+                          </View>
+                          <View style={[
+                            styles.escalatedStatusDot,
+                            { backgroundColor: isResponded ? '#22c55e' : '#f97316' }
+                          ]} />
+                        </View>
+                        <Text style={styles.escalatedName} numberOfLines={1}>
+                          {item.professional.name}
+                        </Text>
+                        <View style={[
+                          styles.escalatedStatusPill,
+                          { backgroundColor: isResponded ? '#DCFCE7' : '#FFF7ED' }
+                        ]}>
+                          <Text style={[
+                            styles.escalatedStatusText,
+                            { color: isResponded ? '#16A34A' : '#EA580C' }
+                          ]}>
+                            {isResponded ? 'Respondido' : 'Pendiente'}
+                          </Text>
+                        </View>
+                        <Text style={styles.escalatedPreview} numberOfLines={1}>
+                          {item.lastMessage || 'Sin mensajes aún'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Recientes */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -1427,5 +1525,65 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#f1f5f9",
     marginHorizontal: 20,
+  },
+  // Escalated Chats ("Mis Consultas") Cards
+  escalatedCard: {
+    width: 160,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  escalatedCardHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginBottom: 8,
+  },
+  escalatedAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    overflow: "hidden" as const,
+  },
+  escalatedAvatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  escalatedStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  escalatedName: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: COLORS.black,
+    marginBottom: 6,
+  },
+  escalatedStatusPill: {
+    alignSelf: "flex-start" as const,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 6,
+  },
+  escalatedStatusText: {
+    fontSize: 10,
+    fontWeight: "700" as const,
+    textTransform: "uppercase" as const,
+  },
+  escalatedPreview: {
+    fontSize: 11,
+    color: COLORS.gray,
+    lineHeight: 14,
   },
 });

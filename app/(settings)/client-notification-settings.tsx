@@ -7,7 +7,8 @@ import {
     TouchableOpacity,
     View,
     Switch,
-    ActivityIndicator,} from "react-native";
+    ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
@@ -40,6 +41,7 @@ interface ClientNotificationPreferences {
     appointments: boolean;
     reminders: boolean;
     payments: boolean;
+    escalation_response: boolean;
 }
 
 interface NotificationCategory {
@@ -80,15 +82,24 @@ const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
         iconBg: COLORS.green50,
         iconColor: COLORS.green500,
     },
+    {
+        key: "escalation_response",
+        title: "Consultas",
+        description: "Respuestas de profesionales a tus consultas",
+        icon: "support-agent",
+        iconBg: COLORS.orange50,
+        iconColor: COLORS.orange500,
+    },
 ];
 
 export default function ClientNotificationSettingsScreen() {
     const { user, token, updateUserProfile } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [preferences, setPreferences] = useState<ClientNotificationPreferences>({
         appointments: true,
         reminders: true,
         payments: true,
+        escalation_response: true,
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -103,6 +114,7 @@ export default function ClientNotificationSettingsScreen() {
                 appointments: userPrefs?.appointments ?? true,
                 reminders: userPrefs?.reminders ?? true,
                 payments: userPrefs?.payments ?? true,
+                escalation_response: userPrefs?.escalation_response ?? true,
             });
         } catch (error) {
             console.error("Error loading preferences:", error);
@@ -122,10 +134,10 @@ export default function ClientNotificationSettingsScreen() {
         const category = NOTIFICATION_CATEGORIES.find(c => c.key === key);
         if (!value && category?.warningOnDisable) {
             showAlert({
-    type: 'warning',
-    title: '⚠️ ¿Estás seguro?',
-    message: '',
-    buttons: [
+                type: 'warning',
+                title: '⚠️ ¿Estás seguro?',
+                message: '',
+                buttons: [
                     {
                         text: "Mantener activo",
                         style: "cancel",
@@ -136,7 +148,7 @@ export default function ClientNotificationSettingsScreen() {
                         onPress: () => performToggle(key, value),
                     },
                 ]
-});
+            });
             return;
         }
 
@@ -209,7 +221,7 @@ export default function ClientNotificationSettingsScreen() {
                     <View style={styles.alwaysActiveBanner}>
                         <MaterialIcons name="videocam" size={18} color={COLORS.green500} />
                         <Text style={styles.alwaysActiveText}>
-                            Las videollamadas entrantes siempre estarán activas
+                            Las videollamadas entrantes y respuestas a consultas siempre estarán activas
                         </Text>
                     </View>
 

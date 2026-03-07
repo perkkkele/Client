@@ -485,3 +485,47 @@ export async function forgetMe(
     return response.json();
 }
 
+// =========================================
+// Client Escalated Chats ("Mis Consultas")
+// =========================================
+
+export interface EscalatedChat {
+    _id: string;
+    professional: {
+        _id: string;
+        name: string;
+        avatar?: string;
+        profession: string;
+    };
+    escalation: {
+        status: 'pending' | 'accepted';
+        reason?: string;
+        requestedAt?: string;
+        respondedAt?: string;
+    };
+    lastMessage: string | null;
+    lastMessageDate: string;
+    isLastFromProfessional: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Get client's escalated chats (pending or responded)
+export async function getMyEscalatedChats(
+    token: string
+): Promise<EscalatedChat[]> {
+    const response = await fetch(`${API_URL}/my-escalated-chats`, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || error.msg || "Error al obtener consultas escaladas");
+    }
+
+    const data: { chats: EscalatedChat[] } = await response.json();
+    return data.chats || [];
+}

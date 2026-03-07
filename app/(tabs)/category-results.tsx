@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -11,12 +11,14 @@ import {
     TouchableOpacity,
     View,
     ScrollView,
+    Alert,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { professionalApi, userApi, getAssetUrl } from "../../api";
 import { Professional } from "../../api/professional";
+import { useUserLocation } from "../../hooks/useUserLocation";
 
 const COLORS = {
     primary: "#f9f506",
@@ -87,11 +89,16 @@ export default function CategoryResultsScreen() {
     const [sortBy, setSortBy] = useState<SortOption>("relevance");
     const [searchText, setSearchText] = useState(search || "");
 
+    // GPS / proximity
+    const { requestLocation, loading: gpsLoading, permissionDenied, moduleUnavailable } = useUserLocation(token);
+    const userCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+
     // Filter modal states
     const [showFiltersModal, setShowFiltersModal] = useState(false);
     const [filterDistance, setFilterDistance] = useState(15);
     const [filterMaxPrice, setFilterMaxPrice] = useState(80);
     const [filterMinRating, setFilterMinRating] = useState(4);
+    const [appliedMaxDistance, setAppliedMaxDistance] = useState<number | undefined>(undefined);
 
     // Favorites state
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -104,6 +111,8 @@ export default function CategoryResultsScreen() {
         setIsLoading(true);
         try {
             let data;
+            const coords = userCoordsRef.current;
+
             // If there's a search query, search across professionals
             if (searchText.trim()) {
                 data = await professionalApi.getProfessionals(token, {
@@ -117,7 +126,12 @@ export default function CategoryResultsScreen() {
                 data = await professionalApi.getProfessionalsByCategory(
                     token,
                     selectedCategory,
-                    { sortBy }
+                    {
+                        sortBy,
+                        userLat: coords?.lat,
+                        userLng: coords?.lng,
+                        maxDistance: appliedMaxDistance,
+                    }
                 );
             }
             setProfessionals(data);
@@ -126,7 +140,7 @@ export default function CategoryResultsScreen() {
         } finally {
             setIsLoading(false);
         }
-    }, [token, selectedCategory, sortBy, searchText]);
+    }, [token, selectedCategory, sortBy, searchText, appliedMaxDistance]);
 
     const loadFavorites = useCallback(async () => {
         if (!token) return;
@@ -470,7 +484,24 @@ export default function CategoryResultsScreen() {
                             <TouchableOpacity
                                 key={option.id}
                                 style={styles.sortOption}
-                                onPress={() => setSortBy(option.id)}
+                                onPress={async () => {
+                                    if (option.id === 'distance') {
+                                        // Request GPS for distance sort
+                                        const coords = await requestLocation();
+                                        if (coords) {
+                                            userCoordsRef.current = coords;
+                                            setSortBy('distance');
+                                        } else {
+                                            Alert.alert(
+                                                'Ubicación necesaria',
+                                                'Para ordenar por cercanía necesitamos tu ubicación. Activa el GPS en los ajustes de tu dispositivo.',
+                                                [{ text: 'Entendido' }]
+                                            );
+                                        }
+                                    } else {
+                                        setSortBy(option.id);
+                                    }
+                                }}
                             >
                                 <Text style={[
                                     styles.sortOptionText,
@@ -480,6 +511,9 @@ export default function CategoryResultsScreen() {
                                 </Text>
                                 {sortBy === option.id && (
                                     <MaterialIcons name="arrow-downward" size={14} color={COLORS.textMain} />
+                                )}
+                                {option.id === 'distance' && gpsLoading && (
+                                    <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 4 }} />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -653,9 +687,26 @@ export default function CategoryResultsScreen() {
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.applyButton}
-                                onPress={() => {
+                                onPress={async () => {
+                                    // If distance filter is not "Sin Límite", request GPS
+                                    if (filterDistance < 100) {
+                                        const coords = await requestLocation();
+                                        if (coords) {
+                                            userCoordsRef.current = coords;
+                                            setAppliedMaxDistance(filterDistance);
+                                        } else {
+                                            Alert.alert(
+                                                'Ubicación necesaria',
+                                                'Para filtrar por cercanía necesitamos tu ubicación. Activa el GPS en los ajustes de tu dispositivo.',
+                                                [{ text: 'Entendido' }]
+                                            );
+                                            setShowFiltersModal(false);
+                                            return;
+                                        }
+                                    } else {
+                                        setAppliedMaxDistance(undefined);
+                                    }
                                     setShowFiltersModal(false);
-                                    // TODO: Apply filters to the professional list
                                 }}
                             >
                                 <Text style={styles.applyButtonText}>Aplicar filtros</Text>

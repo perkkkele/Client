@@ -149,6 +149,7 @@ export interface User {
         appointments?: boolean;
         reminders?: boolean;
         payments?: boolean;
+        escalation_response?: boolean;
     };
 
     // === Campos profesionales ===
@@ -280,6 +281,7 @@ export interface UserUpdateData {
         appointments?: boolean;
         reminders?: boolean;
         payments?: boolean;
+        escalation_response?: boolean;
     };
 
     // Cambio a profesional
