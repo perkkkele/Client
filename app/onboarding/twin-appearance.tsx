@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState, useEffect, useRef } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,10 +17,13 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, getAssetUrl } from "../../api";
-import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar } from "../../api/liveAvatar";
+import * as elevenlabsApi from "../../api/elevenlabsApi";
+import * as avatarPreviewApi from "../../api/avatarPreviewApi";
+import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar, getAvatarGender } from "../../api/liveAvatar";
 import { useSubscription } from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
 import { useAlert } from "../../components/TwinProAlert";
+import LiveAvatarVideo from "../../components/LiveAvatarVideo";
 
 // Video requirements constants
 const VIDEO_REQUIREMENTS = {
@@ -83,7 +87,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 
 export default function TwinAppearanceScreen() {
     const { user, token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     // Inicializar con valores guardados del usuario o defaults sensatos
     const [videoType, setVideoType] = useState<"predefined" | "trained">(
         user?.digitalTwin?.appearance?.videoType || "predefined"
@@ -107,6 +111,14 @@ export default function TwinAppearanceScreen() {
     const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
     const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
     const soundRef = useRef<any>(null);
+
+    // Live avatar preview state
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+    const [isLivePreviewActive, setIsLivePreviewActive] = useState(false);
+    const [previewLivekitUrl, setPreviewLivekitUrl] = useState<string | null>(null);
+    const [previewLivekitToken, setPreviewLivekitToken] = useState<string | null>(null);
+    const previewCleanupRef = useRef(false);
+    const previewAutoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Private/cloned voices modal state
     const [showPrivateVoiceModal, setShowPrivateVoiceModal] = useState(false);
@@ -150,12 +162,14 @@ export default function TwinAppearanceScreen() {
             if (appearance.voiceType) {
                 setVoiceType(appearance.voiceType);
             }
-            // Restore selected avatar
+            // Restore selected avatar (include gender from map)
             if (appearance.liveAvatarId && !selectedAvatar) {
+                const avatarName = appearance.liveAvatarName || "Avatar";
                 setSelectedAvatar({
                     id: appearance.liveAvatarId,
-                    name: appearance.liveAvatarName || "Avatar",
+                    name: avatarName,
                     preview_url: appearance.liveAvatarPreview || "",
+                    gender: getAvatarGender(avatarName) || appearance.liveAvatarGender || undefined,
                 });
             }
             // Restore selected voice
@@ -184,6 +198,14 @@ export default function TwinAppearanceScreen() {
         }
     }, [showVoiceModal]);
 
+    // Reload voices when avatar changes (gender filter)
+    useEffect(() => {
+        if (selectedAvatar && publicVoices.length > 0) {
+            // Avatar changed — reload voices with new gender filter
+            loadPublicVoices();
+        }
+    }, [selectedAvatar?.id]);
+
     // Load private voices when modal opens
     useEffect(() => {
         if (showPrivateVoiceModal && privateVoices.length === 0) {
@@ -198,17 +220,23 @@ export default function TwinAppearanceScreen() {
         }
     }, [showCustomAvatarModal]);
 
-    // Cleanup audio on unmount
+    // Cleanup audio and preview session on unmount
     useEffect(() => {
+        previewCleanupRef.current = false;
         return () => {
+            previewCleanupRef.current = true;
             if (soundRef.current) {
                 soundRef.current.unloadAsync();
             }
             if (previewSoundRef.current) {
                 previewSoundRef.current.unloadAsync();
             }
+            // Stop live avatar preview session
+            if (token) {
+                avatarPreviewApi.stopPreview(token).catch(() => { });
+            }
         };
-    }, []);
+    }, [token]);
 
     async function loadPublicAvatars() {
         setLoadingAvatars(true);
@@ -239,9 +267,30 @@ export default function TwinAppearanceScreen() {
     async function loadPublicVoices() {
         setLoadingVoices(true);
         try {
-            // Use OpenAI TTS voices for CUSTOM mode compatibility
-            const voices = liveAvatarApi.getOpenAIVoices();
-            setPublicVoices(voices);
+            // Load curated ElevenLabs voices filtered by language and avatar gender
+            const userLanguage = user?.language || 'es';
+            // Gender comes from the static avatar gender map (authoritative source)
+            const avatarGender = selectedAvatar?.gender || null;
+            console.log(`[Voices] Loading catalog: lang=${userLanguage}, gender=${avatarGender || 'any'}`);
+            const elevenLabsVoices = await elevenlabsApi.getVoices(userLanguage, avatarGender || undefined);
+
+            // Map ElevenLabs format to our PublicVoice interface
+            const mappedVoices: PublicVoice[] = elevenLabsVoices.map(v => ({
+                id: v.voice_id,
+                name: v.name,
+                gender: v.gender || 'unknown',
+                language: v.language || userLanguage,
+                preview_url: elevenlabsApi.getPreviewUrl(v.voice_id, userLanguage, v.preview_url),
+                sample_url: v.preview_url || null,
+                accent: v.accent || null,
+                age: v.age || null,
+                description: v.description || null,
+                use_case: v.use_case || null,
+                category: v.category || null,
+            }));
+
+            console.log(`[Voices] Loaded ${mappedVoices.length} curated voices (lang: ${userLanguage}, gender: ${avatarGender || 'any'})`);
+            setPublicVoices(mappedVoices);
         } catch (error) {
             console.error("Error loading voices:", error);
             showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las voces' });
@@ -324,28 +373,19 @@ export default function TwinAppearanceScreen() {
         }
     }
 
-    // Play preview in the main card (selected voice sample)
+    // Play live avatar preview — starts LiveAvatar session + ElevenLabs TTS + lip-sync
     async function playPreview() {
-        // If already playing, stop it
-        if (isPreviewPlaying) {
-            try {
-                if (previewSoundRef.current) {
-                    await previewSoundRef.current.stopAsync();
-                    await previewSoundRef.current.unloadAsync();
-                    previewSoundRef.current = null;
-                }
-                if (Speech) {
-                    Speech.stop();
-                }
-            } catch (e) {
-                console.log("Error stopping playback:", e);
-            }
+        // If live preview is active, stop it
+        if (isLivePreviewActive) {
+            setIsLivePreviewActive(false);
             setIsPreviewPlaying(false);
+            setPreviewLivekitUrl(null);
+            setPreviewLivekitToken(null);
             return;
         }
 
-        if (!Audio) {
-            showAlert({ type: 'warning', title: 'No disponible', message: 'La reproducción de audio requiere un build de desarrollo' });
+        if (!selectedAvatar) {
+            showAlert({ type: 'warning', title: 'Selecciona un avatar', message: 'Primero elige un avatar del catálogo para ver la vista previa' });
             return;
         }
 
@@ -354,76 +394,104 @@ export default function TwinAppearanceScreen() {
             return;
         }
 
-        // Stop any existing audio first
-        try {
-            if (previewSoundRef.current) {
-                await previewSoundRef.current.unloadAsync();
-                previewSoundRef.current = null;
-            }
-            if (Speech) {
-                Speech.stop();
-            }
-        } catch (e) {
-            console.log("Error stopping previous audio:", e);
+        if (!token) {
+            showAlert({ type: 'error', title: 'Error', message: 'Sesión no válida' });
+            return;
         }
 
+        const userLanguage = user?.language || 'es';
+
+        // Cancel any pending auto-stop from a previous preview
+        if (previewAutoStopRef.current) {
+            clearTimeout(previewAutoStopRef.current);
+            previewAutoStopRef.current = null;
+        }
+
+        setIsPreviewLoading(true);
         setIsPreviewPlaying(true);
-        console.log("=== PLAYING VOICE PREVIEW ===");
-        console.log("Selected voice name:", selectedVoice.name);
-        console.log("Selected voice ID:", selectedVoice.id);
-        console.log("Cached preview_url:", selectedVoice.preview_url);
-
-        // ALWAYS fetch fresh voice details from API to get the correct preview URL
-        // This prevents issues with cached/stale URLs
-        let previewUrl: string | undefined;
-        try {
-            console.log("Fetching fresh voice details from API for ID:", selectedVoice.id);
-            const voiceDetails = await liveAvatarApi.getVoiceById(selectedVoice.id);
-            console.log("API returned voice details:", JSON.stringify(voiceDetails, null, 2));
-
-            if (voiceDetails) {
-                previewUrl = voiceDetails.preview_url || voiceDetails.sample_url;
-                console.log("Fresh preview URL from API:", previewUrl);
-            }
-        } catch (error) {
-            console.error("Error fetching voice details:", error);
-            setIsPreviewPlaying(false);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo obtener la muestra de voz' });
-            return;
-        }
-
-        // If no preview URL available from API, show informative alert
-        // LiveAvatar API doesn't provide sample audio for voices
-        if (!previewUrl) {
-            setIsPreviewPlaying(false);
-            showAlert({
-    type: 'warning',
-    title: 'Vista Previa No Disponible',
-    message: '',
-    buttons: [{ text: "Entendido" }]
-});
-            return;
-        }
+        console.log("=== STARTING LIVE AVATAR PREVIEW ===");
+        console.log("Avatar:", selectedAvatar.name, "(", selectedAvatar.id, ")");
+        console.log("Voice:", selectedVoice.name, "(", selectedVoice.id, ")");
 
         try {
-            console.log("Playing audio from URL:", previewUrl);
-
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: previewUrl },
-                { shouldPlay: true }
+            // 1. Start preview session (or reuse hot session)
+            const startResult = await avatarPreviewApi.startPreview(
+                token,
+                selectedAvatar.id,
+                userLanguage
             );
-            previewSoundRef.current = sound;
 
-            sound.setOnPlaybackStatusUpdate((status: any) => {
-                if (status.isLoaded && status.didJustFinish) {
+            if (!startResult.success || !startResult.data) {
+                throw new Error(startResult.error || 'Failed to start preview session');
+            }
+
+            if (previewCleanupRef.current) return; // Component unmounted
+
+            const { livekitUrl, clientToken, isHotSession } = startResult.data;
+            console.log(`[Preview] Session ${isHotSession ? 'reused (hot)' : 'created'}: ${livekitUrl}`);
+
+            // 2. Set LiveKit connection info for the video component
+            setPreviewLivekitUrl(livekitUrl);
+            setPreviewLivekitToken(clientToken);
+            setIsLivePreviewActive(true);
+            setIsPreviewLoading(false);
+
+            // 3. Wait a moment for the connection to establish, then make avatar speak
+            // For hot sessions, less delay needed
+            const speakDelay = isHotSession ? 500 : 3000;
+            setTimeout(async () => {
+                if (previewCleanupRef.current) return;
+
+                console.log('[Preview] Making avatar speak...');
+                const speakResult = await avatarPreviewApi.speakPreview(
+                    token!,
+                    selectedVoice!.id,
+                    userLanguage
+                );
+
+                if (speakResult.success) {
+                    console.log(`[Preview] Avatar speaking, estimated duration: ${speakResult.audioDurationMs}ms`);
+                    // Auto-stop the preview after the audio finishes + buffer
+                    const duration = (speakResult.audioDurationMs || 5000) + 2000;
+                    previewAutoStopRef.current = setTimeout(() => {
+                        if (previewCleanupRef.current) return;
+                        previewAutoStopRef.current = null;
+                        // Return to idle state — show play button + static image
+                        setIsPreviewPlaying(false);
+                        setIsLivePreviewActive(false);
+                        setPreviewLivekitUrl(null);
+                        setPreviewLivekitToken(null);
+                    }, duration);
+                } else {
+                    console.error('[Preview] Speak failed:', speakResult.error);
+                    // Reset to idle and show message
                     setIsPreviewPlaying(false);
-                    previewSoundRef.current = null;
+                    setIsLivePreviewActive(false);
+                    setPreviewLivekitUrl(null);
+                    setPreviewLivekitToken(null);
+
+                    if (speakResult.error === 'VOICE_NOT_COMPATIBLE') {
+                        showAlert({
+                            type: 'warning',
+                            title: 'Voz no compatible',
+                            message: 'La voz actual es del avatar por defecto. Selecciona una voz del catálogo de "Voz Estándar" para previsualizar.',
+                        });
+                    } else {
+                        showAlert({
+                            type: 'error',
+                            title: 'Error',
+                            message: speakResult.error || 'No se pudo reproducir la vista previa',
+                        });
+                    }
                 }
-            });
-        } catch (error) {
-            console.error("Error playing preview:", error);
+            }, speakDelay);
+
+        } catch (error: any) {
+            console.error("Error in live preview:", error);
+            setIsPreviewLoading(false);
             setIsPreviewPlaying(false);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo reproducir la vista previa' });
+            setIsLivePreviewActive(false);
+            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo iniciar la vista previa' });
         }
     }
 
@@ -441,15 +509,19 @@ export default function TwinAppearanceScreen() {
         setShowVoiceModal(true);
     }
 
-    // Handler for "Entrenar con Video" button - shows custom avatars modal (Premium only)
-    // User can select an existing trained avatar or create a new one
+    // Handler for "Entrenar con Video" button
+    // Currently not available - LiveAvatar API doesn't support custom avatar creation yet
     function handleSelectTrainedVideo() {
         if (!isPremium) {
             setShowUpgradeModal(true);
             return;
         }
-        setVideoType("trained");
-        setShowCustomAvatarModal(true);
+        showAlert({
+            type: 'info',
+            title: 'Próximamente',
+            message: 'La creación de avatares personalizados con tu propio vídeo estará disponible muy pronto. Estamos trabajando para traerte esta funcionalidad.',
+            buttons: [{ text: 'Entendido' }],
+        });
     }
 
     // Handler to open video upload modal from within custom avatars modal
@@ -462,20 +534,20 @@ export default function TwinAppearanceScreen() {
     function handleCustomAvatarSelect(avatar: UserAvatar) {
         if (avatar.status === 'processing' || avatar.status === 'pending') {
             showAlert({
-    type: 'success',
-    title: 'Avatar en Proceso',
-    message: 'Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.',
-    buttons: [{ text: "Entendido" }]
-});
+                type: 'success',
+                title: 'Avatar en Proceso',
+                message: 'Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.',
+                buttons: [{ text: "Entendido" }]
+            });
             return;
         }
         if (avatar.status === 'failed') {
             showAlert({
-    type: 'error',
-    title: 'Avatar Fallido',
-    message: 'Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.',
-    buttons: [{ text: "Entendido" }]
-});
+                type: 'error',
+                title: 'Avatar Fallido',
+                message: 'Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.',
+                buttons: [{ text: "Entendido" }]
+            });
             return;
         }
         setSelectedAvatar({
@@ -487,14 +559,19 @@ export default function TwinAppearanceScreen() {
         setShowCustomAvatarModal(false);
     }
 
-    // Handler for voice cloning - opens private voices modal (Premium only)
+    // Handler for voice cloning - currently not available
+    // LiveAvatar API doesn't support custom voice creation yet
     function handleVoiceCloning() {
         if (!isPremium) {
             setShowUpgradeModal(true);
             return;
         }
-        setVoiceType("cloned");
-        setShowPrivateVoiceModal(true);
+        showAlert({
+            type: 'info',
+            title: 'Próximamente',
+            message: 'La opción de usar tu propia voz clonada estará disponible muy pronto. Mientras tanto, puedes elegir entre las voces profesionales del catálogo.',
+            buttons: [{ text: 'Entendido' }],
+        });
     }
 
     // Record video from camera
@@ -527,11 +604,11 @@ export default function TwinAppearanceScreen() {
             // Validate minimum duration
             if (durationSeconds < VIDEO_REQUIREMENTS.minDurationSeconds) {
                 showAlert({
-    type: 'info',
-    title: 'Video Demasiado Corto',
-    message: '',
-    buttons: [{ text: "Reintentar", onPress: handleRecordFromCamera }]
-});
+                    type: 'info',
+                    title: 'Video Demasiado Corto',
+                    message: '',
+                    buttons: [{ text: "Reintentar", onPress: handleRecordFromCamera }]
+                });
                 return;
             }
 
@@ -567,14 +644,14 @@ export default function TwinAppearanceScreen() {
 
             if (avatarResponse.status === 'processing' || avatarResponse.status === 'pending') {
                 showAlert({
-    type: 'success',
-    title: '¡Avatar en Proceso!',
-    message: 'Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.',
-    buttons: [
+                    type: 'success',
+                    title: '¡Avatar en Proceso!',
+                    message: 'Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.',
+                    buttons: [
                         { text: "Continuar con Predefinido", onPress: () => setShowAvatarModal(true) },
                         { text: "Esperar", style: "cancel" }
                     ]
-});
+                });
             } else if (avatarResponse.status === 'ready') {
                 // Avatar is ready, update selection
                 setSelectedAvatar({
@@ -587,11 +664,11 @@ export default function TwinAppearanceScreen() {
         } catch (error: any) {
             console.error("Error uploading video for avatar:", error);
             showAlert({
-    type: 'error',
-    title: 'Error al Crear Avatar',
-    message: '',
-    buttons: [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
-});
+                type: 'error',
+                title: 'Error al Crear Avatar',
+                message: '',
+                buttons: [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
+            });
         } finally {
             setUploadingVideo(false);
             setUploadProgress("");
@@ -601,27 +678,30 @@ export default function TwinAppearanceScreen() {
     // Handle Google Drive (coming soon)
     function handleGoogleDrive() {
         showAlert({
-    type: 'warning',
-    title: 'Próximamente',
-    message: 'La integración con Google Drive estará disponible pronto.',
-    buttons: [{ text: "Entendido" }]
-});
+            type: 'warning',
+            title: 'Próximamente',
+            message: 'La integración con Google Drive estará disponible pronto.',
+            buttons: [{ text: "Entendido" }]
+        });
     }
 
     // Handle AWS S3 (coming soon)
     function handleAwsS3() {
         showAlert({
-    type: 'warning',
-    title: 'Próximamente',
-    message: 'La integración con AWS S3 estará disponible pronto.',
-    buttons: [{ text: "Entendido" }]
-});
+            type: 'warning',
+            title: 'Próximamente',
+            message: 'La integración con AWS S3 estará disponible pronto.',
+            buttons: [{ text: "Entendido" }]
+        });
     }
 
     function handleAvatarSelect(avatar: PublicAvatar) {
-        setSelectedAvatar(avatar);
-        setVideoType("predefined"); // Auto-set to predefined when avatar is selected
-        // Auto-set voice to standard since predefined avatars come with standard voices
+        // Set gender from static map (authoritative source)
+        const gender = getAvatarGender(avatar.name);
+        const avatarWithGender = { ...avatar, gender: gender || avatar.gender };
+
+        setSelectedAvatar(avatarWithGender);
+        setVideoType("predefined");
         setVoiceType("standard");
 
         // Auto-select the avatar's default voice if available
@@ -696,6 +776,7 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveAvatarId = selectedAvatar.id;
                     updateData.digitalTwin.appearance.liveAvatarName = selectedAvatar.name;
                     updateData.digitalTwin.appearance.liveAvatarPreview = selectedAvatar.preview_url;
+                    updateData.digitalTwin.appearance.liveAvatarGender = selectedAvatar.gender || null;
                 }
 
                 // If a trained/custom avatar is selected, save its data
@@ -703,6 +784,7 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveAvatarId = selectedAvatar.id;
                     updateData.digitalTwin.appearance.liveAvatarName = selectedAvatar.name;
                     updateData.digitalTwin.appearance.liveAvatarPreview = selectedAvatar.preview_url;
+                    updateData.digitalTwin.appearance.liveAvatarGender = selectedAvatar.gender || null;
                 }
 
                 // If a standard voice is selected, save its data
@@ -711,9 +793,10 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
                     updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
                     updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
-                    // Also save to ttsConfig for OpenAI TTS in CUSTOM mode
+                    // Save to ttsConfig for ElevenLabs TTS in CUSTOM mode
                     updateData.digitalTwin.ttsConfig = {
                         voice: selectedVoice.id,
+                        provider: 'elevenlabs',
                         speed: user?.digitalTwin?.ttsConfig?.speed || 1.0,
                     };
                 }
@@ -987,7 +1070,19 @@ export default function TwinAppearanceScreen() {
             >
                 {/* Preview Card */}
                 <View style={styles.previewCard}>
-                    {avatarUrl ? (
+                    {/* Live avatar video or static image */}
+                    {isLivePreviewActive && previewLivekitUrl && previewLivekitToken ? (
+                        <LiveAvatarVideo
+                            livekitUrl={previewLivekitUrl}
+                            livekitToken={previewLivekitToken}
+                            style={styles.previewImage}
+                            onError={(err) => {
+                                console.error('[Preview] LiveKit error:', err);
+                                setIsLivePreviewActive(false);
+                                setIsPreviewPlaying(false);
+                            }}
+                        />
+                    ) : avatarUrl ? (
                         <Image source={{ uri: avatarUrl }} style={styles.previewImage} />
                     ) : (
                         <View style={[styles.previewImage, styles.previewPlaceholder]}>
@@ -995,22 +1090,33 @@ export default function TwinAppearanceScreen() {
                         </View>
                     )}
 
+                    {/* Loading overlay */}
+                    {isPreviewLoading && (
+                        <View style={styles.previewLoadingOverlay}>
+                            <ActivityIndicator size="large" color="#FFFFFF" />
+                            <Text style={styles.previewLoadingText}>Preparando vista previa...</Text>
+                        </View>
+                    )}
+
                     {/* Preview Badge */}
                     <View style={styles.previewBadge}>
-                        <View style={styles.previewDot} />
-                        <Text style={styles.previewBadgeText}>VISTA PREVIA</Text>
+                        <View style={[styles.previewDot, isLivePreviewActive && { backgroundColor: '#EF4444' }]} />
+                        <Text style={styles.previewBadgeText}>
+                            {isLivePreviewActive ? 'EN VIVO' : 'VISTA PREVIA'}
+                        </Text>
                     </View>
 
                     {/* Bottom controls */}
                     <View style={styles.previewBottom}>
                         <TouchableOpacity
-                            style={[styles.playButton, isPreviewPlaying && styles.playButtonActive]}
+                            style={[styles.playButton, (isPreviewPlaying || isLivePreviewActive) && styles.playButtonActive]}
                             onPress={playPreview}
+                            disabled={isPreviewLoading}
                         >
                             <MaterialIcons
-                                name={isPreviewPlaying ? "stop" : "play-arrow"}
+                                name={(isPreviewPlaying || isLivePreviewActive) ? "stop" : "play-arrow"}
                                 size={28}
-                                color={isPreviewPlaying ? "#FFFFFF" : "#000000"}
+                                color={(isPreviewPlaying || isLivePreviewActive) ? "#FFFFFF" : "#000000"}
                             />
                         </TouchableOpacity>
                         <View style={styles.voiceInfo}>
@@ -1387,7 +1493,6 @@ export default function TwinAppearanceScreen() {
                             <View style={styles.requirementList}>
                                 <Text style={styles.requirementItem}>• 15 segundos en estado de escucha</Text>
                                 <Text style={styles.requirementItem}>• 90 segundos hablando naturalmente</Text>
-                                <Text style={styles.requirementItem}>• 90 segundos hablando naturalmente</Text>
                                 <Text style={styles.requirementItem}>• 15 segundos en espera activa</Text>
                             </View>
                             <View style={styles.tipBox}>
@@ -1418,7 +1523,7 @@ export default function TwinAppearanceScreen() {
                             {/* Google Drive Option */}
                             <TouchableOpacity
                                 style={[styles.uploadOption, styles.uploadOptionDisabled]}
-                                onPress={handleGoogleDrive}
+                                disabled={true}
                             >
                                 <View style={[styles.uploadOptionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
                                     <MaterialIcons name="cloud" size={28} color={COLORS.accentGreen} />
@@ -1435,7 +1540,7 @@ export default function TwinAppearanceScreen() {
                             {/* AWS S3 Option */}
                             <TouchableOpacity
                                 style={[styles.uploadOption, styles.uploadOptionDisabled]}
-                                onPress={handleAwsS3}
+                                disabled={true}
                             >
                                 <View style={[styles.uploadOptionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
                                     <MaterialIcons name="storage" size={28} color={COLORS.accentPurple} />
@@ -1730,6 +1835,21 @@ const styles = StyleSheet.create({
         aspectRatio: 4 / 3,
         position: "relative",
         marginBottom: 24,
+        alignSelf: "center",
+        width: "100%",
+    },
+    previewLoadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10,
+    },
+    previewLoadingText: {
+        color: "#FFFFFF",
+        fontSize: 14,
+        marginTop: 12,
+        fontWeight: "500",
     },
     previewImage: {
         width: "100%",

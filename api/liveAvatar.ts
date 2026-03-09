@@ -13,6 +13,45 @@ export const SANTA_CONFIG = {
     language: "es", // Spanish
 };
 
+/**
+ * Static gender map for LiveAvatar public catalog.
+ * Key: avatar base name (lowercase), Value: 'male' | 'female'
+ * This is the authoritative source for avatar gender detection.
+ */
+const AVATAR_GENDER_MAP: Record<string, 'male' | 'female'> = {
+    'santa': 'male',
+    'ann': 'female',
+    'shawn': 'male',
+    'dexter': 'male',
+    'judy': 'female',
+    'june': 'female',
+    'silas': 'male',
+    'bryan': 'male',
+    'elenora': 'female',
+    'wayne': 'male',
+    'katya': 'female',
+    'graham': 'male',
+    'amina': 'female',
+    'anthony': 'male',
+    'rika': 'female',
+    'pedro': 'male',
+    'alessandra': 'female',
+    'anastasia': 'female',
+    'thaddeus': 'male',
+    'marianne': 'female',
+};
+
+/**
+ * Get the gender of an avatar by its name.
+ * Matches the first word of the avatar name against the gender map.
+ * Example: "Pedro in Black Suit" → "pedro" → "male"
+ */
+export function getAvatarGender(avatarName: string): 'male' | 'female' | null {
+    if (!avatarName) return null;
+    const firstName = avatarName.split(' ')[0].toLowerCase();
+    return AVATAR_GENDER_MAP[firstName] || null;
+}
+
 export interface AvatarConfig {
     avatarId: string;
     voiceId?: string;
@@ -321,6 +360,9 @@ export interface PublicVoice {
     sample_url?: string;
     provider?: string;
     description?: string;
+    age?: string;
+    use_case?: string;
+    category?: string;
 }
 
 /**
