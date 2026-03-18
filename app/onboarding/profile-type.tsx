@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -40,6 +41,7 @@ const COLORS = {
 };
 
 export default function ProfileTypeScreen() {
+    const { t } = useTranslation('onboarding');
     // Animation refs for orbits
     const orbitOuterRotation = useRef(new Animated.Value(0)).current;
     const orbitInnerRotation = useRef(new Animated.Value(0)).current;
@@ -158,7 +160,7 @@ export default function ProfileTypeScreen() {
                         </View>
                         <View style={styles.onlineBadge}>
                             <View style={styles.onlineDot} />
-                            <Text style={styles.onlineText}>On line</Text>
+                            <Text style={styles.onlineText}>{t('profileType.onlineText')}</Text>
                         </View>
                     </View>
 
@@ -171,7 +173,7 @@ export default function ProfileTypeScreen() {
                         ]}
                     >
                         <MaterialIcons name="gavel" size={14} color={COLORS.blue400} />
-                        <Text style={styles.badgeText}>Legal</Text>
+                        <Text style={styles.badgeText}>{t('profileType.badgeLegal')}</Text>
                     </Animated.View>
 
                     {/* Floating badges - Bienestar */}
@@ -183,7 +185,7 @@ export default function ProfileTypeScreen() {
                         ]}
                     >
                         <MaterialIcons name="spa" size={14} color={COLORS.orange400} />
-                        <Text style={styles.badgeText}>Bienestar</Text>
+                        <Text style={styles.badgeText}>{t('profileType.badgeBienestar')}</Text>
                     </Animated.View>
 
                     {/* Floating badges - Salud (small, blurred effect) */}
@@ -195,7 +197,7 @@ export default function ProfileTypeScreen() {
                         ]}
                     >
                         <MaterialIcons name="monitor-heart" size={12} color={COLORS.teal300} />
-                        <Text style={styles.badgeTextSmall}>Salud</Text>
+                        <Text style={styles.badgeTextSmall}>{t('profileType.badgeSalud')}</Text>
                     </Animated.View>
 
                     {/* Heart icon badge - top right */}
@@ -223,9 +225,9 @@ export default function ProfileTypeScreen() {
 
                 {/* Hero text */}
                 <View style={styles.heroText}>
-                    <Text style={styles.heroTitle}>Conecta con Expertos</Text>
+                    <Text style={styles.heroTitle}>{t('profileType.heroTitle')}</Text>
                     <Text style={styles.heroSubtitle}>
-                        Recibe ayuda instantánea con los gemelos digitales de profesionales reales.
+                        {t('profileType.heroSubtitle')}
                     </Text>
                 </View>
             </View>
@@ -233,8 +235,8 @@ export default function ProfileTypeScreen() {
             {/* Content section */}
             <View style={styles.contentSection}>
                 <View style={styles.questionSection}>
-                    <Text style={styles.questionTitle}>¿Cómo quieres usar TwinPro?</Text>
-                    <Text style={styles.questionSubtitle}>Selecciona tu perfil para comenzar</Text>
+                    <Text style={styles.questionTitle}>{t('profileType.questionTitle')}</Text>
+                    <Text style={styles.questionSubtitle}>{t('profileType.questionSubtitle')}</Text>
                 </View>
 
                 <View style={styles.optionsContainer}>
@@ -248,9 +250,9 @@ export default function ProfileTypeScreen() {
                             <MaterialIcons name="search" size={28} color={COLORS.blue600} />
                         </View>
                         <View style={styles.optionContent}>
-                            <Text style={styles.optionTitle}>Necesito un profesional</Text>
+                            <Text style={styles.optionTitle}>{t('profileType.userTitle')}</Text>
                             <Text style={styles.optionSubtitle} numberOfLines={1}>
-                                Busco un experto de forma rápida y segura.
+                                {t('profileType.userSubtitle')}
                             </Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
@@ -266,9 +268,9 @@ export default function ProfileTypeScreen() {
                             <MaterialIcons name="verified" size={28} color={COLORS.yellow700} />
                         </View>
                         <View style={styles.optionContent}>
-                            <Text style={styles.optionTitle}>Soy un profesional</Text>
+                            <Text style={styles.optionTitle}>{t('profileType.proTitle')}</Text>
                             <Text style={styles.optionSubtitle} numberOfLines={1}>
-                                Quiero crear mi gemelo digital.
+                                {t('profileType.proSubtitle')}
                             </Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />

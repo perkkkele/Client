@@ -18,6 +18,7 @@ import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import * as calendarApi from "../../api/calendar";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -60,15 +61,7 @@ interface DaySchedule {
     absenceReason?: string;
 }
 
-const DAYS = [
-    { key: "monday", label: "Lunes", short: "L" },
-    { key: "tuesday", label: "Martes", short: "M" },
-    { key: "wednesday", label: "Miércoles", short: "X" },
-    { key: "thursday", label: "Jueves", short: "J" },
-    { key: "friday", label: "Viernes", short: "V" },
-    { key: "saturday", label: "Sábado", short: "S" },
-    { key: "sunday", label: "Domingo", short: "D" },
-];
+const DAY_KEYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
 const MINUTES = ["00", "15", "30", "45"];
@@ -76,6 +69,13 @@ const MINUTES = ["00", "15", "30", "45"];
 export default function WorkScheduleScreen() {
     const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
+    const { t } = useTranslation('settings');
+
+    const DAYS = DAY_KEYS.map(key => ({
+        key,
+        label: t(`workScheduleScreen.days.${key}`),
+        short: t(`workScheduleScreen.daysShort.${key}`),
+    }));
     const [isSaving, setIsSaving] = useState(false);
 
     // Duration per appointment type
@@ -98,7 +98,7 @@ export default function WorkScheduleScreen() {
             const { url } = await calendarApi.getGoogleAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Google Calendar" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('workScheduleScreen.errorGoogle') })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -111,7 +111,7 @@ export default function WorkScheduleScreen() {
             const { url } = await calendarApi.getOutlookAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Outlook" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('workScheduleScreen.errorOutlook') })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -119,10 +119,10 @@ export default function WorkScheduleScreen() {
 
     const handleDisconnectCalendar = () => {
         showAlert({
-            type: 'warning', title: "Desconectar", message: "¿Desconectar calendario?", buttons: [
-                { text: "Cancelar", style: "cancel" },
+            type: 'warning', title: t('workScheduleScreen.disconnectTitle'), message: t('workScheduleScreen.disconnectMessage'), buttons: [
+                { text: t('workScheduleScreen.cancel'), style: "cancel" },
                 {
-                    text: "Desconectar",
+                    text: t('workScheduleScreen.disconnect'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token) return;
@@ -368,12 +368,12 @@ export default function WorkScheduleScreen() {
                 await refreshUser();
             }
             showAlert({
-                type: 'success', title: "Éxito", message: "Horario actualizado correctamente", buttons: [
+                type: 'success', title: t('workScheduleScreen.successTitle'), message: t('workScheduleScreen.successMessage'), buttons: [
                     { text: "OK", onPress: () => router.back() }
                 ]
             })
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar el horario" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('workScheduleScreen.errorSave') })
         } finally {
             setIsSaving(false);
         }
@@ -390,14 +390,14 @@ export default function WorkScheduleScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mi Horario Laboral</Text>
+                <Text style={styles.headerTitle}>{t('workScheduleScreen.headerTitle')}</Text>
                 <TouchableOpacity
                     style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
                     onPress={handleSave}
                     disabled={isSaving}
                 >
                     <Text style={styles.saveButtonText}>
-                        {isSaving ? "..." : "Guardar"}
+                        {isSaving ? "..." : t('workScheduleScreen.save')}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -405,7 +405,7 @@ export default function WorkScheduleScreen() {
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 {/* Schedule Preview Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>MI HORARIO LABORAL</Text>
+                    <Text style={styles.sectionTitle}>{t('workScheduleScreen.scheduleSection')}</Text>
                     <View style={styles.schedulePreviewCard}>
                         {/* Week Days Grid */}
                         <View style={styles.weekGrid}>
@@ -447,11 +447,11 @@ export default function WorkScheduleScreen() {
                         <View style={styles.scheduleSummary}>
                             <View style={styles.summaryChip}>
                                 <MaterialIcons name="event-available" size={14} color={COLORS.green600} />
-                                <Text style={styles.summaryChipText}>{activeDays} días activos</Text>
+                                <Text style={styles.summaryChipText}>{t('workScheduleScreen.activeDays', { count: activeDays })}</Text>
                             </View>
                             <View style={styles.summaryChip}>
                                 <MaterialIcons name="schedule" size={14} color={COLORS.blue600} />
-                                <Text style={styles.summaryChipText}>{totalSlots} franjas</Text>
+                                <Text style={styles.summaryChipText}>{t('workScheduleScreen.slots', { count: totalSlots })}</Text>
                             </View>
                         </View>
                     </View>
@@ -460,7 +460,7 @@ export default function WorkScheduleScreen() {
                 {/* Calendar Sync Section - Premium Only */}
                 <View style={styles.section}>
                     <View style={styles.sectionTitleRow}>
-                        <Text style={styles.sectionTitle}>SINCRONIZACIÓN DE CALENDARIO</Text>
+                        <Text style={styles.sectionTitle}>{t('workScheduleScreen.calendarSection')}</Text>
                     </View>
                     <View style={styles.calendarCard}>
                         {user?.subscription?.plan !== 'premium' ? (
@@ -469,17 +469,17 @@ export default function WorkScheduleScreen() {
                                     <MaterialIcons name="workspace-premium" size={24} color="#f59e0b" />
                                 </View>
                                 <Text style={styles.calendarLockedTitle}>
-                                    Función exclusiva Premium
+                                    {t('workScheduleScreen.premiumOnly')}
                                 </Text>
                                 <Text style={styles.calendarLockedHint}>
-                                    Sincroniza tu disponibilidad con Google Calendar o Outlook automáticamente.
+                                    {t('workScheduleScreen.premiumHint')}
                                 </Text>
                                 <TouchableOpacity
                                     style={styles.upgradeButton}
-                                    onPress={() => showAlert({ type: 'info', title: "Plan Premium", message: "Actualiza a Premium para sincronizar tu calendario con Google o Outlook.", buttons: [{ text: "OK" }] })}
+                                    onPress={() => showAlert({ type: 'info', title: t('workScheduleScreen.premiumUpgradeTitle'), message: t('workScheduleScreen.premiumUpgradeMessage'), buttons: [{ text: "OK" }] })}
                                 >
                                     <MaterialIcons name="workspace-premium" size={16} color="#f59e0b" />
-                                    <Text style={styles.upgradeButtonText}>Mejorar a Premium</Text>
+                                    <Text style={styles.upgradeButtonText}>{t('workScheduleScreen.premiumUpgrade')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : calendarConnected ? (
@@ -496,7 +496,7 @@ export default function WorkScheduleScreen() {
                                         <Text style={styles.calendarConnectedTitle}>
                                             {calendarProvider === "google" ? "Google Calendar" : "Outlook"}
                                         </Text>
-                                        <Text style={styles.calendarConnectedStatus}>✓ Conectado</Text>
+                                        <Text style={styles.calendarConnectedStatus}>{t('workScheduleScreen.calendarConnected')}</Text>
                                     </View>
                                     <TouchableOpacity
                                         style={styles.disconnectBtn}
@@ -509,7 +509,7 @@ export default function WorkScheduleScreen() {
                         ) : (
                             <View style={styles.calendarNotConnectedContent}>
                                 <Text style={styles.calendarHintCompact}>
-                                    Sincroniza tu disponibilidad y añade citas automáticamente
+                                    {t('workScheduleScreen.calendarSyncHint')}
                                 </Text>
                                 <View style={styles.calendarButtonsRow}>
                                     <TouchableOpacity
@@ -542,9 +542,9 @@ export default function WorkScheduleScreen() {
 
                 {/* Weekly Schedule */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>SEMANA LABORAL</Text>
+                    <Text style={styles.sectionTitle}>{t('workScheduleScreen.weekSection')}</Text>
                     <Text style={styles.sectionHint}>
-                        Toca en cada hora para cambiarla. Puedes añadir múltiples franjas por día.
+                        {t('workScheduleScreen.weekHint')}
                     </Text>
 
                     {DAYS.map((day) => {
@@ -630,7 +630,7 @@ export default function WorkScheduleScreen() {
                                             onPress={() => addSlot(day.key)}
                                         >
                                             <MaterialIcons name="add" size={18} color={COLORS.blue600} />
-                                            <Text style={styles.addSlotText}>Añadir franja</Text>
+                                            <Text style={styles.addSlotText}>{t('workScheduleScreen.addSlot')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -643,7 +643,7 @@ export default function WorkScheduleScreen() {
                 <View style={styles.helpNotice}>
                     <MaterialIcons name="info-outline" size={16} color={COLORS.gray500} />
                     <Text style={styles.helpText}>
-                        Este horario se usará para mostrar tu disponibilidad a los clientes que quieran agendar citas contigo.
+                        {t('workScheduleScreen.helpNotice')}
                     </Text>
                 </View>
             </ScrollView>
@@ -660,10 +660,10 @@ export default function WorkScheduleScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <TouchableOpacity onPress={() => setTimePickerVisible(false)}>
-                                <Text style={styles.modalCancel}>Cancelar</Text>
+                                <Text style={styles.modalCancel}>{t('workScheduleScreen.timePickerCancel')}</Text>
                             </TouchableOpacity>
                             <Text style={styles.modalTitle}>
-                                {editingSlot?.field === "start" ? "Hora de inicio" : "Hora de fin"}
+                                {editingSlot?.field === "start" ? t('workScheduleScreen.timePickerStart') : t('workScheduleScreen.timePickerEnd')}
                             </Text>
                             <TouchableOpacity onPress={confirmTimePicker}>
                                 <Text style={styles.modalConfirm}>OK</Text>
@@ -681,7 +681,7 @@ export default function WorkScheduleScreen() {
                         <View style={styles.pickerContainer}>
                             {/* Hours */}
                             <View style={styles.pickerColumn}>
-                                <Text style={styles.pickerLabel}>Hora</Text>
+                                <Text style={styles.pickerLabel}>{t('workScheduleScreen.timePickerHour')}</Text>
                                 <ScrollView
                                     style={styles.pickerScroll}
                                     showsVerticalScrollIndicator={false}
@@ -709,7 +709,7 @@ export default function WorkScheduleScreen() {
 
                             {/* Minutes */}
                             <View style={styles.pickerColumn}>
-                                <Text style={styles.pickerLabel}>Min</Text>
+                                <Text style={styles.pickerLabel}>{t('workScheduleScreen.timePickerMin')}</Text>
                                 <ScrollView
                                     style={styles.pickerScroll}
                                     showsVerticalScrollIndicator={false}
@@ -738,7 +738,7 @@ export default function WorkScheduleScreen() {
 
                         {/* Quick Select for common times */}
                         <View style={styles.quickTimes}>
-                            <Text style={styles.quickTimesLabel}>Rápido:</Text>
+                            <Text style={styles.quickTimesLabel}>{t('workScheduleScreen.timePickerQuick')}</Text>
                             {["09:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map(time => (
                                 <TouchableOpacity
                                     key={time}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "./constants";
@@ -16,12 +17,13 @@ interface StatsBlockProps {
 }
 
 export default function StatsBlock({ analytics }: StatsBlockProps) {
+    const { t } = useTranslation('settings');
     return (
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
                 <View style={styles.titleBadge}>
                     <MaterialIcons name="bar-chart" size={16} color={COLORS.primary} />
-                    <Text style={styles.sectionTitle}>Resumen de Actividad</Text>
+                    <Text style={styles.sectionTitle}>{t('statsBlock.activitySummary')}</Text>
                 </View>
             </View>
             <View style={styles.statsGrid}>
@@ -32,7 +34,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="visibility" size={20} color={COLORS.primary} />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Visitas Perfil</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.profileViews')}</Text>
                     <Text style={styles.statValue}>{analytics.profileViews.toLocaleString()}</Text>
                 </View>
 
@@ -43,7 +45,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="chat" size={20} color={COLORS.purple600} />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Conversaciones</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.conversations')}</Text>
                     <Text style={styles.statValue}>{analytics.totalConversations.toLocaleString()}</Text>
                 </View>
 
@@ -54,7 +56,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="schedule" size={20} color="#0EA5E9" />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Duración Chats</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.chatDuration')}</Text>
                     <Text style={styles.statValue}>{analyticsApi.formatDuration(analytics.totalConversationSeconds)}</Text>
                 </View>
 
@@ -65,7 +67,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Citas Agendadas</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.appointmentsBooked')}</Text>
                     <Text style={styles.statValue}>{analytics.appointmentsBooked}</Text>
                 </View>
 
@@ -76,7 +78,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="call" size={20} color={COLORS.green600} />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Llamadas</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.calls')}</Text>
                     <Text style={styles.statValue}>{analytics.phoneCalls}</Text>
                 </View>
 
@@ -87,7 +89,7 @@ export default function StatsBlock({ analytics }: StatsBlockProps) {
                             <MaterialIcons name="support-agent" size={20} color="#D97706" />
                         </View>
                     </View>
-                    <Text style={styles.statLabel}>Escalaciones</Text>
+                    <Text style={styles.statLabel}>{t('statsBlock.escalations')}</Text>
                     <Text style={styles.statValue}>{analytics.escalations}</Text>
                 </View>
             </View>

@@ -5,7 +5,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,    KeyboardAvoidingView,
+    View,
+    KeyboardAvoidingView,
     Platform,
     ScrollView,
     ActivityIndicator,
@@ -13,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -27,16 +29,18 @@ const COLORS = {
     gray800: "#1F2937",
 };
 
-const FEEDBACK_TYPES = [
-    { value: "sugerencia", label: "Sugerencia" },
-    { value: "error", label: "Reportar un error" },
-    { value: "general", label: "Comentario General" },
-    { value: "otro", label: "Otro" },
-];
-
 export default function SendFeedbackScreen() {
+    const { t } = useTranslation('settings');
+
+    const FEEDBACK_TYPES = [
+        { value: "sugerencia", label: t('sendFeedbackScreen.types.suggestion') },
+        { value: "error", label: t('sendFeedbackScreen.types.error') },
+        { value: "general", label: t('sendFeedbackScreen.types.general') },
+        { value: "otro", label: t('sendFeedbackScreen.types.other') },
+    ];
+
     const [feedbackType, setFeedbackType] = useState("sugerencia");
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
@@ -47,7 +51,7 @@ export default function SendFeedbackScreen() {
 
     async function handleSubmit() {
         if (!message.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor, escribe tu comentario.' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('sendFeedbackScreen.emptyMessageError') });
             return;
         }
 
@@ -56,11 +60,11 @@ export default function SendFeedbackScreen() {
         setTimeout(() => {
             setIsLoading(false);
             showAlert({
-    type: 'info',
-    title: '¡Gracias!',
-    message: 'Tu comentario ha sido enviado correctamente. Lo revisaremos lo antes posible.',
-    buttons: [{ text: "OK", onPress: () => router.back() }]
-});
+                type: 'info',
+                title: t('sendFeedbackScreen.successTitle'),
+                message: t('sendFeedbackScreen.successMessage'),
+                buttons: [{ text: "OK", onPress: () => router.back() }]
+            });
         }, 1500);
     }
 
@@ -73,7 +77,7 @@ export default function SendFeedbackScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Enviar Comentarios</Text>
+                <Text style={styles.headerTitle}>{t('sendFeedbackScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -87,12 +91,12 @@ export default function SendFeedbackScreen() {
                     keyboardShouldPersistTaps="handled"
                 >
                     <Text style={styles.description}>
-                        Tu opinión es fundamental para nosotros. Envíanos tus sugerencias, reportes de errores o cualquier comentario para mejorar tu experiencia con nuestros profesionales.
+                        {t('sendFeedbackScreen.description')}
                     </Text>
 
                     {/* Feedback Type Selector */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>TIPO DE COMENTARIO</Text>
+                        <Text style={styles.inputLabel}>{t('sendFeedbackScreen.typeLabel')}</Text>
                         <TouchableOpacity
                             style={styles.pickerButton}
                             onPress={() => setShowPicker(!showPicker)}
@@ -133,12 +137,12 @@ export default function SendFeedbackScreen() {
 
                     {/* Message Input */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>MENSAJE</Text>
+                        <Text style={styles.inputLabel}>{t('sendFeedbackScreen.messageLabel')}</Text>
                         <TextInput
                             style={styles.textArea}
                             value={message}
                             onChangeText={setMessage}
-                            placeholder="Escribe aquí tus comentarios. Cuantos más detalles nos des, mejor podremos ayudarte..."
+                            placeholder={t('sendFeedbackScreen.messagePlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             multiline
                             textAlignVertical="top"
@@ -158,7 +162,7 @@ export default function SendFeedbackScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.submitButtonText}>Enviar Comentarios</Text>
+                            <Text style={styles.submitButtonText}>{t('sendFeedbackScreen.submitButton')}</Text>
                             <MaterialIcons name="send" size={20} color="#000000" />
                         </>
                     )}

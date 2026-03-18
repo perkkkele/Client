@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -41,6 +42,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 export default function EditProfileScreen() {
     const { showAlert } = useAlert();
     const { user, token, updateUserProfile } = useAuth();
+    const { t } = useTranslation('settings');
     const [isLoading, setIsLoading] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
@@ -68,13 +70,13 @@ export default function EditProfileScreen() {
 
     function pickImage() {
         showAlert({
-            type: 'info', title: "Cambiar foto de perfil", message: "¿Cómo quieres añadir tu foto?", buttons: [
+            type: 'info', title: t('editProfileScreen.changePhotoTitle'), message: t('editProfileScreen.changePhotoMessage'), buttons: [
                 {
-                    text: "Cámara",
+                    text: t('editProfileScreen.camera'),
                     onPress: async () => {
                         const { status } = await ImagePicker.requestCameraPermissionsAsync();
                         if (status !== "granted") {
-                            showAlert({ type: 'warning', title: 'Permiso denegado', message: 'Necesitamos acceso a la cámara' });
+                            showAlert({ type: 'warning', title: t('editProfileScreen.permissionDenied'), message: t('editProfileScreen.cameraPermission') });
                             return;
                         }
                         const result = await ImagePicker.launchCameraAsync({
@@ -88,11 +90,11 @@ export default function EditProfileScreen() {
                     },
                 },
                 {
-                    text: "Galería",
+                    text: t('editProfileScreen.gallery'),
                     onPress: async () => {
                         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                         if (status !== "granted") {
-                            showAlert({ type: 'warning', title: 'Permiso requerido', message: 'Necesitamos acceso a tu galería.' });
+                            showAlert({ type: 'warning', title: t('editProfileScreen.permissionDenied'), message: t('editProfileScreen.galleryPermission') });
                             return;
                         }
                         const result = await ImagePicker.launchImageLibraryAsync({
@@ -107,7 +109,7 @@ export default function EditProfileScreen() {
                     },
                 },
                 {
-                    text: "Cancelar",
+                    text: t('common:cancel'),
                     style: "cancel",
                 },
             ]
@@ -116,7 +118,7 @@ export default function EditProfileScreen() {
 
     async function handleChangeAvatar(imageUri: string) {
         if (!token) {
-            showAlert({ type: 'error', title: "Error", message: "No hay sesión activa" })
+            showAlert({ type: 'error', title: t('common:error'), message: t('editProfileScreen.noSession') })
             return;
         }
 
@@ -125,7 +127,7 @@ export default function EditProfileScreen() {
             const updatedUser = await userApi.updateAvatar(token, imageUri);
             await updateUserProfile(updatedUser);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo actualizar la foto de perfil" })
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('editProfileScreen.avatarError') })
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -133,7 +135,7 @@ export default function EditProfileScreen() {
 
     async function handleSave() {
         if (!token) {
-            showAlert({ type: 'error', title: "Error", message: "No hay sesión activa" })
+            showAlert({ type: 'error', title: t('common:error'), message: t('editProfileScreen.noSession') })
             return;
         }
 
@@ -146,12 +148,12 @@ export default function EditProfileScreen() {
             });
             await updateUserProfile(updatedUser);
             showAlert({
-                type: 'success', title: "Éxito", message: "Perfil actualizado correctamente", buttons: [
+                type: 'success', title: t('common:success'), message: t('editProfileScreen.profileUpdated'), buttons: [
                     { text: "OK", onPress: () => router.back() }
                 ]
             })
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo actualizar el perfil" })
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('editProfileScreen.profileUpdateError') })
         } finally {
             setIsLoading(false);
         }
@@ -168,7 +170,7 @@ export default function EditProfileScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Editar Perfil</Text>
+                <Text style={styles.headerTitle}>{t('editProfileScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -206,7 +208,7 @@ export default function EditProfileScreen() {
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={pickImage} disabled={isUploadingAvatar}>
-                        <Text style={styles.changePhotoText}>Cambiar foto de perfil</Text>
+                        <Text style={styles.changePhotoText}>{t('editProfileScreen.changePhoto')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -215,36 +217,36 @@ export default function EditProfileScreen() {
 
                     {/* Display Name (Firstname) */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>NOMBRE</Text>
+                        <Text style={styles.inputLabel}>{t('editProfileScreen.labelName')}</Text>
                         <TextInput
                             style={styles.input}
                             value={firstname}
                             onChangeText={setFirstname}
-                            placeholder="Tu nombre"
+                            placeholder={t('editProfileScreen.placeholderName')}
                             placeholderTextColor={COLORS.gray400}
                         />
                     </View>
 
                     {/* Lastname */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>APELLIDOS</Text>
+                        <Text style={styles.inputLabel}>{t('editProfileScreen.labelLastname')}</Text>
                         <TextInput
                             style={styles.input}
                             value={lastname}
                             onChangeText={setLastname}
-                            placeholder="Tus apellidos"
+                            placeholder={t('editProfileScreen.placeholderLastname')}
                             placeholderTextColor={COLORS.gray400}
                         />
                     </View>
 
                     {/* Email (readonly) */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
+                        <Text style={styles.inputLabel}>{t('editProfileScreen.labelEmail')}</Text>
                         <TextInput
                             style={[styles.input, styles.inputDisabled]}
                             value={email}
                             editable={false}
-                            placeholder="tucorreo@ejemplo.com"
+                            placeholder={t('editProfileScreen.placeholderEmail')}
                             placeholderTextColor={COLORS.gray400}
                             keyboardType="email-address"
                         />
@@ -252,12 +254,12 @@ export default function EditProfileScreen() {
 
                     {/* Phone (optional) */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>TELÉFONO (OPCIONAL)</Text>
+                        <Text style={styles.inputLabel}>{t('editProfileScreen.labelPhone')}</Text>
                         <TextInput
                             style={styles.input}
                             value={phone}
                             onChangeText={setPhone}
-                            placeholder="+34 000 000 000"
+                            placeholder={t('editProfileScreen.placeholderPhone')}
                             placeholderTextColor={COLORS.gray400}
                             keyboardType="phone-pad"
                         />
@@ -274,7 +276,7 @@ export default function EditProfileScreen() {
                         <View style={styles.changePasswordIcon}>
                             <MaterialIcons name="lock" size={20} color={COLORS.gray600} />
                         </View>
-                        <Text style={styles.changePasswordText}>Cambiar Contraseña</Text>
+                        <Text style={styles.changePasswordText}>{t('editProfileScreen.changePassword')}</Text>
                     </View>
                     <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                 </TouchableOpacity>
@@ -292,7 +294,7 @@ export default function EditProfileScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+                            <Text style={styles.saveButtonText}>{t('editProfileScreen.saveChanges')}</Text>
                             <MaterialIcons name="check" size={20} color="#000000" />
                         </>
                     )}

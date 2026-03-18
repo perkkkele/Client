@@ -22,6 +22,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../context";
 import { stripeConnectApi } from "../../api";
 import type { ConnectBalance, Payout } from "../../api/stripeConnect";
+import { useTranslation } from 'react-i18next';
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -43,6 +44,7 @@ const COLORS = {
 
 export default function MyEarningsScreen() {
     const { token, user, refreshUser } = useAuth();
+    const { t } = useTranslation('settings');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [balance, setBalance] = useState<ConnectBalance | null>(null);
@@ -75,7 +77,7 @@ export default function MyEarningsScreen() {
             }
         } catch (err: any) {
             console.error("Error loading earnings:", err);
-            setError(err.message || "Error cargando datos");
+            setError(err.message || t('myEarningsScreen.errorLoading'));
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -107,13 +109,13 @@ export default function MyEarningsScreen() {
     const getPayoutStatusInfo = (status: string) => {
         switch (status) {
             case "paid":
-                return { label: "Completado", color: COLORS.success, icon: "check-circle" as const };
+                return { label: t('myEarningsScreen.statusCompleted'), color: COLORS.success, icon: "check-circle" as const };
             case "pending":
-                return { label: "Pendiente", color: COLORS.warning, icon: "schedule" as const };
+                return { label: t('myEarningsScreen.statusPending'), color: COLORS.warning, icon: "schedule" as const };
             case "in_transit":
-                return { label: "En tránsito", color: COLORS.stripe, icon: "local-shipping" as const };
+                return { label: t('myEarningsScreen.statusInTransit'), color: COLORS.stripe, icon: "local-shipping" as const };
             case "failed":
-                return { label: "Fallido", color: COLORS.error, icon: "error" as const };
+                return { label: t('myEarningsScreen.statusFailed'), color: COLORS.error, icon: "error" as const };
             default:
                 return { label: status, color: COLORS.gray500, icon: "help" as const };
         }
@@ -154,7 +156,7 @@ export default function MyEarningsScreen() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textDark} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Mis Ingresos</Text>
+                    <Text style={styles.headerTitle}>{t('myEarningsScreen.headerTitle')}</Text>
                     <View style={styles.headerSpacer} />
                 </View>
                 <View style={styles.loadingContainer}>
@@ -172,20 +174,20 @@ export default function MyEarningsScreen() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textDark} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Mis Ingresos</Text>
+                    <Text style={styles.headerTitle}>{t('myEarningsScreen.headerTitle')}</Text>
                     <View style={styles.headerSpacer} />
                 </View>
                 <View style={styles.emptyState}>
                     <MaterialIcons name="account-balance-wallet" size={64} color={COLORS.gray400} />
-                    <Text style={styles.emptyTitle}>Configura tu cuenta de pagos</Text>
+                    <Text style={styles.emptyTitle}>{t('myEarningsScreen.setupTitle')}</Text>
                     <Text style={styles.emptyDescription}>
-                        Conecta tu cuenta bancaria para empezar a recibir pagos y ver tus ingresos aquí.
+                        {t('myEarningsScreen.setupDesc')}
                     </Text>
                     <TouchableOpacity
                         style={styles.primaryButton}
                         onPress={() => router.push("/(settings)/stripe-onboarding")}
                     >
-                        <Text style={styles.primaryButtonText}>Configurar ahora</Text>
+                        <Text style={styles.primaryButtonText}>{t('myEarningsScreen.setupNow')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -199,7 +201,7 @@ export default function MyEarningsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textDark} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mis Ingresos</Text>
+                <Text style={styles.headerTitle}>{t('myEarningsScreen.headerTitle')}</Text>
                 <TouchableOpacity style={styles.headerAction} onPress={handleOpenDashboard}>
                     <MaterialIcons name="open-in-new" size={22} color={COLORS.stripe} />
                 </TouchableOpacity>
@@ -222,19 +224,19 @@ export default function MyEarningsScreen() {
                         {/* Balance Cards */}
                         <View style={styles.balanceContainer}>
                             <View style={styles.balanceCard}>
-                                <Text style={styles.balanceLabel}>Disponible</Text>
+                                <Text style={styles.balanceLabel}>{t('myEarningsScreen.available')}</Text>
                                 <Text style={styles.balanceAmount}>
                                     {formatPrice(balance?.available || 0)}
                                 </Text>
-                                <Text style={styles.balanceHint}>Listo para transferir</Text>
+                                <Text style={styles.balanceHint}>{t('myEarningsScreen.readyToTransfer')}</Text>
                             </View>
 
                             <View style={[styles.balanceCard, styles.balanceCardSecondary]}>
-                                <Text style={styles.balanceLabelSecondary}>Pendiente</Text>
+                                <Text style={styles.balanceLabelSecondary}>{t('myEarningsScreen.pending')}</Text>
                                 <Text style={styles.balanceAmountSecondary}>
                                     {formatPrice(balance?.pending || 0)}
                                 </Text>
-                                <Text style={styles.balanceHintSecondary}>En proceso</Text>
+                                <Text style={styles.balanceHintSecondary}>{t('myEarningsScreen.inProcess')}</Text>
                             </View>
                         </View>
 
@@ -242,22 +244,22 @@ export default function MyEarningsScreen() {
                         <View style={styles.infoCard}>
                             <MaterialIcons name="info-outline" size={18} color={COLORS.gray500} />
                             <Text style={styles.infoText}>
-                                Las transferencias se realizan automáticamente a tu cuenta bancaria cada 2-7 días hábiles.
+                                {t('myEarningsScreen.transferInfo')}
                             </Text>
                         </View>
 
                         {/* Payouts Section */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Transferencias</Text>
+                            <Text style={styles.sectionTitle}>{t('myEarningsScreen.transfers')}</Text>
 
                             {payouts.length === 0 ? (
                                 <View style={styles.emptyPayouts}>
                                     <MaterialIcons name="account-balance" size={40} color={COLORS.gray400} />
                                     <Text style={styles.emptyPayoutsText}>
-                                        Aún no hay transferencias
+                                        {t('myEarningsScreen.noTransfers')}
                                     </Text>
                                     <Text style={styles.emptyPayoutsHint}>
-                                        Cuando recibas pagos, las transferencias aparecerán aquí
+                                        {t('myEarningsScreen.noTransfersHint')}
                                     </Text>
                                 </View>
                             ) : (

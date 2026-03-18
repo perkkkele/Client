@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
     FlatList,
     StyleSheet,
@@ -36,7 +37,13 @@ const COLORS = {
     teal400: "#2dd4bf",
 };
 
-const FILTERS = ["Hoy", "Últimos 7 días", "Último mes", "Todos"];
+const LOCALE_MAP: Record<string, string> = {
+    es: 'es-ES',
+    en: 'en-US',
+    fr: 'fr-FR',
+    de: 'de-DE',
+};
+
 const PAGE_SIZE = 20;
 
 // Helper to get gradient color based on index
@@ -54,23 +61,6 @@ const getAvatarColor = (index: number) => {
     return colors[index % colors.length];
 };
 
-// Helper to format date
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Ahora";
-    if (diffMins < 60) return `${diffMins} min`;
-    if (diffHours < 24) return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    if (diffDays === 1) return "Ayer";
-    if (diffDays < 7) return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][date.getDay()];
-    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-};
-
 // Helper to filter by date range
 const filterByDateRange = (conversations: AvatarConversation[], filterIndex: number) => {
     const now = new Date();
@@ -80,17 +70,17 @@ const filterByDateRange = (conversations: AvatarConversation[], filterIndex: num
         const convDate = new Date(conv.lastMessageDate);
 
         switch (filterIndex) {
-            case 0: // Hoy
+            case 0:
                 return convDate >= today;
-            case 1: // Últimos 7 días
+            case 1:
                 const weekAgo = new Date(today);
                 weekAgo.setDate(weekAgo.getDate() - 7);
                 return convDate >= weekAgo;
-            case 2: // Último mes
+            case 2:
                 const monthAgo = new Date(today);
                 monthAgo.setMonth(monthAgo.getMonth() - 1);
                 return convDate >= monthAgo;
-            default: // Todos
+            default:
                 return true;
         }
     });
@@ -98,7 +88,32 @@ const filterByDateRange = (conversations: AvatarConversation[], filterIndex: num
 
 export default function TwinHistoryScreen() {
     const { user, token } = useAuth();
-    const [activeFilter, setActiveFilter] = useState(3); // "Todos" by default
+    const { t, i18n } = useTranslation('settings');
+    const locale = LOCALE_MAP[i18n.language] || 'es-ES';
+
+    const FILTERS = [t('twinHistory.filterToday'), t('twinHistory.filterLast7'), t('twinHistory.filterLastMonth'), t('twinHistory.filterAll')];
+
+    // Helper to format date
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return t('twinHistory.now');
+        if (diffMins < 60) return `${diffMins} min`;
+        if (diffHours < 24) return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+        if (diffDays === 1) return t('twinHistory.yesterday');
+        if (diffDays < 7) {
+            const dayNames = t('twinHistory.dayNames', { returnObjects: true }) as string[];
+            return dayNames[date.getDay()];
+        }
+        return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
+    };
+
+    const [activeFilter, setActiveFilter] = useState(3); // "All" by default
     const [searchQuery, setSearchQuery] = useState("");
     const [conversations, setConversations] = useState<AvatarConversation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -210,11 +225,11 @@ export default function TwinHistoryScreen() {
                             styles.statusText,
                             { color: item.status === "resolved" ? COLORS.green400 : COLORS.orange400 }
                         ]}>
-                            {item.status === "resolved" ? "Resuelto por IA" : "Escalado"}
+                            {item.status === "resolved" ? t('twinHistory.resolvedByAI') : t('twinHistory.escalated')}
                         </Text>
                     </View>
                     <Text style={styles.messageCount}>
-                        {item.messageCount} mensajes
+                        {t('twinHistory.messages', { count: item.messageCount })}
                     </Text>
                 </View>
             </View>
@@ -227,7 +242,7 @@ export default function TwinHistoryScreen() {
         return (
             <View style={styles.loadingMoreContainer}>
                 <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.loadingMoreText}>Cargando más...</Text>
+                <Text style={styles.loadingMoreText}>{t('twinHistory.loadingMore')}</Text>
             </View>
         );
     }, [loadingMore]);
@@ -239,7 +254,7 @@ export default function TwinHistoryScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Historial de Conversaciones</Text>
+                <Text style={styles.headerTitle}>{t('twinHistory.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -249,7 +264,7 @@ export default function TwinHistoryScreen() {
                     <MaterialIcons name="search" size={20} color={COLORS.gray400} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar por usuario o palabra clave..."
+                        placeholder={t('twinHistory.searchPlaceholder')}
                         placeholderTextColor={COLORS.gray500}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -280,20 +295,20 @@ export default function TwinHistoryScreen() {
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Cargando conversaciones...</Text>
+                    <Text style={styles.loadingText}>{t('twinHistory.loading')}</Text>
                 </View>
             ) : filteredConversations.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="chat-bubble-outline" size={64} color={COLORS.gray500} />
                     <Text style={styles.emptyTitle}>
                         {conversations.length === 0
-                            ? "Sin conversaciones"
-                            : "No hay resultados"}
+                            ? t('twinHistory.emptyTitle')
+                            : t('twinHistory.noResults')}
                     </Text>
                     <Text style={styles.emptySubtitle}>
                         {conversations.length === 0
-                            ? "Tu gemelo digital aún no ha tenido conversaciones"
-                            : "Prueba con otros filtros o palabras clave"}
+                            ? t('twinHistory.emptySubtitle')
+                            : t('twinHistory.noResultsHint')}
                     </Text>
                 </View>
             ) : (

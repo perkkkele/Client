@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, Switch, StyleSheet, TextInput } from "react-native";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -36,6 +37,7 @@ export default function TwinBlock({
     escalation,
     onEscalationChange,
 }: TwinBlockProps) {
+    const { t } = useTranslation('settings');
     const [showEscalationConfig, setShowEscalationConfig] = useState(false);
     const [keywordInput, setKeywordInput] = useState("");
     const { minutesUsed, minutesIncluded, extraMinutesUsed } = useSubscription();
@@ -95,19 +97,19 @@ export default function TwinBlock({
                         </View>
                         <View style={styles.testHintRow}>
                             <MaterialIcons name="touch-app" size={10} color="rgba(255,255,255,0.5)" />
-                            <Text style={styles.testHint}>Probar</Text>
+                            <Text style={styles.testHint}>{t('twinBlock.test')}</Text>
                         </View>
                     </TouchableOpacity>
                     {/* Info column */}
                     <View style={styles.twinInfo}>
-                        <Text style={styles.twinTitle}>Gemelo Digital</Text>
+                        <Text style={styles.twinTitle}>{t('twinBlock.digitalTwin')}</Text>
                         <View style={styles.twinStatus}>
                             <View style={[
                                 styles.statusDot,
                                 !geminiActive && styles.statusDotInactive
                             ]} />
                             <Text style={styles.statusText}>
-                                {geminiActive ? "Activo y público" : "Inactivo"}
+                                {geminiActive ? t('twinBlock.activeAndPublic') : t('twinBlock.inactive')}
                             </Text>
                         </View>
                     </View>
@@ -122,7 +124,7 @@ export default function TwinBlock({
                 <TouchableOpacity style={styles.configureButton} onPress={onConfigureGemini}>
                     <View style={styles.configureButtonContent}>
                         <MaterialIcons name="tune" size={20} color={COLORS.primary} />
-                        <Text style={styles.configureButtonText}>Configurar Gemelo</Text>
+                        <Text style={styles.configureButtonText}>{t('twinBlock.configureTwin')}</Text>
                     </View>
                     <MaterialIcons name="arrow-forward" size={20} color={COLORS.primary} />
                 </TouchableOpacity>
@@ -155,7 +157,7 @@ export default function TwinBlock({
                         <View style={styles.usageWarningRow}>
                             <MaterialIcons name="info-outline" size={13} color="#fbbf24" />
                             <Text style={styles.usageWarningText}>
-                                {extraMinutesUsed} min extra consumidos
+                                {t('twinBlock.extraMinutesUsed', { count: extraMinutesUsed })}
                             </Text>
                         </View>
                     )}
@@ -169,7 +171,7 @@ export default function TwinBlock({
                             <View style={styles.escalationHeader}>
                                 <View style={styles.escalationHeaderLeft}>
                                     <MaterialIcons name="support-agent" size={20} color="#FFFFFF" />
-                                    <Text style={styles.escalationTitle}>Escalado a profesional</Text>
+                                    <Text style={styles.escalationTitle}>{t('twinBlock.escalationTitle')}</Text>
                                 </View>
                                 <Switch
                                     value={escalation.enabled}
@@ -180,7 +182,7 @@ export default function TwinBlock({
                                 />
                             </View>
                             <Text style={styles.escalationHint}>
-                                Permite a tus clientes contactarte cuando el gemelo no pueda ayudarles
+                                {t('twinBlock.escalationHint')}
                             </Text>
 
                             {escalation.enabled && (
@@ -189,7 +191,7 @@ export default function TwinBlock({
                                     onPress={() => setShowEscalationConfig(!showEscalationConfig)}
                                 >
                                     <Text style={styles.escalationExpandText}>
-                                        {showEscalationConfig ? "Ocultar opciones" : "Configurar triggers"}
+                                        {showEscalationConfig ? t('twinBlock.hideOptions') : t('twinBlock.configureTriggers')}
                                     </Text>
                                     <MaterialIcons
                                         name={showEscalationConfig ? "expand-less" : "expand-more"}
@@ -210,7 +212,7 @@ export default function TwinBlock({
                                             size={22}
                                             color={escalation.triggers.clientRequest ? "#60a5fa" : "rgba(255,255,255,0.5)"}
                                         />
-                                        <Text style={styles.checkboxLabel}>El cliente lo solicite</Text>
+                                        <Text style={styles.checkboxLabel}>{t('twinBlock.triggerClientRequest')}</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
@@ -222,7 +224,7 @@ export default function TwinBlock({
                                             size={22}
                                             color={escalation.triggers.twinUnable ? "#60a5fa" : "rgba(255,255,255,0.5)"}
                                         />
-                                        <Text style={styles.checkboxLabel}>El gemelo no pueda responder</Text>
+                                        <Text style={styles.checkboxLabel}>{t('twinBlock.triggerTwinUnable')}</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
@@ -234,7 +236,7 @@ export default function TwinBlock({
                                             size={22}
                                             color={escalation.triggers.keywords ? "#60a5fa" : "rgba(255,255,255,0.5)"}
                                         />
-                                        <Text style={styles.checkboxLabel}>Palabras clave detectadas</Text>
+                                        <Text style={styles.checkboxLabel}>{t('twinBlock.triggerKeywords')}</Text>
                                     </TouchableOpacity>
 
                                     {escalation.triggers.keywords && (
@@ -242,7 +244,7 @@ export default function TwinBlock({
                                             <View style={styles.keywordInputRow}>
                                                 <TextInput
                                                     style={styles.keywordInput}
-                                                    placeholder="Nueva palabra clave..."
+                                                    placeholder={t('twinBlock.newKeywordPlaceholder')}
                                                     placeholderTextColor="rgba(255,255,255,0.4)"
                                                     value={keywordInput}
                                                     onChangeText={setKeywordInput}

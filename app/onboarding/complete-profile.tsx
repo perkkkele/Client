@@ -1,7 +1,8 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +18,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
+import { getCategoryLabel } from '../../utils/categoryUtils';
 
 const COLORS = {
     primary: "#FFE600",
@@ -35,26 +38,32 @@ interface Interest {
     icon: string;
 }
 
-const INTERESTS: Interest[] = [
-    { id: "legal", name: "Legal", icon: "gavel" },
-    { id: "salud", name: "Salud", icon: "medical-services" },
-    { id: "fitness", name: "Fitness", icon: "fitness-center" },
-    { id: "hogar", name: "Hogar", icon: "home-repair-service" },
-    { id: "finanzas", name: "Finanzas", icon: "attach-money" },
-    { id: "educacion", name: "Educación", icon: "school" },
-    { id: "tecnologia", name: "Tecnología", icon: "computer" },
-    { id: "diseno", name: "Diseño", icon: "palette" },
-    { id: "bienestar", name: "Bienestar emocional", icon: "self-improvement" },
-    { id: "inmobiliario", name: "Inmobiliario", icon: "real-estate-agent" },
-    { id: "estetica", name: "Estética", icon: "face" },
-    { id: "empleo", name: "Empleo", icon: "work" },
-    { id: "energia", name: "Energía", icon: "bolt" },
-    { id: "otros", name: "Otra", icon: "add" },
+const INTEREST_IDS = [
+    { id: "legal", icon: "gavel" },
+    { id: "salud", icon: "medical-services" },
+    { id: "fitness", icon: "fitness-center" },
+    { id: "hogar", icon: "home-repair-service" },
+    { id: "finanzas", icon: "attach-money" },
+    { id: "educacion", icon: "school" },
+    { id: "tecnologia", icon: "computer" },
+    { id: "diseno", icon: "palette" },
+    { id: "bienestar", icon: "self-improvement" },
+    { id: "inmobiliario", icon: "real-estate-agent" },
+    { id: "estetica", icon: "face" },
+    { id: "empleo", icon: "work" },
+    { id: "energia", icon: "bolt" },
+    { id: "otros", icon: "add" },
 ];
 
 export default function CompleteProfileScreen() {
     const { token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
+    const { t: tCommon } = useTranslation('common');
+    const INTERESTS = useMemo(() => INTEREST_IDS.map(item => ({
+        ...item,
+        name: getCategoryLabel(tCommon, item.id),
+    })), [tCommon]);
     const [displayName, setDisplayName] = useState("");
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
     const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -88,11 +97,11 @@ export default function CompleteProfileScreen() {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
             showAlert({
-    type: 'warning',
-    title: 'Permiso Requerido',
-    message: 'Necesitamos acceso a tu cámara para tomar una foto.',
-    buttons: [{ text: "OK" }]
-});
+                type: 'warning',
+                title: t('completeProfile.permissionRequired'),
+                message: t('completeProfile.cameraPermissionMessage'),
+                buttons: [{ text: "OK" }]
+            });
             return;
         }
 
@@ -111,7 +120,7 @@ export default function CompleteProfileScreen() {
         if (Platform.OS === 'ios') {
             ActionSheetIOS.showActionSheetWithOptions(
                 {
-                    options: ['Cancelar', 'Tomar foto', 'Elegir de galería'],
+                    options: [t('completeProfile.cancel'), t('completeProfile.takePhoto'), t('completeProfile.chooseFromGallery')],
                     cancelButtonIndex: 0,
                 },
                 (buttonIndex) => {
@@ -125,15 +134,15 @@ export default function CompleteProfileScreen() {
         } else {
             // Android - use Alert with buttons
             showAlert({
-    type: 'warning',
-    title: 'Foto de perfil',
-    message: '¿Cómo quieres añadir tu foto?',
-    buttons: [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Tomar foto", onPress: handleTakePhoto },
-                    { text: "Elegir de galería", onPress: handlePickFromGallery },
+                type: 'warning',
+                title: t('completeProfile.profilePhoto'),
+                message: t('completeProfile.profilePhotoQuestion'),
+                buttons: [
+                    { text: t('completeProfile.cancel'), style: "cancel" },
+                    { text: t('completeProfile.takePhoto'), onPress: handleTakePhoto },
+                    { text: t('completeProfile.chooseFromGallery'), onPress: handlePickFromGallery },
                 ]
-});
+            });
         }
     }
 
@@ -177,7 +186,7 @@ export default function CompleteProfileScreen() {
 
             router.push("/onboarding/success");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar el perfil" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('completeProfile.saveError') });
         } finally {
             setIsLoading(false);
         }
@@ -191,7 +200,7 @@ export default function CompleteProfileScreen() {
                     <Ionicons name="arrow-back" size={24} color={COLORS.gray700} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleSkip}>
-                    <Text style={styles.skipText}>Saltar</Text>
+                    <Text style={styles.skipText}>{t('completeProfile.skip')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -203,9 +212,9 @@ export default function CompleteProfileScreen() {
             >
                 {/* Title */}
                 <View style={styles.titleSection}>
-                    <Text style={styles.title}>Crea tu perfil</Text>
+                    <Text style={styles.title}>{t('completeProfile.title')}</Text>
                     <Text style={styles.subtitle}>
-                        Sube una foto y cuéntanos qué buscas para obtener mejores coincidencias.
+                        {t('completeProfile.subtitle')}
                     </Text>
                 </View>
 
@@ -227,12 +236,12 @@ export default function CompleteProfileScreen() {
 
                 {/* Name input */}
                 <View style={styles.inputSection}>
-                    <Text style={styles.inputLabel}>¿Cómo quieres que te llamemos?</Text>
+                    <Text style={styles.inputLabel}>{t('completeProfile.nameLabel')}</Text>
                     <View style={styles.inputContainer}>
                         <MaterialIcons name="person" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
-                            placeholder="ej. Javier Gómez"
+                            placeholder={t('completeProfile.namePlaceholder')}
                             placeholderTextColor={COLORS.textMuted}
                             value={displayName}
                             onChangeText={setDisplayName}
@@ -253,7 +262,7 @@ export default function CompleteProfileScreen() {
                                 color={isNameValid ? COLORS.success : "#EF4444"}
                             />
                             <Text style={[styles.hintText, { color: isNameValid ? COLORS.success : "#EF4444" }]}>
-                                Mín. 3 caracteres
+                                {t('completeProfile.nameHint')}
                             </Text>
                         </View>
                     )}
@@ -261,7 +270,7 @@ export default function CompleteProfileScreen() {
 
                 {/* Interests selection */}
                 <View style={styles.interestsSection}>
-                    <Text style={styles.inputLabel}>¿Qué profesionales necesitas?</Text>
+                    <Text style={styles.inputLabel}>{t('completeProfile.interestsLabel')}</Text>
                     <View style={styles.interestsGrid}>
                         {INTERESTS.map((interest) => {
                             const isSelected = selectedInterests.includes(interest.id);
@@ -294,7 +303,7 @@ export default function CompleteProfileScreen() {
                     onPress={handleContinue}
                     activeOpacity={0.9}
                 >
-                    <Text style={styles.continueButtonText}>Continuar</Text>
+                    <Text style={styles.continueButtonText}>{t('completeProfile.continue')}</Text>
                     <Ionicons name="arrow-forward" size={18} color="#000000" />
                 </TouchableOpacity>
             </View>

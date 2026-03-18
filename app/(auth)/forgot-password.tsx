@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "../../api/config";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#FFED00",
@@ -37,17 +38,18 @@ export default function ForgotPasswordScreen() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const { showAlert } = useAlert();
+    const { t } = useTranslation('auth');
 
     async function handleRequestReset() {
         if (!email) {
-            showAlert({ type: 'warning', title: 'Email requerido', message: 'Introduce tu dirección de correo electrónico para recuperar tu contraseña.' });
+            showAlert({ type: 'warning', title: t('forgotPassword.emailRequiredTitle'), message: t('forgotPassword.emailRequired') });
             return;
         }
 
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            showAlert({ type: 'warning', title: 'Email no válido', message: 'Introduce una dirección de correo electrónico válida (ej: nombre@ejemplo.com).' });
+            showAlert({ type: 'warning', title: t('forgotPassword.invalidEmailTitle'), message: t('forgotPassword.invalidEmail') });
             return;
         }
 
@@ -64,11 +66,11 @@ export default function ForgotPasswordScreen() {
             if (response.ok) {
                 setIsSent(true);
             } else {
-                showAlert({ type: 'error', title: 'No se pudo enviar', message: data.message || 'No se pudo procesar la solicitud. Comprueba el email e inténtalo de nuevo.' });
+                showAlert({ type: 'error', title: t('forgotPassword.sendFailedTitle'), message: data.message || t('forgotPassword.sendFailed') });
             }
         } catch (error) {
             console.error("Forgot password error:", error);
-            showAlert({ type: 'error', title: 'Sin conexión', message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('forgotPassword.noConnectionTitle'), message: t('forgotPassword.noConnection') });
         } finally {
             setIsLoading(false);
         }
@@ -90,7 +92,7 @@ export default function ForgotPasswordScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <Ionicons name="arrow-back" size={20} color={COLORS.textDark} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Recuperar Contraseña</Text>
+                <Text style={styles.headerTitle}>{t('forgotPassword.headerTitle')}</Text>
                 <View style={styles.backButton} />
             </View>
 
@@ -111,14 +113,14 @@ export default function ForgotPasswordScreen() {
                             </View>
 
                             {/* Title */}
-                            <Text style={styles.title}>¿Olvidaste tu contraseña?</Text>
+                            <Text style={styles.title}>{t('forgotPassword.title')}</Text>
                             <Text style={styles.subtitle}>
-                                Introduce tu email y te enviaremos un código para recuperar tu acceso.
+                                {t('forgotPassword.subtitle')}
                             </Text>
 
                             {/* Email Input */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>EMAIL</Text>
+                                <Text style={styles.inputLabel}>{t('forgotPassword.emailLabel')}</Text>
                                 <View style={styles.inputContainer}>
                                     <Ionicons
                                         name="mail-outline"
@@ -128,7 +130,7 @@ export default function ForgotPasswordScreen() {
                                     />
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="tu@email.com"
+                                        placeholder={t('forgotPassword.emailPlaceholder')}
                                         placeholderTextColor={COLORS.gray400}
                                         keyboardType="email-address"
                                         autoCapitalize="none"
@@ -149,7 +151,7 @@ export default function ForgotPasswordScreen() {
                                 {isLoading ? (
                                     <ActivityIndicator color="#000000" />
                                 ) : (
-                                    <Text style={styles.submitButtonText}>Enviar Código</Text>
+                                    <Text style={styles.submitButtonText}>{t('forgotPassword.sendCode')}</Text>
                                 )}
                             </TouchableOpacity>
                         </>
@@ -162,20 +164,18 @@ export default function ForgotPasswordScreen() {
                                 </View>
                             </View>
 
-                            <Text style={styles.title}>¡Código Enviado!</Text>
+                            <Text style={styles.title}>{t('forgotPassword.codeSentTitle')}</Text>
                             <Text style={styles.subtitle}>
-                                Si existe una cuenta con el email{"\n"}
-                                <Text style={styles.emailHighlight}>{email}</Text>
-                                {"\n"}recibirás un código de 6 dígitos.
+                                {t('forgotPassword.codeSentMessage', { email })}
                             </Text>
 
                             <Text style={styles.checkSpam}>
-                                Revisa tu bandeja de spam si no lo encuentras.
+                                {t('forgotPassword.checkSpam')}
                             </Text>
 
                             {/* Continue Button */}
                             <TouchableOpacity style={styles.submitButton} onPress={handleContinue}>
-                                <Text style={styles.submitButtonText}>Introducir Código</Text>
+                                <Text style={styles.submitButtonText}>{t('forgotPassword.enterCode')}</Text>
                             </TouchableOpacity>
 
                             {/* Resend */}
@@ -183,7 +183,7 @@ export default function ForgotPasswordScreen() {
                                 style={styles.resendButton}
                                 onPress={() => setIsSent(false)}
                             >
-                                <Text style={styles.resendText}>¿No recibiste el código? Reintentar</Text>
+                                <Text style={styles.resendText}>{t('forgotPassword.noCodeReceived')}</Text>
                             </TouchableOpacity>
                         </>
                     )}

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -26,6 +27,7 @@ const COLORS = {
 };
 
 export default function SuccessScreen() {
+    const { t } = useTranslation('onboarding');
     // Pulse animation for central icon
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -73,7 +75,7 @@ export default function SuccessScreen() {
 
                 {/* Title */}
                 <Text style={styles.title}>
-                    ¡Felicidades,{"\n"}tu perfil está listo!
+                    {t('success.title')}
                 </Text>
 
                 {/* Illustration */}
@@ -101,8 +103,8 @@ export default function SuccessScreen() {
 
                                 {/* AI Avatar label */}
                                 <View style={styles.leftLabel}>
-                                    <Text style={styles.labelTitleBold}>AVATARES IA ÚLTIMA GENERACIÓN</Text>
-                                    <Text style={styles.labelSubtitle}>Entrenados y personalizados</Text>
+                                    <Text style={styles.labelTitleBold}>{t('success.aiAvatarsLabel')}</Text>
+                                    <Text style={styles.labelSubtitle}>{t('success.aiAvatarsSublabel')}</Text>
                                 </View>
                             </View>
 
@@ -116,7 +118,7 @@ export default function SuccessScreen() {
 
                                 {/* Human support label - top */}
                                 <View style={styles.rightLabelTop}>
-                                    <Text style={styles.labelTitleBold}>SOPORTE HUMANO REAL PROFESIONAL</Text>
+                                    <Text style={styles.labelTitleBold}>{t('success.humanSupportLabel')}</Text>
                                 </View>
                             </View>
 
@@ -134,12 +136,12 @@ export default function SuccessScreen() {
                 {/* Subtitle */}
                 <View style={styles.subtitleContainer}>
                     <View style={styles.subtitleLineLeft} />
-                    <Text style={styles.subtitleBadge}>SINCRONIZACIÓN TOTAL</Text>
+                    <Text style={styles.subtitleBadge}>{t('success.syncBadge')}</Text>
                     <View style={styles.subtitleLineRight} />
                 </View>
 
                 <Text style={styles.description}>
-                    Ahora puedes empezar a conectar con expertos y disfrutar de todas las ventajas de TwinPro.
+                    {t('success.description')}
                 </Text>
 
                 {/* Spacer to push button to bottom */}
@@ -151,7 +153,7 @@ export default function SuccessScreen() {
                     onPress={handleExplore}
                     activeOpacity={0.9}
                 >
-                    <Text style={styles.exploreButtonText}>Empezar a explorar</Text>
+                    <Text style={styles.exploreButtonText}>{t('success.exploreButton')}</Text>
                     <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>

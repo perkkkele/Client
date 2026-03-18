@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -29,6 +30,8 @@ interface LegalItem {
 }
 
 export default function AppInfoScreen() {
+    const { t } = useTranslation('settings');
+
     function handleBack() {
         router.back();
     }
@@ -42,10 +45,10 @@ export default function AppInfoScreen() {
     }
 
     const legalItems: LegalItem[] = [
-        { icon: "gavel", label: "Términos de Servicio", route: "/(settings)/terms-of-service" },
-        { icon: "policy", label: "Política de Privacidad", route: "/(settings)/privacy-policy" },
-        { icon: "code", label: "Licencias de Código Abierto", route: "/(settings)/licenses" },
-        { icon: "volunteer-activism", label: "Créditos", route: "/(settings)/credits" },
+        { icon: "gavel", label: t('appInfoScreen.termsOfService'), route: "/(settings)/terms-of-service" },
+        { icon: "policy", label: t('appInfoScreen.privacyPolicy'), route: "/(settings)/privacy-policy" },
+        { icon: "code", label: t('appInfoScreen.openSourceLicenses'), route: "/(settings)/licenses" },
+        { icon: "volunteer-activism", label: t('appInfoScreen.credits'), route: "/(settings)/credits" },
     ];
 
     return (
@@ -55,7 +58,7 @@ export default function AppInfoScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Info de la aplicación</Text>
+                <Text style={styles.headerTitle}>{t('appInfoScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -70,12 +73,12 @@ export default function AppInfoScreen() {
                         <MaterialIcons name="group" size={56} color={COLORS.primary} />
                     </View>
                     <Text style={styles.appName}>TwinPro</Text>
-                    <Text style={styles.appVersion}>Versión 1.0.0</Text>
+                    <Text style={styles.appVersion}>{t('appInfoScreen.version', { version: '1.0.0' })}</Text>
                 </View>
 
                 {/* Legal & Credits Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>LEGAL Y CRÉDITOS</Text>
+                    <Text style={styles.sectionTitle}>{t('appInfoScreen.sectionLegal')}</Text>
                     <View style={styles.legalCard}>
                         {legalItems.map((item, index) => (
                             <View key={item.label}>
@@ -98,17 +101,17 @@ export default function AppInfoScreen() {
                 <View style={styles.actionsSection}>
                     <TouchableOpacity style={styles.actionButton} onPress={handleVisitWebsite}>
                         <MaterialIcons name="public" size={20} color={COLORS.textMain} />
-                        <Text style={styles.actionButtonText}>Visitar nuestra web</Text>
+                        <Text style={styles.actionButtonText}>{t('appInfoScreen.visitWebsite')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.actionButton} onPress={handleContactUs}>
                         <MaterialIcons name="mail" size={20} color={COLORS.textMain} />
-                        <Text style={styles.actionButtonText}>Contactar con nosotros</Text>
+                        <Text style={styles.actionButtonText}>{t('appInfoScreen.contactUs')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Copyright */}
                 <Text style={styles.copyright}>
-                    © 2024 TwinPro Inc. Todos los derechos reservados.
+                    {t('appInfoScreen.copyright')}
                 </Text>
             </ScrollView>
         </SafeAreaView>

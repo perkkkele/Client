@@ -1,5 +1,6 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
     Linking,
     ScrollView,
@@ -44,177 +45,49 @@ interface FAQItem {
     category: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    // Gemelo Digital
-    {
-        category: "Gemelo Digital",
-        question: "¿Cómo activo o desactivo mi Gemelo Digital?",
-        answer: "Usa el interruptor en la tarjeta 'Tu Gemelo Digital'. Cuando está activo (verde), atenderá consultas automáticamente. Puedes desactivarlo en cualquier momento.",
-    },
-    {
-        category: "Gemelo Digital",
-        question: "¿Qué significa 'Estado: Listo'?",
-        answer: "Significa que tu gemelo está configurado y listo para atender clientes. Si muestra otro estado, puede que necesites completar la configuración en 'Configurar'.",
-    },
-    {
-        category: "Gemelo Digital",
-        question: "¿Cómo edito la personalidad de mi gemelo?",
-        answer: "Toca 'Configurar' en la tarjeta del gemelo para acceder a la configuración de apariencia, comportamiento y base de conocimientos.",
-    },
-    {
-        category: "Gemelo Digital",
-        question: "¿Qué es la escalación?",
-        answer: "Es cuando el gemelo transfiere la conversación a ti (el profesional real). Puede ocurrir si el cliente lo solicita, si el gemelo no puede responder, o por palabras clave específicas.",
-    },
-    // Perfil y Estadísticas
-    {
-        category: "Perfil",
-        question: "¿Cómo edito mi perfil público?",
-        answer: "Toca tu foto de perfil o ve al menú y selecciona 'Mi perfil público'. Desde ahí puedes editar nombre, bio, foto, servicios y más.",
-    },
-    {
-        category: "Perfil",
-        question: "¿Qué significan las estadísticas de visitas?",
-        answer: "Las visitas muestran cuántas personas han visto tu perfil. Las conversiones indican cuántas iniciaron una conversación. Un alto ratio de conversión indica un buen perfil.",
-    },
-    {
-        category: "Perfil",
-        question: "¿De dónde vienen los datos de 'Esta semana'?",
-        answer: "Son estadísticas de los últimos 7 días. Incluyen visitas al perfil, conversaciones iniciadas, citas agendadas y ganancias si tienes plan Professional o superior.",
-    },
-    // Citas
-    {
-        category: "Citas",
-        question: "¿Por qué no veo el bloque de Citas?",
-        answer: "La gestión de citas está disponible en plan Professional o superior. Mejora tu plan para desbloquear esta función.",
-    },
-    {
-        category: "Citas",
-        question: "¿Cómo configuro mis horarios de disponibilidad?",
-        answer: "Ve al menú > 'Mi horario laboral'. Ahí puedes definir días y horas en que aceptas citas, pausas, y días festivos.",
-    },
-    {
-        category: "Citas",
-        question: "¿Qué es la confirmación automática?",
-        answer: "Si está activada, las citas se confirman automáticamente sin que tengas que aprobarlas manualmente. Útil si tienes disponibilidad clara.",
-    },
-    {
-        category: "Citas",
-        question: "¿Puedo cobrar por las citas?",
-        answer: "Sí, activa 'Requerir pago' en la configuración de citas. Los clientes pagarán al reservar. Necesitas tener Stripe configurado.",
-    },
-    // Ganancias
-    {
-        category: "Ganancias",
-        question: "¿Dónde veo mis ganancias?",
-        answer: "El bloque 'Ingresos' muestra tus ganancias. Para ver detalles completos, ve al menú > 'Planes y créditos' > 'Historial de pagos'.",
-    },
-    {
-        category: "Ganancias",
-        question: "¿Cómo recibo mis pagos?",
-        answer: "Los pagos se procesan a través de Stripe. Configura tu cuenta bancaria en 'Planes y créditos' para recibir transferencias automáticas.",
-    },
-    // Personalización del Dashboard
-    {
-        category: "Dashboard",
-        question: "¿Puedo reorganizar los bloques del dashboard?",
-        answer: "Sí, toca el botón flotante con el icono de cuadrícula para entrar en modo edición. Usa las flechas para reordenar los bloques según tu preferencia.",
-    },
-    {
-        category: "Dashboard",
-        question: "¿Qué es el modo edición?",
-        answer: "Permite personalizar la disposición de los bloques en tu dashboard. Cuando está activo, verás flechas arriba/abajo en cada bloque para moverlos.",
-    },
-    // Atención Directa
-    {
-        category: "Atención Directa",
-        question: "¿Qué es 'Atención directa'?",
-        answer: "Es donde ves las conversaciones que requieren tu intervención personal. Incluye escalaciones del gemelo y mensajes directos de clientes.",
-    },
-    {
-        category: "Atención Directa",
-        question: "¿Cómo sé si tengo mensajes pendientes?",
-        answer: "El icono de campana en la cabecera muestra un número rojo si tienes notificaciones sin leer. También recibirás notificaciones push si están activadas.",
-    },
-    // Planes y Suscripción
-    {
-        category: "Planes",
-        question: "¿Cuáles son los planes disponibles?",
-        answer: "Starter (gratis): funciones básicas. Professional: citas, estadísticas avanzadas. Premium: voz clonada, avatar personalizado, todas las funciones.",
-    },
-    {
-        category: "Planes",
-        question: "¿Cómo mejoro mi plan?",
-        answer: "Ve al menú > 'Planes y créditos'. Ahí puedes ver tu plan actual y las opciones de mejora con sus beneficios.",
-    },
-    {
-        category: "Planes",
-        question: "¿Puedo cancelar mi suscripción?",
-        answer: "Sí, puedes cancelar en cualquier momento desde 'Planes y créditos'. Mantendrás acceso hasta el final del período de facturación.",
-    },
-    // Menú y Navegación
-    {
-        category: "Navegación",
-        question: "¿Cómo accedo al menú completo?",
-        answer: "Toca el icono de menú (tres líneas) en la esquina superior derecha. Ahí encontrarás todas las opciones organizadas por categorías.",
-    },
-    {
-        category: "Navegación",
-        question: "¿Qué opciones tiene el menú?",
-        answer: "Mi Negocio (perfil, reseñas, horario), Agenda (citas), Gemelo Digital (historial, rendimiento), Cuenta (planes, notificaciones) y Ayuda.",
-    },
-];
-
-// Group FAQs by category
-const FAQ_CATEGORIES = [
-    "Gemelo Digital",
-    "Perfil",
-    "Citas",
-    "Ganancias",
-    "Dashboard",
-    "Atención Directa",
-    "Planes",
-    "Navegación",
-];
-
-interface GuideItem {
-    icon: keyof typeof MaterialIcons.glyphMap;
-    title: string;
-    duration: string;
-}
-
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "smart-toy",
-        title: "Guía completa del Gemelo Digital",
-        duration: "5 min de lectura",
-    },
-    {
-        icon: "calendar-month",
-        title: "Configurar tu agenda de citas",
-        duration: "3 min de lectura",
-    },
-    {
-        icon: "payments",
-        title: "Configurar pagos y cobros",
-        duration: "4 min de lectura",
-    },
-    {
-        icon: "trending-up",
-        title: "Entender tus estadísticas",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "verified",
-        title: "Optimizar tu perfil profesional",
-        duration: "3 min de lectura",
-    },
-];
-
 export default function HelpProDashboardScreen() {
+    const { t } = useTranslation('settings');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    const FAQ_CATEGORIES_KEYS = [
+        'catGemelo', 'catPerfil', 'catCitas', 'catGanancias',
+        'catDashboard', 'catAtencion', 'catPlanes', 'catNavegacion'
+    ];
+
+    const FAQ_ITEMS = useMemo(() => [
+        { categoryKey: 'catGemelo', qKey: 'faq1q', aKey: 'faq1a' },
+        { categoryKey: 'catGemelo', qKey: 'faq2q', aKey: 'faq2a' },
+        { categoryKey: 'catGemelo', qKey: 'faq3q', aKey: 'faq3a' },
+        { categoryKey: 'catGemelo', qKey: 'faq4q', aKey: 'faq4a' },
+        { categoryKey: 'catPerfil', qKey: 'faq5q', aKey: 'faq5a' },
+        { categoryKey: 'catPerfil', qKey: 'faq6q', aKey: 'faq6a' },
+        { categoryKey: 'catPerfil', qKey: 'faq7q', aKey: 'faq7a' },
+        { categoryKey: 'catCitas', qKey: 'faq8q', aKey: 'faq8a' },
+        { categoryKey: 'catCitas', qKey: 'faq9q', aKey: 'faq9a' },
+        { categoryKey: 'catCitas', qKey: 'faq10q', aKey: 'faq10a' },
+        { categoryKey: 'catCitas', qKey: 'faq11q', aKey: 'faq11a' },
+        { categoryKey: 'catGanancias', qKey: 'faq12q', aKey: 'faq12a' },
+        { categoryKey: 'catGanancias', qKey: 'faq13q', aKey: 'faq13a' },
+        { categoryKey: 'catDashboard', qKey: 'faq14q', aKey: 'faq14a' },
+        { categoryKey: 'catDashboard', qKey: 'faq15q', aKey: 'faq15a' },
+        { categoryKey: 'catAtencion', qKey: 'faq16q', aKey: 'faq16a' },
+        { categoryKey: 'catAtencion', qKey: 'faq17q', aKey: 'faq17a' },
+        { categoryKey: 'catPlanes', qKey: 'faq18q', aKey: 'faq18a' },
+        { categoryKey: 'catPlanes', qKey: 'faq19q', aKey: 'faq19a' },
+        { categoryKey: 'catPlanes', qKey: 'faq20q', aKey: 'faq20a' },
+        { categoryKey: 'catNavegacion', qKey: 'faq21q', aKey: 'faq21a' },
+        { categoryKey: 'catNavegacion', qKey: 'faq22q', aKey: 'faq22a' },
+    ], []);
+
+    const GUIDE_ITEMS = useMemo(() => [
+        { icon: 'smart-toy' as keyof typeof MaterialIcons.glyphMap, titleKey: 'guide1Title', durationKey: 'guide1Duration' },
+        { icon: 'calendar-month' as keyof typeof MaterialIcons.glyphMap, titleKey: 'guide2Title', durationKey: 'guide2Duration' },
+        { icon: 'payments' as keyof typeof MaterialIcons.glyphMap, titleKey: 'guide3Title', durationKey: 'guide3Duration' },
+        { icon: 'trending-up' as keyof typeof MaterialIcons.glyphMap, titleKey: 'guide4Title', durationKey: 'guide4Duration' },
+        { icon: 'verified' as keyof typeof MaterialIcons.glyphMap, titleKey: 'guide5Title', durationKey: 'guide5Duration' },
+    ], []);
 
     function handleClose() {
         router.back();
@@ -231,10 +104,13 @@ export default function HelpProDashboardScreen() {
     // Filter FAQs by search and category
     const filteredFAQs = FAQ_ITEMS.filter(
         (item) => {
+            const question = t(`helpProDashboard.${item.qKey}`);
+            const answer = t(`helpProDashboard.${item.aKey}`);
             const matchesSearch = searchQuery === "" ||
-                item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                item.answer.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = selectedCategory === null || item.category === selectedCategory;
+                question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                answer.toLowerCase().includes(searchQuery.toLowerCase());
+            const categoryLabel = t(`helpProDashboard.${item.categoryKey}`);
+            const matchesCategory = selectedCategory === null || categoryLabel === selectedCategory;
             return matchesSearch && matchesCategory;
         }
     );
@@ -246,13 +122,13 @@ export default function HelpProDashboardScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Centro de Ayuda</Text>
+                    <Text style={styles.headerTitle}>{t('helpProDashboard.headerTitle')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Todo lo que necesitas saber sobre tu panel profesional y cómo sacarle el máximo partido.
+                    {t('helpProDashboard.headerSubtitle')}
                 </Text>
             </View>
 
@@ -262,7 +138,7 @@ export default function HelpProDashboardScreen() {
                     <MaterialIcons name="search" size={20} color={COLORS.primary} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar en la ayuda..."
+                        placeholder={t('helpProDashboard.searchPlaceholder')}
                         placeholderTextColor={COLORS.gray400}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -293,94 +169,100 @@ export default function HelpProDashboardScreen() {
                         onPress={() => setSelectedCategory(null)}
                     >
                         <Text style={[styles.categoryChipText, selectedCategory === null && styles.categoryChipTextActive]}>
-                            Todas
+                            {t('helpProDashboard.allCategories')}
                         </Text>
                     </TouchableOpacity>
-                    {FAQ_CATEGORIES.map((cat) => (
-                        <TouchableOpacity
-                            key={cat}
-                            style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
-                            onPress={() => setSelectedCategory(cat)}
-                        >
-                            <Text style={[styles.categoryChipText, selectedCategory === cat && styles.categoryChipTextActive]}>
-                                {cat}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                    {FAQ_CATEGORIES_KEYS.map((catKey) => {
+                        const catLabel = t(`helpProDashboard.${catKey}`);
+                        return (
+                            <TouchableOpacity
+                                key={catKey}
+                                style={[styles.categoryChip, selectedCategory === catLabel && styles.categoryChipActive]}
+                                onPress={() => setSelectedCategory(catLabel)}
+                            >
+                                <Text style={[styles.categoryChipText, selectedCategory === catLabel && styles.categoryChipTextActive]}>
+                                    {catLabel}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
 
                 {/* Quick Actions */}
                 <View style={styles.quickActionsGrid}>
                     <TouchableOpacity
-                        style={[styles.quickAction, { backgroundColor: COLORS.green50 }, selectedCategory === "Gemelo Digital" && styles.quickActionActive]}
-                        onPress={() => setSelectedCategory(selectedCategory === "Gemelo Digital" ? null : "Gemelo Digital")}
+                        style={[styles.quickAction, { backgroundColor: COLORS.green50 }, selectedCategory === t('helpProDashboard.catGemelo') && styles.quickActionActive]}
+                        onPress={() => setSelectedCategory(selectedCategory === t('helpProDashboard.catGemelo') ? null : t('helpProDashboard.catGemelo'))}
                     >
                         <MaterialIcons name="smart-toy" size={24} color={COLORS.green600} />
-                        <Text style={styles.quickActionText}>Gemelo</Text>
+                        <Text style={styles.quickActionText}>{t('helpProDashboard.quickGemelo')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.quickAction, { backgroundColor: COLORS.purple50 }, selectedCategory === "Citas" && styles.quickActionActive]}
-                        onPress={() => setSelectedCategory(selectedCategory === "Citas" ? null : "Citas")}
+                        style={[styles.quickAction, { backgroundColor: COLORS.purple50 }, selectedCategory === t('helpProDashboard.catCitas') && styles.quickActionActive]}
+                        onPress={() => setSelectedCategory(selectedCategory === t('helpProDashboard.catCitas') ? null : t('helpProDashboard.catCitas'))}
                     >
                         <MaterialIcons name="calendar-month" size={24} color={COLORS.purple600} />
-                        <Text style={styles.quickActionText}>Citas</Text>
+                        <Text style={styles.quickActionText}>{t('helpProDashboard.quickCitas')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.quickAction, { backgroundColor: COLORS.orange50 }, selectedCategory === "Ganancias" && styles.quickActionActive]}
-                        onPress={() => setSelectedCategory(selectedCategory === "Ganancias" ? null : "Ganancias")}
+                        style={[styles.quickAction, { backgroundColor: COLORS.orange50 }, selectedCategory === t('helpProDashboard.catGanancias') && styles.quickActionActive]}
+                        onPress={() => setSelectedCategory(selectedCategory === t('helpProDashboard.catGanancias') ? null : t('helpProDashboard.catGanancias'))}
                     >
                         <MaterialIcons name="payments" size={24} color={COLORS.orange600} />
-                        <Text style={styles.quickActionText}>Pagos</Text>
+                        <Text style={styles.quickActionText}>{t('helpProDashboard.quickPagos')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.quickAction, { backgroundColor: COLORS.blue50 }, selectedCategory === "Perfil" && styles.quickActionActive]}
-                        onPress={() => setSelectedCategory(selectedCategory === "Perfil" ? null : "Perfil")}
+                        style={[styles.quickAction, { backgroundColor: COLORS.blue50 }, selectedCategory === t('helpProDashboard.catPerfil') && styles.quickActionActive]}
+                        onPress={() => setSelectedCategory(selectedCategory === t('helpProDashboard.catPerfil') ? null : t('helpProDashboard.catPerfil'))}
                     >
                         <MaterialIcons name="analytics" size={24} color={COLORS.blue600} />
-                        <Text style={styles.quickActionText}>Stats</Text>
+                        <Text style={styles.quickActionText}>{t('helpProDashboard.quickStats')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* FAQs */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>
-                        PREGUNTAS FRECUENTES {selectedCategory && `• ${selectedCategory.toUpperCase()}`}
+                        {t('helpProDashboard.faqTitle')} {selectedCategory && `• ${selectedCategory.toUpperCase()}`}
                     </Text>
                     <Text style={styles.sectionSubtitle}>
-                        {filteredFAQs.length} {filteredFAQs.length === 1 ? 'resultado' : 'resultados'}
+                        {filteredFAQs.length} {filteredFAQs.length === 1 ? t('helpProDashboard.result') : t('helpProDashboard.results')}
                     </Text>
                     <View style={styles.faqContainer}>
-                        {filteredFAQs.map((item, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={styles.faqItem}
-                                onPress={() => toggleFAQ(index)}
-                                activeOpacity={0.7}
-                            >
-                                <View style={styles.faqHeader}>
-                                    <View style={styles.faqTitleRow}>
-                                        <View style={[styles.faqCategoryBadge, getCategoryColor(item.category)]}>
-                                            <Text style={styles.faqCategoryText}>{item.category}</Text>
+                        {filteredFAQs.map((item, index) => {
+                            const categoryLabel = t(`helpProDashboard.${item.categoryKey}`);
+                            return (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={styles.faqItem}
+                                    onPress={() => toggleFAQ(index)}
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={styles.faqHeader}>
+                                        <View style={styles.faqTitleRow}>
+                                            <View style={[styles.faqCategoryBadge, getCategoryColor(categoryLabel)]}>
+                                                <Text style={styles.faqCategoryText}>{categoryLabel}</Text>
+                                            </View>
+                                            <MaterialIcons
+                                                name={expandedFAQ === index ? "expand-less" : "expand-more"}
+                                                size={22}
+                                                color={COLORS.gray400}
+                                            />
                                         </View>
-                                        <MaterialIcons
-                                            name={expandedFAQ === index ? "expand-less" : "expand-more"}
-                                            size={22}
-                                            color={COLORS.gray400}
-                                        />
+                                        <Text style={styles.faqQuestion}>{t(`helpProDashboard.${item.qKey}`)}</Text>
                                     </View>
-                                    <Text style={styles.faqQuestion}>{item.question}</Text>
-                                </View>
-                                {expandedFAQ === index && (
-                                    <Text style={styles.faqAnswer}>{item.answer}</Text>
-                                )}
-                            </TouchableOpacity>
-                        ))}
+                                    {expandedFAQ === index && (
+                                        <Text style={styles.faqAnswer}>{t(`helpProDashboard.${item.aKey}`)}</Text>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 </View>
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpProDashboard.guidesTitle')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity
@@ -395,8 +277,8 @@ export default function HelpProDashboardScreen() {
                                     <MaterialIcons name={item.icon} size={18} color={COLORS.primary} />
                                 </View>
                                 <View style={styles.guideInfo}>
-                                    <Text style={styles.guideTitle}>{item.title}</Text>
-                                    <Text style={styles.guideDuration}>{item.duration}</Text>
+                                    <Text style={styles.guideTitle}>{t(`helpProDashboard.${item.titleKey}`)}</Text>
+                                    <Text style={styles.guideDuration}>{t(`helpProDashboard.${item.durationKey}`)}</Text>
                                 </View>
                                 <MaterialIcons name="chevron-right" size={20} color={COLORS.gray200} />
                             </TouchableOpacity>
@@ -406,7 +288,7 @@ export default function HelpProDashboardScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpProDashboard.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -416,7 +298,7 @@ export default function HelpProDashboardScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpProDashboard.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />

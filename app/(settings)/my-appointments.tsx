@@ -1,7 +1,8 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     Linking,
     RefreshControl,
     ScrollView,
@@ -17,6 +18,7 @@ import { getAssetUrl } from "../../api";
 import { Appointment, getAppointments, cancelAppointment } from "../../api/appointment";
 import { createCheckoutSession } from "../../api/payment";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#137fec",
@@ -59,86 +61,11 @@ function formatDate(dateStr: string): string {
     return `${day} ${month}`;
 }
 
-function getStatusConfig(
-    status: string,
-    paymentStatus?: string,
-    appointmentType?: string,
-    requirePaymentOnBooking?: boolean
-) {
-    // Determine if this is an in-situ payment case (presencial + professional allows in-situ)
-    const isInSituPayment = appointmentType === 'presencial' && requirePaymentOnBooking === false;
-
-    // Handle pre-authorized payment (funds held, pending professional confirmation)
-    if (paymentStatus === 'authorized') {
-        return {
-            label: "Pago reservado",
-            icon: "hourglass-top",
-            bgColor: "#eff6ff", // blue-50
-            textColor: "#1d4ed8", // blue-700
-            borderColor: "#dbeafe", // blue-100
-        };
-    }
-
-    // Only show "Pago pendiente" if payment is actually required before appointment
-    // For in-situ payments, show the actual appointment status instead
-    if (paymentStatus === 'pending' && (status === 'pending' || status === 'confirmed') && !isInSituPayment) {
-        return {
-            label: "Pago pendiente",
-            icon: "payment",
-            bgColor: COLORS.yellow50,
-            textColor: COLORS.yellow700,
-            borderColor: COLORS.yellow100,
-        };
-    }
-
-    switch (status) {
-        case "confirmed":
-            return {
-                label: "Confirmada",
-                icon: "check-circle",
-                bgColor: COLORS.green50,
-                textColor: COLORS.green700,
-                borderColor: COLORS.green100,
-            };
-        case "pending":
-            return {
-                label: "Pendiente",
-                icon: "schedule",
-                bgColor: COLORS.yellow50,
-                textColor: COLORS.yellow700,
-                borderColor: COLORS.yellow100,
-            };
-        case "cancelled":
-            return {
-                label: "Cancelada",
-                icon: "cancel",
-                bgColor: COLORS.red50,
-                textColor: COLORS.red600,
-                borderColor: COLORS.red100,
-            };
-        case "completed":
-            return {
-                label: "Completada",
-                icon: "task-alt",
-                bgColor: COLORS.green50,
-                textColor: COLORS.green700,
-                borderColor: COLORS.green100,
-            };
-        default:
-            return {
-                label: status,
-                icon: "info",
-                bgColor: COLORS.gray100,
-                textColor: COLORS.gray500,
-                borderColor: COLORS.gray200,
-            };
-    }
-}
-
 export default function MyAppointmentsScreen() {
     const { tab } = useLocalSearchParams<{ tab?: string }>();
     const { token } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -147,7 +74,79 @@ export default function MyAppointmentsScreen() {
     // Determine which view to show based on tab parameter
     const showUpcoming = tab !== 'history';
     const showHistory = tab === 'history';
-    const headerTitle = showHistory ? "Historial de Citas" : "Próximas Citas";
+    const headerTitle = showHistory ? t('myAppointmentsScreen.historyTitle') : t('myAppointmentsScreen.upcomingTitle');
+
+    function getStatusConfig(
+        status: string,
+        paymentStatus?: string,
+        appointmentType?: string,
+        requirePaymentOnBooking?: boolean
+    ) {
+        const isInSituPayment = appointmentType === 'presencial' && requirePaymentOnBooking === false;
+
+        if (paymentStatus === 'authorized') {
+            return {
+                label: t('myAppointmentsScreen.statusPaymentReserved'),
+                icon: "hourglass-top",
+                bgColor: "#eff6ff",
+                textColor: "#1d4ed8",
+                borderColor: "#dbeafe",
+            };
+        }
+
+        if (paymentStatus === 'pending' && (status === 'pending' || status === 'confirmed') && !isInSituPayment) {
+            return {
+                label: t('myAppointmentsScreen.statusPaymentPending'),
+                icon: "payment",
+                bgColor: COLORS.yellow50,
+                textColor: COLORS.yellow700,
+                borderColor: COLORS.yellow100,
+            };
+        }
+
+        switch (status) {
+            case "confirmed":
+                return {
+                    label: t('myAppointmentsScreen.statusConfirmed'),
+                    icon: "check-circle",
+                    bgColor: COLORS.green50,
+                    textColor: COLORS.green700,
+                    borderColor: COLORS.green100,
+                };
+            case "pending":
+                return {
+                    label: t('myAppointmentsScreen.statusPending'),
+                    icon: "schedule",
+                    bgColor: COLORS.yellow50,
+                    textColor: COLORS.yellow700,
+                    borderColor: COLORS.yellow100,
+                };
+            case "cancelled":
+                return {
+                    label: t('myAppointmentsScreen.statusCancelled'),
+                    icon: "cancel",
+                    bgColor: COLORS.red50,
+                    textColor: COLORS.red600,
+                    borderColor: COLORS.red100,
+                };
+            case "completed":
+                return {
+                    label: t('myAppointmentsScreen.statusCompleted'),
+                    icon: "task-alt",
+                    bgColor: COLORS.green50,
+                    textColor: COLORS.green700,
+                    borderColor: COLORS.green100,
+                };
+            default:
+                return {
+                    label: status,
+                    icon: "info",
+                    bgColor: COLORS.gray100,
+                    textColor: COLORS.gray500,
+                    borderColor: COLORS.gray200,
+                };
+        }
+    }
 
     const loadAppointments = useCallback(async (showRefresh = false) => {
         console.log("[MyAppointments] Loading appointments, token:", token ? "present" : "missing");
@@ -187,13 +186,13 @@ export default function MyAppointmentsScreen() {
 
     const handleCancel = (appointment: Appointment) => {
         showAlert({
-    type: 'info',
-    title: 'Cancelar Cita',
-    message: '',
-    buttons: [
+            type: 'info',
+            title: t('myAppointmentsScreen.cancelTitle'),
+            message: '',
+            buttons: [
                 { text: "No", style: "cancel" },
                 {
-                    text: "Sí, cancelar",
+                    text: t('myAppointmentsScreen.cancelYes'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token) return;
@@ -201,16 +200,16 @@ export default function MyAppointmentsScreen() {
                         try {
                             await cancelAppointment(token, appointment._id);
                             await loadAppointments();
-                            showAlert({ type: 'success', title: 'Éxito', message: 'La cita ha sido cancelada' });
+                            showAlert({ type: 'success', title: t('common:success'), message: t('myAppointmentsScreen.cancelSuccess') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cancelar la cita" });
+                            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('myAppointmentsScreen.cancelError') });
                         } finally {
                             setCancellingId(null);
                         }
                     },
                 },
             ]
-});
+        });
     };
 
     const handlePayNow = async (appointmentId: string) => {
@@ -222,11 +221,11 @@ export default function MyAppointmentsScreen() {
             if (canOpen) {
                 await Linking.openURL(session.url);
             } else {
-                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
+                showAlert({ type: 'error', title: t('common:error'), message: t('myAppointmentsScreen.paymentError') });
             }
         } catch (error: any) {
             console.error("Payment error:", error);
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo iniciar el pago" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('myAppointmentsScreen.paymentStartError') });
         }
     };
 
@@ -325,7 +324,7 @@ export default function MyAppointmentsScreen() {
                                 color={COLORS.primary}
                             />
                             <Text style={styles.infoText}>
-                                {appointment.type === "videoconference" ? "Online" : "Presencial"}
+                                {appointment.type === "videoconference" ? t('myAppointmentsScreen.online') : t('myAppointmentsScreen.inPerson')}
                             </Text>
                         </View>
                     </View>
@@ -334,7 +333,7 @@ export default function MyAppointmentsScreen() {
                     {isInSituPayment && appointment.paymentStatus === 'pending' && isActive && (
                         <View style={styles.inSituBadge}>
                             <MaterialIcons name="store" size={14} color={COLORS.blue700} />
-                            <Text style={styles.inSituText}>Pago presencial • {(appointment.price / 100).toFixed(0)}€</Text>
+                            <Text style={styles.inSituText}>{t('myAppointmentsScreen.inSituPayment')} • {(appointment.price / 100).toFixed(0)}€</Text>
                         </View>
                     )}
 
@@ -347,7 +346,7 @@ export default function MyAppointmentsScreen() {
                                     onPress={() => handlePayNow(appointment._id)}
                                 >
                                     <MaterialIcons name="payment" size={16} color={COLORS.white} />
-                                    <Text style={styles.payButtonText}>Pagar</Text>
+                                    <Text style={styles.payButtonText}>{t('myAppointmentsScreen.pay')}</Text>
                                 </TouchableOpacity>
                             )}
                             {showOptionalPayButton && (
@@ -356,7 +355,7 @@ export default function MyAppointmentsScreen() {
                                     onPress={() => handlePayNow(appointment._id)}
                                 >
                                     <MaterialIcons name="payment" size={16} color={COLORS.primary} />
-                                    <Text style={styles.optionalPayButtonText}>Pagar ahora</Text>
+                                    <Text style={styles.optionalPayButtonText}>{t('myAppointmentsScreen.payNow')}</Text>
                                 </TouchableOpacity>
                             )}
                             <TouchableOpacity
@@ -369,7 +368,7 @@ export default function MyAppointmentsScreen() {
                                 ) : (
                                     <>
                                         <MaterialIcons name="cancel" size={16} color={COLORS.red600} />
-                                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                                        <Text style={styles.cancelButtonText}>{t('myAppointmentsScreen.cancel')}</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -398,15 +397,15 @@ export default function MyAppointmentsScreen() {
             ) : appointments.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="event-busy" size={64} color={COLORS.gray400} />
-                    <Text style={styles.emptyTitle}>No tienes citas</Text>
+                    <Text style={styles.emptyTitle}>{t('myAppointmentsScreen.noAppointments')}</Text>
                     <Text style={styles.emptySubtitle}>
-                        Explora nuestro directorio para encontrar profesionales y agendar tu primera cita
+                        {t('myAppointmentsScreen.noAppointmentsDesc')}
                     </Text>
                     <TouchableOpacity
                         style={styles.exploreButton}
                         onPress={() => router.push("/(tabs)/category-results?category=todos" as any)}
                     >
-                        <Text style={styles.exploreButtonText}>Explorar Profesionales</Text>
+                        <Text style={styles.exploreButtonText}>{t('myAppointmentsScreen.explore')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (

@@ -10,6 +10,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../context";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#FFED00",
@@ -27,12 +28,11 @@ export default function AccountSuspendedScreen() {
     const router = useRouter();
     const { logout } = useAuth();
     const params = useLocalSearchParams<{ reason?: string }>();
+    const { t } = useTranslation('auth');
 
     const handleContactSupport = () => {
-        const subject = encodeURIComponent("Consulta sobre cuenta suspendida");
-        const body = encodeURIComponent(
-            "Hola,\n\nMe gustaría obtener más información sobre la suspensión de mi cuenta.\n\nGracias."
-        );
+        const subject = encodeURIComponent(t('accountSuspended.emailSubject'));
+        const body = encodeURIComponent(t('accountSuspended.emailBody'));
         Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
     };
 
@@ -50,22 +50,22 @@ export default function AccountSuspendedScreen() {
                 </View>
 
                 {/* Title */}
-                <Text style={styles.title}>Cuenta suspendida</Text>
+                <Text style={styles.title}>{t('accountSuspended.title')}</Text>
 
                 {/* Description */}
                 <Text style={styles.description}>
-                    Tu cuenta ha sido suspendida debido a una posible violación de las normas de uso de TwinPro.
+                    {t('accountSuspended.description')}
                 </Text>
 
                 {params.reason && (
                     <View style={styles.reasonContainer}>
-                        <Text style={styles.reasonLabel}>Motivo:</Text>
+                        <Text style={styles.reasonLabel}>{t('accountSuspended.reasonLabel')}</Text>
                         <Text style={styles.reasonText}>{params.reason}</Text>
                     </View>
                 )}
 
                 <Text style={styles.infoText}>
-                    Si crees que esto es un error o necesitas más información, ponte en contacto con nuestro equipo de soporte.
+                    {t('accountSuspended.infoText')}
                 </Text>
 
                 {/* Contact Support Button */}
@@ -74,7 +74,7 @@ export default function AccountSuspendedScreen() {
                     onPress={handleContactSupport}
                 >
                     <MaterialIcons name="email" size={20} color={COLORS.textMain} />
-                    <Text style={styles.primaryButtonText}>Contactar con soporte</Text>
+                    <Text style={styles.primaryButtonText}>{t('accountSuspended.contactSupport')}</Text>
                 </TouchableOpacity>
 
                 {/* Logout Button */}
@@ -82,7 +82,7 @@ export default function AccountSuspendedScreen() {
                     style={styles.secondaryButton}
                     onPress={handleLogout}
                 >
-                    <Text style={styles.secondaryButtonText}>Cerrar sesión</Text>
+                    <Text style={styles.secondaryButtonText}>{t('accountSuspended.logout')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

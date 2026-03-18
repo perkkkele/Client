@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -52,6 +53,8 @@ const LICENSES: License[] = [
 ];
 
 export default function OpenSourceLicensesScreen() {
+    const { t } = useTranslation('settings');
+
     function handleBack() {
         router.back();
     }
@@ -63,7 +66,7 @@ export default function OpenSourceLicensesScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle} numberOfLines={1}>Licencias de Código Abierto</Text>
+                <Text style={styles.headerTitle} numberOfLines={1}>{t('licensesScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -74,7 +77,7 @@ export default function OpenSourceLicensesScreen() {
             >
                 {/* Intro */}
                 <Text style={styles.introText}>
-                    TwinPro utiliza software de código abierto para ofrecer la mejor experiencia posible. Agradecemos a los autores y contribuidores de las siguientes bibliotecas y herramientas.
+                    {t('licensesScreen.introText')}
                 </Text>
 
                 {/* Licenses */}
@@ -93,7 +96,7 @@ export default function OpenSourceLicensesScreen() {
 
                 {/* Footer */}
                 <Text style={styles.footerText}>
-                    Todas las marcas comerciales son propiedad de sus respectivos dueños.
+                    {t('licensesScreen.footerText')}
                 </Text>
             </ScrollView>
         </SafeAreaView>

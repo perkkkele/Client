@@ -156,7 +156,7 @@ export interface User {
     publicName?: string | null;
     profession?: string | null;
     businessName?: string | null;  // Nombre de empresa/marca profesional
-    businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro' | null;
+    businessType?: 'freelance' | 'company' | 'clinic' | null;
     category?: CategoryType | null;
     customCategory?: string | null;  // Free-text when category === 'otro'
     specialties?: string[];
@@ -291,7 +291,7 @@ export interface UserUpdateData {
     publicName?: string;
     profession?: string;
     businessName?: string;  // Nombre de empresa/marca profesional
-    businessType?: 'Autónomo' | 'Empresa' | 'Clínica/Centro';
+    businessType?: 'freelance' | 'company' | 'clinic';
     category?: CategoryType;
     customCategory?: string;  // Free-text when category === 'otro'
     specialties?: string[];

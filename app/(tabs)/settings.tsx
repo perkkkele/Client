@@ -15,6 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -55,12 +56,13 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 export default function SettingsScreen() {
     const { user, token, updateUserProfile } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname
         ? `${user.firstname}${user.lastname ? ` ${user.lastname}` : ""}`
-        : "Usuario Anónimo";
+        : t('common:anonymous');
 
     function handleBack() {
         router.back();
@@ -70,7 +72,7 @@ export default function SettingsScreen() {
         // Pedir permiso
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
-            showAlert({ type: 'warning', title: 'Permiso requerido', message: 'Necesitamos acceso a tu galería para cambiar tu foto. Puedes habilitarlo en los ajustes de tu dispositivo.' });
+            showAlert({ type: 'warning', title: t('avatar.permissionRequired'), message: t('avatar.permissionMessage') });
             return;
         }
 
@@ -89,7 +91,7 @@ export default function SettingsScreen() {
 
     async function handleChangeAvatar(imageUri: string) {
         if (!token) {
-            showAlert({ type: 'error', title: 'Sesión no activa', message: 'Tu sesión ha expirado. Inicia sesión de nuevo para continuar.' });
+            showAlert({ type: 'error', title: t('avatar.sessionExpired'), message: t('avatar.sessionExpiredMessage') });
             return;
         }
 
@@ -97,10 +99,10 @@ export default function SettingsScreen() {
         try {
             const updatedUser = await userApi.updateAvatar(token, imageUri);
             await updateUserProfile(updatedUser);
-            showAlert({ type: 'success', title: '¡Foto actualizada!', message: 'Tu foto de perfil se ha actualizado correctamente.' });
+            showAlert({ type: 'success', title: t('avatar.updated'), message: t('avatar.updatedMessage') });
         } catch (error: any) {
             console.error("Error updating avatar:", error.message || error);
-            showAlert({ type: 'error', title: 'Error al subir foto', message: error.message || 'No se pudo actualizar la foto de perfil. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('avatar.uploadError'), message: error.message || t('avatar.uploadErrorMessage') });
         } finally {
             setIsUploadingAvatar(false);
         }
@@ -124,21 +126,21 @@ export default function SettingsScreen() {
             icon: "support-agent",
             iconColor: COLORS.orange600,
             iconBg: COLORS.orange100,
-            label: "Mis Consultas",
+            label: t('items.myConsultations'),
             onPress: () => router.push("/my-escalated-chats" as any),
         },
         {
             icon: "event-available",
             iconColor: COLORS.green600,
             iconBg: COLORS.green100,
-            label: "Próximas citas",
+            label: t('items.upcomingAppointments'),
             onPress: () => router.push("/(settings)/my-appointments?tab=upcoming"),
         },
         {
             icon: "history",
             iconColor: COLORS.green600,
             iconBg: COLORS.green100,
-            label: "Historial de citas",
+            label: t('items.appointmentHistory'),
             onPress: () => router.push("/(settings)/my-appointments?tab=history"),
         },
     ];
@@ -148,15 +150,15 @@ export default function SettingsScreen() {
             icon: "notifications",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Notificaciones",
+            label: t('items.notifications'),
             onPress: () => router.push("/(settings)/client-notification-settings"),
         },
         {
             icon: "language",
             iconColor: COLORS.orange600,
             iconBg: COLORS.orange100,
-            label: "Idioma",
-            value: "Español",
+            label: t('items.language'),
+            value: t('languages.es'),
         },
     ];
 
@@ -165,35 +167,35 @@ export default function SettingsScreen() {
             icon: "help",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Centro de ayuda",
+            label: t('items.helpCenter'),
             onPress: () => router.push("/(settings)/help-center"),
         },
         {
             icon: "support-agent",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Contactar con soporte",
+            label: t('items.contactSupport'),
             onPress: () => router.push("/(settings)/contact-support"),
         },
         {
             icon: "feedback",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Enviar comentarios",
+            label: t('items.sendFeedback'),
             onPress: () => router.push("/(settings)/send-feedback"),
         },
         {
             icon: "description",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Condiciones y Política de privacidad",
+            label: t('items.termsAndPrivacy'),
             onPress: () => router.push("/(settings)/terms-privacy"),
         },
         {
             icon: "info",
             iconColor: COLORS.blue600,
             iconBg: COLORS.blue100,
-            label: "Info de la aplicación",
+            label: t('items.appInfo'),
             onPress: () => router.push("/(settings)/app-info"),
         },
     ];
@@ -203,14 +205,14 @@ export default function SettingsScreen() {
             icon: "logout",
             iconColor: COLORS.gray600,
             iconBg: COLORS.gray100,
-            label: "Cerrar sesión",
+            label: t('items.logout'),
             onPress: handleLogout,
         },
         {
             icon: "delete-forever",
             iconColor: COLORS.red600,
             iconBg: COLORS.red100,
-            label: "Eliminar cuenta definitivamente",
+            label: t('items.deleteAccount'),
             isDestructive: true,
             onPress: handleDeleteAccount,
         },
@@ -265,7 +267,7 @@ export default function SettingsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Ajustes</Text>
+                <Text style={styles.headerTitle}>{t('title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -300,15 +302,15 @@ export default function SettingsScreen() {
                     </TouchableOpacity>
                     <Text style={styles.displayName}>{displayName}</Text>
                     <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
-                        <Text style={styles.editProfileButtonText}>Editar perfil</Text>
+                        <Text style={styles.editProfileButtonText}>{t('editProfile')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Settings Groups */}
-                {renderSettingsGroup("Mis Citas", appointmentItems)}
-                {renderSettingsGroup("Personalización", personalizationItems)}
-                {renderSettingsGroup("Ayuda y Comentarios", helpItems)}
-                {renderSettingsGroup("Gestión de Cuenta", accountItems)}
+                {renderSettingsGroup(t('sections.appointments'), appointmentItems)}
+                {renderSettingsGroup(t('sections.personalization'), personalizationItems)}
+                {renderSettingsGroup(t('sections.helpAndFeedback'), helpItems)}
+                {renderSettingsGroup(t('sections.accountManagement'), accountItems)}
             </ScrollView>
         </SafeAreaView>
     );

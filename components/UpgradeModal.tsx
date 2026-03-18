@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
     Modal,
     View,
@@ -57,6 +58,7 @@ export default function UpgradeModal({
     featureName,
     requiredPlan,
 }: UpgradeModalProps) {
+    const { t } = useTranslation('settings');
     const planInfo = PLAN_INFO[requiredPlan];
 
     const handleViewPlans = () => {
@@ -79,12 +81,11 @@ export default function UpgradeModal({
                     </View>
 
                     {/* Title */}
-                    <Text style={styles.title}>Función Premium</Text>
+                    <Text style={styles.title}>{t('upgradeModal.title')}</Text>
 
                     {/* Description */}
                     <Text style={styles.description}>
-                        <Text style={styles.featureName}>{featureName}</Text> está disponible en el plan{" "}
-                        <Text style={[styles.planName, { color: planInfo.color }]}>{planInfo.name}</Text>.
+                        {t('upgradeModal.description', { featureName, planName: planInfo.name })}
                     </Text>
 
                     {/* Plan Badge */}
@@ -102,11 +103,11 @@ export default function UpgradeModal({
                             onPress={handleViewPlans}
                         >
                             <MaterialIcons name="upgrade" size={20} color="#FFFFFF" />
-                            <Text style={styles.upgradeButtonText}>Ver Planes</Text>
+                            <Text style={styles.upgradeButtonText}>{t('upgradeModal.viewPlans')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                            <Text style={styles.closeButtonText}>Ahora no</Text>
+                            <Text style={styles.closeButtonText}>{t('upgradeModal.notNow')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

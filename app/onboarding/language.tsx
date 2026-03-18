@@ -6,12 +6,15 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,} from "react-native";
+    ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
+import { changeLanguage, type SupportedLanguage } from '../../services/i18n';
 
 const COLORS = {
     primary: "#FFEA00",
@@ -40,9 +43,16 @@ const LANGUAGES: Language[] = [
 
 export default function LanguageScreen() {
     const { token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     const [selectedLanguage, setSelectedLanguage] = useState<'es' | 'en' | 'fr' | 'de'>("es");
     const [isSaving, setIsSaving] = useState(false);
+
+    // When user taps a language, update i18next immediately for preview
+    async function handleSelectLanguage(lang: SupportedLanguage) {
+        setSelectedLanguage(lang);
+        await changeLanguage(lang);
+    }
 
     async function handleContinue() {
         if (!token) {
@@ -63,7 +73,7 @@ export default function LanguageScreen() {
             router.push("/onboarding/profile-type");
         } catch (error: any) {
             console.error("Error saving language:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar el idioma. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('languageScreen.saveError') });
         } finally {
             setIsSaving(false);
         }
@@ -78,11 +88,11 @@ export default function LanguageScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>
-                        Te damos la{"\n"}bienvenida a{" "}
+                        {t('languageScreen.title')}{" "}
                         <Text style={styles.titleHighlight}>TwinPro</Text>
                     </Text>
                     <Text style={styles.subtitle}>
-                        Selecciona tu idioma para poder continuar
+                        {t('languageScreen.subtitle')}
                     </Text>
                 </View>
 
@@ -95,7 +105,7 @@ export default function LanguageScreen() {
                                 styles.languageButton,
                                 selectedLanguage === lang.id && styles.languageButtonSelected,
                             ]}
-                            onPress={() => setSelectedLanguage(lang.id)}
+                            onPress={() => handleSelectLanguage(lang.id)}
                             activeOpacity={0.7}
                         >
                             <View style={styles.languageContent}>
@@ -131,7 +141,7 @@ export default function LanguageScreen() {
                         <ActivityIndicator color={COLORS.gray900} />
                     ) : (
                         <>
-                            <Text style={styles.continueButtonText}>Continuar</Text>
+                            <Text style={styles.continueButtonText}>{t('languageScreen.continue')}</Text>
                             <Ionicons name="arrow-forward" size={20} color={COLORS.gray900} />
                         </>
                     )}

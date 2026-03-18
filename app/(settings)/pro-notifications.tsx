@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ScrollView,
     StyleSheet,
@@ -63,27 +64,31 @@ const getNotificationIcon = (type: Notification["type"]) => {
     }
 };
 
-const formatTimestamp = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Ahora";
-    if (diffMins < 60) return `Hace ${diffMins} min`;
-    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours !== 1 ? "s" : ""}`;
-    if (diffDays === 1) return "Ayer";
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
-};
-
 export default function ProNotificationsScreen() {
     const { user, token } = useAuth();
+    const { t, i18n } = useTranslation('settings');
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    const LOCALE_MAP: Record<string, string> = { es: 'es-ES', en: 'en-US', fr: 'fr-FR', de: 'de-DE' };
+    const locale = LOCALE_MAP[i18n.language] || 'es-ES';
+
+    const formatTimestamp = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return t('proNotifications.now');
+        if (diffMins < 60) return t('proNotifications.agoMinutes', { count: diffMins });
+        if (diffHours < 24) return diffHours !== 1 ? t('proNotifications.agoHours', { count: diffHours }) : t('proNotifications.agoHour', { count: diffHours });
+        if (diffDays === 1) return t('proNotifications.yesterday');
+        if (diffDays < 7) return t('proNotifications.agoDays', { count: diffDays });
+        return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
+    };
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -321,7 +326,7 @@ export default function ProNotificationsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notificaciones</Text>
+                <Text style={styles.headerTitle}>{t('proNotifications.headerTitle')}</Text>
                 {unreadCount > 0 ? (
                     <TouchableOpacity style={styles.headerButton} onPress={markAllAsRead}>
                         <MaterialIcons name="done-all" size={24} color={COLORS.primary} />
@@ -336,7 +341,7 @@ export default function ProNotificationsScreen() {
                 <View style={styles.unreadBanner}>
                     <MaterialIcons name="notifications-active" size={18} color={COLORS.primary} />
                     <Text style={styles.unreadBannerText}>
-                        {unreadCount} notificación{unreadCount !== 1 ? "es" : ""} sin leer
+                        {unreadCount !== 1 ? t('proNotifications.unreadCountPlural', { count: unreadCount }) : t('proNotifications.unreadCount', { count: unreadCount })}
                     </Text>
                 </View>
             )}
@@ -361,9 +366,9 @@ export default function ProNotificationsScreen() {
                     {notifications.length === 0 ? (
                         <View style={styles.emptyContainer}>
                             <MaterialIcons name="notifications-none" size={64} color={COLORS.gray300} />
-                            <Text style={styles.emptyTitle}>Sin notificaciones</Text>
+                            <Text style={styles.emptyTitle}>{t('proNotifications.emptyTitle')}</Text>
                             <Text style={styles.emptySubtitle}>
-                                Las notificaciones de tu actividad aparecerán aquí
+                                {t('proNotifications.emptySubtitle')}
                             </Text>
                         </View>
                     ) : (

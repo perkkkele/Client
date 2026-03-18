@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { notificationsApi, NotificationPreferences } from "../../api/notifications";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#137fec",
@@ -45,60 +46,61 @@ interface NotificationCategory {
     critical?: boolean;
 }
 
-const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
-    {
-        key: "escalations",
-        title: "Escalaciones",
-        description: "Chats que requieren tu atención directa",
-        icon: "support-agent",
-        iconBg: COLORS.orange50,
-        iconColor: COLORS.orange500,
-        critical: true,
-    },
-    {
-        key: "appointments",
-        title: "Citas",
-        description: "Reservas, cancelaciones y recordatorios",
-        icon: "calendar-today",
-        iconBg: COLORS.blue50,
-        iconColor: COLORS.blue500,
-    },
-    {
-        key: "reviews",
-        title: "Reseñas",
-        description: "Nuevas valoraciones de clientes",
-        icon: "star",
-        iconBg: COLORS.purple50,
-        iconColor: COLORS.purple500,
-    },
-    {
-        key: "earnings",
-        title: "Ingresos",
-        description: "Pagos recibidos y resúmenes",
-        icon: "payments",
-        iconBg: "#f0fdf4",
-        iconColor: COLORS.green500,
-    },
-    {
-        key: "billing",
-        title: "Planes y Facturación",
-        description: "Renovaciones, facturas y alertas de créditos",
-        icon: "receipt-long",
-        iconBg: "#fef2f2",
-        iconColor: "#EF4444",
-    },
-    {
-        key: "system",
-        title: "Sistema",
-        description: "Actualizaciones y mejoras de la plataforma",
-        icon: "info",
-        iconBg: COLORS.gray100,
-        iconColor: COLORS.gray500,
-    },
-];
-
 export default function NotificationSettingsScreen() {
+    const { t } = useTranslation('settings');
     const { user, token } = useAuth();
+
+    const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+        {
+            key: "escalations",
+            title: t('notificationSettingsScreen.categories.escalations'),
+            description: t('notificationSettingsScreen.categories.escalationsDesc'),
+            icon: "support-agent",
+            iconBg: COLORS.orange50,
+            iconColor: COLORS.orange500,
+            critical: true,
+        },
+        {
+            key: "appointments",
+            title: t('notificationSettingsScreen.categories.appointments'),
+            description: t('notificationSettingsScreen.categories.appointmentsDesc'),
+            icon: "calendar-today",
+            iconBg: COLORS.blue50,
+            iconColor: COLORS.blue500,
+        },
+        {
+            key: "reviews",
+            title: t('notificationSettingsScreen.categories.reviews'),
+            description: t('notificationSettingsScreen.categories.reviewsDesc'),
+            icon: "star",
+            iconBg: COLORS.purple50,
+            iconColor: COLORS.purple500,
+        },
+        {
+            key: "earnings",
+            title: t('notificationSettingsScreen.categories.earnings'),
+            description: t('notificationSettingsScreen.categories.earningsDesc'),
+            icon: "payments",
+            iconBg: "#f0fdf4",
+            iconColor: COLORS.green500,
+        },
+        {
+            key: "billing",
+            title: t('notificationSettingsScreen.categories.billing'),
+            description: t('notificationSettingsScreen.categories.billingDesc'),
+            icon: "receipt-long",
+            iconBg: "#fef2f2",
+            iconColor: "#EF4444",
+        },
+        {
+            key: "system",
+            title: t('notificationSettingsScreen.categories.system'),
+            description: t('notificationSettingsScreen.categories.systemDesc'),
+            icon: "info",
+            iconBg: COLORS.gray100,
+            iconColor: COLORS.gray500,
+        },
+    ];
     const [preferences, setPreferences] = useState<NotificationPreferences>({
         escalations: true,
         appointments: true,
@@ -163,7 +165,7 @@ export default function NotificationSettingsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notificaciones</Text>
+                <Text style={styles.headerTitle}>{t('notificationSettingsScreen.headerTitle')}</Text>
                 <View style={styles.headerButton}>
                     {saving && <ActivityIndicator size="small" color={COLORS.primary} />}
                 </View>
@@ -183,7 +185,7 @@ export default function NotificationSettingsScreen() {
                     <View style={styles.infoBanner}>
                         <MaterialIcons name="notifications-active" size={20} color={COLORS.primary} />
                         <Text style={styles.infoBannerText}>
-                            Configura qué notificaciones quieres recibir en tu panel profesional
+                            {t('notificationSettingsScreen.infoBanner')}
                         </Text>
                     </View>
 
@@ -209,7 +211,7 @@ export default function NotificationSettingsScreen() {
                                         <Text style={styles.categoryTitle}>{category.title}</Text>
                                         {category.critical && (
                                             <View style={styles.criticalBadge}>
-                                                <Text style={styles.criticalBadgeText}>Crítico</Text>
+                                                <Text style={styles.criticalBadgeText}>{t('notificationSettingsScreen.criticalBadge')}</Text>
                                             </View>
                                         )}
                                     </View>
@@ -230,7 +232,7 @@ export default function NotificationSettingsScreen() {
 
                     {/* Footer Note */}
                     <Text style={styles.footerNote}>
-                        Las notificaciones de escalaciones siempre están recomendadas ya que son críticas para tu negocio.
+                        {t('notificationSettingsScreen.footerNote')}
                     </Text>
                 </ScrollView>
             )}

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, Switch, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -24,6 +25,7 @@ export default function AppointmentsBlock({
     onToggleAutoConfirm,
     onTogglePaymentRequired,
 }: AppointmentsBlockProps) {
+    const { t } = useTranslation('settings');
     return (
         <View style={styles.card}>
             {/* Header */}
@@ -31,7 +33,7 @@ export default function AppointmentsBlock({
                 <View style={styles.headerIcon}>
                     <MaterialIcons name="calendar-month" size={22} color={COLORS.orange600} />
                 </View>
-                <Text style={styles.headerTitle}>Gestión de Citas</Text>
+                <Text style={styles.headerTitle}>{t('appointmentsBlock.title')}</Text>
             </View>
 
             {/* Agendar Citas Toggle */}
@@ -40,11 +42,11 @@ export default function AppointmentsBlock({
                     <MaterialIcons name="event" size={20} color={COLORS.orange600} />
                 </View>
                 <View style={styles.toggleInfo}>
-                    <Text style={styles.toggleLabel}>Agendar Citas</Text>
+                    <Text style={styles.toggleLabel}>{t('appointmentsBlock.scheduleAppointments')}</Text>
                     <Text style={styles.toggleHint}>
                         {user?.appointmentsEnabled
-                            ? "Los clientes pueden reservar citas"
-                            : "Activa para que los clientes reserven"
+                            ? t('appointmentsBlock.clientsCanBook')
+                            : t('appointmentsBlock.activateToBook')
                         }
                     </Text>
                 </View>
@@ -73,12 +75,12 @@ export default function AppointmentsBlock({
                 </View>
                 <View style={styles.toggleInfo}>
                     <Text style={[styles.toggleLabel, !user?.appointmentsEnabled && styles.textDisabled]}>
-                        Confirmación automática
+                        {t('appointmentsBlock.autoConfirmation')}
                     </Text>
                     <Text style={[styles.toggleHint, !user?.appointmentsEnabled && styles.textDisabled]}>
                         {user?.autoConfirmAppointments !== false
-                            ? "Citas se confirman al instante"
-                            : "Requiere confirmación manual"
+                            ? t('appointmentsBlock.confirmedInstantly')
+                            : t('appointmentsBlock.requiresManual')
                         }
                     </Text>
                 </View>
@@ -108,12 +110,12 @@ export default function AppointmentsBlock({
                 </View>
                 <View style={styles.toggleInfo}>
                     <Text style={[styles.toggleLabel, !user?.appointmentsEnabled && styles.textDisabled]}>
-                        Pago al reservar
+                        {t('appointmentsBlock.paymentOnBooking')}
                     </Text>
                     <Text style={[styles.toggleHint, !user?.appointmentsEnabled && styles.textDisabled]}>
                         {user?.requirePaymentOnBooking !== false
-                            ? "Cobrar al agendar citas presenciales"
-                            : "Cobrar in situ (cliente paga al llegar)"
+                            ? t('appointmentsBlock.chargeOnBooking')
+                            : t('appointmentsBlock.chargeOnSite')
                         }
                     </Text>
                 </View>
@@ -133,21 +135,21 @@ export default function AppointmentsBlock({
                     onPress={() => router.push("/(settings)/manage-appointments")}
                 >
                     <MaterialIcons name="event-note" size={18} color={COLORS.textMain} />
-                    <Text style={styles.actionButtonText}>Ver citas</Text>
+                    <Text style={styles.actionButtonText}>{t('appointmentsBlock.viewAppointments')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => router.push("/(settings)/appointment-pricing")}
                 >
                     <MaterialIcons name="euro" size={18} color={COLORS.textMain} />
-                    <Text style={styles.actionButtonText}>Tarifas</Text>
+                    <Text style={styles.actionButtonText}>{t('appointmentsBlock.pricing')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.actionButton}
                     onPress={() => router.push("/(settings)/work-schedule")}
                 >
                     <MaterialIcons name="schedule" size={18} color={COLORS.textMain} />
-                    <Text style={styles.actionButtonText}>Horario</Text>
+                    <Text style={styles.actionButtonText}>{t('appointmentsBlock.schedule')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

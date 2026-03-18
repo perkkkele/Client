@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ScrollView,
     StyleSheet,
@@ -29,17 +30,18 @@ interface Topic {
     percentage: number;
 }
 
-const TOPICS: Topic[] = [
-    { name: "Consultas de precios", percentage: 40 },
-    { name: "Horarios de atención", percentage: 25 },
-    { name: "Soporte técnico", percentage: 15 },
-    { name: "Otros", percentage: 20 },
-];
-
-const FILTERS = ["Últimos 7 días", "Último mes", "Personalizado"];
-
 export default function TwinPerformanceScreen() {
     const [activeFilter, setActiveFilter] = useState(0);
+    const { t } = useTranslation('settings');
+
+    const TOPICS: Topic[] = [
+        { name: t('twinPerformance.topicPricing'), percentage: 40 },
+        { name: t('twinPerformance.topicSchedule'), percentage: 25 },
+        { name: t('twinPerformance.topicSupport'), percentage: 15 },
+        { name: t('twinPerformance.topicOther'), percentage: 20 },
+    ];
+
+    const FILTERS = [t('twinPerformance.filterLast7'), t('twinPerformance.filterLastMonth'), t('twinPerformance.filterCustom')];
 
     function handleBack() {
         router.back();
@@ -52,7 +54,7 @@ export default function TwinPerformanceScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Rendimiento del Gemelo</Text>
+                <Text style={styles.headerTitle}>{t('twinPerformance.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -88,7 +90,7 @@ export default function TwinPerformanceScreen() {
                 <View style={styles.chartCard}>
                     <View style={styles.chartHeader}>
                         <View>
-                            <Text style={styles.chartLabel}>Interacciones Totales</Text>
+                            <Text style={styles.chartLabel}>{t('twinPerformance.totalInteractions')}</Text>
                             <View style={styles.chartValueRow}>
                                 <Text style={styles.chartValue}>1,248</Text>
                                 <View style={styles.trendBadge}>
@@ -113,13 +115,13 @@ export default function TwinPerformanceScreen() {
                             <View style={[styles.chartBar, { height: "85%" }]} />
                         </View>
                         <View style={styles.chartLabels}>
-                            <Text style={styles.chartAxisLabel}>Lun</Text>
-                            <Text style={styles.chartAxisLabel}>Mar</Text>
-                            <Text style={styles.chartAxisLabel}>Mié</Text>
-                            <Text style={styles.chartAxisLabel}>Jue</Text>
-                            <Text style={styles.chartAxisLabel}>Vie</Text>
-                            <Text style={styles.chartAxisLabel}>Sáb</Text>
-                            <Text style={styles.chartAxisLabel}>Dom</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.mon')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.tue')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.wed')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.thu')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.fri')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.sat')}</Text>
+                            <Text style={styles.chartAxisLabel}>{t('twinPerformance.sun')}</Text>
                         </View>
                     </View>
                 </View>
@@ -128,15 +130,15 @@ export default function TwinPerformanceScreen() {
                 <View style={styles.kpiGrid}>
                     <View style={styles.kpiCard}>
                         <MaterialIcons name="timer" size={24} color={COLORS.primary} />
-                        <Text style={styles.kpiLabel}>Duración media</Text>
+                        <Text style={styles.kpiLabel}>{t('twinPerformance.avgDuration')}</Text>
                         <Text style={styles.kpiValue}>4m 12s</Text>
-                        <Text style={styles.kpiTrend}>+3% vs ayer</Text>
+                        <Text style={styles.kpiTrend}>{t('twinPerformance.vsYesterday')}</Text>
                     </View>
                     <View style={styles.kpiCard}>
                         <MaterialIcons name="star" size={24} color={COLORS.yellow500} />
-                        <Text style={styles.kpiLabel}>Satisfacción</Text>
+                        <Text style={styles.kpiLabel}>{t('twinPerformance.satisfaction')}</Text>
                         <Text style={styles.kpiValue}>4.8/5</Text>
-                        <Text style={styles.kpiSubtitle}>102 valoraciones</Text>
+                        <Text style={styles.kpiSubtitle}>{t('twinPerformance.ratings')}</Text>
                     </View>
                 </View>
 
@@ -148,7 +150,7 @@ export default function TwinPerformanceScreen() {
                                 <MaterialIcons name="smart-toy" size={20} color={COLORS.green500} />
                             </View>
                             <View>
-                                <Text style={styles.rateLabel}>Tasa de resolución</Text>
+                                <Text style={styles.rateLabel}>{t('twinPerformance.resolutionRate')}</Text>
                                 <Text style={styles.rateValue}>85%</Text>
                             </View>
                         </View>
@@ -163,7 +165,7 @@ export default function TwinPerformanceScreen() {
                                 <MaterialIcons name="support-agent" size={20} color={COLORS.orange500} />
                             </View>
                             <View>
-                                <Text style={styles.rateLabel}>Tasa de escalado</Text>
+                                <Text style={styles.rateLabel}>{t('twinPerformance.escalationRate')}</Text>
                                 <Text style={styles.rateValue}>15%</Text>
                             </View>
                         </View>
@@ -175,7 +177,7 @@ export default function TwinPerformanceScreen() {
 
                 {/* Frequent Topics */}
                 <View style={styles.topicsSection}>
-                    <Text style={styles.sectionTitle}>Temas frecuentes</Text>
+                    <Text style={styles.sectionTitle}>{t('twinPerformance.frequentTopics')}</Text>
                     <View style={styles.topicsCard}>
                         {TOPICS.map((topic, index) => (
                             <View key={index} style={styles.topicItem}>
@@ -202,13 +204,12 @@ export default function TwinPerformanceScreen() {
                         <MaterialIcons name="auto-awesome" size={20} color={COLORS.textMain} />
                     </View>
                     <View style={styles.insightContent}>
-                        <Text style={styles.insightTitle}>Recomendación de Optimización</Text>
+                        <Text style={styles.insightTitle}>{t('twinPerformance.optimizationTitle')}</Text>
                         <Text style={styles.insightText}>
-                            Detectamos un aumento en escalados sobre <Text style={styles.insightHighlight}>"Soporte técnico"</Text>.
-                            Sube nueva documentación para mejorar la autonomía del gemelo.
+                            {t('twinPerformance.optimizationText')}
                         </Text>
                         <TouchableOpacity style={styles.insightButton}>
-                            <Text style={styles.insightButtonText}>Revisar documentación</Text>
+                            <Text style={styles.insightButtonText}>{t('twinPerformance.reviewDocs')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

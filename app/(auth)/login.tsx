@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 // Native Google Sign-In
 let GoogleSignin: any = null;
@@ -57,11 +58,12 @@ export default function LoginScreen() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, loginWithGoogle } = useAuth();
   const { showAlert } = useAlert();
+  const { t } = useTranslation('auth');
 
   // Handle native Google Sign-In
   async function handleGoogleSignIn() {
     if (!isGoogleSignInAvailable || !GoogleSignin) {
-      showAlert({ type: 'error', title: 'Error', message: 'Google Sign-In no está disponible en esta versión' });
+      showAlert({ type: 'error', title: t('common:error'), message: t('login.googleNotAvailable') });
       return;
     }
 
@@ -75,7 +77,7 @@ export default function LoginScreen() {
       const idToken = userInfo.data?.idToken;
 
       if (!idToken) {
-        throw new Error("No se pudo obtener el token de Google");
+        throw new Error(t('login.googleTokenError'));
       }
 
       // Send to our backend
@@ -90,7 +92,7 @@ export default function LoginScreen() {
           params: { reason: error.reason || "" }
         });
       } else if (error.code !== "SIGN_IN_CANCELLED") {
-        showAlert({ type: 'error', title: 'Error', message: error.message || 'Error al iniciar sesión con Google' });
+        showAlert({ type: 'error', title: t('common:error'), message: error.message || t('login.googleLoginError') });
       }
     } finally {
       setIsGoogleLoading(false);
@@ -99,7 +101,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email || !password) {
-      showAlert({ type: 'warning', title: 'Campos incompletos', message: 'Por favor, completa todos los campos' });
+      showAlert({ type: 'warning', title: t('login.fieldsRequiredTitle'), message: t('login.fieldsRequired') });
       return;
     }
 
@@ -115,7 +117,7 @@ export default function LoginScreen() {
           params: { reason: error.reason || "" }
         });
       } else {
-        showAlert({ type: 'error', title: 'Error', message: error.message || 'Error al iniciar sesión' });
+        showAlert({ type: 'error', title: t('common:error'), message: error.message || t('login.loginError') });
       }
     } finally {
       setIsLoading(false);
@@ -151,9 +153,9 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>Iniciar Sesión</Text>
+              <Text style={styles.headerTitle}>{t('login.title')}</Text>
               <Text style={styles.headerSubtitle}>
-                Accede a tu cuenta para conectar.
+                {t('login.subtitle')}
               </Text>
             </View>
           </View>
@@ -162,7 +164,7 @@ export default function LoginScreen() {
           <View style={styles.formCard}>
             {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
+              <Text style={styles.inputLabel}>{t('login.emailLabel')}</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="mail-outline"
@@ -172,7 +174,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="nombre@ejemplo.com"
+                  placeholder={t('login.emailPlaceholder')}
                   placeholderTextColor={COLORS.gray400}
                   value={email}
                   onChangeText={setEmail}
@@ -185,7 +187,7 @@ export default function LoginScreen() {
 
             {/* Contraseña */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>CONTRASEÑA</Text>
+              <Text style={styles.inputLabel}>{t('login.passwordLabel')}</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="lock-closed-outline"
@@ -221,7 +223,7 @@ export default function LoginScreen() {
               onPress={() => router.push("/(auth)/forgot-password")}
             >
               <Text style={styles.forgotPasswordText}>
-                ¿Olvidaste tu contraseña?
+                {t('login.forgotPassword')}
               </Text>
             </TouchableOpacity>
 
@@ -235,7 +237,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#000000" />
               ) : (
                 <>
-                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                  <Text style={styles.loginButtonText}>{t('login.loginButton')}</Text>
                   <Ionicons name="arrow-forward" size={18} color="#000000" />
                 </>
               )}
@@ -244,7 +246,7 @@ export default function LoginScreen() {
             {/* Separador */}
             <View style={styles.dividerContainer}>
               <View style={styles.divider} />
-              <Text style={styles.dividerText}>O continuar con</Text>
+              <Text style={styles.dividerText}>{t('login.divider')}</Text>
               <View style={styles.divider} />
             </View>
 
@@ -265,7 +267,7 @@ export default function LoginScreen() {
                       }}
                       style={styles.socialIcon}
                     />
-                    <Text style={styles.socialButtonText}>Continuar con Google</Text>
+                    <Text style={styles.socialButtonText}>{t('login.googleButton')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -280,10 +282,10 @@ export default function LoginScreen() {
 
             {/* Crear cuenta */}
             <View style={styles.registerContainer}>
-              <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+              <Text style={styles.registerText}>{t('login.noAccount')} </Text>
               <Link href="/onboarding/language" asChild>
                 <TouchableOpacity>
-                  <Text style={styles.registerLink}>Crear cuenta</Text>
+                  <Text style={styles.registerLink}>{t('login.createAccount')}</Text>
                 </TouchableOpacity>
               </Link>
             </View>

@@ -16,6 +16,7 @@ import { useAuth } from "../../context";
 import * as userApi from "../../api/user";
 import { getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -55,6 +56,7 @@ export default function FavoritesScreen() {
     const { token, user } = useAuth();
     const { showAlert } = useAlert();
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('settings');
     const [favorites, setFavorites] = useState<Favorite[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchText, setSearchText] = useState("");
@@ -88,7 +90,7 @@ export default function FavoritesScreen() {
             await userApi.removeFavorite(token, professionalId);
             setFavorites(prev => prev.filter(f => f._id !== professionalId));
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo eliminar de favoritos. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('favorites.removeError') });
         }
     };
 
@@ -101,7 +103,7 @@ export default function FavoritesScreen() {
         if (professional.firstname && professional.lastname) {
             return `${professional.firstname} ${professional.lastname.charAt(0)}.`;
         }
-        return professional.firstname || "Profesional";
+        return professional.firstname || t('favorites.defaultProfession');
     };
 
     const filteredFavorites = favorites.filter(fav => {
@@ -153,7 +155,7 @@ export default function FavoritesScreen() {
             {/* Profession tag */}
             <View style={styles.professionTag}>
                 <Text style={styles.professionText}>
-                    {item.profession || "Profesional"}
+                    {item.profession || t('favorites.defaultProfession')}
                 </Text>
             </View>
 
@@ -173,7 +175,7 @@ export default function FavoritesScreen() {
                     router.push(`/avatar-chat/${item._id}`);
                 }}
             >
-                <Text style={styles.contactButtonText}>Contactar</Text>
+                <Text style={styles.contactButtonText}>{t('favorites.contact')}</Text>
             </TouchableOpacity>
         </TouchableOpacity>
     );
@@ -183,15 +185,15 @@ export default function FavoritesScreen() {
             <View style={styles.emptyIconContainer}>
                 <MaterialIcons name="favorite-border" size={48} color={COLORS.slate400} />
             </View>
-            <Text style={styles.emptyTitle}>Aún no tienes favoritos</Text>
+            <Text style={styles.emptyTitle}>{t('favorites.emptyTitle')}</Text>
             <Text style={styles.emptySubtitle}>
-                Explora el directorio y guarda tus profesionales de confianza
+                {t('favorites.emptySubtitle')}
             </Text>
             <TouchableOpacity
                 style={styles.exploreButton}
                 onPress={() => router.push("/(tabs)/category-results")}
             >
-                <Text style={styles.exploreButtonText}>Explorar Directorio</Text>
+                <Text style={styles.exploreButtonText}>{t('favorites.exploreDirectory')}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -204,7 +206,7 @@ export default function FavoritesScreen() {
             <View style={styles.addIconContainer}>
                 <MaterialIcons name="add" size={32} color={COLORS.slate400} />
             </View>
-            <Text style={styles.addCardText}>Explorar más profesionales</Text>
+            <Text style={styles.addCardText}>{t('favorites.exploreMore')}</Text>
         </TouchableOpacity>
     );
 
@@ -229,9 +231,9 @@ export default function FavoritesScreen() {
                     </View>
 
                     <View style={styles.titleContainer}>
-                        <Text style={styles.title}>Mis Favoritos</Text>
+                        <Text style={styles.title}>{t('favorites.title')}</Text>
                         <Text style={styles.subtitle}>
-                            Tus profesionales de confianza, siempre a mano
+                            {t('favorites.subtitle')}
                         </Text>
                     </View>
 
@@ -240,7 +242,7 @@ export default function FavoritesScreen() {
                         <MaterialIcons name="search" size={24} color={COLORS.slate400} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en mis favoritos..."
+                            placeholder={t('favorites.searchPlaceholder')}
                             placeholderTextColor={COLORS.slate400}
                             value={searchText}
                             onChangeText={setSearchText}
@@ -278,17 +280,17 @@ export default function FavoritesScreen() {
             <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('nav.chats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('nav.directory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem}>
                     <View style={styles.navItemActive}>
                         <MaterialIcons name="favorite" size={24} color={COLORS.textMain} />
                     </View>
-                    <Text style={styles.navLabelActive}>Favoritos</Text>
+                    <Text style={styles.navLabelActive}>{t('nav.favorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => {
                     if (user?.userType === 'userpro') {
@@ -298,7 +300,7 @@ export default function FavoritesScreen() {
                     }
                 }}>
                     <MaterialIcons name="badge" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>Perfil Pro</Text>
+                    <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

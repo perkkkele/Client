@@ -1,12 +1,14 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
-    TextInput,    ActivityIndicator,
+    TextInput,
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
 } from "react-native";
@@ -80,29 +82,14 @@ La información laboral es orientativa y no garantiza procesos de selección ni 
 Las respuestas proporcionadas por este asistente virtual son automatizadas y de carácter informativo. No sustituyen el consejo profesional especializado. La información puede requerir adaptación a su situación específica. Consulte siempre con profesionales cualificados.`,
 };
 
-const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-        legal: "Servicios Legales",
-        salud: "Salud",
-        fitness: "Fitness y Deporte",
-        educacion: "Educación",
-        tecnologia: "Tecnología",
-        diseno: "Diseño",
-        bienestar: "Bienestar",
-        inmobiliario: "Inmobiliario",
-        estetica: "Estética y Belleza",
-        hogar: "Servicios del Hogar",
-        finanzas: "Finanzas",
-        energia: "Energía",
-        empleo: "Empleo",
-        otros: "General",
-    };
-    return labels[category] || labels.otros;
-};
-
 export default function TwinScopeScreen() {
     const { user, token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
+
+    const getCategoryLabel = (category: string) => {
+        return t(`twinScope.categories.${category}`, { defaultValue: t('twinScope.categories.otros') });
+    };
     const [disclaimer, setDisclaimer] = useState("");
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -117,14 +104,14 @@ export default function TwinScopeScreen() {
     const handleBack = () => {
         if (hasChanges) {
             showAlert({
-    type: 'warning',
-    title: 'Cambios sin guardar',
-    message: '¿Quieres descartar los cambios?',
-    buttons: [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Descartar", style: "destructive", onPress: () => router.back() },
+                type: 'warning',
+                title: t('twinScope.unsavedTitle'),
+                message: t('twinScope.unsavedMessage'),
+                buttons: [
+                    { text: t('twinScope.cancel'), style: "cancel" },
+                    { text: t('twinScope.discard'), style: "destructive", onPress: () => router.back() },
                 ]
-});
+            });
         } else {
             router.back();
         }
@@ -136,20 +123,20 @@ export default function TwinScopeScreen() {
 
         if (disclaimer.trim() && disclaimer !== template) {
             showAlert({
-    type: 'info',
-    title: 'Usar plantilla',
-    message: '',
-    buttons: [
-                    { text: "Cancelar", style: "cancel" },
+                type: 'info',
+                title: t('twinScope.useTemplateTitle'),
+                message: '',
+                buttons: [
+                    { text: t('twinScope.cancel'), style: "cancel" },
                     {
-                        text: "Reemplazar",
+                        text: t('twinScope.replace'),
                         onPress: () => {
                             setDisclaimer(template);
                             setHasChanges(true);
                         }
                     },
                 ]
-});
+            });
         } else {
             setDisclaimer(template);
             setHasChanges(true);
@@ -169,10 +156,10 @@ export default function TwinScopeScreen() {
             });
             await refreshUser();
             setHasChanges(false);
-            showAlert({ type: 'success', title: 'Guardado', message: 'El descargo de responsabilidad se ha actualizado correctamente' });
+            showAlert({ type: 'success', title: t('twinScope.savedTitle'), message: t('twinScope.savedMessage') });
         } catch (error) {
             console.error("Error saving disclaimer:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo guardar. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinScope.errorSave') });
         } finally {
             setSaving(false);
         }
@@ -196,7 +183,7 @@ export default function TwinScopeScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Alcance y Límites</Text>
+                    <Text style={styles.headerTitle}>{t('twinScope.headerTitle')}</Text>
                     <TouchableOpacity
                         style={styles.headerButton}
                         onPress={handleSave}
@@ -224,11 +211,9 @@ export default function TwinScopeScreen() {
                     <View style={styles.infoCard}>
                         <MaterialIcons name="info-outline" size={24} color={COLORS.primary} />
                         <View style={styles.infoContent}>
-                            <Text style={styles.infoTitle}>¿Para qué sirve este texto?</Text>
+                            <Text style={styles.infoTitle}>{t('twinScope.infoTitle')}</Text>
                             <Text style={styles.infoText}>
-                                Este descargo de responsabilidad se mostrará a tus clientes al iniciar
-                                una conversación con tu gemelo digital. Es importante para establecer
-                                las expectativas y los límites del servicio automatizado.
+                                {t('twinScope.infoText')}
                             </Text>
                         </View>
                     </View>
@@ -238,7 +223,7 @@ export default function TwinScopeScreen() {
                         <View style={styles.templateLeft}>
                             <MaterialIcons name="auto-fix-high" size={20} color={COLORS.primary} />
                             <Text style={styles.templateText}>
-                                Usar plantilla para {getCategoryLabel(category)}
+                                {t('twinScope.useTemplate', { category: getCategoryLabel(category) })}
                             </Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
@@ -246,26 +231,26 @@ export default function TwinScopeScreen() {
 
                     {/* Editor Section */}
                     <View style={styles.editorSection}>
-                        <Text style={styles.editorLabel}>Tu descargo de responsabilidad</Text>
+                        <Text style={styles.editorLabel}>{t('twinScope.editorLabel')}</Text>
                         <TextInput
                             style={styles.textArea}
                             multiline
                             numberOfLines={10}
-                            placeholder="Escribe aquí el texto que verán tus clientes antes de interactuar con tu gemelo digital..."
+                            placeholder={t('twinScope.editorPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={disclaimer}
                             onChangeText={handleTextChange}
                             textAlignVertical="top"
                         />
                         <Text style={styles.charCount}>
-                            {disclaimer.length} caracteres
+                            {t('twinScope.charCount', { count: disclaimer.length })}
                         </Text>
                     </View>
 
                     {/* Preview Section */}
                     {disclaimer.trim() && (
                         <View style={styles.previewSection}>
-                            <Text style={styles.previewLabel}>Vista previa</Text>
+                            <Text style={styles.previewLabel}>{t('twinScope.preview')}</Text>
                             <View style={styles.previewCard}>
                                 <Text style={styles.previewText}>{disclaimer}</Text>
                             </View>
@@ -274,11 +259,11 @@ export default function TwinScopeScreen() {
 
                     {/* Tips */}
                     <View style={styles.tipsSection}>
-                        <Text style={styles.tipsTitle}>💡 Consejos</Text>
-                        <Text style={styles.tipItem}>• Sé claro sobre lo que tu gemelo puede y no puede hacer</Text>
-                        <Text style={styles.tipItem}>• Incluye cuándo deben contactarte directamente</Text>
-                        <Text style={styles.tipItem}>• Menciona si las respuestas son orientativas o definitivas</Text>
-                        <Text style={styles.tipItem}>• Añade referencias a regulaciones de tu sector si aplica</Text>
+                        <Text style={styles.tipsTitle}>{t('twinScope.tipsTitle')}</Text>
+                        <Text style={styles.tipItem}>{t('twinScope.tip1')}</Text>
+                        <Text style={styles.tipItem}>{t('twinScope.tip2')}</Text>
+                        <Text style={styles.tipItem}>{t('twinScope.tip3')}</Text>
+                        <Text style={styles.tipItem}>{t('twinScope.tip4')}</Text>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

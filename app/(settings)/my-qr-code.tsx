@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useEffect, useState, useRef } from "react";
-import {    ScrollView,
+import {
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -17,6 +18,7 @@ import Svg, { Circle, Rect, G, Text as SvgText, Path } from "react-native-svg";
 import { useAuth } from "../../context";
 import { usernameApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -83,7 +85,8 @@ const TwinProLogo = () => (
 
 export default function MyQRCodeScreen() {
     const { token, user, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [username, setUsername] = useState(user?.username || "");
     const [isEditing, setIsEditing] = useState(!user?.username);
     const [isSaving, setIsSaving] = useState(false);
@@ -126,9 +129,9 @@ export default function MyQRCodeScreen() {
             await usernameApi.updateUsername(token, username.trim());
             if (refreshUser) await refreshUser();
             setIsEditing(false);
-            showAlert({ type: 'success', title: '¡Éxito!', message: 'Tu código QR está listo para compartir' });
+            showAlert({ type: 'success', title: t('myQrCodeScreen.successTitle'), message: t('myQrCodeScreen.successMessage') });
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo guardar el username" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('myQrCodeScreen.errorSave') });
         } finally {
             setIsSaving(false);
         }
@@ -139,7 +142,7 @@ export default function MyQRCodeScreen() {
 
         try {
             await Share.share({
-                message: `¡Conecta conmigo en TwinPro! ${qrUrl}`,
+                message: t('myQrCodeScreen.shareMessage', { url: qrUrl }),
                 url: qrUrl,
             });
         } catch (error) {
@@ -150,7 +153,7 @@ export default function MyQRCodeScreen() {
     function handleCopyLink() {
         if (!qrUrl) return;
         Clipboard.setString(qrUrl);
-        showAlert({ type: 'info', title: '¡Copiado!', message: 'El enlace se ha copiado al portapapeles' });
+        showAlert({ type: 'info', title: t('myQrCodeScreen.copiedTitle'), message: t('myQrCodeScreen.copiedMessage') });
     }
 
     const isUsernameValid = /^[a-z0-9_-]{3,30}$/.test(username.toLowerCase());
@@ -162,7 +165,7 @@ export default function MyQRCodeScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mi Código QR</Text>
+                <Text style={styles.headerTitle}>{t('myQrCodeScreen.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -189,7 +192,7 @@ export default function MyQRCodeScreen() {
                             </View>
                             <Text style={styles.qrUrl}>{qrUrl}</Text>
                             <Text style={styles.qrHint}>
-                                Los clientes pueden escanear este código para hablar con tu gemelo digital
+                                {t('myQrCodeScreen.qrHint')}
                             </Text>
                         </>
                     ) : (
@@ -197,9 +200,9 @@ export default function MyQRCodeScreen() {
                             <View style={styles.noQrIcon}>
                                 <MaterialIcons name="qr-code-2" size={48} color={COLORS.gray400} />
                             </View>
-                            <Text style={styles.noQrTitle}>Configura tu código QR</Text>
+                            <Text style={styles.noQrTitle}>{t('myQrCodeScreen.setupTitle')}</Text>
                             <Text style={styles.noQrHint}>
-                                Elige un nombre de usuario único para generar tu código QR personalizado
+                                {t('myQrCodeScreen.setupHint')}
                             </Text>
                         </View>
                     )}
@@ -212,21 +215,21 @@ export default function MyQRCodeScreen() {
                             <View style={[styles.actionIcon, { backgroundColor: COLORS.blue50 }]}>
                                 <MaterialIcons name="share" size={22} color={COLORS.blue600} />
                             </View>
-                            <Text style={styles.actionLabel}>Compartir</Text>
+                            <Text style={styles.actionLabel}>{t('myQrCodeScreen.share')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.actionButton} onPress={handleCopyLink}>
                             <View style={[styles.actionIcon, { backgroundColor: COLORS.green50 }]}>
                                 <MaterialIcons name="content-copy" size={22} color={COLORS.green600} />
                             </View>
-                            <Text style={styles.actionLabel}>Copiar enlace</Text>
+                            <Text style={styles.actionLabel}>{t('myQrCodeScreen.copyLink')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.actionButton} onPress={() => setIsEditing(true)}>
                             <View style={[styles.actionIcon, { backgroundColor: COLORS.gray100 }]}>
                                 <MaterialIcons name="edit" size={22} color={COLORS.gray600} />
                             </View>
-                            <Text style={styles.actionLabel}>Editar</Text>
+                            <Text style={styles.actionLabel}>{t('myQrCodeScreen.edit')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -234,9 +237,9 @@ export default function MyQRCodeScreen() {
                 {/* Username Editor */}
                 {isEditing && (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>NOMBRE DE USUARIO</Text>
+                        <Text style={styles.sectionTitle}>{t('myQrCodeScreen.usernameSection')}</Text>
                         <Text style={styles.sectionHint}>
-                            Este nombre aparecerá en tu enlace personalizado. Solo letras, números, guiones y guiones bajos.
+                            {t('myQrCodeScreen.usernameHint')}
                         </Text>
 
                         <View style={styles.card}>
@@ -272,7 +275,7 @@ export default function MyQRCodeScreen() {
                                                 styles.availabilityText,
                                                 { color: availability.available ? COLORS.green600 : COLORS.red600 }
                                             ]}>
-                                                {availability.available ? "Disponible" : availability.reason}
+                                                {availability.available ? t('myQrCodeScreen.available') : availability.reason}
                                             </Text>
                                         </>
                                     ) : null}
@@ -281,7 +284,7 @@ export default function MyQRCodeScreen() {
 
                             {/* Character count */}
                             <Text style={styles.charCount}>
-                                {username.length}/30 caracteres (mínimo 3)
+                                {t('myQrCodeScreen.charCount', { count: username.length })}
                             </Text>
                         </View>
 
@@ -299,7 +302,7 @@ export default function MyQRCodeScreen() {
                             ) : (
                                 <>
                                     <MaterialIcons name="check" size={20} color={COLORS.textMain} />
-                                    <Text style={styles.saveButtonText}>Guardar</Text>
+                                    <Text style={styles.saveButtonText}>{t('myQrCodeScreen.save')}</Text>
                                 </>
                             )}
                         </TouchableOpacity>
@@ -312,7 +315,7 @@ export default function MyQRCodeScreen() {
                                     setIsEditing(false);
                                 }}
                             >
-                                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                                <Text style={styles.cancelButtonText}>{t('myQrCodeScreen.cancel')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -325,8 +328,8 @@ export default function MyQRCodeScreen() {
                             <MaterialIcons name="qr-code-scanner" size={20} color={COLORS.blue600} />
                         </View>
                         <View style={styles.infoContent}>
-                            <Text style={styles.infoTitle}>Fácil de compartir</Text>
-                            <Text style={styles.infoText}>Imprime el código o compártelo digitalmente</Text>
+                            <Text style={styles.infoTitle}>{t('myQrCodeScreen.infoShareTitle')}</Text>
+                            <Text style={styles.infoText}>{t('myQrCodeScreen.infoShareText')}</Text>
                         </View>
                     </View>
 
@@ -335,8 +338,8 @@ export default function MyQRCodeScreen() {
                             <MaterialIcons name="smartphone" size={20} color={COLORS.green600} />
                         </View>
                         <View style={styles.infoContent}>
-                            <Text style={styles.infoTitle}>Abre la app automáticamente</Text>
-                            <Text style={styles.infoText}>Los clientes irán directo a tu gemelo digital</Text>
+                            <Text style={styles.infoTitle}>{t('myQrCodeScreen.infoAutoOpenTitle')}</Text>
+                            <Text style={styles.infoText}>{t('myQrCodeScreen.infoAutoOpenText')}</Text>
                         </View>
                     </View>
                 </View>

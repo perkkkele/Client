@@ -16,6 +16,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -41,8 +42,9 @@ export default function DeleteAccountScreen() {
     const [confirmText, setConfirmText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
 
-    const canDelete = confirmText.toUpperCase() === "ELIMINAR";
+    const canDelete = confirmText.toUpperCase() === t('deleteAccount.inputLabelBold');
 
     function handleBack() {
         router.back();
@@ -54,12 +56,12 @@ export default function DeleteAccountScreen() {
 
     async function handleDeleteAccount() {
         if (!canDelete) {
-            showAlert({ type: 'warning', title: 'Confirmación requerida', message: 'Escribe ELIMINAR en el campo de texto para confirmar la eliminación de tu cuenta.' });
+            showAlert({ type: 'warning', title: t('deleteAccount.confirmRequired'), message: t('deleteAccount.confirmRequiredMessage') });
             return;
         }
 
         if (!token) {
-            showAlert({ type: 'error', title: 'Sesión no válida', message: 'Tu sesión ha expirado. Vuelve a iniciar sesión e inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('deleteAccount.sessionInvalid'), message: t('deleteAccount.sessionInvalidMessage') });
             return;
         }
 
@@ -78,7 +80,7 @@ export default function DeleteAccountScreen() {
                 logout();
             }, 100);
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'No se pudo eliminar', message: error.message || 'Ocurrió un problema al eliminar tu cuenta. Inténtalo de nuevo más tarde.' });
+            showAlert({ type: 'error', title: t('deleteAccount.deleteError'), message: error.message || t('deleteAccount.deleteErrorMessage') });
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +93,7 @@ export default function DeleteAccountScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Eliminar Cuenta</Text>
+                <Text style={styles.headerTitle}>{t('deleteAccount.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -118,26 +120,22 @@ export default function DeleteAccountScreen() {
                             {/* Warning text */}
                             <View style={styles.textContainer}>
                                 <Text style={styles.title}>
-                                    ¡Atención! Vas a eliminar tu cuenta definitivamente
+                                    {t('deleteAccount.title')}
                                 </Text>
                                 <Text style={styles.description}>
-                                    Esta acción es{" "}
-                                    <Text style={styles.descriptionHighlight}>irreversible</Text>. Se
-                                    borrará tu perfil, historial de chats, datos de gemelo digital y
-                                    toda la información asociada. No podrás recuperarla.
+                                    {t('deleteAccount.description')}
                                 </Text>
                             </View>
 
                             {/* Confirmation input */}
                             <View style={styles.inputContainer}>
                                 <Text style={styles.inputLabel}>
-                                    Escribe <Text style={styles.inputLabelBold}>ELIMINAR</Text> para
-                                    confirmar
+                                    {t('deleteAccount.inputLabel')}
                                 </Text>
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="ELIMINAR"
+                                        placeholder={t('deleteAccount.placeholder')}
                                         placeholderTextColor={COLORS.gray400}
                                         value={confirmText}
                                         onChangeText={setConfirmText}
@@ -166,7 +164,7 @@ export default function DeleteAccountScreen() {
                                 ) : (
                                     <>
                                         <Text style={styles.deleteButtonText}>
-                                            Eliminar Cuenta Definitivamente
+                                            {t('deleteAccount.confirmButton')}
                                         </Text>
                                         <MaterialIcons name="delete-forever" size={20} color="#FFFFFF" />
                                     </>
@@ -178,7 +176,7 @@ export default function DeleteAccountScreen() {
                                 onPress={handleCancel}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                                <Text style={styles.cancelButtonText}>{t('deleteAccount.cancel')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

@@ -1,0 +1,90 @@
+{
+    "greeting": "Hallo, {{name}}",
+    "greetingSubtext": "Welchen Fachmann brauchen Sie heute?",
+    "searchPlaceholder": "Anwalt, Arzt suchen...",
+    "resultsFor": "ERGEBNISSE FÜR \"{{query}}\"",
+    "clear": "Löschen",
+    "searching": "Suche nach Fachleuten...",
+    "noResults": "Keine Ergebnisse",
+    "noResultsMessage": "Wir konnten keine Fachleute für \"{{query}}\" finden. Versuchen Sie andere Begriffe.",
+    "myConsultations": "MEINE BERATUNGEN",
+    "seeAll": "Alle anzeigen",
+    "recent": "AKTUELL",
+    "responded": "Beantwortet",
+    "pending": "Ausstehend",
+    "noMessagesYet": "Noch keine Nachrichten",
+    "tapToSeeMessages": "Tippen, um Nachrichten zu sehen...",
+    "defaultUser": "Benutzer",
+    "defaultProfessional": "Fachmann",
+    "welcome": {
+        "title": "Willkommen bei TwinPro!",
+        "subtitle": "Verbinden Sie sich mit verifizierten Fachleuten und ihren KI-Zwillingen.",
+        "ai247": "24/7 KI",
+        "verified": "Verifiziert",
+        "fast": "Schnell",
+        "exploreProfessionals": "Fachleute entdecken"
+    },
+    "noVisibleChats": "Keine sichtbaren Chats",
+    "noVisibleChatsMessage": "Sie haben alle Chats ausgeblendet. Entdecken Sie Fachleute, um neue Gespräche zu starten.",
+    "deleteConsultation": "Beratung löschen",
+    "deleteConsultationConfirm": "Möchten Sie diese eskalierte Beratung löschen?",
+    "contextMenu": {
+        "title": "Chat-Optionen",
+        "viewProfile": "Profil ansehen",
+        "hideChat": "Chat ausblenden"
+    },
+    "nav": {
+        "chats": "Chats",
+        "directory": "Verzeichnis",
+        "favorites": "Favoriten",
+        "proPerfil": "Pro-Profil"
+    },
+    "time": {
+        "now": "Jetzt",
+        "yesterday": "Gestern",
+        "days": [
+            "So",
+            "Mo",
+            "Di",
+            "Mi",
+            "Do",
+            "Fr",
+            "Sa"
+        ]
+    },
+    "directory": {
+        "greeting": "Hallo, {{name}}",
+        "greetingSubtext": "Welchen Fachmann brauchen Sie heute?",
+        "searchPlaceholder": "Strafrecht, Arbeitsrecht, Zivilrecht...",
+        "resultsText": "Ergebnisse basierend auf Ihrer letzten Suche",
+        "defaultProfessional": "Fachmann",
+        "contact": "Kontaktieren",
+        "sort": {
+            "relevance": "Relevanz",
+            "distance": "Nähe",
+            "price": "Preis",
+            "reviews": "Bewertungen"
+        },
+        "empty": {
+            "title": "Keine Fachleute gefunden",
+            "subtitle": "Versuchen Sie eine andere Kategorie"
+        },
+        "filters": {
+            "title": "Erweiterte Filter",
+            "proximity": "Nähe",
+            "noLimit": "Ohne Limit",
+            "pricePerHour": "Preis / Stunde",
+            "maxSector": "Sektormaximum",
+            "maxPrice": "Max: {{price}}€",
+            "minReviews": "Mindestbewertungen",
+            "reset": "Zurücksetzen",
+            "apply": "Filter anwenden"
+        },
+        "alerts": {
+            "locationRequired": "Standort erforderlich",
+            "locationSortMessage": "Um nach Nähe zu sortieren, benötigen wir Ihren Standort. Aktivieren Sie GPS in Ihren Geräteeinstellungen.",
+            "locationFilterMessage": "Um nach Nähe zu filtern, benötigen wir Ihren Standort. Aktivieren Sie GPS in Ihren Geräteeinstellungen.",
+            "understood": "Verstanden"
+        }
+    }
+}

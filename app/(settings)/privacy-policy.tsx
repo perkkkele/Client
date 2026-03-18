@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -31,13 +32,17 @@ interface SummaryItem {
     description: string;
 }
 
-const SUMMARY_ITEMS: SummaryItem[] = [
-    { title: "Recopilación Mínima", description: "Solo guardamos los datos necesarios (email, teléfono) para gestionar tu cuenta." },
-    { title: "Encriptación", description: "Tus conversaciones con avatares están encriptadas y protegidas." },
-    { title: "Control Total", description: "Puedes descargar o borrar tus datos desde tu perfil en cualquier momento." },
-];
+const SUMMARY_ITEMS: SummaryItem[] = [];
 
 export default function PrivacyPolicyScreen() {
+    const { t } = useTranslation('settings');
+
+    const summaryItems: SummaryItem[] = [
+        { title: t('privacyPolicyScreen.summary1Title'), description: t('privacyPolicyScreen.summary1Desc') },
+        { title: t('privacyPolicyScreen.summary2Title'), description: t('privacyPolicyScreen.summary2Desc') },
+        { title: t('privacyPolicyScreen.summary3Title'), description: t('privacyPolicyScreen.summary3Desc') },
+    ];
+
     function handleBack() {
         router.back();
     }
@@ -49,7 +54,7 @@ export default function PrivacyPolicyScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Política de Privacidad</Text>
+                <Text style={styles.headerTitle}>{t('privacyPolicyScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -60,9 +65,9 @@ export default function PrivacyPolicyScreen() {
             >
                 {/* Intro */}
                 <View style={styles.introSection}>
-                    <Text style={styles.metaText}>Última actualización: 15 Oct, 2023</Text>
+                    <Text style={styles.metaText}>{t('privacyPolicyScreen.lastUpdated')}</Text>
                     <Text style={styles.introText}>
-                        En TwinPro, nos tomamos muy en serio la privacidad de tus datos. Este documento detalla cómo recopilamos, usamos y protegemos tu información personal al interactuar con nuestros avatares profesionales.
+                        {t('privacyPolicyScreen.introText')}
                     </Text>
                 </View>
 
@@ -72,10 +77,10 @@ export default function PrivacyPolicyScreen() {
                         <View style={styles.summaryIconContainer}>
                             <MaterialIcons name="summarize" size={18} color={COLORS.primary} />
                         </View>
-                        <Text style={styles.summaryTitle}>RESUMEN EJECUTIVO</Text>
+                        <Text style={styles.summaryTitle}>{t('privacyPolicyScreen.executiveSummary')}</Text>
                     </View>
                     <View style={styles.summaryList}>
-                        {SUMMARY_ITEMS.map((item, index) => (
+                        {summaryItems.map((item, index) => (
                             <View key={index} style={styles.summaryItem}>
                                 <MaterialIcons name="check" size={18} color={COLORS.green600} />
                                 <Text style={styles.summaryItemText}>
@@ -90,29 +95,29 @@ export default function PrivacyPolicyScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <MaterialIcons name="storage" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>1. Recopilación de información</Text>
+                        <Text style={styles.sectionTitle}>{t('privacyPolicyScreen.section1Title')}</Text>
                     </View>
                     <View style={styles.contentCard}>
                         <Text style={styles.cardParagraph}>
-                            Recopilamos información para proporcionar y mejorar nuestros servicios de comunicación. Los tipos de datos incluyen:
+                            {t('privacyPolicyScreen.section1Intro')}
                         </Text>
                         <View style={styles.bulletList}>
                             <View style={styles.bulletItem}>
                                 <View style={styles.bullet} />
                                 <Text style={styles.bulletText}>
-                                    <Text style={styles.bulletBold}>Datos de Registro:</Text> Nombre, correo electrónico, número de teléfono y foto de perfil.
+                                    <Text style={styles.bulletBold}>{t('privacyPolicyScreen.section1Bullet1Title')}</Text> {t('privacyPolicyScreen.section1Bullet1Desc')}
                                 </Text>
                             </View>
                             <View style={styles.bulletItem}>
                                 <View style={styles.bullet} />
                                 <Text style={styles.bulletText}>
-                                    <Text style={styles.bulletBold}>Contenido de Mensajes:</Text> Conversaciones encriptadas con avatares profesionales para mejorar el contexto de las respuestas.
+                                    <Text style={styles.bulletBold}>{t('privacyPolicyScreen.section1Bullet2Title')}</Text> {t('privacyPolicyScreen.section1Bullet2Desc')}
                                 </Text>
                             </View>
                             <View style={styles.bulletItem}>
                                 <View style={styles.bullet} />
                                 <Text style={styles.bulletText}>
-                                    <Text style={styles.bulletBold}>Datos de Uso:</Text> Frecuencia de uso, interacciones con directorios y preferencias de avatares.
+                                    <Text style={styles.bulletBold}>{t('privacyPolicyScreen.section1Bullet3Title')}</Text> {t('privacyPolicyScreen.section1Bullet3Desc')}
                                 </Text>
                             </View>
                         </View>
@@ -123,23 +128,23 @@ export default function PrivacyPolicyScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <MaterialIcons name="psychology" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>2. Uso de la información</Text>
+                        <Text style={styles.sectionTitle}>{t('privacyPolicyScreen.section2Title')}</Text>
                     </View>
                     <Text style={styles.sectionParagraph}>
-                        La información recopilada se utiliza principalmente para garantizar que los avatares profesionales respondan de manera precisa y útil. Además, utilizamos los datos para:
+                        {t('privacyPolicyScreen.section2Intro')}
                     </Text>
                     <View style={styles.usageGrid}>
                         <View style={styles.usageItem}>
                             <MaterialIcons name="build" size={20} color={COLORS.gray400} />
-                            <Text style={styles.usageText}>Mantenimiento y mejora técnica</Text>
+                            <Text style={styles.usageText}>{t('privacyPolicyScreen.section2Usage1')}</Text>
                         </View>
                         <View style={styles.usageItem}>
                             <MaterialIcons name="security" size={20} color={COLORS.gray400} />
-                            <Text style={styles.usageText}>Detección y prevención de fraude</Text>
+                            <Text style={styles.usageText}>{t('privacyPolicyScreen.section2Usage2')}</Text>
                         </View>
                         <View style={styles.usageItem}>
                             <MaterialIcons name="analytics" size={20} color={COLORS.gray400} />
-                            <Text style={styles.usageText}>Análisis anonimizado de tendencias</Text>
+                            <Text style={styles.usageText}>{t('privacyPolicyScreen.section2Usage3')}</Text>
                         </View>
                     </View>
                 </View>
@@ -148,10 +153,10 @@ export default function PrivacyPolicyScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <MaterialIcons name="lock" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>3. Almacenamiento y Seguridad</Text>
+                        <Text style={styles.sectionTitle}>{t('privacyPolicyScreen.section3Title')}</Text>
                     </View>
                     <Text style={styles.sectionParagraph}>
-                        Implementamos medidas de seguridad de nivel industrial, incluyendo encriptación de extremo a extremo para chats sensibles. Sus datos se almacenan en servidores seguros con acceso restringido únicamente a personal autorizado. Retenemos su información solo el tiempo necesario para cumplir con los fines establecidos en esta política.
+                        {t('privacyPolicyScreen.section3Text')}
                     </Text>
                 </View>
 
@@ -159,14 +164,14 @@ export default function PrivacyPolicyScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <MaterialIcons name="gavel" size={20} color={COLORS.primary} />
-                        <Text style={styles.sectionTitle}>4. Tus Derechos</Text>
+                        <Text style={styles.sectionTitle}>{t('privacyPolicyScreen.section4Title')}</Text>
                     </View>
                     <View style={styles.rightsCard}>
                         <Text style={styles.rightsText}>
-                            Como usuario de TwinPro, tienes derecho a acceder, rectificar o eliminar tus datos personales en cualquier momento. También puedes oponerte al procesamiento de ciertos datos o solicitar su portabilidad.
+                            {t('privacyPolicyScreen.section4Text')}
                         </Text>
                         <TouchableOpacity>
-                            <Text style={styles.rightsLink}>Contactar al Oficial de Privacidad</Text>
+                            <Text style={styles.rightsLink}>{t('privacyPolicyScreen.contactPrivacyOfficer')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -178,10 +183,10 @@ export default function PrivacyPolicyScreen() {
                         onPress={() => Linking.openURL("https://legal.twinpro.app#privacy")}
                     >
                         <MaterialIcons name="description" size={18} color={COLORS.gray500} />
-                        <Text style={styles.fullDocText}>Ver documento completo</Text>
+                        <Text style={styles.fullDocText}>{t('privacyPolicyScreen.viewFullDoc')}</Text>
                         <MaterialIcons name="arrow-forward" size={16} color={COLORS.gray400} />
                     </TouchableOpacity>
-                    <Text style={styles.footerText}>Al usar TwinPro, aceptas estos términos.</Text>
+                    <Text style={styles.footerText}>{t('privacyPolicyScreen.acceptTerms')}</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>

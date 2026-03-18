@@ -20,6 +20,7 @@ import { userApi, getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
 import useSubscription from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -40,23 +41,16 @@ const COLORS = {
     emerald600: "#059669",
 };
 
-const CATEGORIES = [
-    { id: "legal", label: "Legal" },
-    { id: "salud", label: "Salud" },
-    { id: "educacion", label: "Educación" },
-    { id: "finanzas", label: "Finanzas" },
-    { id: "fitness", label: "Fitness" },
-    { id: "tecnologia", label: "Tecnología" },
-    { id: "hogar", label: "Hogar" },
-    { id: "bienestar", label: "Bienestar" },
-    { id: "otros", label: "Otros" },
-];
+const CATEGORY_IDS = ["legal", "salud", "educacion", "finanzas", "fitness", "tecnologia", "hogar", "bienestar", "otros"];
 
 export default function EditProProfileScreen() {
     const { showAlert } = useAlert();
     const { token, user, refreshUser } = useAuth();
     const { canAccess, getRequiredPlan } = useSubscription();
+    const { t } = useTranslation('settings');
     const [isLoadingData, setIsLoadingData] = useState(true);
+
+    const CATEGORIES = CATEGORY_IDS.map(id => ({ id, label: t(`editProProfileScreen.categories.${id}`) }));
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const hasQrAccess = canAccess('qrCode');
 
@@ -126,13 +120,13 @@ export default function EditProProfileScreen() {
 
     function handlePickImage() {
         showAlert({
-            type: 'info', title: "Cambiar foto de perfil", message: "¿Cómo quieres añadir tu foto?", buttons: [
+            type: 'info', title: t('editProProfileScreen.changePhotoTitle'), message: t('editProProfileScreen.changePhotoMessage'), buttons: [
                 {
-                    text: "Cámara",
+                    text: t('editProProfileScreen.camera'),
                     onPress: async () => {
                         const { status } = await ImagePicker.requestCameraPermissionsAsync();
                         if (status !== "granted") {
-                            showAlert({ type: 'warning', title: 'Permiso denegado', message: 'Necesitamos acceso a la cámara' });
+                            showAlert({ type: 'warning', title: t('editProProfileScreen.permissionDenied'), message: t('editProProfileScreen.permissionMessage') });
                             return;
                         }
                         const result = await ImagePicker.launchCameraAsync({
@@ -146,7 +140,7 @@ export default function EditProProfileScreen() {
                     },
                 },
                 {
-                    text: "Galería",
+                    text: t('editProProfileScreen.gallery'),
                     onPress: async () => {
                         const result = await ImagePicker.launchImageLibraryAsync({
                             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -160,7 +154,7 @@ export default function EditProProfileScreen() {
                     },
                 },
                 {
-                    text: "Cancelar",
+                    text: t('editProProfileScreen.cancel'),
                     style: "cancel",
                 },
             ]
@@ -180,11 +174,11 @@ export default function EditProProfileScreen() {
 
     async function handleSave() {
         if (!publicName.trim()) {
-            showAlert({ type: 'error', title: "Error", message: "Por favor ingresa tu nombre público" })
+            showAlert({ type: 'error', title: t('common:error'), message: t('editProProfileScreen.errorPublicName') })
             return;
         }
         if (!profession.trim()) {
-            showAlert({ type: 'error', title: "Error", message: "Por favor ingresa tu profesión" })
+            showAlert({ type: 'error', title: t('common:error'), message: t('editProProfileScreen.errorProfession') })
             return;
         }
 
@@ -211,12 +205,12 @@ export default function EditProProfileScreen() {
             }
 
             showAlert({
-                type: 'success', title: "Éxito", message: "Perfil actualizado correctamente", buttons: [
+                type: 'success', title: t('editProProfileScreen.successTitle'), message: t('editProProfileScreen.successMessage'), buttons: [
                     { text: "OK", onPress: () => router.back() }
                 ]
             })
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar el perfil" })
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('editProProfileScreen.errorSave') })
         } finally {
             setIsLoading(false);
         }
@@ -229,7 +223,7 @@ export default function EditProProfileScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Perfil Profesional</Text>
+                <Text style={styles.headerTitle}>{t('editProProfileScreen.headerTitle')}</Text>
                 <TouchableOpacity
                     style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
                     onPress={handleSave}
@@ -238,7 +232,7 @@ export default function EditProProfileScreen() {
                     {isLoading ? (
                         <ActivityIndicator size="small" color={COLORS.textMain} />
                     ) : (
-                        <Text style={styles.saveButtonText}>Guardar</Text>
+                        <Text style={styles.saveButtonText}>{t('editProProfileScreen.save')}</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -266,7 +260,7 @@ export default function EditProProfileScreen() {
                                 <MaterialIcons name="camera-alt" size={18} color={COLORS.textMain} />
                             </View>
                         </TouchableOpacity>
-                        <Text style={styles.avatarHint}>Toca para cambiar tu foto</Text>
+                        <Text style={styles.avatarHint}>{t('editProProfileScreen.avatarHint')}</Text>
                     </View>
 
                     {/* Username & Profile URL Section */}
@@ -282,7 +276,7 @@ export default function EditProProfileScreen() {
                                     onPress={handleViewQR}
                                 >
                                     <MaterialIcons name="qr-code-2" size={16} color={COLORS.gray500} />
-                                    <Text style={styles.qrButtonText}>Ver mi código QR</Text>
+                                    <Text style={styles.qrButtonText}>{t('editProProfileScreen.viewQR')}</Text>
                                     {!hasQrAccess && (
                                         <View style={styles.proBadge}>
                                             <Text style={styles.proBadgeText}>PRO</Text>
@@ -295,12 +289,12 @@ export default function EditProProfileScreen() {
 
                     {/* Form Fields */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>INFORMACIÓN BÁSICA</Text>
+                        <Text style={styles.sectionTitle}>{t('editProProfileScreen.basicInfo')}</Text>
 
                         <View style={styles.card}>
                             {/* Public Name */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Nombre público</Text>
+                                <Text style={styles.inputLabel}>{t('editProProfileScreen.publicName')}</Text>
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Ej. Dr. Juan Pérez"
@@ -314,7 +308,7 @@ export default function EditProProfileScreen() {
 
                             {/* Profession */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Profesión</Text>
+                                <Text style={styles.inputLabel}>{t('editProProfileScreen.profession')}</Text>
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Ej. Abogado, Médico, Coach..."
@@ -328,13 +322,13 @@ export default function EditProProfileScreen() {
 
                             {/* Category */}
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Categoría</Text>
+                                <Text style={styles.inputLabel}>{t('editProProfileScreen.category')}</Text>
                                 <TouchableOpacity
                                     style={styles.pickerButton}
                                     onPress={() => setShowCategoryPicker(!showCategoryPicker)}
                                 >
                                     <Text style={[styles.pickerText, !category && styles.placeholderText]}>
-                                        {category ? CATEGORIES.find(c => c.id === category)?.label : "Seleccionar..."}
+                                        {category ? CATEGORIES.find(c => c.id === category)?.label : t('editProProfileScreen.categorySelect')}
                                     </Text>
                                     <MaterialIcons
                                         name={showCategoryPicker ? "expand-less" : "expand-more"}
@@ -375,7 +369,7 @@ export default function EditProProfileScreen() {
 
                     {/* Specialties Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>ESPECIALIDADES</Text>
+                        <Text style={styles.sectionTitle}>{t('editProProfileScreen.specialties')}</Text>
 
                         <View style={styles.card}>
                             <View style={styles.specialtiesContainer}>
@@ -408,7 +402,7 @@ export default function EditProProfileScreen() {
                     {/* Bio Section */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>PRESENTACIÓN</Text>
+                            <Text style={styles.sectionTitle}>{t('editProProfileScreen.presentation')}</Text>
                             <Text style={styles.bioCounter}>{bio.length}/{bioMaxLength}</Text>
                         </View>
 
@@ -431,7 +425,7 @@ export default function EditProProfileScreen() {
             <UpgradeModal
                 visible={showUpgradeModal}
                 onClose={() => setShowUpgradeModal(false)}
-                featureName="Código QR Personalizado"
+                featureName={t('editProProfileScreen.qrFeatureName')}
                 requiredPlan={getRequiredPlan('qrCode') || 'professional'}
             />
         </SafeAreaView>

@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ScrollView,
     StyleSheet,
@@ -55,46 +56,49 @@ interface NotificationCategory {
     warningOnDisable?: string;
 }
 
-const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
-    {
-        key: "appointments",
-        title: "Citas",
-        description: "Confirmaciones y cancelaciones de citas",
-        icon: "calendar-today",
-        iconBg: COLORS.blue50,
-        iconColor: COLORS.blue500,
-    },
-    {
-        key: "reminders",
-        title: "Recordatorios",
-        description: "Avisos 24h y 1h antes de tu cita",
-        icon: "alarm",
-        iconBg: COLORS.orange50,
-        iconColor: COLORS.orange500,
-        critical: true,
-        warningOnDisable: "Sin recordatorios podrías olvidar tus citas agendadas. Esto puede resultar en pérdida de la cita o cargos por no presentarse.",
-    },
-    {
-        key: "payments",
-        title: "Pagos",
-        description: "Confirmaciones de pago realizados",
-        icon: "payment",
-        iconBg: COLORS.green50,
-        iconColor: COLORS.green500,
-    },
-    {
-        key: "escalation_response",
-        title: "Consultas",
-        description: "Respuestas de profesionales a tus consultas",
-        icon: "support-agent",
-        iconBg: COLORS.orange50,
-        iconColor: COLORS.orange500,
-    },
-];
+
 
 export default function ClientNotificationSettingsScreen() {
     const { user, token, updateUserProfile } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
+
+    const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
+        {
+            key: "appointments",
+            title: t('clientNotificationSettings.categories.appointments'),
+            description: t('clientNotificationSettings.categories.appointmentsDesc'),
+            icon: "calendar-today",
+            iconBg: COLORS.blue50,
+            iconColor: COLORS.blue500,
+        },
+        {
+            key: "reminders",
+            title: t('clientNotificationSettings.categories.reminders'),
+            description: t('clientNotificationSettings.categories.remindersDesc'),
+            icon: "alarm",
+            iconBg: COLORS.orange50,
+            iconColor: COLORS.orange500,
+            critical: true,
+            warningOnDisable: t('clientNotificationSettings.categories.remindersWarning'),
+        },
+        {
+            key: "payments",
+            title: t('clientNotificationSettings.categories.payments'),
+            description: t('clientNotificationSettings.categories.paymentsDesc'),
+            icon: "payment",
+            iconBg: COLORS.green50,
+            iconColor: COLORS.green500,
+        },
+        {
+            key: "escalation_response",
+            title: t('clientNotificationSettings.categories.escalation'),
+            description: t('clientNotificationSettings.categories.escalationDesc'),
+            icon: "support-agent",
+            iconBg: COLORS.orange50,
+            iconColor: COLORS.orange500,
+        },
+    ];
     const [preferences, setPreferences] = useState<ClientNotificationPreferences>({
         appointments: true,
         reminders: true,
@@ -135,15 +139,15 @@ export default function ClientNotificationSettingsScreen() {
         if (!value && category?.warningOnDisable) {
             showAlert({
                 type: 'warning',
-                title: '⚠️ ¿Estás seguro?',
+                title: t('clientNotificationSettings.warningTitle'),
                 message: '',
                 buttons: [
                     {
-                        text: "Mantener activo",
+                        text: t('clientNotificationSettings.keepActive'),
                         style: "cancel",
                     },
                     {
-                        text: "Desactivar",
+                        text: t('clientNotificationSettings.deactivate'),
                         style: "destructive",
                         onPress: () => performToggle(key, value),
                     },
@@ -176,7 +180,7 @@ export default function ClientNotificationSettingsScreen() {
             console.error("Error updating preference:", error);
             // Revert on failure
             setPreferences(prev => ({ ...prev, [key]: !value }));
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo actualizar la preferencia' });
+            showAlert({ type: 'error', title: 'Error', message: t('clientNotificationSettings.errorUpdate') });
         } finally {
             setSaving(false);
         }
@@ -193,7 +197,7 @@ export default function ClientNotificationSettingsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notificaciones</Text>
+                <Text style={styles.headerTitle}>{t('clientNotificationSettings.headerTitle')}</Text>
                 <View style={styles.headerButton}>
                     {saving && <ActivityIndicator size="small" color={COLORS.primary} />}
                 </View>
@@ -213,7 +217,7 @@ export default function ClientNotificationSettingsScreen() {
                     <View style={styles.infoBanner}>
                         <MaterialIcons name="notifications-active" size={20} color={COLORS.primary} />
                         <Text style={styles.infoBannerText}>
-                            Configura qué notificaciones quieres recibir sobre tus citas y pagos
+                            {t('clientNotificationSettings.infoBanner')}
                         </Text>
                     </View>
 
@@ -221,7 +225,7 @@ export default function ClientNotificationSettingsScreen() {
                     <View style={styles.alwaysActiveBanner}>
                         <MaterialIcons name="videocam" size={18} color={COLORS.green500} />
                         <Text style={styles.alwaysActiveText}>
-                            Las videollamadas entrantes y respuestas a consultas siempre estarán activas
+                            {t('clientNotificationSettings.alwaysActive')}
                         </Text>
                     </View>
 
@@ -247,7 +251,7 @@ export default function ClientNotificationSettingsScreen() {
                                         <Text style={styles.categoryTitle}>{category.title}</Text>
                                         {category.critical && (
                                             <View style={styles.criticalBadge}>
-                                                <Text style={styles.criticalBadgeText}>Importante</Text>
+                                                <Text style={styles.criticalBadgeText}>{t('clientNotificationSettings.important')}</Text>
                                             </View>
                                         )}
                                     </View>
@@ -268,7 +272,7 @@ export default function ClientNotificationSettingsScreen() {
 
                     {/* Footer Note */}
                     <Text style={styles.footerNote}>
-                        Las notificaciones te ayudan a no perderte ninguna cita importante con tus profesionales.
+                        {t('clientNotificationSettings.footerNote')}
                     </Text>
                 </ScrollView>
             )}

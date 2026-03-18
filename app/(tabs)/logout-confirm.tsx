@@ -8,6 +8,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -19,6 +20,7 @@ const COLORS = {
 
 export default function LogoutConfirmScreen() {
     const { logout } = useAuth();
+    const { t } = useTranslation('settings');
 
     function handleCancel() {
         router.back();
@@ -46,9 +48,9 @@ export default function LogoutConfirmScreen() {
                     </View>
 
                     {/* Text */}
-                    <Text style={styles.title}>¿Cerrar sesión?</Text>
+                    <Text style={styles.title}>{t('logout.title')}</Text>
                     <Text style={styles.description}>
-                        ¿Estás seguro de que quieres salir? Deberás iniciar sesión de nuevo para hablar con tus profesionales.
+                        {t('logout.description')}
                     </Text>
                 </View>
 
@@ -62,7 +64,7 @@ export default function LogoutConfirmScreen() {
                         onPress={handleLogout}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.logoutButtonText}>Sí, cerrar sesión</Text>
+                        <Text style={styles.logoutButtonText}>{t('logout.confirm')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -70,7 +72,7 @@ export default function LogoutConfirmScreen() {
                         onPress={handleCancel}
                         activeOpacity={0.7}
                     >
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                        <Text style={styles.cancelButtonText}>{t('logout.cancel')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

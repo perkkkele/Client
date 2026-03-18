@@ -25,6 +25,7 @@ import { useAuth } from "../../context/AuthContext";
 import { subscriptionApi } from "../../api";
 import type { SubscriptionStatus, SubscriptionPlan } from "../../api/subscription";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#137fec",
@@ -61,6 +62,7 @@ const PLAN_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
 export default function PlansCreditsScreen() {
     const { token, refreshUser } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<SubscriptionStatus | null>(null);
@@ -127,7 +129,7 @@ export default function PlansCreditsScreen() {
 
         // Don't allow subscribing to current plan
         if (status?.plan === planId) {
-            showAlert({ type: 'info', title: 'Info', message: 'Ya tienes este plan activo' });
+            showAlert({ type: 'info', title: 'Info', message: t('plansCreditsScreen.alreadyActive') });
             return;
         }
 
@@ -149,9 +151,9 @@ export default function PlansCreditsScreen() {
                 if (refreshUser) await refreshUser();
 
                 showAlert({
-                    type: 'success', title: result.isUpgrade ? "¡Plan mejorado!" : "Plan cambiado", message: result.isUpgrade
-                        ? `Has actualizado de ${result.previousPlan} a ${result.newPlan}. El cambio se aplica inmediatamente.`
-                        : `Has cambiado de ${result.previousPlan} a ${result.newPlan}. El ajuste se reflejará en tu próxima factura.`
+                    type: 'success', title: result.isUpgrade ? t('plansCreditsScreen.planUpgraded') : t('plansCreditsScreen.planChanged'), message: result.isUpgrade
+                        ? t('plansCreditsScreen.upgradeMessage', { previous: result.previousPlan, new: result.newPlan })
+                        : t('plansCreditsScreen.downgradeMessage', { previous: result.previousPlan, new: result.newPlan })
                 })
             } else {
                 // New subscription - use checkout
@@ -183,10 +185,10 @@ export default function PlansCreditsScreen() {
                         if (refreshUser) await refreshUser();
                     }
                 } catch (checkoutError: any) {
-                    showAlert({ type: 'error', title: 'Error', message: checkoutError.message || "Error al procesar la suscripción" });
+                    showAlert({ type: 'error', title: t('common:error'), message: checkoutError.message || t('plansCreditsScreen.subscriptionError') });
                 }
             } else {
-                showAlert({ type: 'error', title: 'Error', message: error.message || "Error al procesar la suscripción" });
+                showAlert({ type: 'error', title: t('common:error'), message: error.message || t('plansCreditsScreen.subscriptionError') });
             }
         } finally {
             setCheckoutLoading(null);
@@ -196,12 +198,12 @@ export default function PlansCreditsScreen() {
     const handleCancelSubscription = () => {
         showAlert({
             type: 'info',
-            title: 'Cancelar suscripción',
-            message: 'Si cancelas, mantendrás acceso a tu plan actual hasta el final del período facturado. Después volverás al plan Starter.',
+            title: t('plansCreditsScreen.cancelTitle'),
+            message: t('plansCreditsScreen.cancelMessage'),
             buttons: [
-                { text: "No, mantener", style: "cancel" },
+                { text: t('plansCreditsScreen.cancelNo'), style: "cancel" },
                 {
-                    text: "Sí, cancelar",
+                    text: t('plansCreditsScreen.cancelYes'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token) return;
@@ -218,9 +220,9 @@ export default function PlansCreditsScreen() {
                                 })
                                 : 'el final del período';
 
-                            showAlert({ type: 'info', title: 'Suscripción cancelada', message: `Tu plan se mantendrá activo hasta ${cancelDate}. Después volverás automáticamente al plan Starter.` });
+                            showAlert({ type: 'info', title: t('plansCreditsScreen.cancelledTitle'), message: t('plansCreditsScreen.cancelledMessage', { date: cancelDate }) });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: "Error", message: error.message })
+                            showAlert({ type: 'error', title: t('common:error'), message: error.message })
                         }
                     },
                 },
@@ -231,7 +233,7 @@ export default function PlansCreditsScreen() {
     const handleSubmitVerification = async () => {
         if (!token) return;
         if (!verificationData.declarationAccepted) {
-            showAlert({ type: 'error', title: 'Error', message: 'Debes aceptar la declaración jurada' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('plansCreditsScreen.declarationRequired') });
             return;
         }
 
@@ -241,17 +243,17 @@ export default function PlansCreditsScreen() {
             setVerificationModalVisible(false);
             await loadData();
             if (refreshUser) await refreshUser();
-            showAlert({ type: 'warning', title: '¡Verificación completada!', message: 'Has obtenido el badge de Profesional Verificado.' });
+            showAlert({ type: 'warning', title: t('plansCreditsScreen.verificationSuccess'), message: t('plansCreditsScreen.verificationBadge') });
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message })
+            showAlert({ type: 'error', title: t('common:error'), message: error.message })
         } finally {
             setVerificationLoading(false);
         }
     };
 
     const formatPrice = (cents: number) => {
-        if (cents === 0) return "Gratis";
-        return `${(cents / 100).toFixed(0)}€/mes`;
+        if (cents === 0) return t('plansCreditsScreen.free');
+        return t('plansCreditsScreen.pricePerMonth', { price: `${(cents / 100).toFixed(0)}€` });
     };
 
     const renderUsageBar = () => {
@@ -262,7 +264,7 @@ export default function PlansCreditsScreen() {
         return (
             <View style={styles.usageCard}>
                 <View style={styles.usageHeader}>
-                    <Text style={styles.usageTitle}>Uso de minutos</Text>
+                    <Text style={styles.usageTitle}>{t('plansCreditsScreen.minuteUsage')}</Text>
                     <Text style={styles.usageCount}>
                         {status.minutesUsed} / {status.minutesIncluded} min
                     </Text>
@@ -280,13 +282,13 @@ export default function PlansCreditsScreen() {
                     <View style={styles.extraUsageContainer}>
                         <MaterialIcons name="info" size={16} color={COLORS.warning} />
                         <Text style={styles.extraUsageText}>
-                            {status.extraMinutesUsed} min extra ({(extraMinuteCost / 100).toFixed(2)}€/min)
+                            {t('plansCreditsScreen.extraMinutes', { count: status.extraMinutesUsed, cost: `${(extraMinuteCost / 100).toFixed(2)}€` })}
                         </Text>
                     </View>
                 )}
                 {status.currentPeriodEnd && (
                     <Text style={styles.resetText}>
-                        Se reinicia el {new Date(status.currentPeriodEnd).toLocaleDateString("es-ES")}
+                        {t('plansCreditsScreen.resetDate', { date: new Date(status.currentPeriodEnd).toLocaleDateString() })}
                     </Text>
                 )}
             </View>
@@ -305,14 +307,14 @@ export default function PlansCreditsScreen() {
                         <MaterialIcons name={planIcon} size={24} color="#FFFFFF" />
                     </View>
                     <View style={styles.currentPlanInfo}>
-                        <Text style={styles.currentPlanLabel}>Tu plan actual</Text>
+                        <Text style={styles.currentPlanLabel}>{t('plansCreditsScreen.yourCurrentPlan')}</Text>
                         <Text style={[styles.currentPlanName, { color: planColor }]}>
                             {status.planName}
                         </Text>
                     </View>
                     {status.status === "active" && (
                         <View style={[styles.statusBadge, { backgroundColor: COLORS.success + "20" }]}>
-                            <Text style={[styles.statusBadgeText, { color: COLORS.success }]}>Activo</Text>
+                            <Text style={[styles.statusBadgeText, { color: COLORS.success }]}>{t('plansCreditsScreen.active')}</Text>
                         </View>
                     )}
                 </View>
@@ -322,13 +324,13 @@ export default function PlansCreditsScreen() {
                     {status.verification.identityVerified && (
                         <View style={[styles.badge, { backgroundColor: "#10b98120" }]}>
                             <MaterialIcons name="verified-user" size={16} color="#10b981" />
-                            <Text style={[styles.badgeText, { color: "#10b981" }]}>Identidad Verificada</Text>
+                            <Text style={[styles.badgeText, { color: "#10b981" }]}>{t('plansCreditsScreen.identityVerified')}</Text>
                         </View>
                     )}
                     {status.verification.professionalVerified && (
                         <View style={[styles.badge, { backgroundColor: "#3b82f620" }]}>
                             <MaterialIcons name="workspace-premium" size={16} color="#3b82f6" />
-                            <Text style={[styles.badgeText, { color: "#3b82f6" }]}>Profesional Verificado</Text>
+                            <Text style={[styles.badgeText, { color: "#3b82f6" }]}>{t('plansCreditsScreen.professionalVerified')}</Text>
                         </View>
                     )}
                 </View>
@@ -337,14 +339,14 @@ export default function PlansCreditsScreen() {
                 {status.plan !== "starter" && !status.verification.professionalVerified && (
                     <TouchableOpacity style={styles.verificationCta} onPress={() => setVerificationModalVisible(true)}>
                         <MaterialIcons name="verified" size={20} color={COLORS.professional} />
-                        <Text style={styles.verificationCtaText}>Verificar mi profesión</Text>
+                        <Text style={styles.verificationCtaText}>{t('plansCreditsScreen.verifyProfession')}</Text>
                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 )}
 
                 {status.plan !== "starter" && (
                     <TouchableOpacity style={styles.cancelButton} onPress={handleCancelSubscription}>
-                        <Text style={styles.cancelButtonText}>Cancelar suscripción</Text>
+                        <Text style={styles.cancelButtonText}>{t('plansCreditsScreen.cancelSubscription')}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -357,19 +359,19 @@ export default function PlansCreditsScreen() {
         const planIcon = PLAN_ICONS[plan.id] || "star";
 
         const featuresList = [
-            { key: "directoryListing", label: "Presencia en el directorio profesional", icon: "public" },
-            { key: "catalogAvatar", label: "Acceso a avatares de catálogo", icon: "face" },
-            { key: "customAvatar", label: "Avatar personalizado", icon: "auto-fix-high" },
-            { key: "escalation", label: "Escalado a profesional", icon: "support-agent" },
-            { key: "appointments", label: "Sistema de reserva de citas", icon: "event" },
-            { key: "videoAppointments", label: "Videollamadas integradas", icon: "videocam" },
-            { key: "integratedPayments", label: "Pasarela de pagos integrada", icon: "payments" },
-            { key: "widget", label: "Widget web para Chatbot", icon: "widgets" },
-            { key: "qrCode", label: "Código QR personalizado", icon: "qr-code-2" },
-            { key: "analytics", label: "Analíticas", icon: "analytics" },
-            { key: "advancedReports", label: "Informes y métricas avanzadas", icon: "assessment" },
-            { key: "calendarSync", label: "Sincronización calendario", icon: "calendar-month" },
-            { key: "searchPriority", label: "Posicionamiento prioritario", icon: "trending-up" },
+            { key: "directoryListing", label: t('plansCreditsScreen.features.directoryListing'), icon: "public" },
+            { key: "catalogAvatar", label: t('plansCreditsScreen.features.catalogAvatar'), icon: "face" },
+            { key: "customAvatar", label: t('plansCreditsScreen.features.customAvatar'), icon: "auto-fix-high" },
+            { key: "escalation", label: t('plansCreditsScreen.features.escalation'), icon: "support-agent" },
+            { key: "appointments", label: t('plansCreditsScreen.features.appointments'), icon: "event" },
+            { key: "videoAppointments", label: t('plansCreditsScreen.features.videoAppointments'), icon: "videocam" },
+            { key: "integratedPayments", label: t('plansCreditsScreen.features.integratedPayments'), icon: "payments" },
+            { key: "widget", label: t('plansCreditsScreen.features.widget'), icon: "widgets" },
+            { key: "qrCode", label: t('plansCreditsScreen.features.qrCode'), icon: "qr-code-2" },
+            { key: "analytics", label: t('plansCreditsScreen.features.analytics'), icon: "analytics" },
+            { key: "advancedReports", label: t('plansCreditsScreen.features.advancedReports'), icon: "assessment" },
+            { key: "calendarSync", label: t('plansCreditsScreen.features.calendarSync'), icon: "calendar-month" },
+            { key: "searchPriority", label: t('plansCreditsScreen.features.searchPriority'), icon: "trending-up" },
         ];
 
         return (
@@ -391,14 +393,14 @@ export default function PlansCreditsScreen() {
                     </View>
                     {isCurrentPlan && (
                         <View style={[styles.currentBadge, { backgroundColor: planColor }]}>
-                            <Text style={styles.currentBadgeText}>Actual</Text>
+                            <Text style={styles.currentBadgeText}>{t('plansCreditsScreen.current')}</Text>
                         </View>
                     )}
                 </View>
 
                 <View style={styles.minutesRow}>
                     <MaterialIcons name="timer" size={18} color={COLORS.gray600} />
-                    <Text style={styles.minutesText}>{plan.minutesIncluded} min/mes incluidos</Text>
+                    <Text style={styles.minutesText}>{t('plansCreditsScreen.minutesPerMonth', { count: plan.minutesIncluded })}</Text>
                 </View>
 
                 <View style={styles.featuresList}>
@@ -431,8 +433,8 @@ export default function PlansCreditsScreen() {
                             ) : (
                                 <Text style={styles.subscribeButtonText}>
                                     {status?.plan && status.plan !== 'starter' && status.status === 'active'
-                                        ? `Cambiar a ${plan.name}`
-                                        : `Suscribirse a ${plan.name}`
+                                        ? t('plansCreditsScreen.switchTo', { plan: plan.name })
+                                        : t('plansCreditsScreen.subscribeTo', { plan: plan.name })
                                     }
                                 </Text>
                             )}
@@ -459,7 +461,7 @@ export default function PlansCreditsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.gray800} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Planes y Créditos</Text>
+                <Text style={styles.headerTitle}>{t('plansCreditsScreen.headerTitle')}</Text>
                 <View style={styles.headerPlaceholder} />
             </View>
 
@@ -472,13 +474,13 @@ export default function PlansCreditsScreen() {
                 {renderCurrentPlan()}
                 {renderUsageBar()}
 
-                <Text style={styles.sectionTitle}>Planes disponibles</Text>
+                <Text style={styles.sectionTitle}>{t('plansCreditsScreen.availablePlans')}</Text>
                 {plans.map(renderPlanCard)}
 
                 <View style={styles.extraInfoCard}>
                     <MaterialIcons name="info-outline" size={20} color={COLORS.gray500} />
                     <Text style={styles.extraInfoText}>
-                        Los minutos adicionales se cobran a {(extraMinuteCost / 100).toFixed(2)}€/min
+                        {t('plansCreditsScreen.extraMinuteInfo', { cost: `${(extraMinuteCost / 100).toFixed(2)}€` })}
                     </Text>
                 </View>
             </ScrollView>
@@ -492,7 +494,7 @@ export default function PlansCreditsScreen() {
             >
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Verificación Profesional</Text>
+                        <Text style={styles.modalTitle}>{t('plansCreditsScreen.verificationTitle')}</Text>
                         <TouchableOpacity onPress={() => setVerificationModalVisible(false)}>
                             <MaterialIcons name="close" size={24} color={COLORS.gray600} />
                         </TouchableOpacity>
@@ -500,7 +502,7 @@ export default function PlansCreditsScreen() {
 
                     <ScrollView style={styles.modalContent}>
                         <Text style={styles.modalDescription}>
-                            Completa este formulario para obtener el badge de Profesional Verificado.
+                            {t('plansCreditsScreen.verificationDesc')}
                         </Text>
 
                         <TouchableOpacity
@@ -513,11 +515,11 @@ export default function PlansCreditsScreen() {
                                 color={verificationData.declarationAccepted ? COLORS.success : COLORS.gray400}
                             />
                             <Text style={styles.declarationText}>
-                                Declaro que ejerzo esta actividad profesional de forma real y legal
+                                {t('plansCreditsScreen.declaration')}
                             </Text>
                         </TouchableOpacity>
 
-                        <Text style={styles.inputLabel}>Nº de colegiado / Licencia (opcional)</Text>
+                        <Text style={styles.inputLabel}>{t('plansCreditsScreen.licenseLabel')}</Text>
                         <TextInput
                             style={styles.textInput}
                             placeholder="Ej: 12345-M"
@@ -525,7 +527,7 @@ export default function PlansCreditsScreen() {
                             onChangeText={(text) => setVerificationData((prev) => ({ ...prev, licenseNumber: text }))}
                         />
 
-                        <Text style={styles.inputLabel}>Información adicional (opcional)</Text>
+                        <Text style={styles.inputLabel}>{t('plansCreditsScreen.additionalInfoLabel')}</Text>
                         <TextInput
                             style={[styles.textInput, styles.textArea]}
                             placeholder="Cualquier información relevante..."
@@ -544,7 +546,7 @@ export default function PlansCreditsScreen() {
                             {verificationLoading ? (
                                 <ActivityIndicator color="#FFFFFF" />
                             ) : (
-                                <Text style={styles.submitButtonText}>Enviar verificación</Text>
+                                <Text style={styles.submitButtonText}>{t('plansCreditsScreen.submitVerification')}</Text>
                             )}
                         </TouchableOpacity>
                     </ScrollView>

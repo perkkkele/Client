@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -40,24 +41,27 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Cómo contacto a un avatar profesional?",
-        answer: "Puedes navegar por el Directorio, seleccionar un profesional y pulsar en \"Iniciar Chat\". El avatar responderá instantáneamente.",
-    },
-    {
-        question: "¿Son las conversaciones privadas?",
-        answer: "Sí, todas las conversaciones están encriptadas de extremo a extremo para garantizar tu privacidad y seguridad.",
-    },
-    {
-        question: "¿Cómo funciona el gemelo digital?",
-        answer: "El gemelo digital es una réplica entrenada del profesional real, disponible 24/7 para responder tus consultas iniciales.",
-    },
-];
+const FAQ_ITEMS: FAQItem[] = [];
 
 export default function HelpCenterScreen() {
+    const { t } = useTranslation('settings');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+
+    const faqItems: FAQItem[] = [
+        {
+            question: t('helpCenterScreen.faq1Question'),
+            answer: t('helpCenterScreen.faq1Answer'),
+        },
+        {
+            question: t('helpCenterScreen.faq2Question'),
+            answer: t('helpCenterScreen.faq2Answer'),
+        },
+        {
+            question: t('helpCenterScreen.faq3Question'),
+            answer: t('helpCenterScreen.faq3Answer'),
+        },
+    ];
 
     function handleBack() {
         router.back();
@@ -86,7 +90,7 @@ export default function HelpCenterScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Centro de Ayuda</Text>
+                <Text style={styles.headerTitle}>{t('helpCenterScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -100,7 +104,7 @@ export default function HelpCenterScreen() {
                     <MaterialIcons name="search" size={20} color={COLORS.gray400} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar temas de ayuda..."
+                        placeholder={t('helpCenterScreen.searchPlaceholder')}
                         placeholderTextColor={COLORS.gray400}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -109,9 +113,9 @@ export default function HelpCenterScreen() {
 
                 {/* FAQ Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES (FAQ)</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCenterScreen.faqSectionTitle')}</Text>
                     <View style={styles.faqContainer}>
-                        {FAQ_ITEMS.map((item, index) => (
+                        {faqItems.map((item, index) => (
                             <TouchableOpacity
                                 key={index}
                                 style={styles.faqItem}
@@ -138,13 +142,13 @@ export default function HelpCenterScreen() {
 
                 {/* Guides Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCenterScreen.guidesSectionTitle')}</Text>
                     <View style={styles.guidesCard}>
                         <TouchableOpacity style={styles.guideItem}>
                             <View style={[styles.guideIcon, { backgroundColor: COLORS.indigo100 }]}>
                                 <MaterialIcons name="smartphone" size={18} color={COLORS.indigo600} />
                             </View>
-                            <Text style={styles.guideText}>Uso básico de la aplicación</Text>
+                            <Text style={styles.guideText}>{t('helpCenterScreen.guideBasicUsage')}</Text>
                             <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
@@ -152,7 +156,7 @@ export default function HelpCenterScreen() {
                             <View style={[styles.guideIcon, { backgroundColor: COLORS.purple100 }]}>
                                 <MaterialIcons name="smart-toy" size={18} color={COLORS.purple600} />
                             </View>
-                            <Text style={styles.guideText}>Interactuar con el Gemelo Digital</Text>
+                            <Text style={styles.guideText}>{t('helpCenterScreen.guideDigitalTwin')}</Text>
                             <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                         </TouchableOpacity>
                     </View>
@@ -160,25 +164,25 @@ export default function HelpCenterScreen() {
 
                 {/* Contact Support Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CONTACTAR SOPORTE</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCenterScreen.contactSectionTitle')}</Text>
                     <View style={styles.contactGrid}>
                         <TouchableOpacity style={styles.contactButton} onPress={handleContactLiveChat}>
                             <View style={[styles.contactIcon, { backgroundColor: COLORS.blue50 }]}>
                                 <MaterialIcons name="chat" size={24} color={COLORS.blue600} />
                             </View>
-                            <Text style={styles.contactLabel}>Chat en{"\n"}Vivo</Text>
+                            <Text style={styles.contactLabel}>{t('helpCenterScreen.contactLiveChat')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.contactButton} onPress={handleContactCall}>
                             <View style={[styles.contactIcon, { backgroundColor: COLORS.green50 }]}>
                                 <MaterialIcons name="call" size={24} color={COLORS.green600} />
                             </View>
-                            <Text style={styles.contactLabel}>Llamar{"\n"}Soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCenterScreen.contactCall')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.contactButton} onPress={handleContactEmail}>
                             <View style={[styles.contactIcon, { backgroundColor: COLORS.orange50 }]}>
                                 <MaterialIcons name="mail" size={24} color={COLORS.orange600} />
                             </View>
-                            <Text style={styles.contactLabel}>Enviar{"\n"}Mensaje</Text>
+                            <Text style={styles.contactLabel}>{t('helpCenterScreen.contactEmail')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -189,8 +193,8 @@ export default function HelpCenterScreen() {
                         <MaterialIcons name="groups" size={24} color={COLORS.primary} />
                     </View>
                     <View style={styles.communityText}>
-                        <Text style={styles.communityTitle}>Comunidad de Usuarios</Text>
-                        <Text style={styles.communitySubtitle}>Únete a los foros de discusión</Text>
+                        <Text style={styles.communityTitle}>{t('helpCenterScreen.communityTitle')}</Text>
+                        <Text style={styles.communitySubtitle}>{t('helpCenterScreen.communitySubtitle')}</Text>
                     </View>
                     <MaterialIcons name="arrow-forward" size={20} color="#FFFFFF" />
                 </TouchableOpacity>

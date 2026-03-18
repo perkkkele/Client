@@ -6,10 +6,12 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Linking,} from "react-native";
+    Linking,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -32,17 +34,19 @@ const COLORS = {
     green800: "#166534",
 };
 
-const SUPPORT_TOPICS = [
-    "Problema Técnico",
-    "Facturación y Pagos",
-    "Reportar un Usuario",
-    "Consulta General",
-    "Otro",
-];
-
 export default function ContactSupportScreen() {
+    const { t } = useTranslation('settings');
+
+    const SUPPORT_TOPICS = [
+        { key: 'technical', label: t('contactSupportScreen.topics.technical') },
+        { key: 'billing', label: t('contactSupportScreen.topics.billing') },
+        { key: 'report', label: t('contactSupportScreen.topics.report') },
+        { key: 'general', label: t('contactSupportScreen.topics.general') },
+        { key: 'other', label: t('contactSupportScreen.topics.other') },
+    ];
+
     const [selectedTopic, setSelectedTopic] = useState(SUPPORT_TOPICS[0]);
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
     const [showPicker, setShowPicker] = useState(false);
 
     function handleBack() {
@@ -50,12 +54,12 @@ export default function ContactSupportScreen() {
     }
 
     function handleWriteSupport() {
-        const subject = encodeURIComponent(`[${selectedTopic}] Consulta de soporte`);
+        const subject = encodeURIComponent(`[${selectedTopic.label}] ${t('contactSupportScreen.emailSubject')}`);
         Linking.openURL(`mailto:soporte@twinpro.com?subject=${subject}`);
     }
 
     function handleLiveChat() {
-        showAlert({ type: 'warning', title: 'Chat en Vivo', message: 'El chat en vivo estará disponible próximamente.' });
+        showAlert({ type: 'warning', title: t('contactSupportScreen.liveChat'), message: t('contactSupportScreen.liveChatSoon') });
     }
 
     function handleCallSupport() {
@@ -69,7 +73,7 @@ export default function ContactSupportScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Contactar Soporte</Text>
+                <Text style={styles.headerTitle}>{t('contactSupportScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -83,34 +87,34 @@ export default function ContactSupportScreen() {
                     <View style={styles.heroIcon}>
                         <MaterialIcons name="support-agent" size={48} color={COLORS.gray400} />
                     </View>
-                    <Text style={styles.heroTitle}>Estamos para ayudarte</Text>
+                    <Text style={styles.heroTitle}>{t('contactSupportScreen.heroTitle')}</Text>
                     <Text style={styles.heroSubtitle}>
-                        Elige el motivo de tu consulta y nos pondremos en contacto contigo lo antes posible.
+                        {t('contactSupportScreen.heroSubtitle')}
                     </Text>
                     <View style={styles.statusBadge}>
                         <View style={styles.statusDot} />
-                        <Text style={styles.statusText}>Atención: Lun-Vie • 9:00 - 18:00</Text>
+                        <Text style={styles.statusText}>{t('contactSupportScreen.statusText')}</Text>
                     </View>
                 </View>
 
                 {/* Topic Selector */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>ASUNTO</Text>
+                    <Text style={styles.sectionLabel}>{t('contactSupportScreen.subjectLabel')}</Text>
                     <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setShowPicker(!showPicker)}
                     >
-                        <Text style={styles.pickerText}>{selectedTopic}</Text>
+                        <Text style={styles.pickerText}>{selectedTopic.label}</Text>
                         <MaterialIcons name="expand-more" size={24} color={COLORS.gray400} />
                     </TouchableOpacity>
                     {showPicker && (
                         <View style={styles.pickerContainer}>
                             {SUPPORT_TOPICS.map((topic) => (
                                 <TouchableOpacity
-                                    key={topic}
+                                    key={topic.key}
                                     style={[
                                         styles.pickerOption,
-                                        selectedTopic === topic && styles.pickerOptionSelected,
+                                        selectedTopic.key === topic.key && styles.pickerOptionSelected,
                                     ]}
                                     onPress={() => {
                                         setSelectedTopic(topic);
@@ -120,12 +124,12 @@ export default function ContactSupportScreen() {
                                     <Text
                                         style={[
                                             styles.pickerOptionText,
-                                            selectedTopic === topic && styles.pickerOptionTextSelected,
+                                            selectedTopic.key === topic.key && styles.pickerOptionTextSelected,
                                         ]}
                                     >
-                                        {topic}
+                                        {topic.label}
                                     </Text>
-                                    {selectedTopic === topic && (
+                                    {selectedTopic.key === topic.key && (
                                         <MaterialIcons name="check" size={20} color={COLORS.primary} />
                                     )}
                                 </TouchableOpacity>
@@ -137,13 +141,13 @@ export default function ContactSupportScreen() {
                 {/* Write to Support Button */}
                 <TouchableOpacity style={styles.primaryButton} onPress={handleWriteSupport}>
                     <MaterialIcons name="edit-square" size={20} color="#000000" />
-                    <Text style={styles.primaryButtonText}>Escribir a Soporte</Text>
+                    <Text style={styles.primaryButtonText}>{t('contactSupportScreen.writeSupport')}</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
                 <View style={styles.dividerContainer}>
                     <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>¿Necesitas ayuda inmediata?</Text>
+                    <Text style={styles.dividerText}>{t('contactSupportScreen.immediateHelp')}</Text>
                     <View style={styles.dividerLine} />
                 </View>
 
@@ -153,15 +157,15 @@ export default function ContactSupportScreen() {
                         <View style={[styles.quickActionIcon, { backgroundColor: COLORS.blue50 }]}>
                             <MaterialIcons name="chat" size={24} color={COLORS.blue600} />
                         </View>
-                        <Text style={styles.quickActionTitle}>Chat en Vivo</Text>
-                        <Text style={styles.quickActionSubtitle}>Tiempo de espera: ~2 min</Text>
+                        <Text style={styles.quickActionTitle}>{t('contactSupportScreen.liveChat')}</Text>
+                        <Text style={styles.quickActionSubtitle}>{t('contactSupportScreen.liveChatWait')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.quickActionCard} onPress={handleCallSupport}>
                         <View style={[styles.quickActionIcon, { backgroundColor: COLORS.green50 }]}>
                             <MaterialIcons name="call" size={24} color={COLORS.green600} />
                         </View>
-                        <Text style={styles.quickActionTitle}>Llamar a Soporte</Text>
-                        <Text style={styles.quickActionSubtitle}>Hablar con un agente</Text>
+                        <Text style={styles.quickActionTitle}>{t('contactSupportScreen.callSupport')}</Text>
+                        <Text style={styles.quickActionSubtitle}>{t('contactSupportScreen.callSupportSubtitle')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -169,7 +173,7 @@ export default function ContactSupportScreen() {
                 <View style={styles.infoNote}>
                     <MaterialIcons name="info" size={18} color={COLORS.gray400} />
                     <Text style={styles.infoNoteText}>
-                        Para consultas sobre privacidad de datos, por favor revisa nuestra política de privacidad en los ajustes de tu perfil.
+                        {t('contactSupportScreen.privacyNote')}
                     </Text>
                 </View>
             </ScrollView>

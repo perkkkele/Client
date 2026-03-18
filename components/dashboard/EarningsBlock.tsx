@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ interface EarningsBlockProps {
 }
 
 export default function EarningsBlock({ token }: EarningsBlockProps) {
+    const { t } = useTranslation('settings');
     const [loading, setLoading] = useState(true);
     const [status, setStatus] = useState<ConnectStatus | null>(null);
     const [balance, setBalance] = useState<ConnectBalance | null>(null);
@@ -60,23 +62,23 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                     <View style={styles.headerIcon}>
                         <MaterialIcons name="account-balance-wallet" size={22} color={COLORS.green600} />
                     </View>
-                    <Text style={styles.headerTitle}>Mis Ingresos</Text>
+                    <Text style={styles.headerTitle}>{t('earningsBlock.title')}</Text>
                 </View>
 
                 <View style={styles.setupContainer}>
                     <View style={styles.setupIconContainer}>
                         <MaterialIcons name="account-balance" size={40} color={COLORS.gray400} />
                     </View>
-                    <Text style={styles.setupTitle}>Configura tu cuenta de pagos</Text>
+                    <Text style={styles.setupTitle}>{t('earningsBlock.setupPayments')}</Text>
                     <Text style={styles.setupDescription}>
-                        Conecta tu cuenta bancaria para recibir pagos directamente de tus clientes.
+                        {t('earningsBlock.setupDescription')}
                     </Text>
                     <TouchableOpacity
                         style={styles.setupButton}
                         onPress={() => router.push("/(settings)/stripe-onboarding")}
                     >
                         <MaterialIcons name="add" size={18} color={COLORS.textMain} />
-                        <Text style={styles.setupButtonText}>Configurar ahora</Text>
+                        <Text style={styles.setupButtonText}>{t('earningsBlock.setupNow')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -91,10 +93,10 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                 <View style={styles.headerIcon}>
                     <MaterialIcons name="account-balance-wallet" size={22} color={COLORS.green600} />
                 </View>
-                <Text style={styles.headerTitle}>Mis Ingresos</Text>
+                <Text style={styles.headerTitle}>{t('earningsBlock.title')}</Text>
                 <View style={styles.verifiedBadge}>
                     <MaterialIcons name="check-circle" size={14} color={COLORS.green600} />
-                    <Text style={styles.verifiedText}>Verificado</Text>
+                    <Text style={styles.verifiedText}>{t('earningsBlock.verified')}</Text>
                 </View>
             </View>
 
@@ -107,13 +109,13 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                     {/* Balance Cards */}
                     <View style={styles.balanceRow}>
                         <View style={styles.balanceCard}>
-                            <Text style={styles.balanceLabel}>Disponible</Text>
+                            <Text style={styles.balanceLabel}>{t('earningsBlock.available')}</Text>
                             <Text style={styles.balanceAmount}>
                                 {formatCents(balance?.available || 0)}
                             </Text>
                         </View>
                         <View style={[styles.balanceCard, styles.balanceCardSecondary]}>
-                            <Text style={styles.balanceLabelSecondary}>Pendiente</Text>
+                            <Text style={styles.balanceLabelSecondary}>{t('earningsBlock.pending')}</Text>
                             <Text style={styles.balanceAmountSecondary}>
                                 {formatCents(balance?.pending || 0)}
                             </Text>
@@ -124,7 +126,7 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                     <View style={styles.feeInfo}>
                         <MaterialIcons name="info-outline" size={14} color={COLORS.gray500} />
                         <Text style={styles.feeText}>
-                            Comisión TwinPro: 10% por transacción
+                            {t('earningsBlock.feeInfo')}
                         </Text>
                     </View>
 
@@ -135,7 +137,7 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                             onPress={() => router.push("/(settings)/my-earnings")}
                         >
                             <MaterialIcons name="trending-up" size={18} color={COLORS.textMain} />
-                            <Text style={styles.actionButtonText}>Ver todo</Text>
+                            <Text style={styles.actionButtonText}>{t('earningsBlock.viewAll')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={styles.actionButton}
@@ -157,7 +159,7 @@ export default function EarningsBlock({ token }: EarningsBlockProps) {
                             onPress={() => router.push("/(settings)/stripe-onboarding")}
                         >
                             <MaterialIcons name="settings" size={18} color={COLORS.textMain} />
-                            <Text style={styles.actionButtonText}>Ajustes</Text>
+                            <Text style={styles.actionButtonText}>{t('earningsBlock.settings')}</Text>
                         </TouchableOpacity>
                     </View>
                 </>

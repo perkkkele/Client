@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import {ScrollView,
+import {
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -14,6 +15,7 @@ import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -52,6 +54,7 @@ interface SocialLink {
 
 export default function ContactInfoScreen() {
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const { token, user, refreshUser } = useAuth();
 
     // Contact info state
@@ -132,12 +135,14 @@ export default function ContactInfoScreen() {
                     await refreshUser();
                 }
 
-                showAlert({ type: 'success', title: "Éxito", message: "Datos de contacto actualizados", buttons: [
-                    { text: "OK", onPress: () => router.back() }
-                ] })
+                showAlert({
+                    type: 'success', title: t('contactInfoScreen.successTitle'), message: t('contactInfoScreen.successMessage'), buttons: [
+                        { text: "OK", onPress: () => router.back() }
+                    ]
+                })
             }
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "Error al guardar los datos" })
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('contactInfoScreen.errorSaving') })
         } finally {
             setIsSaving(false);
         }
@@ -158,14 +163,14 @@ export default function ContactInfoScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Datos de contacto</Text>
+                <Text style={styles.headerTitle}>{t('contactInfoScreen.headerTitle')}</Text>
                 <TouchableOpacity
                     style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
                     onPress={handleSave}
                     disabled={isSaving}
                 >
                     <Text style={styles.saveButtonText}>
-                        {isSaving ? "Guardando..." : "Guardar"}
+                        {isSaving ? t('contactInfoScreen.saving') : t('contactInfoScreen.save')}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -173,9 +178,9 @@ export default function ContactInfoScreen() {
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 {/* Contact Info Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>INFORMACIÓN DE CONTACTO</Text>
+                    <Text style={styles.sectionTitle}>{t('contactInfoScreen.contactInfoSection')}</Text>
                     <Text style={styles.sectionHint}>
-                        Estos datos serán visibles en tu perfil público para que tus clientes puedan contactarte.
+                        {t('contactInfoScreen.contactInfoHint')}
                     </Text>
 
                     <View style={styles.card}>
@@ -185,7 +190,7 @@ export default function ContactInfoScreen() {
                                 <View style={[styles.inputIcon, { backgroundColor: COLORS.green50 }]}>
                                     <MaterialIcons name="phone" size={18} color={COLORS.green600} />
                                 </View>
-                                <Text style={styles.inputLabelText}>Teléfono profesional</Text>
+                                <Text style={styles.inputLabelText}>{t('contactInfoScreen.phoneLabel')}</Text>
                             </View>
                             <View style={styles.inputWithVisibility}>
                                 <TextInput
@@ -217,7 +222,7 @@ export default function ContactInfoScreen() {
                                 <View style={[styles.inputIcon, { backgroundColor: COLORS.blue50 }]}>
                                     <MaterialIcons name="email" size={18} color={COLORS.blue600} />
                                 </View>
-                                <Text style={styles.inputLabelText}>Email profesional</Text>
+                                <Text style={styles.inputLabelText}>{t('contactInfoScreen.emailLabel')}</Text>
                             </View>
                             <View style={styles.inputWithVisibility}>
                                 <TextInput
@@ -250,7 +255,7 @@ export default function ContactInfoScreen() {
                                 <View style={[styles.inputIcon, { backgroundColor: COLORS.purple50 }]}>
                                     <MaterialIcons name="language" size={18} color={COLORS.purple600} />
                                 </View>
-                                <Text style={styles.inputLabelText}>Sitio web</Text>
+                                <Text style={styles.inputLabelText}>{t('contactInfoScreen.websiteLabel')}</Text>
                             </View>
                             <View style={styles.inputWithVisibility}>
                                 <TextInput
@@ -279,9 +284,9 @@ export default function ContactInfoScreen() {
 
                 {/* Location Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>UBICACIÓN</Text>
+                    <Text style={styles.sectionTitle}>{t('contactInfoScreen.locationSection')}</Text>
                     <Text style={styles.sectionHint}>
-                        Indica dónde ofreces tus servicios para que los clientes cercanos te encuentren.
+                        {t('contactInfoScreen.locationHint')}
                     </Text>
 
                     <View style={[styles.card, { zIndex: 100 }]}>
@@ -291,7 +296,7 @@ export default function ContactInfoScreen() {
                                 <View style={[styles.inputIcon, { backgroundColor: COLORS.orange50 }]}>
                                     <MaterialIcons name="location-on" size={18} color={COLORS.orange600} />
                                 </View>
-                                <Text style={styles.inputLabelText}>Dirección</Text>
+                                <Text style={styles.inputLabelText}>{t('contactInfoScreen.addressLabel')}</Text>
                             </View>
                             <AddressAutocomplete
                                 value={address}
@@ -308,7 +313,7 @@ export default function ContactInfoScreen() {
                                         lng: selectedAddress.lng,
                                     });
                                 }}
-                                placeholder="Escribe una dirección..."
+                                placeholder={t('contactInfoScreen.addressPlaceholder')}
                             />
                         </View>
                     </View>
@@ -316,9 +321,9 @@ export default function ContactInfoScreen() {
 
                 {/* Social Links Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>REDES SOCIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('contactInfoScreen.socialSection')}</Text>
                     <Text style={styles.sectionHint}>
-                        Añade tus perfiles de redes sociales para aumentar tu visibilidad.
+                        {t('contactInfoScreen.socialHint')}
                     </Text>
 
                     <View style={styles.card}>
@@ -364,7 +369,7 @@ export default function ContactInfoScreen() {
                 <View style={styles.privacyNotice}>
                     <MaterialIcons name="info-outline" size={16} color={COLORS.gray500} />
                     <Text style={styles.privacyText}>
-                        Tu información de contacto será visible para los usuarios que visiten tu perfil público.
+                        {t('contactInfoScreen.privacyNotice')}
                     </Text>
                 </View>
             </ScrollView>

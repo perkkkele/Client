@@ -1,0 +1,90 @@
+{
+    "greeting": "Hi, {{name}}",
+    "greetingSubtext": "Which professional do you need today?",
+    "searchPlaceholder": "Search lawyer, doctor...",
+    "resultsFor": "RESULTS FOR \"{{query}}\"",
+    "clear": "Clear",
+    "searching": "Searching professionals...",
+    "noResults": "No results",
+    "noResultsMessage": "We couldn't find professionals for \"{{query}}\". Try different terms.",
+    "myConsultations": "MY CONSULTATIONS",
+    "seeAll": "See all",
+    "recent": "RECENT",
+    "responded": "Replied",
+    "pending": "Pending",
+    "noMessagesYet": "No messages yet",
+    "tapToSeeMessages": "Tap to see messages...",
+    "defaultUser": "User",
+    "defaultProfessional": "Professional",
+    "welcome": {
+        "title": "Welcome to TwinPro!",
+        "subtitle": "Connect with verified professionals and their AI twins.",
+        "ai247": "24/7 AI",
+        "verified": "Verified",
+        "fast": "Fast",
+        "exploreProfessionals": "Explore Professionals"
+    },
+    "noVisibleChats": "No visible chats",
+    "noVisibleChatsMessage": "You've hidden all chats. Explore professionals to start new conversations.",
+    "deleteConsultation": "Delete consultation",
+    "deleteConsultationConfirm": "Do you want to delete this escalated consultation?",
+    "contextMenu": {
+        "title": "Chat options",
+        "viewProfile": "View profile",
+        "hideChat": "Hide chat"
+    },
+    "nav": {
+        "chats": "Chats",
+        "directory": "Directory",
+        "favorites": "Favorites",
+        "proPerfil": "Pro Profile"
+    },
+    "time": {
+        "now": "Now",
+        "yesterday": "Yesterday",
+        "days": [
+            "Sun",
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat"
+        ]
+    },
+    "directory": {
+        "greeting": "Hi, {{name}}",
+        "greetingSubtext": "Which professional do you need today?",
+        "searchPlaceholder": "Criminal law, labor, civil...",
+        "resultsText": "Results based on your recent search",
+        "defaultProfessional": "Professional",
+        "contact": "Contact",
+        "sort": {
+            "relevance": "Relevance",
+            "distance": "Proximity",
+            "price": "Price",
+            "reviews": "Reviews"
+        },
+        "empty": {
+            "title": "No professionals found",
+            "subtitle": "Try a different category"
+        },
+        "filters": {
+            "title": "Advanced Filters",
+            "proximity": "Proximity",
+            "noLimit": "No Limit",
+            "pricePerHour": "Price / hour",
+            "maxSector": "Sector Max",
+            "maxPrice": "Max: {{price}}€",
+            "minReviews": "Minimum reviews",
+            "reset": "Reset",
+            "apply": "Apply filters"
+        },
+        "alerts": {
+            "locationRequired": "Location required",
+            "locationSortMessage": "To sort by proximity we need your location. Enable GPS in your device settings.",
+            "locationFilterMessage": "To filter by proximity we need your location. Enable GPS in your device settings.",
+            "understood": "Got it"
+        }
+    }
+}

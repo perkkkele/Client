@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,    StyleSheet,
+    ActivityIndicator,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -15,6 +16,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { authApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -37,7 +39,8 @@ const COLORS = {
 
 export default function ChangePasswordScreen() {
     const { token } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [isLoading, setIsLoading] = useState(false);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -68,12 +71,12 @@ export default function ChangePasswordScreen() {
 
     async function handleChangePassword() {
         if (!isValid) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor, completa todos los requisitos' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('changePasswordScreen.requirementsError') });
             return;
         }
 
         if (!token) {
-            showAlert({ type: 'error', title: 'Error', message: 'No hay sesión activa' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('changePasswordScreen.noSession') });
             return;
         }
 
@@ -81,13 +84,13 @@ export default function ChangePasswordScreen() {
         try {
             await authApi.changePassword(token, currentPassword, newPassword);
             showAlert({
-    type: 'success',
-    title: 'Éxito',
-    message: 'Tu contraseña ha sido actualizada correctamente',
-    buttons: [{ text: "OK", onPress: () => router.back() }]
-});
+                type: 'success',
+                title: t('common:success'),
+                message: t('changePasswordScreen.passwordUpdated'),
+                buttons: [{ text: "OK", onPress: () => router.back() }]
+            });
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cambiar la contraseña" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('changePasswordScreen.passwordUpdateError') });
         } finally {
             setIsLoading(false);
         }
@@ -115,7 +118,7 @@ export default function ChangePasswordScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Cambiar Contraseña</Text>
+                <Text style={styles.headerTitle}>{t('changePasswordScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -133,20 +136,20 @@ export default function ChangePasswordScreen() {
                     <View style={styles.infoCard}>
                         <MaterialIcons name="info" size={20} color={COLORS.gray600} />
                         <Text style={styles.infoText}>
-                            Por seguridad, necesitas tu contraseña actual para hacer cambios.
+                            {t('changePasswordScreen.infoText')}
                         </Text>
                     </View>
 
                     {/* Current Password */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>CONTRASEÑA ACTUAL</Text>
+                        <Text style={styles.inputLabel}>{t('changePasswordScreen.labelCurrent')}</Text>
                         <View style={styles.inputContainer}>
                             <MaterialIcons name="lock" size={20} color={COLORS.gray400} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 value={currentPassword}
                                 onChangeText={setCurrentPassword}
-                                placeholder="Tu contraseña actual"
+                                placeholder={t('changePasswordScreen.placeholderCurrent')}
                                 placeholderTextColor={COLORS.gray400}
                                 secureTextEntry={!showCurrentPassword}
                             />
@@ -165,14 +168,14 @@ export default function ChangePasswordScreen() {
 
                     {/* New Password */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>NUEVA CONTRASEÑA</Text>
+                        <Text style={styles.inputLabel}>{t('changePasswordScreen.labelNew')}</Text>
                         <View style={styles.inputContainer}>
                             <MaterialIcons name="lock-outline" size={20} color={COLORS.gray400} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
                                 value={newPassword}
                                 onChangeText={setNewPassword}
-                                placeholder="Nueva contraseña"
+                                placeholder={t('changePasswordScreen.placeholderNew')}
                                 placeholderTextColor={COLORS.gray400}
                                 secureTextEntry={!showNewPassword}
                             />
@@ -190,16 +193,16 @@ export default function ChangePasswordScreen() {
 
                         {/* Requirements */}
                         <View style={styles.requirements}>
-                            {renderRequirement(hasMinLength, "Mínimo 8 caracteres")}
-                            {renderRequirement(hasUpperCase, "Una letra mayúscula")}
-                            {renderRequirement(hasNumber, "Un número")}
-                            {renderRequirement(hasSpecialChar, "Un carácter especial")}
+                            {renderRequirement(hasMinLength, t('changePasswordScreen.reqMinLength'))}
+                            {renderRequirement(hasUpperCase, t('changePasswordScreen.reqUpperCase'))}
+                            {renderRequirement(hasNumber, t('changePasswordScreen.reqNumber'))}
+                            {renderRequirement(hasSpecialChar, t('changePasswordScreen.reqSpecialChar'))}
                         </View>
                     </View>
 
                     {/* Confirm Password */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>CONFIRMAR CONTRASEÑA</Text>
+                        <Text style={styles.inputLabel}>{t('changePasswordScreen.labelConfirm')}</Text>
                         <View style={[
                             styles.inputContainer,
                             confirmPassword.length > 0 && (passwordsMatch ? styles.inputSuccess : styles.inputError)
@@ -209,7 +212,7 @@ export default function ChangePasswordScreen() {
                                 style={styles.input}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
-                                placeholder="Repite la nueva contraseña"
+                                placeholder={t('changePasswordScreen.placeholderConfirm')}
                                 placeholderTextColor={COLORS.gray400}
                                 secureTextEntry={!showConfirmPassword}
                             />
@@ -225,7 +228,7 @@ export default function ChangePasswordScreen() {
                             </TouchableOpacity>
                         </View>
                         {confirmPassword.length > 0 && !passwordsMatch && (
-                            <Text style={styles.errorText}>Las contraseñas no coinciden</Text>
+                            <Text style={styles.errorText}>{t('changePasswordScreen.passwordsMismatch')}</Text>
                         )}
                     </View>
                 </ScrollView>
@@ -246,7 +249,7 @@ export default function ChangePasswordScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.saveButtonText}>Actualizar Contraseña</Text>
+                            <Text style={styles.saveButtonText}>{t('changePasswordScreen.updateButton')}</Text>
                             <MaterialIcons name="check" size={20} color="#000000" />
                         </>
                     )}

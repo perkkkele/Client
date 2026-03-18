@@ -32,6 +32,7 @@ import { Appointment } from "../../api/appointment";
 import { createChat } from "../../api/chat";
 import * as calendarApi from "../../api/calendar";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 // =============================================================================
 // COLORS
@@ -84,18 +85,22 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
     return getAssetUrl(avatarPath);
 }
 
-function formatDate(dateStr: string): string {
+const LOCALE_MAP: Record<string, string> = {
+    es: 'es-ES', en: 'en-US', fr: 'fr-FR', de: 'de-DE',
+};
+
+function formatDate(dateStr: string, locale: string, t: any): string {
     const date = new Date(dateStr);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     if (date.toDateString() === today.toDateString()) {
-        return "Hoy";
+        return t('manageAppointmentsScreen.today');
     } else if (date.toDateString() === tomorrow.toDateString()) {
-        return "Mañana";
+        return t('manageAppointmentsScreen.tomorrow');
     } else {
-        return date.toLocaleDateString("es-ES", {
+        return date.toLocaleDateString(locale, {
             weekday: "short",
             day: "numeric",
             month: "short",
@@ -103,9 +108,9 @@ function formatDate(dateStr: string): string {
     }
 }
 
-function formatDateFull(dateStr: string): string {
+function formatDateFull(dateStr: string, locale: string = 'es-ES'): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("es-ES", {
+    return date.toLocaleDateString(locale, {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -134,28 +139,28 @@ function getStatusStyle(status: Appointment["status"]) {
     }
 }
 
-function getStatusLabel(status: Appointment["status"]) {
+function getStatusLabel(status: Appointment["status"], t: any) {
     switch (status) {
-        case "confirmed": return "Confirmada";
-        case "pending": return "Pendiente";
-        case "cancelled": return "Cancelada";
-        case "completed": return "Completada";
+        case "confirmed": return t('manageAppointmentsScreen.statusConfirmed');
+        case "pending": return t('manageAppointmentsScreen.statusPending');
+        case "cancelled": return t('manageAppointmentsScreen.statusCancelled');
+        case "completed": return t('manageAppointmentsScreen.statusCompleted');
         default: return status;
     }
 }
 
-function getPaymentStatusStyle(status: string | undefined) {
+function getPaymentStatusStyle(status: string | undefined, t: any) {
     switch (status) {
         case "paid":
-            return { bg: COLORS.green50, text: COLORS.green600, label: "Pagado" };
+            return { bg: COLORS.green50, text: COLORS.green600, label: t('manageAppointmentsScreen.paymentPaid') };
         case "authorized":
-            return { bg: "#e0f2fe", text: "#0369a1", label: "Pago reservado" };
+            return { bg: "#e0f2fe", text: "#0369a1", label: t('manageAppointmentsScreen.paymentAuthorized') };
         case "pending":
-            return { bg: COLORS.orange50, text: COLORS.orange600, label: "Pendiente de pago" };
+            return { bg: COLORS.orange50, text: COLORS.orange600, label: t('manageAppointmentsScreen.paymentPending') };
         case "failed":
-            return { bg: COLORS.red50, text: COLORS.red600, label: "Pago fallido" };
+            return { bg: COLORS.red50, text: COLORS.red600, label: t('manageAppointmentsScreen.paymentFailed') };
         case "cancelled":
-            return { bg: COLORS.gray100, text: COLORS.gray500, label: "Pago cancelado" };
+            return { bg: COLORS.gray100, text: COLORS.gray500, label: t('manageAppointmentsScreen.paymentCancelled') };
         default:
             return null;
     }
@@ -169,6 +174,7 @@ type TabType = "past" | "today" | "upcoming";
 export default function ManageAppointmentsScreen() {
     const { showAlert } = useAlert();
     const { user, token } = useAuth();
+    const { t, i18n } = useTranslation('settings');
 
     // Data states
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -208,7 +214,7 @@ export default function ManageAppointmentsScreen() {
             const { url } = await calendarApi.getGoogleAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Google Calendar" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('manageAppointmentsScreen.errorGoogle') })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -221,7 +227,7 @@ export default function ManageAppointmentsScreen() {
             const { url } = await calendarApi.getOutlookAuthUrl(token);
             await Linking.openURL(url);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo conectar con Outlook" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('manageAppointmentsScreen.errorOutlook') })
         } finally {
             setIsConnectingCalendar(false);
         }
@@ -229,10 +235,10 @@ export default function ManageAppointmentsScreen() {
 
     const handleDisconnectCalendar = () => {
         showAlert({
-            type: 'warning', title: "Desconectar", message: "¿Desconectar calendario?", buttons: [
-                { text: "Cancelar", style: "cancel" },
+            type: 'warning', title: t('manageAppointmentsScreen.disconnectTitle'), message: t('manageAppointmentsScreen.disconnectMessage'), buttons: [
+                { text: t('manageAppointmentsScreen.cancel'), style: "cancel" },
                 {
-                    text: "Desconectar",
+                    text: t('manageAppointmentsScreen.disconnect'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token) return;
@@ -264,7 +270,7 @@ export default function ManageAppointmentsScreen() {
             setAppointments(sorted);
         } catch (error: any) {
             console.error("[ManageAppointments] Error loading:", error);
-            showAlert({ type: 'error', title: "Error", message: "No se pudieron cargar las citas" })
+            showAlert({ type: 'error', title: "Error", message: t('manageAppointmentsScreen.loadError') })
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -314,8 +320,8 @@ export default function ManageAppointmentsScreen() {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(apt => {
                 const clientName = `${apt.client?.firstname} ${apt.client?.lastname}`.toLowerCase();
-                const dateStr = formatDate(apt.date).toLowerCase();
-                const serviceType = apt.type === "videoconference" ? "videollamada" : "presencial";
+                const dateStr = formatDate(apt.date, LOCALE_MAP[i18n.language] || 'es-ES', t).toLowerCase();
+                const serviceType = apt.type === "videoconference" ? t('manageAppointmentsScreen.videoCall').toLowerCase() : t('manageAppointmentsScreen.inPersonShort').toLowerCase();
                 return (
                     clientName.includes(query) ||
                     dateStr.includes(query) ||
@@ -366,10 +372,10 @@ export default function ManageAppointmentsScreen() {
         if (!token) return;
 
         showAlert({
-            type: 'info', title: "Confirmar Cita", message: "¿Estás seguro de que quieres confirmar esta cita?", buttons: [
-                { text: "Cancelar", style: "cancel" },
+            type: 'info', title: t('manageAppointmentsScreen.confirmTitle'), message: t('manageAppointmentsScreen.confirmMessage'), buttons: [
+                { text: t('manageAppointmentsScreen.cancelAction'), style: "cancel" },
                 {
-                    text: "Confirmar",
+                    text: t('manageAppointmentsScreen.confirm'),
                     onPress: async () => {
                         setActionLoading(appointmentId);
                         try {
@@ -381,9 +387,9 @@ export default function ManageAppointmentsScreen() {
                                         : apt
                                 )
                             );
-                            showAlert({ type: 'success', title: 'Éxito', message: 'Cita confirmada correctamente' });
+                            showAlert({ type: 'success', title: t('manageAppointmentsScreen.confirmTitle'), message: t('manageAppointmentsScreen.confirmSuccess') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo confirmar la cita' });
+                            showAlert({ type: 'error', title: 'Error', message: error.message || t('manageAppointmentsScreen.confirmError') });
                         } finally {
                             setActionLoading(null);
                         }
@@ -397,10 +403,10 @@ export default function ManageAppointmentsScreen() {
         if (!token) return;
 
         showAlert({
-            type: 'info', title: "Cancelar Cita", message: "¿Estás seguro de que quieres cancelar esta cita? Se notificará al cliente y se eliminará del calendario.", buttons: [
-                { text: "No", style: "cancel" },
+            type: 'info', title: t('manageAppointmentsScreen.cancelTitle'), message: t('manageAppointmentsScreen.cancelMessage'), buttons: [
+                { text: t('manageAppointmentsScreen.cancelNo'), style: "cancel" },
                 {
-                    text: "Sí, cancelar",
+                    text: t('manageAppointmentsScreen.cancelYes'),
                     style: "destructive",
                     onPress: async () => {
                         setActionLoading(appointmentId);
@@ -413,9 +419,9 @@ export default function ManageAppointmentsScreen() {
                                         : apt
                                 )
                             );
-                            showAlert({ type: 'success', title: 'Cita cancelada', message: 'La cita ha sido cancelada y el cliente ha sido notificado' });
+                            showAlert({ type: 'success', title: t('manageAppointmentsScreen.cancelSuccess'), message: t('manageAppointmentsScreen.cancelSuccessMessage') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo cancelar la cita' });
+                            showAlert({ type: 'error', title: 'Error', message: error.message || t('manageAppointmentsScreen.cancelError') });
                         } finally {
                             setActionLoading(null);
                         }
@@ -436,7 +442,7 @@ export default function ManageAppointmentsScreen() {
             const chat = await createChat(token, user._id, appointment.client._id);
             router.push(`/pro-chat/${chat._id}?startVideoCall=true` as any);
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo iniciar la videollamada" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('manageAppointmentsScreen.videoCallError') })
         }
     };
 
@@ -464,12 +470,12 @@ export default function ManageAppointmentsScreen() {
         const { appointment, newDateStr, newTime, comments } = rescheduleModal;
 
         if (!newDateStr || !newTime) {
-            showAlert({ type: 'warning', title: "Datos incompletos", message: "Por favor introduce la fecha y hora" })
+            showAlert({ type: 'warning', title: t('manageAppointmentsScreen.rescheduleIncomplete'), message: t('manageAppointmentsScreen.rescheduleIncompleteMessage') })
             return;
         }
 
         if (newDateStr === appointment.date && newTime === appointment.time) {
-            showAlert({ type: 'warning', title: "Sin cambios", message: "Selecciona una nueva fecha u hora diferente" })
+            showAlert({ type: 'warning', title: t('manageAppointmentsScreen.rescheduleNoChange'), message: t('manageAppointmentsScreen.rescheduleNoChangeMessage') })
             return;
         }
 
@@ -488,9 +494,9 @@ export default function ManageAppointmentsScreen() {
                         : apt
                 )
             );
-            showAlert({ type: 'info', title: "Cita reprogramada", message: `La cita ha sido movida al ${formatDateFull(newDateStr)} a las ${newTime}. El cliente será notificado.` })
+            showAlert({ type: 'info', title: t('manageAppointmentsScreen.rescheduleSuccess'), message: t('manageAppointmentsScreen.rescheduleSuccessMessage', { date: formatDateFull(newDateStr, LOCALE_MAP[i18n.language] || 'es-ES'), time: newTime }) })
         } catch (error: any) {
-            showAlert({ type: 'error', title: "Error", message: error.message || "No se pudo reprogramar la cita" })
+            showAlert({ type: 'error', title: "Error", message: error.message || t('manageAppointmentsScreen.rescheduleError') })
         } finally {
             setActionLoading(null);
         }
@@ -507,7 +513,7 @@ export default function ManageAppointmentsScreen() {
         if (!appointment?.client) return null;
 
         const statusStyle = getStatusStyle(appointment.status);
-        const paymentStyle = getPaymentStatusStyle(appointment.paymentStatus);
+        const paymentStyle = getPaymentStatusStyle(appointment.paymentStatus, t);
         const isCancelled = appointment.status === "cancelled";
         const isPending = appointment.status === "pending";
         const isConfirmed = appointment.status === "confirmed";
@@ -548,7 +554,7 @@ export default function ManageAppointmentsScreen() {
                                     <View style={[styles.statusDot, { backgroundColor: COLORS.green500 }]} />
                                 )}
                                 <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                                    {getStatusLabel(appointment.status)}
+                                    {getStatusLabel(appointment.status, t)}
                                 </Text>
                             </View>
                             {!isCancelled && (
@@ -586,11 +592,11 @@ export default function ManageAppointmentsScreen() {
                             </Text>
                             <View style={styles.clientLinks}>
                                 <TouchableOpacity onPress={() => handleViewClientChats(appointment.client._id)}>
-                                    <Text style={styles.clientLink}>Chats</Text>
+                                    <Text style={styles.clientLink}>{t('manageAppointmentsScreen.viewChats')}</Text>
                                 </TouchableOpacity>
                                 <Text style={styles.linkSeparator}>•</Text>
                                 <TouchableOpacity onPress={() => handleViewClientHistory(appointment.client._id)}>
-                                    <Text style={styles.clientLink}>Ver historial de citas</Text>
+                                    <Text style={styles.clientLink}>{t('manageAppointmentsScreen.viewHistory')}</Text>
                                 </TouchableOpacity>
                             </View>
                             <View style={styles.typeBadgeContainer}>
@@ -607,7 +613,7 @@ export default function ManageAppointmentsScreen() {
                                         styles.typeBadgeText,
                                         isVideoconference ? styles.typeBadgeTextVideo : styles.typeBadgeTextPresencial
                                     ]}>
-                                        {isVideoconference ? "Videollamada" : "Cita presencial"}
+                                        {isVideoconference ? t('manageAppointmentsScreen.videoCall') : t('manageAppointmentsScreen.inPerson')}
                                     </Text>
                                 </View>
                             </View>
@@ -626,7 +632,7 @@ export default function ManageAppointmentsScreen() {
                             {!appointment.paymentStatus && appointment.type === "presencial" && (
                                 <View style={[styles.paymentBadge, { backgroundColor: COLORS.gray100 }]}>
                                     <Text style={[styles.paymentBadgeText, { color: COLORS.gray500 }]}>
-                                        Pago presencial
+                                        {t('manageAppointmentsScreen.paymentPresencial')}
                                     </Text>
                                 </View>
                             )}
@@ -640,7 +646,7 @@ export default function ManageAppointmentsScreen() {
                             onPress={() => handleStartVideoCall(appointment)}
                         >
                             <MaterialIcons name="video-camera-front" size={18} color="#fff" />
-                            <Text style={styles.videoCallButtonText}>Iniciar videollamada</Text>
+                            <Text style={styles.videoCallButtonText}>{t('manageAppointmentsScreen.startVideoCall')}</Text>
                         </TouchableOpacity>
                     )}
 
@@ -655,21 +661,21 @@ export default function ManageAppointmentsScreen() {
                                 style={styles.actionButton}
                                 onPress={() => handleOpenReschedule(appointment)}
                             >
-                                <Text style={styles.actionButtonText}>Reprogramar</Text>
+                                <Text style={styles.actionButtonText}>{t('manageAppointmentsScreen.reschedule')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.actionButton, styles.actionButtonDanger]}
                                 onPress={() => handleCancel(appointment._id)}
                             >
                                 <Text style={[styles.actionButtonText, styles.actionButtonTextDanger]}>
-                                    Cancelar
+                                    {t('manageAppointmentsScreen.cancelAction')}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.actionButton}
                                 onPress={() => handleViewDetails(appointment._id)}
                             >
-                                <Text style={styles.actionButtonText}>Detalles</Text>
+                                <Text style={styles.actionButtonText}>{t('manageAppointmentsScreen.details')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -692,7 +698,7 @@ export default function ManageAppointmentsScreen() {
                     >
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.gray600} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Mis Citas</Text>
+                    <Text style={styles.headerTitle}>{t('manageAppointmentsScreen.headerTitle')}</Text>
                 </View>
                 <TouchableOpacity
                     style={styles.calendarButton}
@@ -709,7 +715,7 @@ export default function ManageAppointmentsScreen() {
                     <MaterialIcons name="search" size={20} color={COLORS.gray400} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar cliente, fecha o servicio..."
+                        placeholder={t('manageAppointmentsScreen.searchPlaceholder')}
                         placeholderTextColor={COLORS.gray500}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -732,7 +738,7 @@ export default function ManageAppointmentsScreen() {
                         styles.tabText,
                         activeTab === "past" && styles.tabTextActive
                     ]}>
-                        Pasadas
+                        {t('manageAppointmentsScreen.tabPast')}
                     </Text>
                     <View style={[
                         styles.tabBadge,
@@ -755,7 +761,7 @@ export default function ManageAppointmentsScreen() {
                         styles.tabText,
                         activeTab === "today" && styles.tabTextActive
                     ]}>
-                        Hoy
+                        {t('manageAppointmentsScreen.tabToday')}
                     </Text>
                     <View style={[
                         styles.tabBadge,
@@ -778,7 +784,7 @@ export default function ManageAppointmentsScreen() {
                         styles.tabText,
                         activeTab === "upcoming" && styles.tabTextActive
                     ]}>
-                        Próximas
+                        {t('manageAppointmentsScreen.tabUpcoming')}
                     </Text>
                     <View style={[
                         styles.tabBadge,
@@ -799,7 +805,7 @@ export default function ManageAppointmentsScreen() {
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Cargando citas...</Text>
+                    <Text style={styles.loadingText}>{t('manageAppointmentsScreen.loading')}</Text>
                 </View>
             ) : (
                 <ScrollView
@@ -820,9 +826,11 @@ export default function ManageAppointmentsScreen() {
                                 <MaterialIcons name="pending-actions" size={18} color={COLORS.orange600} />
                             </View>
                             <View style={styles.pendingBannerContent}>
-                                <Text style={styles.pendingBannerTitle}>Solicitudes pendientes</Text>
+                                <Text style={styles.pendingBannerTitle}>{t('manageAppointmentsScreen.pendingTitle')}</Text>
                                 <Text style={styles.pendingBannerSubtitle}>
-                                    {pendingConfirmationCount} cita{pendingConfirmationCount > 1 ? "s" : ""} requiere{pendingConfirmationCount > 1 ? "n" : ""} tu aprobación
+                                    {pendingConfirmationCount > 1
+                                        ? t('manageAppointmentsScreen.pendingPlural', { count: pendingConfirmationCount })
+                                        : t('manageAppointmentsScreen.pendingSingular', { count: pendingConfirmationCount })}
                                 </Text>
                             </View>
                             <View style={styles.pendingBannerRight}>
@@ -839,16 +847,16 @@ export default function ManageAppointmentsScreen() {
                         <View style={styles.emptyState}>
                             <MaterialIcons name="event-available" size={64} color={COLORS.gray300} />
                             <Text style={styles.emptyTitle}>
-                                {searchQuery ? "Sin resultados" : "No hay citas"}
+                                {searchQuery ? t('manageAppointmentsScreen.emptyNoResults') : t('manageAppointmentsScreen.emptyNoAppointments')}
                             </Text>
                             <Text style={styles.emptySubtitle}>
                                 {searchQuery
-                                    ? `No se encontraron citas para "${searchQuery}"`
+                                    ? t('manageAppointmentsScreen.emptySearchResult', { query: searchQuery })
                                     : activeTab === "past"
-                                        ? "No tienes citas pasadas"
+                                        ? t('manageAppointmentsScreen.emptyPast')
                                         : activeTab === "today"
-                                            ? "No tienes citas programadas para hoy"
-                                            : "No tienes citas próximas"
+                                            ? t('manageAppointmentsScreen.emptyToday')
+                                            : t('manageAppointmentsScreen.emptyUpcoming')
                                 }
                             </Text>
                         </View>
@@ -857,7 +865,7 @@ export default function ManageAppointmentsScreen() {
                             <View key={date} style={styles.dateSection}>
                                 <View style={styles.dateHeaderRow}>
                                     <Text style={styles.dateHeader}>
-                                        {date === today ? `Hoy, ${formatDateFull(date).split(",")[1]}` : formatDateFull(date)}
+                                        {date === today ? `${t('manageAppointmentsScreen.today')}, ${formatDateFull(date, LOCALE_MAP[i18n.language] || 'es-ES').split(",")[1] || ''}` : formatDateFull(date, LOCALE_MAP[i18n.language] || 'es-ES')}
                                     </Text>
                                 </View>
                                 {dateAppointments.map(renderAppointmentCard)}
@@ -871,13 +879,13 @@ export default function ManageAppointmentsScreen() {
                             <View style={styles.upcomingPreviewHeader}>
                                 <View style={styles.upcomingPreviewTitleRow}>
                                     <MaterialIcons name="event-note" size={20} color={COLORS.blue600} />
-                                    <Text style={styles.upcomingPreviewTitle}>Próximas Citas</Text>
+                                    <Text style={styles.upcomingPreviewTitle}>{t('manageAppointmentsScreen.upcomingPreview')}</Text>
                                 </View>
                                 <TouchableOpacity
                                     style={styles.viewAllButton}
                                     onPress={() => setActiveTab("upcoming")}
                                 >
-                                    <Text style={styles.viewAllText}>Ver todas</Text>
+                                    <Text style={styles.viewAllText}>{t('manageAppointmentsScreen.viewAll')}</Text>
                                     <MaterialIcons name="chevron-right" size={18} color={COLORS.primary} />
                                 </TouchableOpacity>
                             </View>
@@ -891,7 +899,7 @@ export default function ManageAppointmentsScreen() {
                                 >
                                     <View style={styles.upcomingPreviewDate}>
                                         <Text style={styles.upcomingPreviewDay}>
-                                            {new Date(apt.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()}
+                                            {new Date(apt.date + 'T00:00:00').toLocaleDateString(LOCALE_MAP[i18n.language] || 'es-ES', { weekday: 'short' }).toUpperCase()}
                                         </Text>
                                         <Text style={styles.upcomingPreviewDayNum}>
                                             {new Date(apt.date + 'T00:00:00').getDate()}
@@ -912,7 +920,7 @@ export default function ManageAppointmentsScreen() {
                                                 styles.upcomingPreviewType,
                                                 { color: apt.type === "videoconference" ? COLORS.blue600 : COLORS.green600 }
                                             ]}>
-                                                {apt.type === "videoconference" ? "Videollamada" : "Presencial"}
+                                                {apt.type === "videoconference" ? t('manageAppointmentsScreen.videoCall') : t('manageAppointmentsScreen.inPersonShort')}
                                             </Text>
                                         </View>
                                     </View>
@@ -938,7 +946,7 @@ export default function ManageAppointmentsScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Reprogramar cita</Text>
+                            <Text style={styles.modalTitle}>{t('manageAppointmentsScreen.rescheduleTitle')}</Text>
                             <TouchableOpacity
                                 onPress={() => setRescheduleModal(prev => ({ ...prev, visible: false }))}
                             >
@@ -949,19 +957,19 @@ export default function ManageAppointmentsScreen() {
                         {rescheduleModal.appointment && (
                             <View style={styles.modalBody}>
                                 <Text style={styles.modalLabel}>
-                                    Cita con {rescheduleModal.appointment.client.firstname} {rescheduleModal.appointment.client.lastname}
+                                    {t('manageAppointmentsScreen.rescheduleWith', { name: `${rescheduleModal.appointment.client.firstname} ${rescheduleModal.appointment.client.lastname}` })}
                                 </Text>
                                 <Text style={styles.modalCurrentDate}>
-                                    Actualmente: {formatDateFull(rescheduleModal.appointment.date)} a las {rescheduleModal.appointment.time}
+                                    {t('manageAppointmentsScreen.rescheduleCurrently', { date: formatDateFull(rescheduleModal.appointment.date, LOCALE_MAP[i18n.language] || 'es-ES'), time: rescheduleModal.appointment.time })}
                                 </Text>
 
                                 {/* New Date */}
-                                <Text style={styles.inputLabel}>Nueva fecha (YYYY-MM-DD)</Text>
+                                <Text style={styles.inputLabel}>{t('manageAppointmentsScreen.rescheduleNewDate')}</Text>
                                 <View style={styles.datePickerButton}>
                                     <MaterialIcons name="calendar-today" size={20} color={COLORS.primary} />
                                     <TextInput
                                         style={styles.dateInputText}
-                                        placeholder="Ej: 2026-01-15"
+                                        placeholder={t('manageAppointmentsScreen.rescheduleNewDatePlaceholder')}
                                         placeholderTextColor={COLORS.gray400}
                                         value={rescheduleModal.newDateStr}
                                         onChangeText={(text) =>
@@ -971,10 +979,10 @@ export default function ManageAppointmentsScreen() {
                                 </View>
 
                                 {/* New Time */}
-                                <Text style={styles.inputLabel}>Nueva hora</Text>
+                                <Text style={styles.inputLabel}>{t('manageAppointmentsScreen.rescheduleNewTime')}</Text>
                                 <TextInput
                                     style={styles.textInput}
-                                    placeholder="Ej: 10:00"
+                                    placeholder={t('manageAppointmentsScreen.rescheduleNewTimePlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={rescheduleModal.newTime}
                                     onChangeText={(text) =>
@@ -983,10 +991,10 @@ export default function ManageAppointmentsScreen() {
                                 />
 
                                 {/* Comments */}
-                                <Text style={styles.inputLabel}>Comentarios (opcional)</Text>
+                                <Text style={styles.inputLabel}>{t('manageAppointmentsScreen.rescheduleComments')}</Text>
                                 <TextInput
                                     style={[styles.textInput, styles.textArea]}
-                                    placeholder="Motivo del cambio de hora..."
+                                    placeholder={t('manageAppointmentsScreen.rescheduleCommentsPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={rescheduleModal.comments}
                                     onChangeText={(text) =>
@@ -1001,14 +1009,14 @@ export default function ManageAppointmentsScreen() {
                                         style={styles.modalCancelButton}
                                         onPress={() => setRescheduleModal(prev => ({ ...prev, visible: false }))}
                                     >
-                                        <Text style={styles.modalCancelText}>Cancelar</Text>
+                                        <Text style={styles.modalCancelText}>{t('manageAppointmentsScreen.cancelAction')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={styles.modalConfirmButton}
                                         onPress={handleReschedule}
                                     >
                                         <MaterialIcons name="edit-calendar" size={18} color="#fff" />
-                                        <Text style={styles.modalConfirmText}>Reprogramar</Text>
+                                        <Text style={styles.modalConfirmText}>{t('manageAppointmentsScreen.reschedule')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -1029,7 +1037,7 @@ export default function ManageAppointmentsScreen() {
                             <MaterialIcons name="close" size={24} color={COLORS.textMain} />
                         </TouchableOpacity>
                         <Text style={styles.calendarModalTitle}>
-                            {calendarConnected ? "Mi Calendario" : "Sincronizar Calendario"}
+                            {calendarConnected ? t('manageAppointmentsScreen.calendarMyCalendar') : t('manageAppointmentsScreen.calendarSync')}
                         </Text>
                         {calendarConnected ? (
                             <TouchableOpacity onPress={handleDisconnectCalendar}>
@@ -1059,10 +1067,10 @@ export default function ManageAppointmentsScreen() {
                                 <MaterialIcons name="event" size={64} color={COLORS.gray300} />
                             </View>
                             <Text style={styles.calendarNotConnectedTitle}>
-                                Calendario no sincronizado
+                                {t('manageAppointmentsScreen.calendarNotSynced')}
                             </Text>
                             <Text style={styles.calendarNotConnectedText}>
-                                Sincroniza tu calendario para ver tus citas y disponibilidad en tiempo real
+                                {t('manageAppointmentsScreen.calendarNotSyncedHint')}
                             </Text>
 
                             <View style={styles.calendarConnectButtons}>
@@ -1096,7 +1104,7 @@ export default function ManageAppointmentsScreen() {
                             </View>
 
                             <Text style={styles.calendarHintText}>
-                                💡 Las citas confirmadas se añadirán automáticamente a tu calendario
+                                {t('manageAppointmentsScreen.calendarAutoHint')}
                             </Text>
                         </View>
                     )}

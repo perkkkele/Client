@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -24,6 +25,8 @@ const COLORS = {
 };
 
 export default function TermsOfServiceScreen() {
+    const { t } = useTranslation('settings');
+
     function handleBack() {
         router.back();
     }
@@ -35,7 +38,7 @@ export default function TermsOfServiceScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Términos de Servicio</Text>
+                <Text style={styles.headerTitle}>{t('termsOfServiceScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -47,34 +50,34 @@ export default function TermsOfServiceScreen() {
                 {/* Meta */}
                 <View style={styles.metaRow}>
                     <View style={styles.metaDot} />
-                    <Text style={styles.metaText}>Última actualización: 24 de Octubre, 2023</Text>
+                    <Text style={styles.metaText}>{t('termsOfServiceScreen.lastUpdated')}</Text>
                 </View>
 
                 {/* Section 1 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>1. Introducción</Text>
+                    <Text style={styles.sectionTitle}>{t('termsOfServiceScreen.section1Title')}</Text>
                     <Text style={styles.paragraph}>
-                        Bienvenido a nuestra aplicación. Al acceder y utilizar nuestros servicios de comunicación con avatares, usted acepta estar sujeto a los siguientes términos y condiciones. Nuestra plataforma facilita la conexión entre usuarios y representaciones digitales ("Avatares") de profesionales verificados. Por favor, lea estos términos detenidamente antes de continuar.
+                        {t('termsOfServiceScreen.section1Text')}
                     </Text>
                 </View>
 
                 {/* Section 2 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>2. Uso de Avatares Profesionales</Text>
+                    <Text style={styles.sectionTitle}>{t('termsOfServiceScreen.section2Title')}</Text>
                     <Text style={styles.paragraph}>
-                        Los avatares disponibles en esta plataforma son representaciones generadas o gestionadas por profesionales reales. Sin embargo, debe tener en cuenta lo siguiente:
+                        {t('termsOfServiceScreen.section2Intro')}
                     </Text>
                     <View style={styles.listContainer}>
                         <View style={styles.listItem}>
                             <MaterialIcons name="check-circle" size={20} color={COLORS.primary} />
                             <Text style={styles.listText}>
-                                El asesoramiento proporcionado a través de la interfaz de chat tiene fines informativos y no sustituye una consulta profesional presencial en situaciones de emergencia.
+                                {t('termsOfServiceScreen.section2Item1')}
                             </Text>
                         </View>
                         <View style={styles.listItem}>
                             <MaterialIcons name="check-circle" size={20} color={COLORS.primary} />
                             <Text style={styles.listText}>
-                                Usted acepta tratar a los avatares y a los profesionales detrás de ellos con respeto y cortesía en todo momento.
+                                {t('termsOfServiceScreen.section2Item2')}
                             </Text>
                         </View>
                     </View>
@@ -82,28 +85,28 @@ export default function TermsOfServiceScreen() {
 
                 {/* Section 3 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>3. Privacidad y Datos</Text>
+                    <Text style={styles.sectionTitle}>{t('termsOfServiceScreen.section3Title')}</Text>
                     <Text style={styles.paragraph}>
-                        Sus conversaciones están encriptadas de extremo a extremo. No compartimos el contenido de sus chats con terceros sin su consentimiento explícito, salvo cuando sea requerido por ley. Para más detalles, consulte nuestra Política de Privacidad.
+                        {t('termsOfServiceScreen.section3Text')}
                     </Text>
                 </View>
 
                 {/* Section 4 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>4. Pagos y Suscripciones</Text>
+                    <Text style={styles.sectionTitle}>{t('termsOfServiceScreen.section4Title')}</Text>
                     <View style={styles.infoCard}>
-                        <Text style={styles.infoCardTitle}>Renovación Automática</Text>
+                        <Text style={styles.infoCardTitle}>{t('termsOfServiceScreen.autoRenewalTitle')}</Text>
                         <Text style={styles.infoCardText}>
-                            Las suscripciones a perfiles Pro se renuevan automáticamente al final de cada ciclo de facturación a menos que se cancelen con al menos 24 horas de antelación.
+                            {t('termsOfServiceScreen.autoRenewalText')}
                         </Text>
                     </View>
                 </View>
 
                 {/* Section 5 */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>5. Limitación de Responsabilidad</Text>
+                    <Text style={styles.sectionTitle}>{t('termsOfServiceScreen.section5Title')}</Text>
                     <Text style={styles.paragraph}>
-                        La empresa no se hace responsable por decisiones tomadas basándose únicamente en la información proporcionada por los avatares. El uso del servicio es bajo su propio riesgo.
+                        {t('termsOfServiceScreen.section5Text')}
                     </Text>
                 </View>
 
@@ -114,10 +117,10 @@ export default function TermsOfServiceScreen() {
                         onPress={() => Linking.openURL("https://legal.twinpro.app#terms")}
                     >
                         <MaterialIcons name="description" size={18} color={COLORS.gray500} />
-                        <Text style={styles.fullDocText}>Ver documento completo</Text>
+                        <Text style={styles.fullDocText}>{t('termsOfServiceScreen.viewFullDoc')}</Text>
                         <MaterialIcons name="arrow-forward" size={16} color={COLORS.gray400} />
                     </TouchableOpacity>
-                    <Text style={styles.footerText}>Al usar TwinPro, aceptas estos términos.</Text>
+                    <Text style={styles.footerText}>{t('termsOfServiceScreen.acceptTerms')}</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>

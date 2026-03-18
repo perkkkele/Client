@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -16,6 +17,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
 import { useAuth } from "../../context";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#FFED00",
@@ -35,7 +37,8 @@ const COLORS = {
 
 export default function RegisterUserScreen() {
     const { login } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -54,7 +57,7 @@ export default function RegisterUserScreen() {
 
     async function handleRegister() {
         if (!canSubmit) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor completa todos los campos correctamente' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('registerUser.fieldsError') });
             return;
         }
 
@@ -69,7 +72,7 @@ export default function RegisterUserScreen() {
             // Registro e inicio de sesión exitoso, continuar al siguiente paso
             router.push("/onboarding/notifications");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al crear la cuenta" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('registerUser.registerError') });
         } finally {
             setIsLoading(false);
         }
@@ -110,9 +113,9 @@ export default function RegisterUserScreen() {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.headerContent}>
-                            <Text style={styles.headerTitle}>Crear Cuenta</Text>
+                            <Text style={styles.headerTitle}>{t('registerUser.headerTitle')}</Text>
                             <Text style={styles.headerSubtitle}>
-                                Regístrate para conectar con expertos.
+                                {t('registerUser.headerSubtitle')}
                             </Text>
                         </View>
                     </View>
@@ -121,7 +124,7 @@ export default function RegisterUserScreen() {
                     <View style={styles.formCard}>
                         {/* Nombre */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>NOMBRE</Text>
+                            <Text style={styles.inputLabel}>{t('registerUser.nameLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="person"
@@ -131,7 +134,7 @@ export default function RegisterUserScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Ej. Javier López"
+                                    placeholder={t('registerUser.namePlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={name}
                                     onChangeText={setName}
@@ -149,7 +152,7 @@ export default function RegisterUserScreen() {
 
                         {/* Email */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
+                            <Text style={styles.inputLabel}>{t('registerUser.emailLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="email"
@@ -159,7 +162,7 @@ export default function RegisterUserScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="nombre@ejemplo.com"
+                                    placeholder={t('registerUser.emailPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={email}
                                     onChangeText={setEmail}
@@ -179,7 +182,7 @@ export default function RegisterUserScreen() {
 
                         {/* Password */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CONTRASEÑA</Text>
+                            <Text style={styles.inputLabel}>{t('registerUser.passwordLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="lock"
@@ -211,7 +214,7 @@ export default function RegisterUserScreen() {
 
                         {/* Confirm Password */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CONFIRMAR CONTRASEÑA</Text>
+                            <Text style={styles.inputLabel}>{t('registerUser.confirmPasswordLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="lock-reset"
@@ -254,19 +257,19 @@ export default function RegisterUserScreen() {
                                 </View>
                             </TouchableOpacity>
                             <Text style={styles.termsText}>
-                                Acepto los{" "}
+                                {t('registerUser.acceptTermsPrefix')}
                                 <Text
                                     style={styles.termsLink}
                                     onPress={() => router.push("/legal/terms-of-service")}
                                 >
-                                    Términos de Servicio
+                                    {t('registerUser.termsOfService')}
                                 </Text>
-                                {" "}y la{" "}
+                                {t('registerUser.acceptTermsMiddle')}
                                 <Text
                                     style={styles.termsLink}
                                     onPress={() => router.push("/legal/privacy-policy")}
                                 >
-                                    Política de Privacidad
+                                    {t('registerUser.privacyPolicy')}
                                 </Text>.
                             </Text>
                         </View>
@@ -284,7 +287,7 @@ export default function RegisterUserScreen() {
                                 </View>
                             </TouchableOpacity>
                             <Text style={styles.termsText}>
-                                Acepto el uso de tecnologías analíticas para mejorar el servicio.
+                                {t('registerUser.acceptAnalytics')}
                             </Text>
                         </View>
 
@@ -298,7 +301,7 @@ export default function RegisterUserScreen() {
                                 <ActivityIndicator color="#000000" />
                             ) : (
                                 <>
-                                    <Text style={styles.registerButtonText}>Crear Cuenta</Text>
+                                    <Text style={styles.registerButtonText}>{t('registerUser.createAccount')}</Text>
                                     <Ionicons name="arrow-forward" size={18} color="#000000" />
                                 </>
                             )}
@@ -307,7 +310,7 @@ export default function RegisterUserScreen() {
                         {/* Separador */}
                         <View style={styles.dividerContainer}>
                             <View style={styles.divider} />
-                            <Text style={styles.dividerText}>O continúa con</Text>
+                            <Text style={styles.dividerText}>{t('registerUser.orContinueWith')}</Text>
                             <View style={styles.divider} />
                         </View>
 
@@ -326,9 +329,9 @@ export default function RegisterUserScreen() {
 
                         {/* Login link */}
                         <View style={styles.loginContainer}>
-                            <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
+                            <Text style={styles.loginText}>{t('registerUser.hasAccount')}</Text>
                             <TouchableOpacity onPress={handleLogin}>
-                                <Text style={styles.loginLink}>Inicia sesión</Text>
+                                <Text style={styles.loginLink}>{t('registerUser.loginLink')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

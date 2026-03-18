@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -9,6 +10,7 @@ interface ProfileBlockProps {
 }
 
 export default function ProfileBlock({ userId }: ProfileBlockProps) {
+    const { t } = useTranslation('settings');
     const handlePress = () => {
         if (userId) {
             router.push(`/professional/${userId}` as any);
@@ -28,8 +30,8 @@ export default function ProfileBlock({ userId }: ProfileBlockProps) {
                         <MaterialIcons name="visibility" size={22} color="#FFFFFF" />
                     </View>
                     <View style={styles.profilePreviewText}>
-                        <Text style={styles.profilePreviewTitle}>Ver mi perfil público</Text>
-                        <Text style={styles.profilePreviewSubtitle}>Así te ven tus clientes</Text>
+                        <Text style={styles.profilePreviewTitle}>{t('profileBlock.viewPublicProfile')}</Text>
+                        <Text style={styles.profilePreviewSubtitle}>{t('profileBlock.howClientsSeeYou')}</Text>
                     </View>
                 </View>
                 <View style={styles.profilePreviewArrow}>

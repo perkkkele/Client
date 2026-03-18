@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -16,6 +17,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { authApi } from "../../api";
 import { useAuth } from "../../context";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 // Native Google Sign-In
 let GoogleSignin: any = null;
@@ -51,7 +53,8 @@ const COLORS = {
 
 export default function RegisterProScreen() {
     const { login, loginWithGoogle } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -72,7 +75,7 @@ export default function RegisterProScreen() {
     // Handle native Google Sign-In for professionals
     async function handleGoogleSignIn() {
         if (!isGoogleSignInAvailable || !GoogleSignin) {
-            showAlert({ type: 'error', title: 'Error', message: 'Google Sign-In no está disponible en esta versión' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('registerPro.googleError') });
             return;
         }
 
@@ -83,7 +86,7 @@ export default function RegisterProScreen() {
             const idToken = userInfo.data?.idToken;
 
             if (!idToken) {
-                throw new Error("No se pudo obtener el token de Google");
+                throw new Error(t('registerPro.googleError'));
             }
 
             // Login/register with Google as 'userpro' (professional)
@@ -94,7 +97,7 @@ export default function RegisterProScreen() {
         } catch (error: any) {
             console.log("Google Sign-In error:", error);
             if (error.code !== "SIGN_IN_CANCELLED") {
-                showAlert({ type: 'error', title: 'Error', message: error.message || "Error al iniciar sesión con Google" });
+                showAlert({ type: 'error', title: t('common:error'), message: error.message || t('registerPro.googleError') });
             }
         } finally {
             setIsGoogleLoading(false);
@@ -103,7 +106,7 @@ export default function RegisterProScreen() {
 
     async function handleRegister() {
         if (!canSubmit) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor completa todos los campos correctamente' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('registerPro.fieldsError') });
             return;
         }
 
@@ -118,7 +121,7 @@ export default function RegisterProScreen() {
             // Registro e inicio de sesión exitoso, continuar al perfil profesional
             router.push("/onboarding/pro-profile");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al crear la cuenta" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('registerPro.registerError') });
         } finally {
             setIsLoading(false);
         }
@@ -159,9 +162,9 @@ export default function RegisterProScreen() {
                             </TouchableOpacity>
                         </View>
                         <View style={styles.headerContent}>
-                            <Text style={styles.headerTitle}>Crear Cuenta</Text>
+                            <Text style={styles.headerTitle}>{t('registerPro.headerTitle')}</Text>
                             <Text style={styles.headerSubtitle}>
-                                Regístrate para conectar con expertos.
+                                {t('registerPro.headerSubtitle')}
                             </Text>
                         </View>
                     </View>
@@ -170,7 +173,7 @@ export default function RegisterProScreen() {
                     <View style={styles.formCard}>
                         {/* Nombre */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>NOMBRE</Text>
+                            <Text style={styles.inputLabel}>{t('registerPro.nameLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="person"
@@ -180,7 +183,7 @@ export default function RegisterProScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Ej. Javier López"
+                                    placeholder={t('registerPro.namePlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={name}
                                     onChangeText={setName}
@@ -198,7 +201,7 @@ export default function RegisterProScreen() {
 
                         {/* Email */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
+                            <Text style={styles.inputLabel}>{t('registerPro.emailLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="email"
@@ -208,7 +211,7 @@ export default function RegisterProScreen() {
                                 />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="nombre@ejemplo.com"
+                                    placeholder={t('registerPro.emailPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={email}
                                     onChangeText={setEmail}
@@ -228,7 +231,7 @@ export default function RegisterProScreen() {
 
                         {/* Password */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CONTRASEÑA</Text>
+                            <Text style={styles.inputLabel}>{t('registerPro.passwordLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="lock"
@@ -260,7 +263,7 @@ export default function RegisterProScreen() {
 
                         {/* Confirm Password */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>CONFIRMAR CONTRASEÑA</Text>
+                            <Text style={styles.inputLabel}>{t('registerPro.confirmPasswordLabel')}</Text>
                             <View style={styles.inputContainer}>
                                 <MaterialIcons
                                     name="lock-reset"
@@ -303,19 +306,19 @@ export default function RegisterProScreen() {
                                 </View>
                             </TouchableOpacity>
                             <Text style={styles.termsText}>
-                                Acepto los{" "}
+                                {t('registerPro.acceptTermsPrefix')}
                                 <Text
                                     style={styles.termsLink}
                                     onPress={() => router.push("/legal/terms-of-service")}
                                 >
-                                    Términos de Servicio
+                                    {t('registerPro.termsOfService')}
                                 </Text>
-                                {" "}y la{" "}
+                                {t('registerPro.acceptTermsMiddle')}
                                 <Text
                                     style={styles.termsLink}
                                     onPress={() => router.push("/legal/privacy-policy")}
                                 >
-                                    Política de Privacidad
+                                    {t('registerPro.privacyPolicy')}
                                 </Text>.
                             </Text>
                         </View>
@@ -333,7 +336,7 @@ export default function RegisterProScreen() {
                                 </View>
                             </TouchableOpacity>
                             <Text style={styles.termsText}>
-                                Acepto el uso de tecnologías analíticas para mejorar el servicio.
+                                {t('registerPro.acceptAnalytics')}
                             </Text>
                         </View>
 
@@ -347,7 +350,7 @@ export default function RegisterProScreen() {
                                 <ActivityIndicator color="#000000" />
                             ) : (
                                 <>
-                                    <Text style={styles.registerButtonText}>Crear Cuenta</Text>
+                                    <Text style={styles.registerButtonText}>{t('registerPro.createAccount')}</Text>
                                     <Ionicons name="arrow-forward" size={18} color="#000000" />
                                 </>
                             )}
@@ -356,7 +359,7 @@ export default function RegisterProScreen() {
                         {/* Separador */}
                         <View style={styles.dividerContainer}>
                             <View style={styles.divider} />
-                            <Text style={styles.dividerText}>O continúa con</Text>
+                            <Text style={styles.dividerText}>{t('registerPro.orContinueWith')}</Text>
                             <View style={styles.divider} />
                         </View>
 
@@ -377,7 +380,7 @@ export default function RegisterProScreen() {
                                             }}
                                             style={styles.socialIcon}
                                         />
-                                        <Text style={styles.socialButtonText}>Continuar con Google</Text>
+                                        <Text style={styles.socialButtonText}>{t('registerPro.orContinueWith')} Google</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -385,9 +388,9 @@ export default function RegisterProScreen() {
 
                         {/* Login link */}
                         <View style={styles.loginContainer}>
-                            <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
+                            <Text style={styles.loginText}>{t('registerPro.hasAccount')}</Text>
                             <TouchableOpacity onPress={handleLogin}>
-                                <Text style={styles.loginLink}>Inicia sesión</Text>
+                                <Text style={styles.loginLink}>{t('registerPro.loginLink')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

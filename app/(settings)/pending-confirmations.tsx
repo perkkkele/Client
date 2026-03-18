@@ -13,7 +13,8 @@ import {
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,    RefreshControl,
+    ActivityIndicator,
+    RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -22,6 +23,7 @@ import { getAssetUrl } from "../../api";
 import * as appointmentApi from "../../api/appointment";
 import { Appointment } from "../../api/appointment";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#4F46E5",
@@ -73,7 +75,8 @@ function getClientInitials(client: Appointment["client"] | undefined): string {
 
 export default function PendingConfirmationsScreen() {
     const { token } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +97,7 @@ export default function PendingConfirmationsScreen() {
             setAppointments(pending);
         } catch (error: any) {
             console.error("[PendingConfirmations] Error:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las citas pendientes' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('pendingConfirmationsScreen.loadError') });
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -119,9 +122,9 @@ export default function PendingConfirmationsScreen() {
         try {
             await appointmentApi.confirmAppointment(token, appointmentId);
             setAppointments(prev => prev.filter(apt => apt._id !== appointmentId));
-            showAlert({ type: 'success', title: 'Éxito', message: 'Cita confirmada correctamente. El cliente ha sido notificado.' });
+            showAlert({ type: 'success', title: t('common:success'), message: t('pendingConfirmationsScreen.confirmSuccess') });
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo confirmar la cita" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('pendingConfirmationsScreen.confirmError') });
         } finally {
             setActionLoading(null);
         }
@@ -131,29 +134,29 @@ export default function PendingConfirmationsScreen() {
         if (!token) return;
 
         showAlert({
-    type: 'warning',
-    title: 'Rechazar Cita',
-    message: '¿Estás seguro de que quieres rechazar esta cita? El cliente será notificado.',
-    buttons: [
-                { text: "Cancelar", style: "cancel" },
+            type: 'warning',
+            title: t('pendingConfirmationsScreen.rejectTitle'),
+            message: t('pendingConfirmationsScreen.rejectMessage'),
+            buttons: [
+                { text: t('pendingConfirmationsScreen.rejectCancel'), style: "cancel" },
                 {
-                    text: "Rechazar",
+                    text: t('pendingConfirmationsScreen.rejectConfirm'),
                     style: "destructive",
                     onPress: async () => {
                         setActionLoading(appointmentId);
                         try {
                             await appointmentApi.cancelAppointment(token, appointmentId);
                             setAppointments(prev => prev.filter(apt => apt._id !== appointmentId));
-                            showAlert({ type: 'info', title: 'Cita rechazada', message: 'El cliente ha sido notificado.' });
+                            showAlert({ type: 'info', title: t('pendingConfirmationsScreen.rejectSuccess'), message: t('pendingConfirmationsScreen.rejectNotified') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo rechazar la cita" });
+                            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('pendingConfirmationsScreen.rejectError') });
                         } finally {
                             setActionLoading(null);
                         }
                     },
                 },
             ]
-});
+        });
     };
 
     return (
@@ -163,7 +166,7 @@ export default function PendingConfirmationsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.gray600} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Solicitudes Pendientes</Text>
+                <Text style={styles.headerTitle}>{t('pendingConfirmationsScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -171,29 +174,29 @@ export default function PendingConfirmationsScreen() {
             <View style={styles.infoBanner}>
                 <MaterialIcons name="info-outline" size={20} color={COLORS.primary} />
                 <Text style={styles.infoText}>
-                    Estas citas requieren tu confirmación. Al confirmar, el cliente será notificado.
+                    {t('pendingConfirmationsScreen.infoBanner')}
                 </Text>
             </View>
 
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Cargando solicitudes...</Text>
+                    <Text style={styles.loadingText}>{t('pendingConfirmationsScreen.loading')}</Text>
                 </View>
             ) : appointments.length === 0 ? (
                 <View style={styles.emptyState}>
                     <View style={styles.emptyIconContainer}>
                         <MaterialIcons name="check-circle" size={64} color={COLORS.green500} />
                     </View>
-                    <Text style={styles.emptyTitle}>¡Todo al día!</Text>
+                    <Text style={styles.emptyTitle}>{t('pendingConfirmationsScreen.allCaughtUp')}</Text>
                     <Text style={styles.emptySubtitle}>
-                        No tienes citas pendientes de confirmación
+                        {t('pendingConfirmationsScreen.noPending')}
                     </Text>
                     <TouchableOpacity
                         style={styles.backToAppointments}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.backToAppointmentsText}>Volver a mis citas</Text>
+                        <Text style={styles.backToAppointmentsText}>{t('pendingConfirmationsScreen.backToAppointments')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -261,7 +264,7 @@ export default function PendingConfirmationsScreen() {
                                                 styles.typeBadgeText,
                                                 isVideoconference ? styles.typeBadgeTextVideo : styles.typeBadgeTextPresencial
                                             ]}>
-                                                {isVideoconference ? "Videollamada" : "Cita presencial"}
+                                                {isVideoconference ? t('pendingConfirmationsScreen.videoCall') : t('pendingConfirmationsScreen.inPerson')}
                                             </Text>
                                         </View>
                                         <Text style={styles.durationText}>
@@ -292,14 +295,14 @@ export default function PendingConfirmationsScreen() {
                                                 onPress={() => handleConfirm(appointment._id)}
                                             >
                                                 <MaterialIcons name="check" size={18} color="#fff" />
-                                                <Text style={styles.confirmButtonText}>Confirmar</Text>
+                                                <Text style={styles.confirmButtonText}>{t('pendingConfirmationsScreen.confirm')}</Text>
                                             </TouchableOpacity>
                                             <TouchableOpacity
                                                 style={styles.rejectButton}
                                                 onPress={() => handleReject(appointment._id)}
                                             >
                                                 <MaterialIcons name="close" size={18} color={COLORS.red600} />
-                                                <Text style={styles.rejectButtonText}>Rechazar</Text>
+                                                <Text style={styles.rejectButtonText}>{t('pendingConfirmationsScreen.reject')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     )}

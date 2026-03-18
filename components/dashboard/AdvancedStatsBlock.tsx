@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { COLORS } from "./constants";
@@ -12,6 +13,8 @@ interface AdvancedStatsBlockProps {
 const WEEKDAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProps) {
+    const { t } = useTranslation('settings');
+    const weekdayLabels = t('advancedStats.weekdays', { returnObjects: true }) as string[];
     // Find peak hour
     const maxHourValue = Math.max(...analytics.peakHours);
     const peakHourIndex = analytics.peakHours.indexOf(maxHourValue);
@@ -20,28 +23,28 @@ export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProp
     // Find busiest day
     const maxDayValue = Math.max(...analytics.weekdayDistribution);
     const busiestDayIndex = analytics.weekdayDistribution.indexOf(maxDayValue);
-    const busiestDayLabel = WEEKDAY_LABELS[busiestDayIndex];
+    const busiestDayLabel = weekdayLabels[busiestDayIndex];
 
     return (
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
                 <View style={styles.premiumBadge}>
                     <MaterialIcons name="diamond" size={16} color="#8B5CF6" />
-                    <Text style={styles.sectionTitle}>Analíticas Avanzadas</Text>
+                    <Text style={styles.sectionTitle}>{t('advancedStats.title')}</Text>
                 </View>
             </View>
 
             {/* Conversion Rates */}
             <View style={styles.conversionRow}>
                 <View style={styles.conversionCard}>
-                    <Text style={styles.conversionLabel}>Visita → Conversación</Text>
+                    <Text style={styles.conversionLabel}>{t('advancedStats.viewToConversation')}</Text>
                     <Text style={styles.conversionValue}>{analytics.conversionRates.viewToConversation}%</Text>
                     <View style={styles.conversionBar}>
                         <View style={[styles.conversionFill, { width: `${analytics.conversionRates.viewToConversation}%` }]} />
                     </View>
                 </View>
                 <View style={styles.conversionCard}>
-                    <Text style={styles.conversionLabel}>Conversación → Cita</Text>
+                    <Text style={styles.conversionLabel}>{t('advancedStats.conversationToAppointment')}</Text>
                     <Text style={styles.conversionValue}>{analytics.conversionRates.conversationToAppointment}%</Text>
                     <View style={styles.conversionBar}>
                         <View style={[styles.conversionFill, styles.conversionFillGreen, { width: `${analytics.conversionRates.conversationToAppointment}%` }]} />
@@ -51,7 +54,7 @@ export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProp
 
             {/* Traffic Sources */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Origen del Tráfico</Text>
+                <Text style={styles.cardTitle}>{t('advancedStats.trafficOrigin')}</Text>
                 <View style={styles.trafficGrid}>
                     <View style={styles.trafficItem}>
                         <View style={[styles.trafficIcon, { backgroundColor: "#EEF2FF" }]}>
@@ -89,18 +92,18 @@ export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProp
                 <View style={styles.insightCard}>
                     <MaterialIcons name="access-time" size={24} color="#8B5CF6" />
                     <Text style={styles.insightValue}>{peakHourLabel}</Text>
-                    <Text style={styles.insightLabel}>Hora Pico</Text>
+                    <Text style={styles.insightLabel}>{t('advancedStats.peakHour')}</Text>
                 </View>
                 <View style={styles.insightCard}>
                     <MaterialIcons name="today" size={24} color="#0EA5E9" />
                     <Text style={styles.insightValue}>{busiestDayLabel}</Text>
-                    <Text style={styles.insightLabel}>Día + Activo</Text>
+                    <Text style={styles.insightLabel}>{t('advancedStats.busiestDay')}</Text>
                 </View>
             </View>
 
             {/* Weekly Activity Chart */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Actividad Semanal</Text>
+                <Text style={styles.cardTitle}>{t('advancedStats.weeklyActivity')}</Text>
                 <View style={styles.weekChart}>
                     {analytics.weekdayDistribution.map((value, index) => {
                         const maxVal = Math.max(...analytics.weekdayDistribution, 1);
@@ -110,7 +113,7 @@ export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProp
                                 <View style={styles.weekBarWrapper}>
                                     <View style={[styles.weekBar, { height: `${Math.max(heightPercent, 5)}%` }]} />
                                 </View>
-                                <Text style={styles.weekLabel}>{WEEKDAY_LABELS[index]}</Text>
+                                <Text style={styles.weekLabel}>{weekdayLabels[index]}</Text>
                             </View>
                         );
                     })}
@@ -124,17 +127,17 @@ export default function AdvancedStatsBlock({ analytics }: AdvancedStatsBlockProp
                     <Text style={styles.miniStatValue}>
                         {analyticsApi.formatDuration(analytics.averageConversationDuration)}
                     </Text>
-                    <Text style={styles.miniStatLabel}>Duración Media</Text>
+                    <Text style={styles.miniStatLabel}>{t('advancedStats.averageDuration')}</Text>
                 </View>
                 <View style={styles.miniStatCard}>
                     <MaterialIcons name="person-add" size={20} color={COLORS.green600} />
                     <Text style={styles.miniStatValue}>{analytics.visitors.unique}</Text>
-                    <Text style={styles.miniStatLabel}>Usuarios Nuevos</Text>
+                    <Text style={styles.miniStatLabel}>{t('advancedStats.newUsers')}</Text>
                 </View>
                 <View style={styles.miniStatCard}>
                     <MaterialIcons name="replay" size={20} color={COLORS.blue600} />
                     <Text style={styles.miniStatValue}>{analytics.visitors.returning}</Text>
-                    <Text style={styles.miniStatLabel}>Recurrentes</Text>
+                    <Text style={styles.miniStatLabel}>{t('advancedStats.returning')}</Text>
                 </View>
             </View>
         </View>

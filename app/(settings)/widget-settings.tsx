@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
     View,
     Text,
@@ -58,6 +59,7 @@ export default function WidgetSettingsScreen() {
     const { user, token, refreshUser } = useAuth();
     const { showAlert } = useAlert();
     const { canAccess } = useSubscription();
+    const { t } = useTranslation('settings');
 
     const [config, setConfig] = useState<WidgetConfig>({
         position: "bottom-right",
@@ -92,18 +94,18 @@ export default function WidgetSettingsScreen() {
         if (channel === 'text' && !value && !voiceEnabled) {
             showAlert({
                 type: 'warning',
-                title: 'Al menos un canal',
-                message: 'Debes mantener al menos un canal de comunicación habilitado.',
-                buttons: [{ text: 'Entendido' }],
+                title: t('widgetSettings.atLeastOneChannel'),
+                message: t('widgetSettings.atLeastOneChannelMsg'),
+                buttons: [{ text: t('widgetSettings.understood') }],
             });
             return;
         }
         if (channel === 'voice' && !value && !textEnabled) {
             showAlert({
                 type: 'warning',
-                title: 'Al menos un canal',
-                message: 'Debes mantener al menos un canal de comunicación habilitado.',
-                buttons: [{ text: 'Entendido' }],
+                title: t('widgetSettings.atLeastOneChannel'),
+                message: t('widgetSettings.atLeastOneChannelMsg'),
+                buttons: [{ text: t('widgetSettings.understood') }],
             });
             return;
         }
@@ -183,9 +185,9 @@ export default function WidgetSettingsScreen() {
         setCopied(true);
         showAlert({
             type: 'info',
-            title: '¡Código copiado!',
-            message: 'Pega este código justo antes de </body> en tu sitio web.',
-            buttons: [{ text: "Entendido" }]
+            title: t('widgetSettings.codeCopiedAlert'),
+            message: t('widgetSettings.codeCopiedMessage'),
+            buttons: [{ text: t('widgetSettings.understood') }]
         });
 
         setTimeout(() => setCopied(false), 3000);
@@ -195,11 +197,11 @@ export default function WidgetSettingsScreen() {
         router.back();
     };
 
-    const positions: { id: WidgetPosition; label: string; icon: string }[] = [
-        { id: "bottom-right", label: "Abajo derecha", icon: "south-east" },
-        { id: "bottom-left", label: "Abajo izquierda", icon: "south-west" },
-        { id: "top-right", label: "Arriba derecha", icon: "north-east" },
-        { id: "top-left", label: "Arriba izquierda", icon: "north-west" },
+    const positions: { id: WidgetPosition; labelKey: string; icon: string }[] = [
+        { id: "bottom-right", labelKey: "bottomRight", icon: "south-east" },
+        { id: "bottom-left", labelKey: "bottomLeft", icon: "south-west" },
+        { id: "top-right", labelKey: "topRight", icon: "north-east" },
+        { id: "top-left", labelKey: "topLeft", icon: "north-west" },
     ];
 
     const colors = [
@@ -218,7 +220,7 @@ export default function WidgetSettingsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Widget para Web</Text>
+                <Text style={styles.headerTitle}>{t('widgetSettings.headerTitle')}</Text>
                 <View style={styles.headerPlaceholder} />
             </View>
 
@@ -232,16 +234,15 @@ export default function WidgetSettingsScreen() {
                     <View style={styles.infoIconContainer}>
                         <MaterialIcons name="widgets" size={24} color={COLORS.blue500} />
                     </View>
-                    <Text style={styles.infoTitle}>Integra tu Gemelo Digital en tu Web</Text>
+                    <Text style={styles.infoTitle}>{t('widgetSettings.infoTitle')}</Text>
                     <Text style={styles.infoDescription}>
-                        Añade una burbuja de chat a tu sitio web para que tus visitantes puedan
-                        comunicarse con tu gemelo digital 24/7.
+                        {t('widgetSettings.infoDescription')}
                     </Text>
                 </View>
 
                 {/* Position Selection */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>POSICIÓN DEL BOTÓN</Text>
+                    <Text style={styles.sectionTitle}>{t('widgetSettings.buttonPosition')}</Text>
                     <View style={styles.positionGrid}>
                         {positions.map((pos) => (
                             <TouchableOpacity
@@ -261,7 +262,7 @@ export default function WidgetSettingsScreen() {
                                     styles.positionLabel,
                                     config.position === pos.id && styles.positionLabelActive
                                 ]}>
-                                    {pos.label}
+                                    {t(`widgetSettings.${pos.labelKey}`)}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -270,7 +271,7 @@ export default function WidgetSettingsScreen() {
 
                 {/* Color Selection */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>COLOR DEL BOTÓN</Text>
+                    <Text style={styles.sectionTitle}>{t('widgetSettings.buttonColor')}</Text>
                     <View style={styles.colorGrid}>
                         {colors.map((c) => (
                             <TouchableOpacity
@@ -292,14 +293,14 @@ export default function WidgetSettingsScreen() {
 
                 {/* Avatar Toggle */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>OPCIONES</Text>
+                    <Text style={styles.sectionTitle}>{t('widgetSettings.options')}</Text>
                     <TouchableOpacity
                         style={styles.toggleRow}
                         onPress={() => setConfig({ ...config, useAvatar: !config.useAvatar })}
                     >
                         <View style={styles.toggleInfo}>
                             <MaterialIcons name="face" size={20} color={COLORS.textMain} />
-                            <Text style={styles.toggleLabel}>Mostrar tu avatar en el botón</Text>
+                            <Text style={styles.toggleLabel}>{t('widgetSettings.showAvatar')}</Text>
                         </View>
                         <View style={[styles.toggle, config.useAvatar && styles.toggleActive]}>
                             <View style={[styles.toggleThumb, config.useAvatar && styles.toggleThumbActive]} />
@@ -331,10 +332,10 @@ export default function WidgetSettingsScreen() {
                             />
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.toggleLabel}>
-                                    Modo {widgetTheme === 'dark' ? 'Oscuro' : 'Claro'}
+                                    {widgetTheme === 'dark' ? t('widgetSettings.modeDark') : t('widgetSettings.modeLight')}
                                 </Text>
                                 <Text style={styles.toggleDescription}>
-                                    Cambia la apariencia del widget
+                                    {t('widgetSettings.changeAppearance')}
                                 </Text>
                             </View>
                         </View>
@@ -346,7 +347,7 @@ export default function WidgetSettingsScreen() {
 
                 {/* Channel Configuration */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CANALES DE COMUNICACIÓN</Text>
+                    <Text style={styles.sectionTitle}>{t('widgetSettings.channels')}</Text>
                     <TouchableOpacity
                         style={styles.toggleRow}
                         onPress={() => handleChannelToggle('text', !textEnabled)}
@@ -354,9 +355,9 @@ export default function WidgetSettingsScreen() {
                         <View style={styles.toggleInfo}>
                             <MaterialIcons name="chat" size={20} color={COLORS.textMain} />
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.toggleLabel}>Chat de texto</Text>
+                                <Text style={styles.toggleLabel}>{t('widgetSettings.textChat')}</Text>
                                 <Text style={styles.toggleDescription}>
-                                    Permite interactuar por escrito
+                                    {t('widgetSettings.textChatDesc')}
                                 </Text>
                             </View>
                         </View>
@@ -372,9 +373,9 @@ export default function WidgetSettingsScreen() {
                         <View style={styles.toggleInfo}>
                             <MaterialIcons name="mic" size={20} color={COLORS.textMain} />
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.toggleLabel}>Conversación de voz</Text>
+                                <Text style={styles.toggleLabel}>{t('widgetSettings.voiceChat')}</Text>
                                 <Text style={styles.toggleDescription}>
-                                    Permite hablar con tu gemelo digital
+                                    {t('widgetSettings.voiceChatDesc')}
                                 </Text>
                             </View>
                         </View>
@@ -386,7 +387,7 @@ export default function WidgetSettingsScreen() {
 
                 {/* Embed Code */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>CÓDIGO DE INTEGRACIÓN</Text>
+                    <Text style={styles.sectionTitle}>{t('widgetSettings.integrationCode')}</Text>
 
                     {/* Tab selector */}
                     <View style={styles.tabRow}>
@@ -421,8 +422,8 @@ export default function WidgetSettingsScreen() {
                     {/* Description */}
                     <Text style={styles.embedDescription}>
                         {embedType === 'script'
-                            ? 'Burbuja flotante que se abre al hacer clic. Recomendado para la mayoría de webs.'
-                            : 'Chat integrado directamente en tu página. Ideal para páginas de contacto o landing pages.'}
+                            ? t('widgetSettings.scriptDesc')
+                            : t('widgetSettings.iframeDesc')}
                     </Text>
 
                     <View style={styles.codeContainer}>
@@ -447,31 +448,31 @@ export default function WidgetSettingsScreen() {
                             color={copied ? COLORS.green500 : COLORS.textMain}
                         />
                         <Text style={[styles.copyButtonText, copied && styles.copyButtonTextSuccess]}>
-                            {copied ? "¡Código Copiado!" : "Copiar Código"}
+                            {copied ? t('widgetSettings.codeCopied') : t('widgetSettings.copyCode')}
                         </Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Instructions */}
                 <View style={styles.instructionsCard}>
-                    <Text style={styles.instructionsTitle}>Cómo Integrar</Text>
+                    <Text style={styles.instructionsTitle}>{t('widgetSettings.howToIntegrate')}</Text>
                     <View style={styles.instructionStep}>
                         <View style={styles.stepNumber}>
                             <Text style={styles.stepNumberText}>1</Text>
                         </View>
-                        <Text style={styles.stepText}>Copia el código de arriba</Text>
+                        <Text style={styles.stepText}>{t('widgetSettings.step1')}</Text>
                     </View>
                     <View style={styles.instructionStep}>
                         <View style={styles.stepNumber}>
                             <Text style={styles.stepNumberText}>2</Text>
                         </View>
-                        <Text style={styles.stepText}>Pégalo antes de {"</body>"} en tu HTML</Text>
+                        <Text style={styles.stepText}>{t('widgetSettings.step2')}</Text>
                     </View>
                     <View style={styles.instructionStep}>
                         <View style={styles.stepNumber}>
                             <Text style={styles.stepNumberText}>3</Text>
                         </View>
-                        <Text style={styles.stepText}>¡Listo! Tu visitantes podrán chatear con tu gemelo</Text>
+                        <Text style={styles.stepText}>{t('widgetSettings.step3')}</Text>
                     </View>
                 </View>
 

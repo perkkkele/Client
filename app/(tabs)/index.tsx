@@ -1,6 +1,6 @@
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -21,6 +21,9 @@ import { getAssetUrl, chatApi, professionalApi } from "../../api";
 import type { Chat, EscalatedChat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
 import { useAuth } from "../../context";
+import { useTranslation } from 'react-i18next';
+import { LOCALE_MAP, type SupportedLanguage } from '../../services/i18n';
+import { getCategoriesWithEmoji, getCategoryLabel, CATEGORY_COLORS } from '../../utils/categoryUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -36,66 +39,6 @@ const COLORS = {
   grayLight: "#94a3b8",
   slate400: "#94a3b8",
   slate800: "#1e293b",
-};
-
-// Todas las categorías profesionales disponibles
-const ALL_CATEGORIES = [
-  { id: "todos", label: "Todos", emoji: "✨" },
-  { id: "legal", label: "Legal", emoji: "⚖️" },
-  { id: "salud", label: "Salud", emoji: "🩺" },
-  { id: "educacion", label: "Educación", emoji: "🎓" },
-  { id: "finanzas", label: "Finanzas", emoji: "💰" },
-  { id: "fitness", label: "Fitness", emoji: "💪" },
-  { id: "tecnologia", label: "Tecnología", emoji: "💻" },
-  { id: "hogar", label: "Hogar", emoji: "🔧" },
-  { id: "bienestar", label: "Bienestar", emoji: "🧘" },
-  { id: "viajes", label: "Viajes", emoji: "✈️" },
-  { id: "coaching", label: "Coaching", emoji: "🎯" },
-  { id: "mantenimiento", label: "Mantenimiento", emoji: "🔩" },
-  { id: "reformas", label: "Reformas", emoji: "🏗️" },
-  { id: "marketing", label: "Marketing", emoji: "📢" },
-  { id: "gestoria", label: "Gestoría", emoji: "📋" },
-  { id: "energia", label: "Energía", emoji: "⚡" },
-  { id: "empleo", label: "Empleo", emoji: "💼" },
-  { id: "arte", label: "Arte", emoji: "🎨" },
-  { id: "eventos", label: "Eventos", emoji: "🎉" },
-  { id: "mascotas", label: "Mascotas", emoji: "🐾" },
-  { id: "belleza", label: "Belleza", emoji: "💅" },
-  { id: "economia", label: "Economía", emoji: "📊" },
-  { id: "inmobiliaria", label: "Inmobiliaria", emoji: "🏠" },
-  { id: "otro", label: "Otro", emoji: "📦" },
-];
-
-// Colores por categoría para los badges
-const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  legal: { bg: "#f1f5f9", text: "#475569" },
-  salud: { bg: "#dbeafe", text: "#1d4ed8" },
-  educacion: { bg: "#dcfce7", text: "#15803d" },
-  finanzas: { bg: "#fef3c7", text: "#b45309" },
-  fitness: { bg: "#ffedd5", text: "#c2410c" },
-  tecnologia: { bg: "#e0e7ff", text: "#4338ca" },
-  hogar: { bg: "#fef3c7", text: "#b45309" },
-  bienestar: { bg: "#fce7f3", text: "#be185d" },
-  viajes: { bg: "#e0f2fe", text: "#0369a1" },
-  coaching: { bg: "#fef9c3", text: "#a16207" },
-  mantenimiento: { bg: "#f1f5f9", text: "#475569" },
-  reformas: { bg: "#ffedd5", text: "#c2410c" },
-  marketing: { bg: "#ede9fe", text: "#6d28d9" },
-  gestoria: { bg: "#f1f5f9", text: "#475569" },
-  energia: { bg: "#fef9c3", text: "#a16207" },
-  empleo: { bg: "#dbeafe", text: "#1d4ed8" },
-  arte: { bg: "#fce7f3", text: "#be185d" },
-  eventos: { bg: "#ede9fe", text: "#6d28d9" },
-  mascotas: { bg: "#dcfce7", text: "#15803d" },
-  belleza: { bg: "#fce7f3", text: "#be185d" },
-  economia: { bg: "#fef3c7", text: "#b45309" },
-  inmobiliaria: { bg: "#e0f2fe", text: "#0369a1" },
-  otro: { bg: "#f3e8ff", text: "#7e22ce" },
-  // Legacy IDs
-  diseno: { bg: "#fce7f3", text: "#be185d" },
-  estetica: { bg: "#fce7f3", text: "#be185d" },
-  inmobiliario: { bg: "#e0f2fe", text: "#0369a1" },
-  otros: { bg: "#f3e8ff", text: "#7e22ce" },
 };
 
 
@@ -131,6 +74,8 @@ function formatRelativeTime(dateString: string | undefined): string {
 export default function TwinProHomeScreen() {
   const { token, user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation('home');
+  const ALL_CATEGORIES = useMemo(() => getCategoriesWithEmoji(t), [t]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
   const [escalatedChats, setEscalatedChats] = useState<EscalatedChat[]>([]);
@@ -335,7 +280,7 @@ export default function TwinProHomeScreen() {
           {item.firstname || item.email?.split("@")[0]}
         </Text>
         <Text style={styles.featuredProfession} numberOfLines={1}>
-          {item.profession || "Profesional"}
+          {item.profession || t('defaultProfessional')}
         </Text>
       </TouchableOpacity>
     );
@@ -375,7 +320,7 @@ export default function TwinProHomeScreen() {
             <Text style={styles.chatName}>
               {partner?.firstname
                 ? `${partner.firstname}${partner.lastname ? ` ${partner.lastname.charAt(0)}.` : ""}`
-                : partner?.email || "Usuario"}
+                : partner?.email || t('defaultUser')}
             </Text>
             <Text style={styles.chatTime}>{formatRelativeTime(item.last_message_date)}</Text>
           </View>
@@ -397,7 +342,7 @@ export default function TwinProHomeScreen() {
           </View>
 
           <Text style={styles.chatPreview} numberOfLines={1}>
-            {item.last_message || "Toca para ver mensajes..."}
+            {item.last_message || t('tapToSeeMessages')}
           </Text>
         </View>
 
@@ -450,8 +395,8 @@ export default function TwinProHomeScreen() {
             )}
           </TouchableOpacity>
           <View style={styles.greetingTextContainer}>
-            <Text style={styles.greetingText}>Hola, {getUserDisplayName()}</Text>
-            <Text style={styles.greetingSubtext}>¿Qué profesional necesitas hoy?</Text>
+            <Text style={styles.greetingText}>{t('greeting', { name: getUserDisplayName() })}</Text>
+            <Text style={styles.greetingSubtext}>{t('greetingSubtext')}</Text>
           </View>
         </View>
 
@@ -461,7 +406,7 @@ export default function TwinProHomeScreen() {
             <MaterialIcons name="search" size={22} color={COLORS.gray} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar abogado, médico..."
+              placeholder={t('searchPlaceholder')}
               placeholderTextColor={COLORS.gray}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -541,21 +486,21 @@ export default function TwinProHomeScreen() {
                 RESULTADOS PARA "{searchQuery}"
               </Text>
               <TouchableOpacity onPress={clearSearch}>
-                <Text style={styles.sectionLink}>Limpiar</Text>
+                <Text style={styles.sectionLink}>{t('clear')}</Text>
               </TouchableOpacity>
             </View>
 
             {isSearching ? (
               <View style={styles.searchLoadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={styles.searchLoadingText}>Buscando profesionales...</Text>
+                <Text style={styles.searchLoadingText}>{t('searching')}</Text>
               </View>
             ) : searchResults.length === 0 ? (
               <View style={styles.emptySearchContainer}>
                 <MaterialIcons name="search-off" size={48} color={COLORS.gray} />
-                <Text style={styles.emptySearchTitle}>Sin resultados</Text>
+                <Text style={styles.emptySearchTitle}>{t('noResults')}</Text>
                 <Text style={styles.emptySearchSubtitle}>
-                  No encontramos profesionales para "{searchQuery}". Intenta con otros términos.
+                  {t('noResultsMessage', { query: searchQuery })}
                 </Text>
               </View>
             ) : (
@@ -600,7 +545,7 @@ export default function TwinProHomeScreen() {
                             styles.searchResultCategoryText,
                             { color: CATEGORY_COLORS[professional.category as keyof typeof CATEGORY_COLORS]?.text || CATEGORY_COLORS.otros.text }
                           ]}>
-                            {ALL_CATEGORIES.find(c => c.id === professional.category)?.label || professional.category}
+                            {getCategoryLabel(t, professional.category || 'otro')}
                           </Text>
                         </View>
                       </View>
@@ -619,11 +564,11 @@ export default function TwinProHomeScreen() {
                 <View style={styles.sectionHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <MaterialIcons name="support-agent" size={14} color="#EA580C" />
-                    <Text style={styles.sectionTitle}>MIS CONSULTAS</Text>
+                    <Text style={styles.sectionTitle}>{t('myConsultations')}</Text>
                   </View>
                   {escalatedChats.length > 3 && (
                     <TouchableOpacity onPress={() => router.push('/my-escalated-chats')}>
-                      <Text style={styles.sectionLink}>Ver todo</Text>
+                      <Text style={styles.sectionLink}>{t('seeAll')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -651,9 +596,9 @@ export default function TwinProHomeScreen() {
                             'Eliminar consulta',
                             '¿Quieres eliminar esta consulta escalada?',
                             [
-                              { text: 'Cancelar', style: 'cancel' },
+                              { text: t('common:cancel'), style: 'cancel' },
                               {
-                                text: 'Eliminar',
+                                text: t('common:delete'),
                                 style: 'destructive',
                                 onPress: async () => {
                                   try {
@@ -695,11 +640,11 @@ export default function TwinProHomeScreen() {
                             styles.escalatedStatusText,
                             { color: isResponded ? '#16A34A' : '#EA580C' }
                           ]}>
-                            {isResponded ? 'Respondido' : 'Pendiente'}
+                            {isResponded ? t('responded') : t('pending')}
                           </Text>
                         </View>
                         <Text style={styles.escalatedPreview} numberOfLines={1}>
-                          {item.lastMessage || 'Sin mensajes aún'}
+                          {item.lastMessage || t('noMessagesYet')}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -711,7 +656,7 @@ export default function TwinProHomeScreen() {
             {/* Recientes */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>RECIENTES</Text>
+                <Text style={styles.sectionTitle}>{t('recent')}</Text>
               </View>
               {/* Mostrar contenido de bienvenida SOLO si no hay ningún chat */}
               {chats.length === 0 ? (
@@ -721,24 +666,24 @@ export default function TwinProHomeScreen() {
                     <View style={styles.welcomeIconContainer}>
                       <MaterialIcons name="waving-hand" size={36} color={COLORS.primary} />
                     </View>
-                    <Text style={styles.welcomeTitle}>¡Bienvenido a TwinPro!</Text>
+                    <Text style={styles.welcomeTitle}>{t('welcome.title')}</Text>
                     <Text style={styles.welcomeSubtitle}>
-                      Conecta con profesionales verificados y sus gemelos IA.
+                      {t('welcome.subtitle')}
                     </Text>
 
                     {/* Compact Feature highlights - horizontal */}
                     <View style={styles.featuresRow}>
                       <View style={styles.featureChip}>
                         <MaterialIcons name="smart-toy" size={14} color="#0284c7" />
-                        <Text style={styles.featureChipText}>24/7 IA</Text>
+                        <Text style={styles.featureChipText}>{t('welcome.ai247')}</Text>
                       </View>
                       <View style={styles.featureChip}>
                         <MaterialIcons name="verified" size={14} color="#16a34a" />
-                        <Text style={styles.featureChipText}>Verificados</Text>
+                        <Text style={styles.featureChipText}>{t('welcome.verified')}</Text>
                       </View>
                       <View style={styles.featureChip}>
                         <MaterialIcons name="bolt" size={14} color="#ca8a04" />
-                        <Text style={styles.featureChipText}>Rápido</Text>
+                        <Text style={styles.featureChipText}>{t('welcome.fast')}</Text>
                       </View>
                     </View>
 
@@ -747,7 +692,7 @@ export default function TwinProHomeScreen() {
                       style={styles.welcomeButton}
                       onPress={() => router.push("/(tabs)/category-results?category=todos")}
                     >
-                      <Text style={styles.welcomeButtonText}>Explorar Profesionales</Text>
+                      <Text style={styles.welcomeButtonText}>{t('welcome.exploreProfessionals')}</Text>
                       <MaterialIcons name="arrow-forward" size={18} color={COLORS.black} />
                     </TouchableOpacity>
                   </View>
@@ -773,9 +718,9 @@ export default function TwinProHomeScreen() {
                   ) : (
                     <View style={styles.emptyStateContainer}>
                       <View style={styles.welcomeContainer}>
-                        <Text style={styles.welcomeTitle}>No hay chats visibles</Text>
+                        <Text style={styles.welcomeTitle}>{t('noVisibleChats')}</Text>
                         <Text style={styles.welcomeSubtitle}>
-                          Has ocultado todos los chats. Explora profesionales para iniciar nuevas conversaciones.
+                          {t('noVisibleChatsMessage')}
                         </Text>
                       </View>
                     </View>
@@ -793,15 +738,15 @@ export default function TwinProHomeScreen() {
           <View style={styles.navItemActive}>
             <MaterialIcons name="chat-bubble" size={24} color={COLORS.black} />
           </View>
-          <Text style={styles.navLabelActive}>Chats</Text>
+          <Text style={styles.navLabelActive}>{t('nav.chats')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
           <MaterialIcons name="diversity-2" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>Directorio</Text>
+          <Text style={styles.navLabel}>{t('nav.directory')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
           <MaterialIcons name="favorite" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>Favoritos</Text>
+          <Text style={styles.navLabel}>{t('nav.favorites')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => {
           // Check if user is a professional (userpro)
@@ -812,7 +757,7 @@ export default function TwinProHomeScreen() {
           }
         }}>
           <MaterialIcons name="badge" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>Perfil Pro</Text>
+          <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -830,24 +775,24 @@ export default function TwinProHomeScreen() {
         >
           <View style={styles.contextMenuContainer}>
             <View style={styles.contextMenuHeader}>
-              <Text style={styles.contextMenuTitle}>Opciones del chat</Text>
+              <Text style={styles.contextMenuTitle}>{t('contextMenu.title')}</Text>
             </View>
 
             <TouchableOpacity style={styles.contextMenuItem} onPress={handleViewProfile}>
               <MaterialIcons name="person" size={22} color={COLORS.black} />
-              <Text style={styles.contextMenuItemText}>Ver perfil</Text>
+              <Text style={styles.contextMenuItemText}>{t('contextMenu.viewProfile')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.contextMenuItem} onPress={handleHideChat}>
               <MaterialIcons name="visibility-off" size={22} color="#ef4444" />
-              <Text style={[styles.contextMenuItemText, { color: "#ef4444" }]}>Ocultar chat</Text>
+              <Text style={[styles.contextMenuItemText, { color: "#ef4444" }]}>{t('contextMenu.hideChat')}</Text>
             </TouchableOpacity>
 
             <View style={styles.contextMenuDivider} />
 
             <TouchableOpacity style={styles.contextMenuItem} onPress={handleCloseContextMenu}>
               <MaterialIcons name="close" size={22} color={COLORS.gray} />
-              <Text style={[styles.contextMenuItemText, { color: COLORS.gray }]}>Cancelar</Text>
+              <Text style={[styles.contextMenuItemText, { color: COLORS.gray }]}>{t('common:cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

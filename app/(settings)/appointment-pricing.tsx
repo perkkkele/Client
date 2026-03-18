@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
-import {    ScrollView,
+import { useTranslation } from "react-i18next";
+import {
+    ScrollView,
     StyleSheet,
     Switch,
     Text,
@@ -40,7 +42,8 @@ const DURATIONS = [15, 30, 45, 60, 90];
 
 export default function AppointmentPricingScreen() {
     const { user, token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [saving, setSaving] = useState(false);
 
     // Enable/Disable appointment types
@@ -108,16 +111,16 @@ export default function AppointmentPricingScreen() {
         // Validate: enabled types must have at least one price > 0
         const missingTypes: string[] = [];
         if (videoEnabled && !Object.values(videoP).some(p => p > 0)) {
-            missingTypes.push("Video-cita");
+            missingTypes.push(t('appointmentPricing.videoCall'));
         }
         if (presencialEnabled && !Object.values(presencialP).some(p => p > 0)) {
-            missingTypes.push("Cita presencial");
+            missingTypes.push(t('appointmentPricing.inPerson'));
         }
         if (missingTypes.length > 0) {
             showAlert({
                 type: 'error',
-                title: 'Tarifas incompletas',
-                message: `Debes configurar al menos un precio para: ${missingTypes.join(", ")}. Introduce el precio en euros para la duración que ofreces.`,
+                title: t('appointmentPricing.incompleteTitle'),
+                message: t('appointmentPricing.incompleteMessage', { types: missingTypes.join(", ") }),
             });
             return;
         }
@@ -141,10 +144,10 @@ export default function AppointmentPricingScreen() {
             });
 
             if (refreshUser) await refreshUser();
-            showAlert({ type: 'success', title: '✓ Guardado', message: 'Tarifas actualizadas correctamente' });
+            showAlert({ type: 'success', title: t('appointmentPricing.savedTitle'), message: t('appointmentPricing.savedMessage') });
         } catch (error) {
             console.error("Error saving prices:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron guardar las tarifas' });
+            showAlert({ type: 'error', title: 'Error', message: t('appointmentPricing.errorSave') });
         } finally {
             setSaving(false);
         }
@@ -208,7 +211,7 @@ export default function AppointmentPricingScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Tarifas de Citas</Text>
+                <Text style={styles.headerTitle}>{t('appointmentPricing.headerTitle')}</Text>
                 <TouchableOpacity
                     style={[styles.saveButton, saving && styles.saveButtonDisabled]}
                     onPress={handleSave}
@@ -217,7 +220,7 @@ export default function AppointmentPricingScreen() {
                     {saving ? (
                         <ActivityIndicator size="small" color={COLORS.textMain} />
                     ) : (
-                        <Text style={styles.saveButtonText}>Guardar</Text>
+                        <Text style={styles.saveButtonText}>{t('appointmentPricing.save')}</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -227,7 +230,7 @@ export default function AppointmentPricingScreen() {
                 <View style={styles.infoBanner}>
                     <MaterialIcons name="info-outline" size={16} color={COLORS.blue600} />
                     <Text style={styles.infoBannerText}>
-                        Habilita los tipos de cita que ofreces. Toca una duración para marcarla por defecto.
+                        {t('appointmentPricing.infoBanner')}
                     </Text>
                 </View>
 
@@ -239,8 +242,8 @@ export default function AppointmentPricingScreen() {
                                 <MaterialIcons name="videocam" size={18} color={COLORS.blue600} />
                             </View>
                             <View>
-                                <Text style={styles.sectionTitle}>Video-cita</Text>
-                                <Text style={styles.sectionHint}>Citas por videoconferencia</Text>
+                                <Text style={styles.sectionTitle}>{t('appointmentPricing.videoCall')}</Text>
+                                <Text style={styles.sectionHint}>{t('appointmentPricing.videoCallHint')}</Text>
                             </View>
                         </View>
                         <Switch
@@ -270,8 +273,8 @@ export default function AppointmentPricingScreen() {
                                 <MaterialIcons name="person" size={18} color={COLORS.green600} />
                             </View>
                             <View>
-                                <Text style={styles.sectionTitle}>Cita presencial</Text>
-                                <Text style={styles.sectionHint}>Citas en tu ubicación física</Text>
+                                <Text style={styles.sectionTitle}>{t('appointmentPricing.inPerson')}</Text>
+                                <Text style={styles.sectionHint}>{t('appointmentPricing.inPersonHint')}</Text>
                             </View>
                         </View>
                         <Switch

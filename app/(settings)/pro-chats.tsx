@@ -1,5 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ScrollView,
     StyleSheet,
@@ -58,23 +59,6 @@ const getAvatarColor = (index: number) => {
     return colors[index % colors.length];
 };
 
-// Helper to format date
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Ahora";
-    if (diffMins < 60) return `${diffMins} min`;
-    if (diffHours < 24) return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    if (diffDays === 1) return "Ayer";
-    if (diffDays < 7) return ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][date.getDay()];
-    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-};
-
 // Group chats by client
 interface ClientGroup {
     clientId: string;
@@ -85,18 +69,39 @@ interface ClientGroup {
     chats: ProChat[];
     hasEscalated: boolean;
     escalatedCount: number;
-    pendingCount: number;  // Chats with pending escalation (not yet attended)
+    pendingCount: number;
     totalUnread: number;
     lastMessageDate: string;
 }
 
 export default function ProChatsScreen() {
     const { user, token } = useAuth();
+    const { t, i18n } = useTranslation('settings');
     const [searchQuery, setSearchQuery] = useState("");
     const [chats, setChats] = useState<ProChat[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+
+    const LOCALE_MAP: Record<string, string> = { es: 'es-ES', en: 'en-US', fr: 'fr-FR', de: 'de-DE' };
+    const locale = LOCALE_MAP[i18n.language] || 'es-ES';
+    const DAY_KEYS = ['daySun', 'dayMon', 'dayTue', 'dayWed', 'dayThu', 'dayFri', 'daySat'];
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return t('proChats.now');
+        if (diffMins < 60) return `${diffMins} min`;
+        if (diffHours < 24) return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+        if (diffDays === 1) return t('proChats.yesterday');
+        if (diffDays < 7) return t(`proChats.${DAY_KEYS[date.getDay()]}`);
+        return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
+    };
 
     const loadChats = useCallback(async () => {
         if (!token || !user?._id) return;
@@ -243,7 +248,7 @@ export default function ProChatsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Atención directa</Text>
+                <Text style={styles.headerTitle}>{t('proChats.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -252,13 +257,13 @@ export default function ProChatsScreen() {
                 <View style={styles.statItem}>
                     <MaterialIcons name="support-agent" size={18} color={COLORS.orange500} />
                     <Text style={[styles.statValue, { color: COLORS.orange500 }]}>{totalPending}</Text>
-                    <Text style={styles.statLabel}>Pendientes</Text>
+                    <Text style={styles.statLabel}>{t('proChats.pending')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                     <MaterialIcons name="check-circle" size={18} color={COLORS.green500} />
                     <Text style={[styles.statValue, { color: COLORS.green500 }]}>{totalAttended}</Text>
-                    <Text style={styles.statLabel}>Atendidos</Text>
+                    <Text style={styles.statLabel}>{t('proChats.attended')}</Text>
                 </View>
             </View>
 
@@ -268,7 +273,7 @@ export default function ProChatsScreen() {
                     <MaterialIcons name="search" size={20} color={COLORS.gray400} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Buscar cliente..."
+                        placeholder={t('proChats.searchPlaceholder')}
                         placeholderTextColor={COLORS.gray400}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -285,18 +290,18 @@ export default function ProChatsScreen() {
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primaryDark} />
-                    <Text style={styles.loadingText}>Cargando conversaciones...</Text>
+                    <Text style={styles.loadingText}>{t('proChats.loading')}</Text>
                 </View>
             ) : filteredGroups.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="chat-bubble-outline" size={64} color={COLORS.gray300} />
                     <Text style={styles.emptyTitle}>
-                        {chats.length === 0 ? "Sin conversaciones" : "No hay resultados"}
+                        {chats.length === 0 ? t('proChats.emptyNoChats') : t('proChats.emptyNoResults')}
                     </Text>
                     <Text style={styles.emptySubtitle}>
                         {chats.length === 0
-                            ? "Las conversaciones con tu gemelo digital aparecerán aquí"
-                            : "Prueba con otra búsqueda"}
+                            ? t('proChats.emptyNoChatsSubtitle')
+                            : t('proChats.emptyNoResultsSubtitle')}
                     </Text>
                 </View>
             ) : (
@@ -312,7 +317,7 @@ export default function ProChatsScreen() {
                         />
                     }
                 >
-                    <Text style={styles.sectionTitle}>CLIENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('proChats.clients')}</Text>
 
                     {filteredGroups.map((group, groupIndex) => {
                         const isExpanded = expandedClients.has(group.clientId);
@@ -347,8 +352,8 @@ export default function ProChatsScreen() {
                                             <Text style={styles.clientName}>{group.clientName}</Text>
                                         </View>
                                         <Text style={styles.clientMeta}>
-                                            {group.chats.length} hilo{group.chats.length !== 1 ? 's' : ''}
-                                            {group.escalatedCount > 0 && ` · ${group.escalatedCount} escalado${group.escalatedCount !== 1 ? 's' : ''}`}
+                                            {group.chats.length !== 1 ? t('proChats.threads', { count: group.chats.length }) : t('proChats.thread', { count: group.chats.length })}
+                                            {group.escalatedCount > 0 && ` · ${group.escalatedCount !== 1 ? t('proChats.escalatedPlural', { count: group.escalatedCount }) : t('proChats.escalated', { count: group.escalatedCount })}`}
                                         </Text>
                                     </View>
 
@@ -412,16 +417,16 @@ export default function ProChatsScreen() {
                                                                 styles.threadPreview,
                                                                 isPending && styles.threadPreviewPending
                                                             ]} numberOfLines={1}>
-                                                                {chat.lastMessage || "Sin mensajes"}
+                                                                {chat.lastMessage || t('proChats.noMessages')}
                                                             </Text>
                                                             {isPending && (
                                                                 <View style={styles.pendingPill}>
-                                                                    <Text style={styles.pendingPillText}>Pendiente</Text>
+                                                                    <Text style={styles.pendingPillText}>{t('proChats.pendingLabel')}</Text>
                                                                 </View>
                                                             )}
                                                             {isAttended && (
                                                                 <View style={styles.attendedPill}>
-                                                                    <Text style={styles.attendedPillText}>Atendido</Text>
+                                                                    <Text style={styles.attendedPillText}>{t('proChats.attendedLabel')}</Text>
                                                                 </View>
                                                             )}
                                                         </View>
@@ -434,10 +439,10 @@ export default function ProChatsScreen() {
                                                                     styles.escalatedReason,
                                                                     isAttended && styles.attendedReason
                                                                 ]} numberOfLines={1}>
-                                                                    → {chat.escalation.reason === 'client_request' ? 'Escalado' :
-                                                                        chat.escalation.reason === 'keyword' ? 'Palabra clave' :
-                                                                            chat.escalation.reason === 'twin_disabled' ? 'Gemelo off' :
-                                                                                'Sugerencia'}
+                                                                    → {chat.escalation.reason === 'client_request' ? t('proChats.reasonEscalated') :
+                                                                        chat.escalation.reason === 'keyword' ? t('proChats.reasonKeyword') :
+                                                                            chat.escalation.reason === 'twin_disabled' ? t('proChats.reasonTwinOff') :
+                                                                                t('proChats.reasonSuggestion')}
                                                                 </Text>
                                                             )}
                                                         </View>

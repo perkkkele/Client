@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useAuth } from "../../context";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -18,20 +19,21 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const { showAlert } = useAlert();
+  const { t } = useTranslation('auth');
 
   async function handleRegister() {
     if (!email || !password || !confirmPassword) {
-      showAlert({ type: 'warning', title: 'Campos incompletos', message: 'Por favor, completa todos los campos para crear tu cuenta.' });
+      showAlert({ type: 'warning', title: t('register.fieldsRequiredTitle'), message: t('register.fieldsRequired') });
       return;
     }
 
     if (password !== confirmPassword) {
-      showAlert({ type: 'warning', title: 'Contraseñas distintas', message: 'Las contraseñas que has introducido no coinciden. Revísalas e inténtalo de nuevo.' });
+      showAlert({ type: 'warning', title: t('register.passwordMismatchTitle'), message: t('register.passwordMismatch') });
       return;
     }
 
     if (password.length < 6) {
-      showAlert({ type: 'warning', title: 'Contraseña muy corta', message: 'Tu contraseña debe tener al menos 6 caracteres.' });
+      showAlert({ type: 'warning', title: t('register.passwordTooShortTitle'), message: t('register.passwordTooShort') });
       return;
     }
 
@@ -40,7 +42,7 @@ export default function RegisterScreen() {
       await register(email, password);
       router.replace("/(tabs)");
     } catch (error: any) {
-      showAlert({ type: 'error', title: 'Registro no completado', message: error.message || 'Ocurrió un problema al crear tu cuenta. Inténtalo de nuevo.' });
+      showAlert({ type: 'error', title: t('register.registerErrorTitle'), message: error.message || t('register.registerError') });
     } finally {
       setIsLoading(false);
     }
@@ -48,11 +50,11 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Crear Cuenta</Text>
+      <Text style={styles.title}>{t('register.title')}</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Correo electrónico"
+        placeholder={t('register.emailPlaceholder')}
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -62,7 +64,7 @@ export default function RegisterScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Contraseña"
+        placeholder={t('register.passwordPlaceholder')}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -71,7 +73,7 @@ export default function RegisterScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Confirmar contraseña"
+        placeholder={t('register.confirmPasswordPlaceholder')}
         secureTextEntry
         value={confirmPassword}
         onChangeText={setConfirmPassword}
@@ -86,15 +88,15 @@ export default function RegisterScreen() {
         {isLoading ? (
           <ActivityIndicator color="white" />
         ) : (
-          <Text style={styles.buttonText}>Registrarse</Text>
+          <Text style={styles.buttonText}>{t('register.registerButton')}</Text>
         )}
       </TouchableOpacity>
 
       <View style={styles.loginContainer}>
-        <Text style={styles.loginText}>¿Ya tienes cuenta? </Text>
+        <Text style={styles.loginText}>{t('register.hasAccount')} </Text>
         <Link href="/(auth)/login" asChild>
           <TouchableOpacity>
-            <Text style={styles.loginLink}>Inicia sesión</Text>
+            <Text style={styles.loginLink}>{t('register.loginLink')}</Text>
           </TouchableOpacity>
         </Link>
       </View>

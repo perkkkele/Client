@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -17,6 +17,8 @@ import { useAuth } from "../../context";
 import { userApi, STATIC_URL } from "../../api";
 import { normalizeProfession } from "../../constants/professionNormalizer";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
+import { getCategoryLabel, getBusinessTypes, CATEGORY_IDS } from '../../utils/categoryUtils';
 
 const COLORS = {
     primary: "#FDE047",
@@ -38,33 +40,7 @@ const COLORS = {
     green600: "#16a34a",
     red500: "#ef4444",
     red600: "#dc2626",
-};
-
-const CATEGORIES = [
-    { id: "legal", label: "Legal" },
-    { id: "salud", label: "Salud" },
-    { id: "educacion", label: "Educación" },
-    { id: "finanzas", label: "Finanzas" },
-    { id: "fitness", label: "Fitness" },
-    { id: "tecnologia", label: "Tecnología" },
-    { id: "hogar", label: "Hogar" },
-    { id: "bienestar", label: "Bienestar" },
-    { id: "viajes", label: "Viajes" },
-    { id: "coaching", label: "Coaching" },
-    { id: "mantenimiento", label: "Mantenimiento" },
-    { id: "reformas", label: "Reformas" },
-    { id: "marketing", label: "Marketing" },
-    { id: "gestoria", label: "Gestoría" },
-    { id: "energia", label: "Energía" },
-    { id: "empleo", label: "Empleo" },
-    { id: "arte", label: "Arte" },
-    { id: "eventos", label: "Eventos" },
-    { id: "mascotas", label: "Mascotas" },
-    { id: "belleza", label: "Belleza" },
-    { id: "economia", label: "Economía" },
-    { id: "inmobiliaria", label: "Inmobiliaria" },
-    { id: "otro", label: "Otro" },
-];
+}
 
 // Alias validation rules
 const ALIAS_MIN_LENGTH = 3;
@@ -75,7 +51,10 @@ type AliasStatus = "idle" | "checking" | "valid" | "invalid" | "taken";
 
 export default function ProProfileScreen() {
     const { token, refreshUser } = useAuth();
+    const { t } = useTranslation('common');
 
+    const BUSINESS_TYPES = useMemo(() => getBusinessTypes(t), [t]);
+    const CATEGORIES = useMemo(() => CATEGORY_IDS.map(id => ({ id, label: getCategoryLabel(t, id) })), [t]);
     const { showAlert } = useAlert();
     // Alias state
     const [alias, setAlias] = useState("");
@@ -231,7 +210,7 @@ export default function ProProfileScreen() {
                     publicName: publicName.trim(),
                     profession: profession.trim(),
                     businessName: businessName.trim() || undefined,
-                    businessType: (businessType || undefined) as 'Autónomo' | 'Empresa' | 'Clínica/Centro' | undefined,
+                    businessType: (businessType || undefined) as 'freelance' | 'company' | 'clinic' | undefined,
                     category: category as any,
                     customCategory: category === 'otro' ? customCategory.trim() : undefined,
                     specialties: specialties,
@@ -432,24 +411,24 @@ export default function ProProfileScreen() {
                                 onPress={() => setShowBusinessTypePicker(!showBusinessTypePicker)}
                             >
                                 <Text style={[styles.businessTypeText, !businessType && styles.placeholder]}>
-                                    {businessType || "Tipo"}
+                                    {BUSINESS_TYPES.find(bt => bt.id === businessType)?.label || "Tipo"}
                                 </Text>
                                 <MaterialIcons name="expand-more" size={18} color={COLORS.gray400} />
                             </TouchableOpacity>
                         </View>
                         {showBusinessTypePicker && (
                             <View style={styles.businessTypePicker}>
-                                {["Autónomo", "Empresa", "Clínica/Centro"].map((type) => (
+                                {BUSINESS_TYPES.map((bt) => (
                                     <TouchableOpacity
-                                        key={type}
-                                        style={[styles.categoryOption, businessType === type && styles.categoryOptionSelected]}
+                                        key={bt.id}
+                                        style={[styles.categoryOption, businessType === bt.id && styles.categoryOptionSelected]}
                                         onPress={() => {
-                                            setBusinessType(type);
+                                            setBusinessType(bt.id);
                                             setShowBusinessTypePicker(false);
                                         }}
                                     >
-                                        <Text style={[styles.categoryOptionText, businessType === type && styles.categoryOptionTextSelected]}>
-                                            {type}
+                                        <Text style={[styles.categoryOptionText, businessType === bt.id && styles.categoryOptionTextSelected]}>
+                                            {bt.label}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}

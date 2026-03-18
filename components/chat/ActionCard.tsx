@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createAppointment } from '../../api/appointment';
@@ -76,32 +77,42 @@ interface CardHeaderConfig {
     pending_payment: string;
 }
 
-const CARD_HEADERS: Record<ActionCardType, CardHeaderConfig> = {
-    appointment: {
-        icon: 'calendar',
-        proposed: 'Propuesta de Cita',
-        confirmed: 'Cita Confirmada',
-        pending_payment: 'Pendiente de Pago',
-    },
-    review: {
-        icon: 'star',
-        proposed: 'Solicitud de Reseña',
-        confirmed: 'Reseña Enviada',
-        pending_payment: '',
-    },
-    payment: {
-        icon: 'card',
-        proposed: 'Pago Pendiente',
-        confirmed: 'Pago Completado',
-        pending_payment: 'Procesando Pago',
-    },
-    form: {
-        icon: 'document-text',
-        proposed: 'Formulario',
-        confirmed: 'Formulario Enviado',
-        pending_payment: '',
-    },
+const CARD_ICONS: Record<ActionCardType, string> = {
+    appointment: 'calendar',
+    review: 'star',
+    payment: 'card',
+    form: 'document-text',
 };
+
+function useCardHeaders(): Record<ActionCardType, CardHeaderConfig> {
+    const { t } = useTranslation('settings');
+    return {
+        appointment: {
+            icon: 'calendar',
+            proposed: t('actionCard.appointmentProposed'),
+            confirmed: t('actionCard.appointmentConfirmed'),
+            pending_payment: t('actionCard.appointmentPendingPayment'),
+        },
+        review: {
+            icon: 'star',
+            proposed: t('actionCard.reviewProposed'),
+            confirmed: t('actionCard.reviewConfirmed'),
+            pending_payment: '',
+        },
+        payment: {
+            icon: 'card',
+            proposed: t('actionCard.paymentProposed'),
+            confirmed: t('actionCard.paymentConfirmed'),
+            pending_payment: t('actionCard.paymentPending'),
+        },
+        form: {
+            icon: 'document-text',
+            proposed: t('actionCard.formProposed'),
+            confirmed: t('actionCard.formConfirmed'),
+            pending_payment: '',
+        },
+    };
+}
 
 // ─── Utility Functions ───────────────────────────────────────────────
 
@@ -159,11 +170,13 @@ function getAppointmentPrice(
 // ─── Root ActionCard Component ───────────────────────────────────────
 
 export default function ActionCard({ data, token, professional, onAction }: ActionCardProps) {
+    const { t } = useTranslation('settings');
     const [status, setStatus] = useState<ActionCardStatus>(
         data.status === 'confirmed' ? 'confirmed' : 'proposed'
     );
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+    const CARD_HEADERS = useCardHeaders();
     const headerConfig = CARD_HEADERS[data.cardType] || CARD_HEADERS.appointment;
 
     const headerTitle =
@@ -217,7 +230,7 @@ export default function ActionCard({ data, token, professional, onAction }: Acti
             {status === 'confirming' && (
                 <View style={styles.confirmingContainer}>
                     <ActivityIndicator size="small" color={COLORS.primary} />
-                    <Text style={styles.confirmingText}>Confirmando...</Text>
+                    <Text style={styles.confirmingText}>{t('actionCard.confirming')}</Text>
                 </View>
             )}
 
@@ -225,7 +238,7 @@ export default function ActionCard({ data, token, professional, onAction }: Acti
                 <View style={styles.confirmedBadge}>
                     <Ionicons name="card-outline" size={14} color={COLORS.primary} />
                     <Text style={styles.confirmedText}>
-                        Cita reservada · Completa el pago en tu navegador
+                        {t('actionCard.pendingPaymentMsg')}
                     </Text>
                 </View>
             )}
@@ -256,8 +269,9 @@ interface AppointmentCardContentProps {
 function AppointmentCardContent({
     payload, token, professional, status, setStatus, setErrorMsg, onAction,
 }: AppointmentCardContentProps) {
+    const { t } = useTranslation('settings');
     const isVideoCall = payload.type === 'videoconference' || payload.type === 'videollamada';
-    const typeLabel = isVideoCall ? 'Videollamada' : 'Presencial';
+    const typeLabel = isVideoCall ? t('actionCard.videoCall') : t('actionCard.inPerson');
     const typeIcon = isVideoCall ? 'videocam' : 'location';
 
     // Use proposal duration if available, otherwise professional's default
@@ -291,13 +305,13 @@ function AppointmentCardContent({
                     if (canOpen) {
                         await Linking.openURL(session.url);
                     } else {
-                        setErrorMsg('No se pudo abrir el enlace de pago');
+                        setErrorMsg(t('actionCard.couldNotOpenPayment'));
                         setStatus('error');
                     }
                     onAction?.({ type: 'appointment_confirmed', id: result._id });
                 } catch (payError: any) {
                     console.error('[ActionCard] Payment error:', payError);
-                    setErrorMsg('Error al iniciar el pago. Puedes pagar desde los detalles de la cita.');
+                    setErrorMsg(t('actionCard.paymentError'));
                     setStatus('error');
                     onAction?.({ type: 'appointment_confirmed', id: result._id });
                 }
@@ -308,7 +322,7 @@ function AppointmentCardContent({
         } catch (err: any) {
             console.error('[ActionCard] Error creating appointment:', err);
             setStatus('error');
-            setErrorMsg(err?.message || 'No se pudo confirmar la cita');
+            setErrorMsg(err?.message || t('actionCard.couldNotConfirm'));
             setTimeout(() => setStatus('proposed'), 3000);
         }
     };
@@ -334,9 +348,9 @@ function AppointmentCardContent({
                     <Text style={styles.detailText}>
                         {price > 0
                             ? (requiresPayment
-                                ? `${formatPrice(price)} (pago online)`
-                                : `${formatPrice(price)} (pago in situ)`)
-                            : "Gratuita"}
+                                ? t('actionCard.paymentOnline', { price: formatPrice(price) })
+                                : t('actionCard.paymentOnSite', { price: formatPrice(price) }))
+                            : t('actionCard.free')}
                     </Text>
                 </View>
             </View>
@@ -354,7 +368,7 @@ function AppointmentCardContent({
                         color={COLORS.white}
                     />
                     <Text style={styles.confirmButtonText}>
-                        {requiresPayment ? 'Reservar y Pagar' : 'Confirmar Cita'}
+                        {requiresPayment ? t('actionCard.reserveAndPay') : t('actionCard.confirmAppointment')}
                     </Text>
                 </TouchableOpacity>
             )}
@@ -363,7 +377,7 @@ function AppointmentCardContent({
                 <View style={styles.confirmedBadge}>
                     <Ionicons name="checkmark" size={14} color={COLORS.success} />
                     <Text style={styles.confirmedText}>
-                        {!requiresPayment ? 'Reservada con éxito (pago in situ)' : 'Reservada con éxito'}
+                        {!requiresPayment ? t('actionCard.reservedSuccessOnSite') : t('actionCard.reservedSuccess')}
                     </Text>
                 </View>
             )}
@@ -374,10 +388,11 @@ function AppointmentCardContent({
 // ─── Generic Placeholder (for future card types) ─────────────────────
 
 function GenericCardContent({ data, status }: { data: ActionCardData; status: ActionCardStatus }) {
+    const { t } = useTranslation('settings');
     return (
         <View style={styles.details}>
             <Text style={styles.detailText}>
-                Tarjeta tipo "{data.cardType}" — próximamente
+                {t('actionCard.genericCard', { type: data.cardType })}
             </Text>
         </View>
     );

@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useCallback, useState, useEffect } from "react";
 import { useSubscription, FeatureName } from "../../hooks/useSubscription";
 import UpgradeModal, { RequiredPlan } from "../../components/UpgradeModal";
@@ -91,6 +92,7 @@ export default function ProDashboardScreen() {
     const { user, logout, token, refreshUser } = useAuth();
     const { canAccess, getRequiredPlan } = useSubscription();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const insets = useSafeAreaInsets();
     // Initialize with false until user data loads, then sync with user.digitalTwin.isActive
     const [geminiActive, setGeminiActive] = useState(false);
@@ -299,7 +301,7 @@ export default function ProDashboardScreen() {
     // ===== END DASHBOARD CUSTOMIZATION =====
 
     const avatarUrl = getAvatarUrl(user?.avatar);
-    const displayName = user?.firstname || user?.email?.split("@")[0] || "Profesional";
+    const displayName = user?.firstname || user?.email?.split("@")[0] || t('proDashboard.professional');
     const fullName = user?.firstname && user?.lastname
         ? `${user.firstname} ${user.lastname}`
         : displayName;
@@ -342,15 +344,15 @@ export default function ProDashboardScreen() {
             if (!hasVideoPrice && !hasPresencialPrice) {
                 showAlert({
                     type: 'warning',
-                    title: 'Configura tus tarifas',
-                    message: 'Antes de activar las citas, debes configurar al menos una tarifa con precio.',
+                    title: t('proDashboard.configureRatesTitle'),
+                    message: t('proDashboard.configureRatesMsg'),
                     buttons: [
                         {
-                            text: 'Ir a Tarifas',
+                            text: t('proDashboard.goToRates'),
                             style: 'default',
                             onPress: () => router.push('/(settings)/appointment-pricing'),
                         },
-                        { text: 'Cancelar', style: 'cancel' },
+                        { text: t('proDashboard.cancel'), style: 'cancel' },
                     ],
                 });
                 return;
@@ -396,11 +398,11 @@ export default function ProDashboardScreen() {
         if (value && !user?.fiscalDisclaimerAccepted) {
             showAlert({
                 type: "warning",
-                title: "Aviso de Obligación Fiscal",
-                message: "Al activar el cobro al reservar, recuerda que como profesional es tu responsabilidad emitir factura a tus clientes por los servicios prestados.\n\nTwinPro actúa como intermediario de pagos y no emite facturas en tu nombre.\n\nDebes utilizar un software de facturación homologado conforme a la normativa vigente.",
+                title: t('proDashboard.fiscalTitle'),
+                message: t('proDashboard.fiscalMessage'),
                 buttons: [
                     {
-                        text: "Acepto y activo cobro",
+                        text: t('proDashboard.acceptAndActivate'),
                         style: "default",
                         onPress: async () => {
                             try {
@@ -416,7 +418,7 @@ export default function ProDashboardScreen() {
                         },
                     },
                     {
-                        text: "Cancelar",
+                        text: t('proDashboard.cancel'),
                         style: "cancel",
                     },
                 ],
@@ -476,45 +478,45 @@ export default function ProDashboardScreen() {
     // Menu sections data
     const menuSections: MenuSection[] = [
         {
-            title: "Mi Negocio",
+            title: t('proDashboard.menuMyBusiness'),
             items: [
-                { icon: "dashboard", label: "Área personal Pro", iconBg: COLORS.primary, iconColor: COLORS.textMain, isActive: true, onPress: () => { setMenuVisible(false); } },
-                { icon: "public", label: "Mi perfil público", iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push(`/professional/${user?._id}`); } },
-                { icon: "reviews", label: "Gestión de reseñas", iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
-                { icon: "schedule", label: "Mi horario laboral", iconBg: COLORS.purple50, iconColor: COLORS.purple600, onPress: () => { setMenuVisible(false); router.push("/(settings)/work-schedule"); } },
-                { icon: "forum", label: "Atención directa", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
+                { icon: "dashboard", label: t('proDashboard.menuPersonalArea'), iconBg: COLORS.primary, iconColor: COLORS.textMain, isActive: true, onPress: () => { setMenuVisible(false); } },
+                { icon: "public", label: t('proDashboard.menuPublicProfile'), iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push(`/professional/${user?._id}`); } },
+                { icon: "reviews", label: t('proDashboard.menuReviewManagement'), iconBg: COLORS.yellow50, iconColor: COLORS.yellow600 },
+                { icon: "schedule", label: t('proDashboard.menuWorkSchedule'), iconBg: COLORS.purple50, iconColor: COLORS.purple600, onPress: () => { setMenuVisible(false); router.push("/(settings)/work-schedule"); } },
+                { icon: "forum", label: t('proDashboard.menuDirectAttention'), iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/pro-chats" as any); } },
             ],
         },
         {
-            title: "Agenda",
+            title: t('proDashboard.menuAgenda'),
             items: [
-                { icon: "calendar-month", label: "Gestión de citas", iconBg: COLORS.orange50, iconColor: COLORS.orange600, requiredFeature: "appointments", requiredPlan: "professional", onPress: () => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); } },
+                { icon: "calendar-month", label: t('proDashboard.menuAppointmentManagement'), iconBg: COLORS.orange50, iconColor: COLORS.orange600, requiredFeature: "appointments", requiredPlan: "professional", onPress: () => { setMenuVisible(false); router.push("/(settings)/manage-appointments"); } },
             ],
         },
         {
-            title: "Tu Gemelo Digital IA",
+            title: t('proDashboard.menuDigitalTwin'),
             items: [
-                { icon: "chat-bubble", label: "Respuestas del gemelo", iconBg: COLORS.indigo50, iconColor: COLORS.indigo600 },
-                { icon: "history", label: "Historial de conversaciones", iconBg: COLORS.teal50, iconColor: COLORS.teal600, onPress: () => { setMenuVisible(false); router.push("/(settings)/twin-history"); } },
-                { icon: "analytics", label: "Rendimiento del gemelo", iconBg: COLORS.rose50, iconColor: COLORS.rose600, requiredFeature: "analytics", requiredPlan: "professional" },
-                { icon: "tune", label: "Alcance y límites", iconBg: COLORS.cyan50, iconColor: COLORS.cyan600 },
+                { icon: "chat-bubble", label: t('proDashboard.menuConversationHistory'), iconBg: COLORS.indigo50, iconColor: COLORS.indigo600 },
+                { icon: "history", label: t('proDashboard.menuConversationHistory'), iconBg: COLORS.teal50, iconColor: COLORS.teal600, onPress: () => { setMenuVisible(false); router.push("/(settings)/twin-history"); } },
+                { icon: "analytics", label: t('proDashboard.menuTwinPerformance'), iconBg: COLORS.rose50, iconColor: COLORS.rose600, requiredFeature: "analytics", requiredPlan: "professional" },
+                { icon: "tune", label: t('proDashboard.menuScopeAndLimits'), iconBg: COLORS.cyan50, iconColor: COLORS.cyan600 },
             ],
         },
         {
-            title: "Cuenta",
+            title: t('proDashboard.menuAccount'),
             items: [
-                { icon: "credit-card", label: "Planes y créditos", iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/plans-credits"); } },
-                { icon: "notifications", label: "Notificaciones", iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/notification-settings"); } },
-                { icon: "logout", label: "Cerrar Sesión", iconBg: COLORS.red50, iconColor: COLORS.red600, isLogout: true, onPress: handleLogout },
+                { icon: "credit-card", label: t('proDashboard.menuPlansCredits'), iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/plans-credits"); } },
+                { icon: "notifications", label: t('proDashboard.menuNotifications'), iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/notification-settings"); } },
+                { icon: "logout", label: t('proDashboard.menuLogout'), iconBg: COLORS.red50, iconColor: COLORS.red600, isLogout: true, onPress: handleLogout },
             ],
         },
         {
-            title: "Ayuda y Comentarios",
+            title: t('proDashboard.menuHelpFeedback'),
             items: [
-                { icon: "help", label: "Centro de ayuda", iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push("/(settings)/help-center"); } },
-                { icon: "support-agent", label: "Contactar con soporte", iconBg: COLORS.orange50, iconColor: COLORS.orange600, onPress: () => { setMenuVisible(false); router.push("/(settings)/contact-support"); } },
-                { icon: "feedback", label: "Enviar comentarios", iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/send-feedback"); } },
-                { icon: "policy", label: "Condiciones y Política de privacidad", iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/terms-privacy"); } },
+                { icon: "help", label: t('proDashboard.menuHelpCenter'), iconBg: COLORS.blue50, iconColor: COLORS.blue600, onPress: () => { setMenuVisible(false); router.push("/(settings)/help-center"); } },
+                { icon: "support-agent", label: t('proDashboard.menuContactSupport'), iconBg: COLORS.orange50, iconColor: COLORS.orange600, onPress: () => { setMenuVisible(false); router.push("/(settings)/contact-support"); } },
+                { icon: "feedback", label: t('proDashboard.menuSendFeedback'), iconBg: COLORS.green50, iconColor: COLORS.green600, onPress: () => { setMenuVisible(false); router.push("/(settings)/send-feedback"); } },
+                { icon: "policy", label: t('proDashboard.menuTermsPrivacy'), iconBg: COLORS.gray100, iconColor: COLORS.gray600, onPress: () => { setMenuVisible(false); router.push("/(settings)/terms-privacy"); } },
             ],
         },
     ];
@@ -586,7 +588,7 @@ export default function ProDashboardScreen() {
                 <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
                     <MaterialIcons name="menu" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Área Personal Pro</Text>
+                <Text style={styles.headerTitle}>{t('proDashboard.headerTitle')}</Text>
                 <TouchableOpacity
                     style={styles.notificationButton}
                     onPress={() => router.push("/(settings)/pro-notifications")}
@@ -626,7 +628,7 @@ export default function ProDashboardScreen() {
                     </TouchableOpacity>
                     <View style={styles.greetingTextContainer}>
                         <View style={styles.greetingRow}>
-                            <Text style={styles.greetingText}>Hola, {displayName}</Text>
+                            <Text style={styles.greetingText}>{t('proDashboard.greeting', { name: displayName })}</Text>
                             <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
                         </View>
                     </View>
@@ -642,7 +644,7 @@ export default function ProDashboardScreen() {
                 {editMode && (
                     <View style={styles.editModeBanner}>
                         <Text style={styles.editModeBannerText}>
-                            📐 Modo edición: usa las flechas para reordenar
+                            📐 {t('proDashboard.editModeBanner')}
                         </Text>
                     </View>
                 )}
@@ -672,20 +674,20 @@ export default function ProDashboardScreen() {
                                     <View key="appointments-locked" style={styles.lockedBlock}>
                                         <View style={styles.lockedBlockContent}>
                                             <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
-                                            <Text style={styles.lockedBlockTitle}>Gestión de Citas</Text>
+                                            <Text style={styles.lockedBlockTitle}>{t('proDashboard.lockedAppointments')}</Text>
                                             <Text style={styles.lockedBlockDesc}>
-                                                Disponible en plan Professional o superior
+                                                {t('proDashboard.lockedAvailablePro')}
                                             </Text>
                                             <TouchableOpacity
                                                 style={styles.lockedBlockButton}
                                                 onPress={() => {
-                                                    setUpgradeModalFeature("Gestión de Citas");
+                                                    setUpgradeModalFeature(t('proDashboard.lockedAppointments'));
                                                     setUpgradeModalPlan("professional");
                                                     setUpgradeModalVisible(true);
                                                 }}
                                             >
                                                 <MaterialIcons name="star" size={16} color="#000" />
-                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                                <Text style={styles.lockedBlockButtonText}>{t('proDashboard.upgradePlan')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -706,20 +708,20 @@ export default function ProDashboardScreen() {
                                     <View key="earnings-locked" style={styles.lockedBlock}>
                                         <View style={styles.lockedBlockContent}>
                                             <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
-                                            <Text style={styles.lockedBlockTitle}>Mis Ingresos</Text>
+                                            <Text style={styles.lockedBlockTitle}>{t('proDashboard.lockedEarnings')}</Text>
                                             <Text style={styles.lockedBlockDesc}>
-                                                Disponible en plan Professional o superior
+                                                {t('proDashboard.lockedAvailablePro')}
                                             </Text>
                                             <TouchableOpacity
                                                 style={styles.lockedBlockButton}
                                                 onPress={() => {
-                                                    setUpgradeModalFeature("Mis Ingresos");
+                                                    setUpgradeModalFeature(t('proDashboard.lockedEarnings'));
                                                     setUpgradeModalPlan("professional");
                                                     setUpgradeModalVisible(true);
                                                 }}
                                             >
                                                 <MaterialIcons name="star" size={16} color="#000" />
-                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                                <Text style={styles.lockedBlockButtonText}>{t('proDashboard.upgradePlan')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -735,20 +737,20 @@ export default function ProDashboardScreen() {
                                     <View key="stats-locked" style={styles.lockedBlock}>
                                         <View style={styles.lockedBlockContent}>
                                             <MaterialIcons name="lock" size={32} color={COLORS.gray400} />
-                                            <Text style={styles.lockedBlockTitle}>Resumen de Actividad</Text>
+                                            <Text style={styles.lockedBlockTitle}>{t('proDashboard.lockedStats')}</Text>
                                             <Text style={styles.lockedBlockDesc}>
-                                                Disponible en plan Professional o superior
+                                                {t('proDashboard.lockedAvailablePro')}
                                             </Text>
                                             <TouchableOpacity
                                                 style={styles.lockedBlockButton}
                                                 onPress={() => {
-                                                    setUpgradeModalFeature("Resumen de Actividad");
+                                                    setUpgradeModalFeature(t('proDashboard.lockedStats'));
                                                     setUpgradeModalPlan("professional");
                                                     setUpgradeModalVisible(true);
                                                 }}
                                             >
                                                 <MaterialIcons name="star" size={16} color="#000" />
-                                                <Text style={styles.lockedBlockButtonText}>Mejorar Plan</Text>
+                                                <Text style={styles.lockedBlockButtonText}>{t('proDashboard.upgradePlan')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -764,20 +766,20 @@ export default function ProDashboardScreen() {
                                     <View key="advancedStats-locked" style={styles.lockedBlock}>
                                         <View style={styles.lockedBlockContent}>
                                             <MaterialIcons name="diamond" size={32} color="#8B5CF6" />
-                                            <Text style={styles.lockedBlockTitle}>Analíticas Avanzadas</Text>
+                                            <Text style={styles.lockedBlockTitle}>{t('proDashboard.lockedAdvancedStats')}</Text>
                                             <Text style={styles.lockedBlockDesc}>
-                                                Disponible exclusivamente en plan Premium
+                                                {t('proDashboard.lockedAvailablePremium')}
                                             </Text>
                                             <TouchableOpacity
                                                 style={[styles.lockedBlockButton, { backgroundColor: '#8B5CF6' }]}
                                                 onPress={() => {
-                                                    setUpgradeModalFeature("Analíticas Avanzadas");
+                                                    setUpgradeModalFeature(t('proDashboard.lockedAdvancedStats'));
                                                     setUpgradeModalPlan("premium");
                                                     setUpgradeModalVisible(true);
                                                 }}
                                             >
                                                 <MaterialIcons name="diamond" size={16} color="#FFF" />
-                                                <Text style={[styles.lockedBlockButtonText, { color: '#FFF' }]}>Obtener Premium</Text>
+                                                <Text style={[styles.lockedBlockButtonText, { color: '#FFF' }]}>{t('proDashboard.getPremium')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -797,21 +799,21 @@ export default function ProDashboardScreen() {
             <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('proDashboard.navChats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('proDashboard.navDirectory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('proDashboard.navFavorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem}>
                     <View style={styles.navItemActive}>
                         <MaterialIcons name="badge" size={24} color={COLORS.textMain} />
                     </View>
-                    <Text style={styles.navLabelActive}>Perfil Pro</Text>
+                    <Text style={styles.navLabelActive}>{t('proDashboard.navProProfile')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -850,9 +852,9 @@ export default function ProDashboardScreen() {
                                 <View>
                                     <Text style={styles.sideMenuName}>{fullName}</Text>
                                     <Text style={styles.sideMenuBadge}>
-                                        {user?.subscription?.plan === 'premium' ? 'Plan Premium' :
-                                            user?.subscription?.plan === 'professional' ? 'Plan Professional' :
-                                                'Plan Starter'}
+                                        {user?.subscription?.plan === 'premium' ? t('proDashboard.planPremium') :
+                                            user?.subscription?.plan === 'professional' ? t('proDashboard.planProfessional') :
+                                                t('proDashboard.planStarter')}
                                     </Text>
                                 </View>
                             </View>
@@ -867,7 +869,7 @@ export default function ProDashboardScreen() {
                         <ScrollView style={styles.sideMenuScroll} showsVerticalScrollIndicator={false}>
                             {/* Mi Negocio Section */}
                             <View style={styles.sideMenuSection}>
-                                <Text style={styles.sideMenuSectionTitle}>MI NEGOCIO</Text>
+                                <Text style={styles.sideMenuSectionTitle}>{t('proDashboard.menuMyBusiness')}</Text>
                                 <View style={styles.sideMenuCard}>
                                     {/* Área personal Pro - Active item */}
                                     <TouchableOpacity
@@ -877,7 +879,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.primary }]}>
                                             <MaterialIcons name="dashboard" size={20} color={COLORS.textMain} />
                                         </View>
-                                        <Text style={[styles.sideMenuCardLabel, styles.sideMenuCardLabelActive]}>Área personal Pro</Text>
+                                        <Text style={[styles.sideMenuCardLabel, styles.sideMenuCardLabelActive]}>{t('proDashboard.menuPersonalArea')}</Text>
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
                                     {/* Mi perfil público - Parent with subitems */}
@@ -890,7 +892,7 @@ export default function ProDashboardScreen() {
                                             <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.blue50 }]}>
                                                 <MaterialIcons name="public" size={20} color={COLORS.blue600} />
                                             </View>
-                                            <Text style={styles.sideMenuParentLabel}>Mi perfil público</Text>
+                                            <Text style={styles.sideMenuParentLabel}>{t('proDashboard.menuPublicProfile')}</Text>
                                             <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                         </TouchableOpacity>
                                         {/* Sub-items - indented */}
@@ -902,7 +904,7 @@ export default function ProDashboardScreen() {
                                                 <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.purple50 }]}>
                                                     <MaterialIcons name="work" size={16} color={COLORS.purple600} />
                                                 </View>
-                                                <Text style={styles.sideMenuSubLabel}>Perfil profesional</Text>
+                                                <Text style={styles.sideMenuSubLabel}>{t('proDashboard.menuProfessionalProfile')}</Text>
                                                 <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                                             </TouchableOpacity>
                                             <TouchableOpacity
@@ -912,14 +914,14 @@ export default function ProDashboardScreen() {
                                                 <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.green50 }]}>
                                                     <MaterialIcons name="contact-phone" size={16} color={COLORS.green600} />
                                                 </View>
-                                                <Text style={styles.sideMenuSubLabel}>Datos de contacto</Text>
+                                                <Text style={styles.sideMenuSubLabel}>{t('proDashboard.menuContactInfo')}</Text>
                                                 <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                                             </TouchableOpacity>
                                             <TouchableOpacity
                                                 style={styles.sideMenuSubItem}
                                                 onPress={() => {
                                                     if (!canAccess('qrCode')) {
-                                                        setUpgradeModalFeature("Mi Código QR");
+                                                        setUpgradeModalFeature(t('proDashboard.menuQrCode'));
                                                         setUpgradeModalPlan("professional");
                                                         setUpgradeModalVisible(true);
                                                     } else {
@@ -931,7 +933,7 @@ export default function ProDashboardScreen() {
                                                 <View style={[styles.sideMenuSubIcon, { backgroundColor: COLORS.teal50 }]}>
                                                     <MaterialIcons name="qr-code-2" size={16} color={COLORS.teal600} />
                                                 </View>
-                                                <Text style={[styles.sideMenuSubLabel, !canAccess('qrCode') && styles.menuItemLabelLocked]}>Mi Código QR</Text>
+                                                <Text style={[styles.sideMenuSubLabel, !canAccess('qrCode') && styles.menuItemLabelLocked]}>{t('proDashboard.menuQrCode')}</Text>
                                                 {!canAccess('qrCode') && (
                                                     <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
                                                         <Text style={styles.proBadgeText}>PRO</Text>
@@ -949,7 +951,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.yellow50 }]}>
                                             <MaterialIcons name="rate-review" size={20} color={COLORS.yellow600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Gestión de reseñas</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuReviewManagement')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -960,7 +962,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="forum" size={20} color={COLORS.green600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Atención directa</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuDirectAttention')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -969,7 +971,7 @@ export default function ProDashboardScreen() {
                                         style={styles.sideMenuCardItem}
                                         onPress={() => {
                                             if (!canAccess('widget')) {
-                                                setUpgradeModalFeature("Widget para Web");
+                                                setUpgradeModalFeature(t('proDashboard.menuWebWidget'));
                                                 setUpgradeModalPlan("professional");
                                                 setUpgradeModalVisible(true);
                                             } else {
@@ -981,7 +983,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.cyan50 }]}>
                                             <MaterialIcons name="widgets" size={20} color={COLORS.cyan600} />
                                         </View>
-                                        <Text style={[styles.sideMenuCardLabel, !canAccess('widget') && styles.menuItemLabelLocked]}>Widget para Web</Text>
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('widget') && styles.menuItemLabelLocked]}>{t('proDashboard.menuWebWidget')}</Text>
                                         {!canAccess('widget') && (
                                             <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
                                                 <Text style={styles.proBadgeText}>PRO</Text>
@@ -994,13 +996,13 @@ export default function ProDashboardScreen() {
 
                             {/* Agenda Section */}
                             <View style={styles.sideMenuSection}>
-                                <Text style={styles.sideMenuSectionTitle}>AGENDA</Text>
+                                <Text style={styles.sideMenuSectionTitle}>{t('proDashboard.menuAgenda')}</Text>
                                 <View style={styles.sideMenuCard}>
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
                                         onPress={() => {
                                             if (!canAccess('appointments')) {
-                                                setUpgradeModalFeature("Gestión de citas");
+                                                setUpgradeModalFeature(t('proDashboard.menuAppointmentManagement'));
                                                 setUpgradeModalPlan("professional");
                                                 setUpgradeModalVisible(true);
                                             } else {
@@ -1012,7 +1014,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.orange50 }]}>
                                             <MaterialIcons name="calendar-month" size={20} color={COLORS.orange600} />
                                         </View>
-                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>Gestión de citas</Text>
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>{t('proDashboard.menuAppointmentManagement')}</Text>
                                         {!canAccess('appointments') && (
                                             <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
                                                 <Text style={styles.proBadgeText}>PRO</Text>
@@ -1025,7 +1027,7 @@ export default function ProDashboardScreen() {
                                         style={styles.sideMenuCardItem}
                                         onPress={() => {
                                             if (!canAccess('appointments')) {
-                                                setUpgradeModalFeature("Tarifas de citas");
+                                                setUpgradeModalFeature(t('proDashboard.menuAppointmentPricing'));
                                                 setUpgradeModalPlan("professional");
                                                 setUpgradeModalVisible(true);
                                             } else {
@@ -1037,7 +1039,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.yellow50 }]}>
                                             <MaterialIcons name="euro" size={20} color={COLORS.yellow600} />
                                         </View>
-                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>Tarifas de citas</Text>
+                                        <Text style={[styles.sideMenuCardLabel, !canAccess('appointments') && styles.menuItemLabelLocked]}>{t('proDashboard.menuAppointmentPricing')}</Text>
                                         {!canAccess('appointments') && (
                                             <View style={[styles.proBadge, { backgroundColor: '#3b82f6' }]}>
                                                 <Text style={styles.proBadgeText}>PRO</Text>
@@ -1053,7 +1055,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.purple50 }]}>
                                             <MaterialIcons name="schedule" size={20} color={COLORS.purple600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Mi horario laboral</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuWorkSchedule')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                 </View>
@@ -1061,7 +1063,7 @@ export default function ProDashboardScreen() {
 
                             {/* Tu Gemelo Digital IA Section */}
                             <View style={styles.sideMenuSection}>
-                                <Text style={styles.sideMenuSectionTitle}>TU GEMELO DIGITAL IA</Text>
+                                <Text style={styles.sideMenuSectionTitle}>{t('proDashboard.menuDigitalTwin')}</Text>
                                 {/* AI Control Panel Button */}
                                 <TouchableOpacity
                                     style={styles.sideMenuAiButton}
@@ -1072,8 +1074,8 @@ export default function ProDashboardScreen() {
                                             <MaterialIcons name="smart-toy" size={24} color="#FFFFFF" />
                                         </View>
                                         <View>
-                                            <Text style={styles.sideMenuAiTitle}>Panel de Control</Text>
-                                            <Text style={styles.sideMenuAiSubtitle}>Configura tu asistente de IA</Text>
+                                            <Text style={styles.sideMenuAiTitle}>{t('proDashboard.menuControlPanel')}</Text>
+                                            <Text style={styles.sideMenuAiSubtitle}>{t('proDashboard.menuConfigureAI')}</Text>
                                         </View>
                                     </View>
                                     <View style={styles.sideMenuAiArrow}>
@@ -1088,7 +1090,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.teal50 }]}>
                                             <MaterialIcons name="history" size={20} color={COLORS.teal600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Historial de conversaciones</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuConversationHistory')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1099,7 +1101,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.cyan50 }]}>
                                             <MaterialIcons name="tune" size={20} color={COLORS.cyan600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Alcance y límites</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuScopeAndLimits')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                 </View>
@@ -1107,7 +1109,7 @@ export default function ProDashboardScreen() {
 
                             {/* Cuenta Section */}
                             <View style={styles.sideMenuSection}>
-                                <Text style={styles.sideMenuSectionTitle}>CUENTA</Text>
+                                <Text style={styles.sideMenuSectionTitle}>{t('proDashboard.menuAccount')}</Text>
                                 <View style={styles.sideMenuCard}>
                                     <TouchableOpacity
                                         style={styles.sideMenuCardItem}
@@ -1116,7 +1118,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="account-balance-wallet" size={20} color={COLORS.green600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Mis Ingresos</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuMyEarnings')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1127,7 +1129,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.indigo50 }]}>
                                             <MaterialIcons name="account-balance" size={20} color={COLORS.indigo600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Configurar Pagos</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuConfigurePayments')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1138,7 +1140,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>
                                             <MaterialIcons name="credit-card" size={20} color={COLORS.gray600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Planes y créditos</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuPlansCredits')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1149,7 +1151,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>
                                             <MaterialIcons name="notifications" size={20} color={COLORS.gray600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Notificaciones</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuNotifications')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1157,20 +1159,20 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.red50 }]}>
                                             <MaterialIcons name="logout" size={20} color={COLORS.red600} />
                                         </View>
-                                        <Text style={[styles.sideMenuCardLabel, { color: COLORS.red600 }]}>Cerrar Sesión</Text>
+                                        <Text style={[styles.sideMenuCardLabel, { color: COLORS.red600 }]}>{t('proDashboard.menuLogout')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
                             {/* Ayuda y Comentarios Section */}
                             <View style={styles.sideMenuSection}>
-                                <Text style={styles.sideMenuSectionTitle}>AYUDA Y COMENTARIOS</Text>
+                                <Text style={styles.sideMenuSectionTitle}>{t('proDashboard.menuHelpFeedback')}</Text>
                                 <View style={styles.sideMenuCard}>
                                     <TouchableOpacity style={styles.sideMenuCardItem} onPress={() => { handleCloseMenu(); router.push("/(settings)/help-center"); }}>
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.blue50 }]}>
                                             <MaterialIcons name="help" size={20} color={COLORS.blue600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Centro de ayuda</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuHelpCenter')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1178,7 +1180,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.orange50 }]}>
                                             <MaterialIcons name="support-agent" size={20} color={COLORS.orange600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Contactar con soporte</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuContactSupport')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1186,7 +1188,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.green50 }]}>
                                             <MaterialIcons name="feedback" size={20} color={COLORS.green600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Enviar comentarios</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuSendFeedback')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                     <View style={styles.sideMenuCardDivider} />
@@ -1194,7 +1196,7 @@ export default function ProDashboardScreen() {
                                         <View style={[styles.sideMenuCardIcon, { backgroundColor: COLORS.gray100 }]}>
                                             <MaterialIcons name="policy" size={20} color={COLORS.gray600} />
                                         </View>
-                                        <Text style={styles.sideMenuCardLabel}>Condiciones y Política</Text>
+                                        <Text style={styles.sideMenuCardLabel}>{t('proDashboard.menuTermsPrivacy')}</Text>
                                         <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                     </TouchableOpacity>
                                 </View>

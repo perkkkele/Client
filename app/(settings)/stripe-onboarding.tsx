@@ -11,7 +11,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,    RefreshControl,
+    ActivityIndicator,
+    RefreshControl,
     Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,7 @@ import { router } from "expo-router";
 import { useAuth } from "../../context";
 import { stripeConnectApi } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -53,7 +55,22 @@ interface ConnectStatus {
 
 export default function StripeOnboardingScreen() {
     const { token, user, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
+
+    const formatRequirement = (req: string): string => {
+        const map: Record<string, string> = {
+            "individual.verification.document": t('stripeOnboarding.reqDocument'),
+            "individual.first_name": t('stripeOnboarding.reqFirstName'),
+            "individual.last_name": t('stripeOnboarding.reqLastName'),
+            "individual.dob": t('stripeOnboarding.reqDob'),
+            "individual.address": t('stripeOnboarding.reqAddress'),
+            "external_account": t('stripeOnboarding.reqBankAccount'),
+            "business_profile.url": t('stripeOnboarding.reqUrl'),
+            "tos_acceptance": t('stripeOnboarding.reqTos'),
+        };
+        return map[req] || req.replace(/_/g, " ");
+    };
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -90,10 +107,10 @@ export default function StripeOnboardingScreen() {
         try {
             const opened = await stripeConnectApi.openOnboarding(token);
             if (!opened) {
-                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir la página de Stripe. Inténtalo de nuevo.' });
+                showAlert({ type: 'error', title: 'Error', message: t('stripeOnboarding.errorOpenStripe') });
             }
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error iniciando el proceso" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('stripeOnboarding.errorStarting') });
         } finally {
             setActionLoading(false);
         }
@@ -106,10 +123,10 @@ export default function StripeOnboardingScreen() {
         try {
             const opened = await stripeConnectApi.openStripeDashboard(token);
             if (!opened) {
-                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el dashboard de Stripe.' });
+                showAlert({ type: 'error', title: 'Error', message: t('stripeOnboarding.errorOpenDashboard') });
             }
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error abriendo dashboard" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('stripeOnboarding.errorOpeningDashboard') });
         } finally {
             setActionLoading(false);
         }
@@ -122,9 +139,9 @@ export default function StripeOnboardingScreen() {
                     <View style={[styles.statusIcon, { backgroundColor: COLORS.gray100 }]}>
                         <MaterialIcons name="account-balance" size={32} color={COLORS.gray500} />
                     </View>
-                    <Text style={styles.statusTitle}>Sin cuenta conectada</Text>
+                    <Text style={styles.statusTitle}>{t('stripeOnboarding.statusNotConnectedTitle')}</Text>
                     <Text style={styles.statusDescription}>
-                        Conecta tu cuenta bancaria para empezar a recibir pagos directamente de tus clientes.
+                        {t('stripeOnboarding.statusNotConnectedDesc')}
                     </Text>
                 </View>
             );
@@ -136,13 +153,13 @@ export default function StripeOnboardingScreen() {
                     <View style={[styles.statusIcon, { backgroundColor: "#fef3c7" }]}>
                         <MaterialIcons name="pending" size={32} color={COLORS.warning} />
                     </View>
-                    <Text style={styles.statusTitle}>Verificación pendiente</Text>
+                    <Text style={styles.statusTitle}>{t('stripeOnboarding.statusPendingTitle')}</Text>
                     <Text style={styles.statusDescription}>
-                        Tu cuenta está creada pero necesitas completar la verificación para poder recibir pagos.
+                        {t('stripeOnboarding.statusPendingDesc')}
                     </Text>
                     {status.requirements?.currentlyDue && status.requirements.currentlyDue.length > 0 && (
                         <View style={styles.requirementsList}>
-                            <Text style={styles.requirementsTitle}>Información requerida:</Text>
+                            <Text style={styles.requirementsTitle}>{t('stripeOnboarding.requirementsTitle')}</Text>
                             {status.requirements.currentlyDue.slice(0, 3).map((req, index) => (
                                 <Text key={index} style={styles.requirementItem}>
                                     • {formatRequirement(req)}
@@ -159,9 +176,9 @@ export default function StripeOnboardingScreen() {
                 <View style={[styles.statusIcon, { backgroundColor: "#d1fae5" }]}>
                     <MaterialIcons name="check-circle" size={32} color={COLORS.success} />
                 </View>
-                <Text style={styles.statusTitle}>¡Cuenta verificada!</Text>
+                <Text style={styles.statusTitle}>{t('stripeOnboarding.statusVerifiedTitle')}</Text>
                 <Text style={styles.statusDescription}>
-                    Tu cuenta está lista para recibir pagos. Los ingresos se transferirán automáticamente a tu cuenta bancaria.
+                    {t('stripeOnboarding.statusVerifiedDesc')}
                 </Text>
                 <View style={styles.statusDetails}>
                     <View style={styles.statusRow}>
@@ -170,7 +187,7 @@ export default function StripeOnboardingScreen() {
                             size={18}
                             color={status.chargesEnabled ? COLORS.success : COLORS.error}
                         />
-                        <Text style={styles.statusRowText}>Puede recibir pagos</Text>
+                        <Text style={styles.statusRowText}>{t('stripeOnboarding.canReceivePayments')}</Text>
                     </View>
                     <View style={styles.statusRow}>
                         <MaterialIcons
@@ -178,7 +195,7 @@ export default function StripeOnboardingScreen() {
                             size={18}
                             color={status.payoutsEnabled ? COLORS.success : COLORS.error}
                         />
-                        <Text style={styles.statusRowText}>Puede recibir transferencias</Text>
+                        <Text style={styles.statusRowText}>{t('stripeOnboarding.canReceiveTransfers')}</Text>
                     </View>
                 </View>
             </View>
@@ -192,7 +209,7 @@ export default function StripeOnboardingScreen() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textDark} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Configurar Pagos</Text>
+                    <Text style={styles.headerTitle}>{t('stripeOnboarding.headerTitle')}</Text>
                     <View style={styles.headerSpacer} />
                 </View>
                 <View style={styles.loadingContainer}>
@@ -225,16 +242,16 @@ export default function StripeOnboardingScreen() {
 
                 {/* Benefits Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Beneficios</Text>
+                    <Text style={styles.sectionTitle}>{t('stripeOnboarding.benefits')}</Text>
 
                     <View style={styles.benefitItem}>
                         <View style={styles.benefitIcon}>
                             <MaterialIcons name="flash-on" size={24} color={COLORS.primary} />
                         </View>
                         <View style={styles.benefitContent}>
-                            <Text style={styles.benefitTitle}>Pagos directos</Text>
+                            <Text style={styles.benefitTitle}>{t('stripeOnboarding.directPaymentsTitle')}</Text>
                             <Text style={styles.benefitDescription}>
-                                Recibe el dinero directamente en tu cuenta bancaria
+                                {t('stripeOnboarding.directPaymentsDesc')}
                             </Text>
                         </View>
                     </View>
@@ -244,9 +261,9 @@ export default function StripeOnboardingScreen() {
                             <MaterialIcons name="security" size={24} color={COLORS.primary} />
                         </View>
                         <View style={styles.benefitContent}>
-                            <Text style={styles.benefitTitle}>Seguridad garantizada</Text>
+                            <Text style={styles.benefitTitle}>{t('stripeOnboarding.securityTitle')}</Text>
                             <Text style={styles.benefitDescription}>
-                                Stripe procesa millones de transacciones de forma segura
+                                {t('stripeOnboarding.securityDesc')}
                             </Text>
                         </View>
                     </View>
@@ -256,9 +273,9 @@ export default function StripeOnboardingScreen() {
                             <MaterialIcons name="schedule" size={24} color={COLORS.primary} />
                         </View>
                         <View style={styles.benefitContent}>
-                            <Text style={styles.benefitTitle}>Transferencias rápidas</Text>
+                            <Text style={styles.benefitTitle}>{t('stripeOnboarding.fastTransfersTitle')}</Text>
                             <Text style={styles.benefitDescription}>
-                                El dinero llega a tu cuenta en 2-7 días hábiles
+                                {t('stripeOnboarding.fastTransfersDesc')}
                             </Text>
                         </View>
                     </View>
@@ -268,7 +285,7 @@ export default function StripeOnboardingScreen() {
                 <View style={styles.feeCard}>
                     <MaterialIcons name="info-outline" size={20} color={COLORS.gray600} />
                     <Text style={styles.feeText}>
-                        TwinPro retiene una comisión del 10% por cada pago procesado.
+                        {t('stripeOnboarding.feeInfo')}
                     </Text>
                 </View>
 
@@ -286,7 +303,7 @@ export default function StripeOnboardingScreen() {
                                 <>
                                     <MaterialIcons name="account-balance" size={22} color={COLORS.textDark} />
                                     <Text style={styles.primaryButtonText}>
-                                        {status?.connected ? "Continuar verificación" : "Conectar cuenta bancaria"}
+                                        {status?.connected ? t('stripeOnboarding.continueVerification') : t('stripeOnboarding.connectBankAccount')}
                                     </Text>
                                 </>
                             )}
@@ -298,7 +315,7 @@ export default function StripeOnboardingScreen() {
                                 onPress={() => router.push("/(settings)/my-earnings")}
                             >
                                 <MaterialIcons name="account-balance-wallet" size={22} color={COLORS.textDark} />
-                                <Text style={styles.primaryButtonText}>Ver mis ingresos</Text>
+                                <Text style={styles.primaryButtonText}>{t('stripeOnboarding.viewEarnings')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -311,7 +328,7 @@ export default function StripeOnboardingScreen() {
                                 ) : (
                                     <>
                                         <MaterialIcons name="open-in-new" size={20} color={COLORS.stripe} />
-                                        <Text style={styles.secondaryButtonText}>Abrir dashboard de Stripe</Text>
+                                        <Text style={styles.secondaryButtonText}>{t('stripeOnboarding.openStripeDashboard')}</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -321,7 +338,7 @@ export default function StripeOnboardingScreen() {
 
                 {/* Powered by Stripe */}
                 <View style={styles.poweredBy}>
-                    <Text style={styles.poweredByText}>Pagos procesados por</Text>
+                    <Text style={styles.poweredByText}>{t('stripeOnboarding.poweredBy')}</Text>
                     <Text style={[styles.poweredByText, { color: COLORS.stripe, fontWeight: "bold" }]}>
                         Stripe
                     </Text>

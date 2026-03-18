@@ -1,0 +1,90 @@
+{
+    "greeting": "Bonjour, {{name}}",
+    "greetingSubtext": "De quel professionnel avez-vous besoin aujourd'hui ?",
+    "searchPlaceholder": "Chercher avocat, médecin...",
+    "resultsFor": "RÉSULTATS POUR \"{{query}}\"",
+    "clear": "Effacer",
+    "searching": "Recherche de professionnels...",
+    "noResults": "Aucun résultat",
+    "noResultsMessage": "Nous n'avons pas trouvé de professionnels pour \"{{query}}\". Essayez d'autres termes.",
+    "myConsultations": "MES CONSULTATIONS",
+    "seeAll": "Voir tout",
+    "recent": "RÉCENTS",
+    "responded": "Répondu",
+    "pending": "En attente",
+    "noMessagesYet": "Pas encore de messages",
+    "tapToSeeMessages": "Appuyez pour voir les messages...",
+    "defaultUser": "Utilisateur",
+    "defaultProfessional": "Professionnel",
+    "welcome": {
+        "title": "Bienvenue sur TwinPro !",
+        "subtitle": "Connectez-vous avec des professionnels vérifiés et leurs jumeaux IA.",
+        "ai247": "IA 24/7",
+        "verified": "Vérifiés",
+        "fast": "Rapide",
+        "exploreProfessionals": "Explorer les professionnels"
+    },
+    "noVisibleChats": "Aucun chat visible",
+    "noVisibleChatsMessage": "Vous avez masqué tous les chats. Explorez les professionnels pour démarrer de nouvelles conversations.",
+    "deleteConsultation": "Supprimer la consultation",
+    "deleteConsultationConfirm": "Voulez-vous supprimer cette consultation escaladée ?",
+    "contextMenu": {
+        "title": "Options du chat",
+        "viewProfile": "Voir le profil",
+        "hideChat": "Masquer le chat"
+    },
+    "nav": {
+        "chats": "Chats",
+        "directory": "Répertoire",
+        "favorites": "Favoris",
+        "proPerfil": "Profil Pro"
+    },
+    "time": {
+        "now": "Maintenant",
+        "yesterday": "Hier",
+        "days": [
+            "Dim",
+            "Lun",
+            "Mar",
+            "Mer",
+            "Jeu",
+            "Ven",
+            "Sam"
+        ]
+    },
+    "directory": {
+        "greeting": "Bonjour, {{name}}",
+        "greetingSubtext": "Quel professionnel recherchez-vous aujourd'hui ?",
+        "searchPlaceholder": "Droit pénal, travail, civil...",
+        "resultsText": "Résultats basés sur votre recherche récente",
+        "defaultProfessional": "Professionnel",
+        "contact": "Contacter",
+        "sort": {
+            "relevance": "Pertinence",
+            "distance": "Proximité",
+            "price": "Prix",
+            "reviews": "Avis"
+        },
+        "empty": {
+            "title": "Aucun professionnel trouvé",
+            "subtitle": "Essayez une autre catégorie"
+        },
+        "filters": {
+            "title": "Filtres avancés",
+            "proximity": "Proximité",
+            "noLimit": "Sans limite",
+            "pricePerHour": "Prix / heure",
+            "maxSector": "Maximum secteur",
+            "maxPrice": "Max : {{price}}€",
+            "minReviews": "Avis minimum",
+            "reset": "Réinitialiser",
+            "apply": "Appliquer les filtres"
+        },
+        "alerts": {
+            "locationRequired": "Localisation requise",
+            "locationSortMessage": "Pour trier par proximité, nous avons besoin de votre localisation. Activez le GPS dans les paramètres de votre appareil.",
+            "locationFilterMessage": "Pour filtrer par proximité, nous avons besoin de votre localisation. Activez le GPS dans les paramètres de votre appareil.",
+            "understood": "Compris"
+        }
+    }
+}

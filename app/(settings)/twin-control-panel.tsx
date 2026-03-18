@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
     Image,
     KeyboardAvoidingView,
@@ -30,6 +31,7 @@ const COLORS = {
 
 export default function TwinControlPanelScreen() {
     const { user, token, refreshUser } = useAuth();
+    const { t } = useTranslation('settings');
     const [isActive, setIsActive] = useState(false);
     const [sessionLimitMinutes, setSessionLimitMinutes] = useState(0);
     const [sessionLimitInput, setSessionLimitInput] = useState("0");
@@ -92,7 +94,7 @@ export default function TwinControlPanelScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Gemelo Digital</Text>
+                <Text style={styles.headerTitle}>{t('twinControlPanel.headerTitle')}</Text>
                 <TouchableOpacity style={styles.headerButton}>
                     <MaterialIcons name="help-outline" size={24} color={COLORS.textSecondary} />
                 </TouchableOpacity>
@@ -113,8 +115,8 @@ export default function TwinControlPanelScreen() {
                     <View style={styles.statusCard}>
                         <View style={styles.statusContent}>
                             <View style={styles.statusInfo}>
-                                <Text style={styles.statusTitle}>Tu gemelo está configurado</Text>
-                                <Text style={styles.statusDescription}>Todos los sistemas sincronizados.</Text>
+                                <Text style={styles.statusTitle}>{t('twinControlPanel.statusConfigured')}</Text>
+                                <Text style={styles.statusDescription}>{t('twinControlPanel.statusSynced')}</Text>
                             </View>
                             <View style={styles.statusImage}>
                                 <MaterialIcons name="smart-toy" size={48} color={COLORS.primary} />
@@ -125,7 +127,7 @@ export default function TwinControlPanelScreen() {
                             onPress={() => user?._id && router.push(`/avatar-chat/${user._id}`)}
                         >
                             <MaterialIcons name="chat-bubble" size={18} color={COLORS.white} />
-                            <Text style={styles.testTwinButtonText}>Probar gemelo digital</Text>
+                            <Text style={styles.testTwinButtonText}>{t('twinControlPanel.testTwin')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -133,7 +135,7 @@ export default function TwinControlPanelScreen() {
                     <View style={styles.toggleCard}>
                         <View style={styles.toggleContent}>
                             <View>
-                                <Text style={styles.toggleTitle}>Estado del Gemelo</Text>
+                                <Text style={styles.toggleTitle}>{t('twinControlPanel.twinStatus')}</Text>
                                 <View style={styles.toggleStatus}>
                                     <MaterialIcons
                                         name={isActive ? "wifi" : "wifi-off"}
@@ -141,7 +143,7 @@ export default function TwinControlPanelScreen() {
                                         color={isActive ? COLORS.green500 : COLORS.textSecondary}
                                     />
                                     <Text style={[styles.toggleStatusText, isActive && { color: COLORS.green500 }]}>
-                                        {isActive ? "Activo y público" : "Inactivo"}
+                                        {isActive ? t('twinControlPanel.active') : t('twinControlPanel.inactive')}
                                     </Text>
                                 </View>
                             </View>
@@ -156,15 +158,15 @@ export default function TwinControlPanelScreen() {
 
                     {/* Session Time Limit */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Límite de Sesión por Cliente</Text>
+                        <Text style={styles.sectionTitle}>{t('twinControlPanel.sessionLimitTitle')}</Text>
                         <View style={styles.sessionLimitCard}>
                             <View style={styles.sessionLimitContent}>
                                 <View style={styles.sessionLimitInfo}>
                                     <MaterialIcons name="timer" size={24} color={COLORS.primary} />
                                     <View style={styles.sessionLimitTextContainer}>
-                                        <Text style={styles.sessionLimitTitle}>Tiempo máximo de atención</Text>
+                                        <Text style={styles.sessionLimitTitle}>{t('twinControlPanel.maxAttention')}</Text>
                                         <Text style={styles.sessionLimitHint}>
-                                            Tiempo máximo de atención por cliente en 24h. Si es 0, no hay límite.
+                                            {t('twinControlPanel.maxAttentionHint')}
                                         </Text>
                                     </View>
                                 </View>
@@ -179,7 +181,7 @@ export default function TwinControlPanelScreen() {
                                         keyboardType="numeric"
                                         maxLength={3}
                                     />
-                                    <Text style={styles.sessionLimitLabel}>minutos</Text>
+                                    <Text style={styles.sessionLimitLabel}>{t('twinControlPanel.minutes')}</Text>
                                 </View>
                             </View>
                         </View>
@@ -187,7 +189,7 @@ export default function TwinControlPanelScreen() {
 
                     {/* Configuration Summary */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Resumen de Configuración</Text>
+                        <Text style={styles.sectionTitle}>{t('twinControlPanel.configSummary')}</Text>
 
                         <TouchableOpacity
                             style={styles.configItem}
@@ -198,8 +200,8 @@ export default function TwinControlPanelScreen() {
                                     <MaterialIcons name="settings" size={24} color={COLORS.primary} />
                                 </View>
                                 <View>
-                                    <Text style={styles.configTitle}>Configuración del gemelo digital</Text>
-                                    <Text style={styles.configSubtitle}>Apariencia, comportamiento y conocimiento</Text>
+                                    <Text style={styles.configTitle}>{t('twinControlPanel.configTwin')}</Text>
+                                    <Text style={styles.configSubtitle}>{t('twinControlPanel.configTwinSubtitle')}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>

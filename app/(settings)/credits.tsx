@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -32,47 +33,51 @@ interface TeamSection {
     members: TeamMember[];
 }
 
-const TEAM_SECTIONS: TeamSection[] = [
-    {
-        title: "Liderazgo",
-        members: [
-            { name: "Javier Úbeda", role: "CEO" },
-        ],
-    },
-    {
-        title: "Desarrollo & Ingeniería",
-        members: [
-            { name: "Alejandro Ruiz", role: "Lead Developer" },
-            { name: "Beatriz Méndez", role: "Backend Architecture" },
-            { name: "Carlos D. Silva", role: "iOS Engineer" },
-            { name: "Diana Torres", role: "Frontend UI" },
-        ],
-    },
-    {
-        title: "Diseño de Producto",
-        members: [
-            { name: "Elena Vargas", role: "Head of Design" },
-            { name: "Fernando Quispe", role: "UX Researcher" },
-            { name: "Gabriela Montes", role: "Visual Designer" },
-        ],
-    },
-    {
-        title: "Arte Gráfico e Ilustración",
-        members: [
-            { name: "Hugo Chávez", role: "Avatar Artist" },
-            { name: "Inés L. Pardo", role: "Motion Graphics" },
-        ],
-    },
-    {
-        title: "QA & Testing",
-        members: [
-            { name: "Javier Solís", role: "QA Lead" },
-            { name: "Karina O. Diaz", role: "Automation" },
-        ],
-    },
-];
+const TEAM_SECTIONS: TeamSection[] = [];
 
 export default function CreditsScreen() {
+    const { t } = useTranslation('settings');
+
+    const teamSections: TeamSection[] = [
+        {
+            title: t('creditsScreen.sections.leadership'),
+            members: [
+                { name: "Javier Úbeda", role: "CEO" },
+            ],
+        },
+        {
+            title: t('creditsScreen.sections.engineering'),
+            members: [
+                { name: "Alejandro Ruiz", role: "Lead Developer" },
+                { name: "Beatriz Méndez", role: "Backend Architecture" },
+                { name: "Carlos D. Silva", role: "iOS Engineer" },
+                { name: "Diana Torres", role: "Frontend UI" },
+            ],
+        },
+        {
+            title: t('creditsScreen.sections.design'),
+            members: [
+                { name: "Elena Vargas", role: "Head of Design" },
+                { name: "Fernando Quispe", role: "UX Researcher" },
+                { name: "Gabriela Montes", role: "Visual Designer" },
+            ],
+        },
+        {
+            title: t('creditsScreen.sections.art'),
+            members: [
+                { name: "Hugo Chávez", role: "Avatar Artist" },
+                { name: "Inés L. Pardo", role: "Motion Graphics" },
+            ],
+        },
+        {
+            title: t('creditsScreen.sections.qa'),
+            members: [
+                { name: "Javier Solís", role: "QA Lead" },
+                { name: "Karina O. Diaz", role: "Automation" },
+            ],
+        },
+    ];
+
     function handleBack() {
         router.back();
     }
@@ -84,7 +89,7 @@ export default function CreditsScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Créditos</Text>
+                <Text style={styles.headerTitle}>{t('creditsScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -98,15 +103,15 @@ export default function CreditsScreen() {
                     <View style={styles.heroIcon}>
                         <MaterialIcons name="groups" size={32} color={COLORS.textMain} />
                     </View>
-                    <Text style={styles.heroTitle}>El equipo TwinPro</Text>
+                    <Text style={styles.heroTitle}>{t('creditsScreen.heroTitle')}</Text>
                     <Text style={styles.heroSubtitle}>
-                        Esta aplicación es el resultado de la pasión, el esfuerzo y la creatividad de muchas personas talentosas.
+                        {t('creditsScreen.heroSubtitle')}
                     </Text>
                 </View>
 
                 {/* Team Sections */}
                 <View style={styles.sectionsContainer}>
-                    {TEAM_SECTIONS.map((section, sectionIndex) => (
+                    {teamSections.map((section, sectionIndex) => (
                         <View key={sectionIndex} style={styles.teamSection}>
                             <Text style={styles.sectionTitle}>{section.title}</Text>
                             <View style={styles.membersCard}>
@@ -127,13 +132,13 @@ export default function CreditsScreen() {
 
                     {/* Special Thanks */}
                     <View style={styles.teamSection}>
-                        <Text style={styles.sectionTitle}>Agradecimientos Especiales</Text>
+                        <Text style={styles.sectionTitle}>{t('creditsScreen.specialThanksTitle')}</Text>
                         <View style={styles.thanksCard}>
                             <Text style={styles.thanksText}>
-                                Gracias a nuestras familias y amigos por su apoyo incondicional durante el desarrollo de TwinPro.
+                                {t('creditsScreen.specialThanks1')}
                             </Text>
                             <Text style={styles.thanksText}>
-                                También agradecemos a la comunidad de código abierto. TwinPro utiliza proyectos increíbles que nos permiten construir mejor software. Los detalles de las licencias se encuentran en la sección "Licencias".
+                                {t('creditsScreen.specialThanks2')}
                             </Text>
                         </View>
                     </View>

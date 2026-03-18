@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
     Image,
     ScrollView,
@@ -13,6 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
+import { useTranslation } from 'react-i18next';
+import { getCategoriesWithIcons } from '../../utils/categoryUtils';
 
 const COLORS = {
     primary: "#f9f506",
@@ -33,32 +35,6 @@ interface Category {
     icon: string;
 }
 
-const ALL_CATEGORIES: Category[] = [
-    { id: "legal", label: "Legal", icon: "balance" },
-    { id: "salud", label: "Salud", icon: "medical-services" },
-    { id: "educacion", label: "Educación", icon: "school" },
-    { id: "finanzas", label: "Finanzas", icon: "attach-money" },
-    { id: "fitness", label: "Fitness", icon: "fitness-center" },
-    { id: "tecnologia", label: "Tecnología", icon: "devices" },
-    { id: "hogar", label: "Hogar", icon: "home-repair-service" },
-    { id: "bienestar", label: "Bienestar", icon: "self-improvement" },
-    { id: "viajes", label: "Viajes", icon: "flight" },
-    { id: "coaching", label: "Coaching", icon: "track-changes" },
-    { id: "mantenimiento", label: "Mantenimiento", icon: "build" },
-    { id: "reformas", label: "Reformas", icon: "construction" },
-    { id: "marketing", label: "Marketing", icon: "campaign" },
-    { id: "gestoria", label: "Gestoría", icon: "assignment" },
-    { id: "energia", label: "Energía", icon: "bolt" },
-    { id: "empleo", label: "Empleo", icon: "work" },
-    { id: "arte", label: "Arte", icon: "palette" },
-    { id: "eventos", label: "Eventos", icon: "celebration" },
-    { id: "mascotas", label: "Mascotas", icon: "pets" },
-    { id: "belleza", label: "Belleza", icon: "spa" },
-    { id: "economia", label: "Economía", icon: "trending-up" },
-    { id: "inmobiliaria", label: "Inmobiliaria", icon: "real-estate-agent" },
-    { id: "otro", label: "Otro", icon: "more-horiz" },
-];
-
 function getAvatarUrl(avatarPath: string | undefined): string | null {
     return getAssetUrl(avatarPath);
 }
@@ -66,9 +42,11 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 export default function AllCategoriesScreen() {
     const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState("");
+    const { t } = useTranslation('settings');
+    const ALL_CATEGORIES = useMemo(() => getCategoriesWithIcons(t), [t]);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
-    const displayName = user?.firstname || user?.email?.split("@")[0] || "Usuario";
+    const displayName = user?.firstname || user?.email?.split("@")[0] || t('allCategories.defaultUser');
 
     function handleBack() {
         router.back();
@@ -121,8 +99,8 @@ export default function AllCategoriesScreen() {
                         )}
                     </TouchableOpacity>
                     <View style={styles.greetingTextContainer}>
-                        <Text style={styles.greetingText}>Hola, {displayName}</Text>
-                        <Text style={styles.greetingSubtext}>¿Qué profesional necesitas hoy?</Text>
+                        <Text style={styles.greetingText}>{t('allCategories.greeting', { name: displayName })}</Text>
+                        <Text style={styles.greetingSubtext}>{t('allCategories.greetingSubtext')}</Text>
                     </View>
                 </View>
 
@@ -132,7 +110,7 @@ export default function AllCategoriesScreen() {
                         <MaterialIcons name="search" size={22} color={COLORS.slate400} style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar abogado, médico..."
+                            placeholder={t('allCategories.searchPlaceholder')}
                             placeholderTextColor={COLORS.slate400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -149,7 +127,7 @@ export default function AllCategoriesScreen() {
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    <Text style={styles.sectionTitle}>Todas las Categorías</Text>
+                    <Text style={styles.sectionTitle}>{t('allCategories.sectionTitle')}</Text>
 
                     <View style={styles.categoriesGrid}>
                         {filteredCategories.map((category) => (
@@ -172,7 +150,7 @@ export default function AllCategoriesScreen() {
                 <View style={styles.swipeIndicator}>
                     <TouchableOpacity style={styles.swipeButton} onPress={handleBack}>
                         <MaterialIcons name="expand-less" size={30} color={COLORS.slate400} />
-                        <Text style={styles.swipeText}>Deslizar para cerrar</Text>
+                        <Text style={styles.swipeText}>{t('allCategories.swipeToClose')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>

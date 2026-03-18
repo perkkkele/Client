@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
     ActivityIndicator,
     FlatList,
@@ -19,6 +19,8 @@ import { useAuth } from "../../context";
 import { professionalApi, userApi, getAssetUrl } from "../../api";
 import { Professional } from "../../api/professional";
 import { useUserLocation } from "../../hooks/useUserLocation";
+import { useTranslation } from 'react-i18next';
+import { getCategoriesWithEmoji, getCategoryLabel } from '../../utils/categoryUtils';
 
 const COLORS = {
     primary: "#f9f506",
@@ -42,46 +44,17 @@ const COLORS = {
     blue500: "#3B82F6",
 };
 
-const CATEGORIES = [
-    { id: "todos", label: "Todos", emoji: "✨" },
-    { id: "legal", label: "Legal", emoji: "⚖️" },
-    { id: "salud", label: "Salud", emoji: "🩺" },
-    { id: "educacion", label: "Educación", emoji: "🎓" },
-    { id: "finanzas", label: "Finanzas", emoji: "💰" },
-    { id: "fitness", label: "Fitness", emoji: "💪" },
-    { id: "tecnologia", label: "Tecnología", emoji: "💻" },
-    { id: "hogar", label: "Hogar", emoji: "🔧" },
-    { id: "bienestar", label: "Bienestar", emoji: "🧘" },
-    { id: "viajes", label: "Viajes", emoji: "✈️" },
-    { id: "coaching", label: "Coaching", emoji: "🎯" },
-    { id: "mantenimiento", label: "Mantenimiento", emoji: "🔩" },
-    { id: "reformas", label: "Reformas", emoji: "🏗️" },
-    { id: "marketing", label: "Marketing", emoji: "📢" },
-    { id: "gestoria", label: "Gestoría", emoji: "📋" },
-    { id: "energia", label: "Energía", emoji: "⚡" },
-    { id: "empleo", label: "Empleo", emoji: "💼" },
-    { id: "arte", label: "Arte", emoji: "🎨" },
-    { id: "eventos", label: "Eventos", emoji: "🎉" },
-    { id: "mascotas", label: "Mascotas", emoji: "🐾" },
-    { id: "belleza", label: "Belleza", emoji: "💅" },
-    { id: "economia", label: "Economía", emoji: "📊" },
-    { id: "inmobiliaria", label: "Inmobiliaria", emoji: "🏠" },
-    { id: "otro", label: "Otro", emoji: "📦" },
-];
+const SORT_OPTION_IDS = ['relevance', 'distance', 'price', 'reviews'] as const;
 
-const SORT_OPTIONS = [
-    { id: "relevance", label: "Relevancia" },
-    { id: "distance", label: "Cercanía" },
-    { id: "price", label: "Precio" },
-    { id: "reviews", label: "Reseñas" },
-] as const;
-
-type SortOption = typeof SORT_OPTIONS[number]["id"];
+type SortOption = typeof SORT_OPTION_IDS[number];
 
 export default function CategoryResultsScreen() {
     const { category, search } = useLocalSearchParams<{ category: string; search?: string }>();
     const { token, user } = useAuth();
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation('home');
+    const CATEGORIES = useMemo(() => getCategoriesWithEmoji(t), [t]);
+    const SORT_OPTIONS = useMemo(() => SORT_OPTION_IDS.map(id => ({ id, label: t(`directory.sort.${id}`) })), [t]);
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [featuredProfessionals, setFeaturedProfessionals] = useState<Professional[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +76,7 @@ export default function CategoryResultsScreen() {
     // Favorites state
     const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-    const categoryLabel = selectedCategory === "todos" ? "Todos" : (CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory);
+    const categoryLabel = getCategoryLabel(t, selectedCategory);
 
     const loadProfessionals = useCallback(async () => {
         if (!token) return;
@@ -266,7 +239,7 @@ export default function CategoryResultsScreen() {
                     {item.firstname || item.email?.split("@")[0]}
                 </Text>
                 <Text style={styles.featuredProfession} numberOfLines={1}>
-                    {item.profession || "Profesional"}
+                    {item.profession || t('directory.defaultProfessional')}
                 </Text>
             </TouchableOpacity>
         );
@@ -330,9 +303,9 @@ export default function CategoryResultsScreen() {
 
                 {/* Info */}
                 <View style={styles.cardContent}>
-                    <Text style={styles.cardName} numberOfLines={1}>{fullName || "Profesional"}</Text>
+                    <Text style={styles.cardName} numberOfLines={1}>{fullName || t('directory.defaultProfessional')}</Text>
                     <Text style={styles.cardDescription} numberOfLines={2}>
-                        {item.description || item.profession || "Profesional"}
+                        {item.description || item.profession || t('directory.defaultProfessional')}
                     </Text>
 
                     {/* Rating */}
@@ -369,7 +342,7 @@ export default function CategoryResultsScreen() {
                         router.push(`/avatar-chat/${item._id}`);
                     }}
                 >
-                    <Text style={styles.contactButtonText}>Contactar</Text>
+                    <Text style={styles.contactButtonText}>{t('directory.contact')}</Text>
                 </TouchableOpacity>
             </TouchableOpacity>
         );
@@ -409,8 +382,8 @@ export default function CategoryResultsScreen() {
                             )}
                         </TouchableOpacity>
                         <View>
-                            <Text style={styles.greetingText}>Hola, {user?.firstname || "Usuario"}</Text>
-                            <Text style={styles.greetingSubtext}>¿Qué profesional necesitas hoy?</Text>
+                            <Text style={styles.greetingText}>{t('directory.greeting', { name: user?.firstname || t('defaultUser') })}</Text>
+                            <Text style={styles.greetingSubtext}>{t('directory.greetingSubtext')}</Text>
                         </View>
                     </View>
 
@@ -419,7 +392,7 @@ export default function CategoryResultsScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.gray400} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Derecho penal, laboral, civil..."
+                            placeholder={t('directory.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchText}
                             onChangeText={setSearchText}
@@ -463,7 +436,7 @@ export default function CategoryResultsScreen() {
                 {/* Results info */}
                 <View style={styles.resultsInfo}>
                     <Text style={styles.resultsText}>
-                        Resultados basados en tu búsqueda reciente <Text style={styles.resultsTextBold}>"{categoryLabel}"</Text>
+                        {t('directory.resultsText')} <Text style={styles.resultsTextBold}>"{categoryLabel}"</Text>
                     </Text>
                 </View>
 
@@ -493,9 +466,9 @@ export default function CategoryResultsScreen() {
                                             setSortBy('distance');
                                         } else {
                                             Alert.alert(
-                                                'Ubicación necesaria',
-                                                'Para ordenar por cercanía necesitamos tu ubicación. Activa el GPS en los ajustes de tu dispositivo.',
-                                                [{ text: 'Entendido' }]
+                                                t('directory.alerts.locationRequired'),
+                                                t('directory.alerts.locationSortMessage'),
+                                                [{ text: t('directory.alerts.understood') }]
                                             );
                                         }
                                     } else {
@@ -528,8 +501,8 @@ export default function CategoryResultsScreen() {
                 ) : professionals.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <MaterialIcons name="search-off" size={48} color={COLORS.gray400} />
-                        <Text style={styles.emptyText}>No se encontraron profesionales</Text>
-                        <Text style={styles.emptySubtext}>Intenta con otra categoría</Text>
+                        <Text style={styles.emptyText}>{t('directory.empty.title')}</Text>
+                        <Text style={styles.emptySubtext}>{t('directory.empty.subtitle')}</Text>
                     </View>
                 ) : (
                     <FlatList
@@ -555,7 +528,7 @@ export default function CategoryResultsScreen() {
                     <View style={styles.modalContent}>
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Filtros Avanzados</Text>
+                            <Text style={styles.modalTitle}>{t('directory.filters.title')}</Text>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
                                 onPress={() => setShowFiltersModal(false)}
@@ -570,10 +543,10 @@ export default function CategoryResultsScreen() {
                                 <View style={styles.filterHeader}>
                                     <View style={styles.filterLabelRow}>
                                         <MaterialIcons name="location-on" size={18} color={COLORS.gray500} />
-                                        <Text style={styles.filterLabel}>Cercanía</Text>
+                                        <Text style={styles.filterLabel}>{t('directory.filters.proximity')}</Text>
                                     </View>
                                     <Text style={styles.filterValueText}>
-                                        {filterDistance >= 100 ? "Sin Límite" : `${filterDistance} km`}
+                                        {filterDistance >= 100 ? t('directory.filters.noLimit') : `${filterDistance} km`}
                                     </Text>
                                 </View>
                                 <View style={styles.filterOptionsRow}>
@@ -597,7 +570,7 @@ export default function CategoryResultsScreen() {
                                 </View>
                                 <View style={styles.sliderLabels}>
                                     <Text style={styles.sliderLabelText}>0 km</Text>
-                                    <Text style={styles.sliderLabelText}>Sin Límite</Text>
+                                    <Text style={styles.sliderLabelText}>{t('directory.filters.noLimit')}</Text>
                                 </View>
                             </View>
 
@@ -606,10 +579,10 @@ export default function CategoryResultsScreen() {
                                 <View style={styles.filterHeader}>
                                     <View style={styles.filterLabelRow}>
                                         <MaterialIcons name="attach-money" size={18} color={COLORS.gray500} />
-                                        <Text style={styles.filterLabel}>Precio / hora</Text>
+                                        <Text style={styles.filterLabel}>{t('directory.filters.pricePerHour')}</Text>
                                     </View>
                                     <Text style={styles.filterValueText}>
-                                        {filterMaxPrice >= 200 ? "Máximo Sector" : `Max: ${filterMaxPrice}€`}
+                                        {filterMaxPrice >= 200 ? t('directory.filters.maxSector') : t('directory.filters.maxPrice', { price: filterMaxPrice })}
                                     </Text>
                                 </View>
                                 <View style={styles.filterOptionsRow}>
@@ -633,7 +606,7 @@ export default function CategoryResultsScreen() {
                                 </View>
                                 <View style={styles.sliderLabels}>
                                     <Text style={styles.sliderLabelText}>0€</Text>
-                                    <Text style={styles.sliderLabelText}>Máximo Sector</Text>
+                                    <Text style={styles.sliderLabelText}>{t('directory.filters.maxSector')}</Text>
                                 </View>
                             </View>
 
@@ -642,7 +615,7 @@ export default function CategoryResultsScreen() {
                                 <View style={styles.filterHeader}>
                                     <View style={styles.filterLabelRow}>
                                         <MaterialIcons name="star" size={18} color={COLORS.gray500} />
-                                        <Text style={styles.filterLabel}>Reseñas mínimas</Text>
+                                        <Text style={styles.filterLabel}>{t('directory.filters.minReviews')}</Text>
                                     </View>
                                     <Text style={styles.filterValueText}>{filterMinRating}.0+</Text>
                                 </View>
@@ -683,7 +656,7 @@ export default function CategoryResultsScreen() {
                                     setFilterMinRating(4);
                                 }}
                             >
-                                <Text style={styles.resetButtonText}>Restablecer</Text>
+                                <Text style={styles.resetButtonText}>{t('directory.filters.reset')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.applyButton}
@@ -696,9 +669,9 @@ export default function CategoryResultsScreen() {
                                             setAppliedMaxDistance(filterDistance);
                                         } else {
                                             Alert.alert(
-                                                'Ubicación necesaria',
-                                                'Para filtrar por cercanía necesitamos tu ubicación. Activa el GPS en los ajustes de tu dispositivo.',
-                                                [{ text: 'Entendido' }]
+                                                t('directory.alerts.locationRequired'),
+                                                t('directory.alerts.locationFilterMessage'),
+                                                [{ text: t('directory.alerts.understood') }]
                                             );
                                             setShowFiltersModal(false);
                                             return;
@@ -709,7 +682,7 @@ export default function CategoryResultsScreen() {
                                     setShowFiltersModal(false);
                                 }}
                             >
-                                <Text style={styles.applyButtonText}>Aplicar filtros</Text>
+                                <Text style={styles.applyButtonText}>{t('directory.filters.apply')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -720,17 +693,17 @@ export default function CategoryResultsScreen() {
             <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('nav.chats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem}>
                     <View style={selectedCategory === "todos" ? styles.navItemActive : undefined}>
                         <MaterialIcons name="diversity-2" size={24} color={selectedCategory === "todos" ? COLORS.textMain : COLORS.gray500} />
                     </View>
-                    <Text style={selectedCategory === "todos" ? styles.navLabelActive : styles.navLabel}>Directorio</Text>
+                    <Text style={selectedCategory === "todos" ? styles.navLabelActive : styles.navLabel}>{t('nav.directory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('nav.favorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => {
                     if (user?.userType === 'userpro') {
@@ -740,7 +713,7 @@ export default function CategoryResultsScreen() {
                     }
                 }}>
                     <MaterialIcons name="badge" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Perfil Pro</Text>
+                    <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

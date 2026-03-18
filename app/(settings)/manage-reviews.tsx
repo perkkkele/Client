@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
 import {
-    ActivityIndicator,    Image,
+    ActivityIndicator,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,6 +17,7 @@ import { useAuth } from "../../context";
 import { getAssetUrl, reviewApi } from "../../api";
 import type { Review as APIReview } from "../../api/review";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#FFED00",
@@ -97,15 +99,16 @@ interface DisplayReview {
 
 type SortOption = 'recent' | 'highest' | 'lowest';
 
-const FILTERS: { label: string; value: SortOption }[] = [
-    { label: "Más recientes", value: "recent" },
-    { label: "Mejor valoradas", value: "highest" },
-    { label: "Peor valoradas", value: "lowest" },
-];
-
 export default function ManageReviewsScreen() {
     const { user, token } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
+
+    const FILTERS: { label: string; value: SortOption }[] = [
+        { label: t('manageReviewsScreen.filterRecent'), value: "recent" },
+        { label: t('manageReviewsScreen.filterHighest'), value: "highest" },
+        { label: t('manageReviewsScreen.filterLowest'), value: "lowest" },
+    ];
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -150,7 +153,7 @@ export default function ManageReviewsScreen() {
             setRatingCount(response.ratingCount || 0);
         } catch (error) {
             console.error("Error loading reviews:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las reseñas' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('manageReviewsScreen.loadError') });
         } finally {
             setIsLoading(false);
             setRefreshing(false);
@@ -172,7 +175,7 @@ export default function ManageReviewsScreen() {
 
     const handleSendReply = async (reviewId: string) => {
         if (!token || !replyText.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor escribe una respuesta' });
+            showAlert({ type: 'error', title: t('common:error'), message: t('manageReviewsScreen.writeReply') });
             return;
         }
 
@@ -189,9 +192,9 @@ export default function ManageReviewsScreen() {
 
             setReplyingTo(null);
             setReplyText("");
-            showAlert({ type: 'success', title: '✓ Éxito', message: 'Tu respuesta ha sido publicada' });
+            showAlert({ type: 'success', title: '✓', message: t('manageReviewsScreen.replySuccess') });
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo enviar la respuesta" });
+            showAlert({ type: 'error', title: t('common:error'), message: error.message || t('manageReviewsScreen.replyError') });
         } finally {
             setIsSendingReply(false);
         }
@@ -226,12 +229,12 @@ export default function ManageReviewsScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                         <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Gestión de Reseñas</Text>
+                    <Text style={styles.headerTitle}>{t('manageReviewsScreen.headerTitle')}</Text>
                     <View style={styles.headerButton} />
                 </View>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Cargando reseñas...</Text>
+                    <Text style={styles.loadingText}>{t('manageReviewsScreen.loading')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -244,7 +247,7 @@ export default function ManageReviewsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back-ios" size={20} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Gestión de Reseñas</Text>
+                <Text style={styles.headerTitle}>{t('manageReviewsScreen.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -287,8 +290,8 @@ export default function ManageReviewsScreen() {
                         </View>
                         <Text style={styles.reviewCount}>
                             {ratingCount === 0
-                                ? "Sin reseñas todavía"
-                                : `Basado en ${ratingCount} ${ratingCount === 1 ? 'reseña' : 'reseñas'}`}
+                                ? t('manageReviewsScreen.noReviewsYet')
+                                : t('manageReviewsScreen.basedOn', { count: ratingCount, label: ratingCount === 1 ? t('manageReviewsScreen.reviewSingular') : t('manageReviewsScreen.reviewPlural') })}
                         </Text>
                     </View>
                 </View>
@@ -324,9 +327,9 @@ export default function ManageReviewsScreen() {
                     {reviews.length === 0 ? (
                         <View style={styles.emptyState}>
                             <MaterialIcons name="rate-review" size={64} color={COLORS.gray200} />
-                            <Text style={styles.emptyTitle}>Sin reseñas</Text>
+                            <Text style={styles.emptyTitle}>{t('manageReviewsScreen.emptyTitle')}</Text>
                             <Text style={styles.emptySubtitle}>
-                                Aún no has recibido ninguna reseña. ¡Tus clientes podrán valorar tu servicio después de interactuar contigo!
+                                {t('manageReviewsScreen.emptySubtitle')}
                             </Text>
                         </View>
                     ) : (
@@ -393,7 +396,7 @@ export default function ManageReviewsScreen() {
                                                     </View>
                                                 )}
                                                 <Text style={styles.responseOwner}>
-                                                    {displayName} <Text style={styles.ownerLabel}>(Tu respuesta)</Text>
+                                                    {displayName} <Text style={styles.ownerLabel}>{t('manageReviewsScreen.yourResponse')}</Text>
                                                 </Text>
                                             </View>
                                             <Text style={styles.responseText}>{review.response}</Text>
@@ -402,7 +405,7 @@ export default function ManageReviewsScreen() {
                                         <View style={styles.replyContainer}>
                                             <View style={styles.replyHeader}>
                                                 <MaterialIcons name="reply" size={20} color={COLORS.textMain} />
-                                                <Text style={styles.replyTitle}>Responder a la reseña</Text>
+                                                <Text style={styles.replyTitle}>{t('manageReviewsScreen.replyToReview')}</Text>
                                             </View>
                                             <TextInput
                                                 style={styles.replyInput}
@@ -418,7 +421,7 @@ export default function ManageReviewsScreen() {
                                                     onPress={() => { setReplyingTo(null); setReplyText(""); }}
                                                     disabled={isSendingReply}
                                                 >
-                                                    <Text style={styles.cancelButton}>Cancelar</Text>
+                                                    <Text style={styles.cancelButton}>{t('manageReviewsScreen.cancelReply')}</Text>
                                                 </TouchableOpacity>
                                                 <TouchableOpacity
                                                     style={[
@@ -431,7 +434,7 @@ export default function ManageReviewsScreen() {
                                                     {isSendingReply ? (
                                                         <ActivityIndicator size="small" color={COLORS.textMain} />
                                                     ) : (
-                                                        <Text style={styles.sendButtonText}>Enviar</Text>
+                                                        <Text style={styles.sendButtonText}>{t('manageReviewsScreen.send')}</Text>
                                                     )}
                                                 </TouchableOpacity>
                                             </View>
@@ -446,7 +449,7 @@ export default function ManageReviewsScreen() {
                                             activeOpacity={0.8}
                                         >
                                             <MaterialIcons name="reply" size={20} color={COLORS.textMain} />
-                                            <Text style={styles.replyButtonText}>Responder a esta reseña</Text>
+                                            <Text style={styles.replyButtonText}>{t('manageReviewsScreen.replyButton')}</Text>
                                             <MaterialIcons name="chevron-right" size={20} color={COLORS.gray400} />
                                         </TouchableOpacity>
                                     )}

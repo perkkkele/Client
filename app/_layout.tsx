@@ -12,6 +12,9 @@ import { API_URL } from "../api/config";
 import { usernameApi } from "../api";
 import * as Sentry from '@sentry/react-native';
 
+// Initialize i18n — must be imported before any component that uses translations
+import '../services/i18n';
+
 Sentry.init({
   dsn: 'https://736dd6efd3d3c513c7b6dc648627a9df@o4510754066333696.ingest.de.sentry.io/4510754069413968',
 

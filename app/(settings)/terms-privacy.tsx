@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from 'react-i18next';
 
 const COLORS = {
     primary: "#f9f506",
@@ -38,38 +39,40 @@ interface SummaryItem {
     description: string;
 }
 
-const SUMMARY_ITEMS: SummaryItem[] = [
-    {
-        icon: "lock",
-        iconBg: COLORS.blue50,
-        iconColor: COLORS.blue600,
-        title: "Privacidad de Datos",
-        description: "Tus datos personales se tratan conforme a la normativa vigente (RGPD y normativa aplicable). Tus comunicaciones están protegidas mediante medidas de seguridad adecuadas y no vendemos tus datos personales.\n\nAlgunos datos pueden compartirse con proveedores tecnológicos únicamente cuando sea necesario para prestar el servicio o por obligación legal.",
-    },
-    {
-        icon: "smart-toy",
-        iconBg: COLORS.purple50,
-        iconColor: COLORS.purple600,
-        title: "Interacción con Gemelos Digitales (IA)",
-        description: "En TwinPro puedes interactuar con Gemelos Digitales basados en inteligencia artificial, configurados o supervisados por profesionales.\n\nLas respuestas generadas:\n• Son automatizadas\n• Tienen carácter informativo y orientativo\n• No sustituyen la atención ni el asesoramiento profesional humano\n• Pueden ser inexactas, incompletas o desactualizadas.",
-    },
-    {
-        icon: "verified-user",
-        iconBg: COLORS.orange50,
-        iconColor: COLORS.orange600,
-        title: "Responsabilidad del Usuario",
-        description: "Al utilizar TwinPro, te comprometes a:\n• Usar el servicio de forma respetuosa y conforme a la ley\n• No realizar usos indebidos, abusivos o fraudulentos\n• No basar decisiones críticas exclusivamente en la información proporcionada por la plataforma o los gemelos digitales\n\nEl incumplimiento de estas normas puede dar lugar a la suspensión o cancelación de la cuenta.",
-    },
-    {
-        icon: "payments",
-        iconBg: COLORS.green50,
-        iconColor: COLORS.green600,
-        title: "Servicios, Créditos y Pagos",
-        description: "TwinPro puede ofrecer:\n• Funcionalidades gratuitas\n• Servicios de pago mediante créditos, suscripciones u otros modelos\n\nSiempre se te informará previamente antes de realizar cualquier cargo. Las condiciones económicas se detallan en los Términos de Servicio.",
-    },
-];
-
 export default function TermsPrivacyScreen() {
+    const { t } = useTranslation('settings');
+
+    const SUMMARY_ITEMS: SummaryItem[] = [
+        {
+            icon: "lock",
+            iconBg: COLORS.blue50,
+            iconColor: COLORS.blue600,
+            title: t('termsPrivacyScreen.dataPrivacyTitle'),
+            description: t('termsPrivacyScreen.dataPrivacyDesc'),
+        },
+        {
+            icon: "smart-toy",
+            iconBg: COLORS.purple50,
+            iconColor: COLORS.purple600,
+            title: t('termsPrivacyScreen.digitalTwinTitle'),
+            description: t('termsPrivacyScreen.digitalTwinDesc'),
+        },
+        {
+            icon: "verified-user",
+            iconBg: COLORS.orange50,
+            iconColor: COLORS.orange600,
+            title: t('termsPrivacyScreen.userResponsibilityTitle'),
+            description: t('termsPrivacyScreen.userResponsibilityDesc'),
+        },
+        {
+            icon: "payments",
+            iconBg: COLORS.green50,
+            iconColor: COLORS.green600,
+            title: t('termsPrivacyScreen.paymentsTitle'),
+            description: t('termsPrivacyScreen.paymentsDesc'),
+        },
+    ];
+
     function handleBack() {
         router.back();
     }
@@ -85,7 +88,7 @@ export default function TermsPrivacyScreen() {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                     <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Resumen Ejecutivo</Text>
+                <Text style={styles.headerTitle}>{t('termsPrivacyScreen.headerTitle')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -97,7 +100,7 @@ export default function TermsPrivacyScreen() {
                 {/* Intro */}
                 <View style={styles.intro}>
                     <Text style={styles.introSubtitle}>
-                        Hemos resumido los puntos clave de nuestros textos legales para que entiendas de forma clara cómo funciona TwinPro, cómo se tratan tus datos y cuáles son las responsabilidades asociadas al uso del servicio.
+                        {t('termsPrivacyScreen.introText')}
                     </Text>
                 </View>
 
@@ -120,14 +123,14 @@ export default function TermsPrivacyScreen() {
                 <TouchableOpacity style={styles.fullTermsButton} onPress={handleViewFullTerms}>
                     <View style={styles.fullTermsLeft}>
                         <MaterialIcons name="description" size={20} color={COLORS.gray400} />
-                        <Text style={styles.fullTermsText}>Ver Términos y Condiciones Completos</Text>
+                        <Text style={styles.fullTermsText}>{t('termsPrivacyScreen.viewFullTerms')}</Text>
                     </View>
                     <MaterialIcons name="arrow-forward" size={18} color={COLORS.gray400} />
                 </TouchableOpacity>
 
                 {/* Disclaimer */}
                 <Text style={styles.disclaimer}>
-                    Este resumen no reemplaza el documento legal completo. Al usar la app, aceptas los Términos y Condiciones oficiales.
+                    {t('termsPrivacyScreen.disclaimer')}
                 </Text>
             </ScrollView>
         </SafeAreaView>
