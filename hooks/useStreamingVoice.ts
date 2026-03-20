@@ -28,7 +28,7 @@ interface UseStreamingVoiceOptions {
     onPartialResponse?: (text: string) => void;
     onResponseComplete?: (response: string) => void;
     onQuickReplies?: (replies: string[]) => void;
-    onAppointmentProposal?: (data: { date: string; time: string; type: string; professionalId: string; clientId: string; chatId: string }) => void;
+    onAppointmentProposal?: (data: { date: string; time: string; type: string; duration?: number | null; professionalId: string; clientId: string; chatId: string }) => void;
     onAudioChunk?: (audioData: { format: string; data: string; sampleRate: number; text: string }) => void;
     onError?: (error: Error) => void;
     onAvatarSpeakingChange?: (speaking: boolean) => void;

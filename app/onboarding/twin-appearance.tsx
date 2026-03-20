@@ -281,12 +281,12 @@ export default function TwinAppearanceScreen() {
                 gender: v.gender || 'unknown',
                 language: v.language || userLanguage,
                 preview_url: elevenlabsApi.getPreviewUrl(v.voice_id, userLanguage, v.preview_url),
-                sample_url: v.preview_url || null,
-                accent: v.accent || null,
-                age: v.age || null,
-                description: v.description || null,
-                use_case: v.use_case || null,
-                category: v.category || null,
+                sample_url: v.preview_url || undefined,
+                accent: v.accent || undefined,
+                age: v.age || undefined,
+                description: v.description || undefined,
+                use_case: v.use_case || undefined,
+                category: v.category || undefined,
             }));
 
             console.log(`[Voices] Loaded ${mappedVoices.length} curated voices (lang: ${userLanguage}, gender: ${avatarGender || 'any'})`);

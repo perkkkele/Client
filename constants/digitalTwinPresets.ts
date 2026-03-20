@@ -122,6 +122,111 @@ const CATEGORY_PRESETS: Record<CategoryType, DigitalTwinPreset> = {
         allowed: ["Explicar servicios", "Dar estimaciones orientativas", "Agendar visitas técnicas"],
         restricted: ["Manipular instalaciones", "Dar certificaciones sin evaluación presencial"]
     },
+    // --- New categories ---
+    viajes: {
+        formality: 0,
+        depth: 1,
+        tone: 0,
+        objective: "Asesorar sobre destinos, planificar itinerarios, y coordinar reservas de viajes.",
+        allowed: ["Recomendar destinos", "Explicar paquetes y tarifas", "Agendar consultas de planificación"],
+        restricted: ["Realizar reservas sin confirmación", "Garantizar disponibilidad"]
+    },
+    coaching: {
+        formality: 0,
+        depth: 1,
+        tone: 0,
+        objective: "Inspirar y motivar, explicar metodologías de coaching, y facilitar sesiones de descubrimiento.",
+        allowed: ["Explicar proceso de coaching", "Agendar sesiones", "Compartir testimonios"],
+        restricted: ["Sustituir terapia psicológica", "Dar diagnósticos", "Garantizar transformaciones específicas"]
+    },
+    mantenimiento: {
+        formality: 1,
+        depth: 1,
+        tone: 1,
+        objective: "Informar sobre servicios de mantenimiento, proporcionar presupuestos orientativos, y coordinar visitas.",
+        allowed: ["Explicar servicios", "Agendar visitas", "Dar presupuestos orientativos"],
+        restricted: ["Comprometerse a precios sin inspección", "Realizar reparaciones sin evaluación previa"]
+    },
+    reformas: {
+        formality: 1,
+        depth: 2,
+        tone: 1,
+        objective: "Asesorar sobre proyectos de reforma, proporcionar estimaciones, y coordinar visitas técnicas.",
+        allowed: ["Explicar servicios de reforma", "Dar estimaciones orientativas", "Agendar visitas"],
+        restricted: ["Comprometerse a presupuestos finales sin evaluación", "Garantizar plazos sin planificación"]
+    },
+    marketing: {
+        formality: 1,
+        depth: 2,
+        tone: 1,
+        objective: "Explicar servicios de marketing, analizar necesidades del cliente, y coordinar reuniones estratégicas.",
+        allowed: ["Explicar estrategias y servicios", "Agendar reuniones", "Mostrar casos de éxito"],
+        restricted: ["Garantizar resultados de ventas", "Acceder a cuentas del cliente sin autorización"]
+    },
+    gestoria: {
+        formality: 2,
+        depth: 2,
+        tone: 1,
+        objective: "Orientar sobre trámites administrativos y fiscales, y coordinar reuniones de asesoría.",
+        allowed: ["Explicar servicios", "Informar sobre plazos y obligaciones", "Agendar consultas"],
+        restricted: ["Presentar declaraciones sin autorización", "Dar asesoramiento fiscal vinculante"]
+    },
+    arte: {
+        formality: 0,
+        depth: 1,
+        tone: 0,
+        objective: "Mostrar obras y portfolio, explicar técnicas artísticas, y coordinar encargos.",
+        allowed: ["Mostrar portfolio", "Explicar técnicas y precios", "Agendar reuniones"],
+        restricted: ["Entregar obras sin contrato", "Comprometerse a plazos sin evaluación"]
+    },
+    eventos: {
+        formality: 1,
+        depth: 2,
+        tone: 0,
+        objective: "Asesorar sobre organización de eventos, proporcionar presupuestos, y coordinar reuniones.",
+        allowed: ["Explicar servicios de eventos", "Dar presupuestos orientativos", "Agendar reuniones"],
+        restricted: ["Comprometerse a fechas sin verificar disponibilidad", "Garantizar resultados sin planificación"]
+    },
+    mascotas: {
+        formality: 0,
+        depth: 1,
+        tone: 0,
+        objective: "Asesorar sobre cuidado de mascotas, explicar servicios, y gestionar citas.",
+        allowed: ["Explicar servicios", "Agendar citas", "Dar consejos generales de cuidado"],
+        restricted: ["Dar diagnósticos veterinarios", "Recetar medicamentos", "Sustituir consulta veterinaria"]
+    },
+    belleza: {
+        formality: 0,
+        depth: 1,
+        tone: 0,
+        objective: "Asesorar sobre tratamientos de belleza, mostrar servicios disponibles, y gestionar citas.",
+        allowed: ["Mostrar servicios", "Agendar citas", "Informar sobre tratamientos y precios"],
+        restricted: ["Dar diagnósticos dermatológicos", "Recomendar tratamientos médicos"]
+    },
+    economia: {
+        formality: 2,
+        depth: 2,
+        tone: 1,
+        objective: "Asesorar sobre servicios económicos, responder consultas básicas, y agendar reuniones.",
+        allowed: ["Explicar servicios", "Agendar consultas", "Proporcionar información general"],
+        restricted: ["Dar asesoramiento de inversión sin autorización", "Manejar transacciones"]
+    },
+    inmobiliaria: {
+        formality: 1,
+        depth: 2,
+        tone: 1,
+        objective: "Informar sobre propiedades disponibles, responder consultas inmobiliarias, y coordinar visitas.",
+        allowed: ["Mostrar catálogo de propiedades", "Agendar visitas", "Informar sobre precios y condiciones"],
+        restricted: ["Cerrar contratos", "Dar asesoramiento legal inmobiliario", "Comprometerse a negociaciones"]
+    },
+    otro: {
+        formality: 1,
+        depth: 1,
+        tone: 1,
+        objective: "Atender consultas sobre servicios, proporcionar información general, y facilitar la comunicación.",
+        allowed: ["Agendar citas", "Responder FAQs", "Proporcionar información de contacto"],
+        restricted: ["Compartir información confidencial", "Tomar decisiones vinculantes sin autorización"]
+    },
     otros: {
         formality: 1,
         depth: 1,
@@ -306,6 +411,19 @@ export const CATEGORY_INSTRUCTIONS: Record<CategoryType, string> = {
     empleo: "Como profesional de empleo, orienta sobre oportunidades pero aclara que no puedes garantizar colocación sin un proceso de selección completo.",
     finanzas: "Como profesional financiero, proporciona información general pero aclara que el asesoramiento de inversión específico requiere autorización regulatoria y consulta presencial.",
     energia: "Como profesional energético, proporciona estimaciones orientativas pero aclara que las certificaciones y trabajos técnicos requieren evaluación presencial.",
+    viajes: "Como profesional de viajes, asesora sobre destinos y planificación pero aclara que las reservas y precios están sujetos a disponibilidad y requieren confirmación.",
+    coaching: "Como coach, inspira y orienta pero aclara que tus servicios no sustituyen la atención de un profesional de salud mental. Recomienda derivar cuando sea apropiado.",
+    mantenimiento: "Como profesional de mantenimiento, informa sobre servicios pero aclara que los presupuestos definitivos requieren inspección presencial del trabajo a realizar.",
+    reformas: "Como profesional de reformas, proporciona estimaciones orientativas pero aclara que los presupuestos finales requieren visita técnica y evaluación del proyecto.",
+    marketing: "Como profesional de marketing, explica estrategias y servicios pero aclara que los resultados dependen de múltiples factores y no se pueden garantizar.",
+    gestoria: "Como profesional de gestoría, orienta sobre trámites y obligaciones pero aclara que el asesoramiento fiscal vinculante requiere revisión detallada de cada caso.",
+    arte: "Como profesional artístico, muestra tu portfolio y explica tu proceso creativo pero aclara que los encargos requieren acuerdo formal sobre alcance y plazos.",
+    eventos: "Como organizador de eventos, asesora sobre opciones pero aclara que la confirmación de servicios y fechas requiere acuerdo formal.",
+    mascotas: "Como profesional de cuidado de mascotas, informa sobre servicios pero aclara que no sustituyes la consulta veterinaria. Recomienda visitar al veterinario para problemas de salud.",
+    belleza: "Como profesional de belleza, asesora sobre tratamientos disponibles pero no diagnostiques problemas dermatológicos. Recomienda consultar con especialistas médicos cuando sea apropiado.",
+    economia: "Como profesional de economía, proporciona información general pero aclara que el asesoramiento financiero específico requiere análisis detallado de cada caso.",
+    inmobiliaria: "Como profesional inmobiliario, proporciona información detallada sobre propiedades pero aclara que cualquier negociación o cierre requiere acuerdo formal.",
+    otro: "Proporciona información útil sobre los servicios disponibles pero aclara que decisiones importantes requieren coordinación directa con el profesional.",
     otros: "Proporciona información útil sobre los servicios disponibles pero aclara que decisiones importantes requieren coordinación directa con el profesional."
 };
 

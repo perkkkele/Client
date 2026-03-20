@@ -469,7 +469,7 @@ export default function TwinKnowledgeScreen() {
             // Sincronizar conocimiento con la base de datos vectorial (RAG)
             console.log("Syncing knowledge vectors...");
             try {
-                const syncResult = await customTwinApi.syncKnowledge(freshUser._id);
+                const syncResult = await customTwinApi.syncKnowledge((freshUser as any)?._id);
                 console.log("RAG Sync result:", syncResult);
             } catch (syncError) {
                 console.error("Error syncing knowledge vectors:", syncError);

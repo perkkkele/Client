@@ -69,6 +69,7 @@ const DEFAULT_STATUS: SubscriptionStatus = {
         widget: false,
         qrCode: false,
         analytics: false,
+        advancedReports: false,
         calendarSync: false,
         searchPriority: false,
     },

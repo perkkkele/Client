@@ -169,7 +169,7 @@ export default function ClientNotificationSettingsScreen() {
 
         try {
             // Update user profile with new preferences
-            const updatedUser = await userApi.updateProfile(token, {
+            const updatedUser = await userApi.updateUser(token, {
                 clientNotificationPreferences: newPrefs,
             });
 

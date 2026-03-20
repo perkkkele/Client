@@ -32,6 +32,11 @@ module.exports = () => {
     return {
         ...config,
         name: getAppName(),
+        plugins: [
+            ...(config.plugins || []),
+            "@sentry/react-native/expo",
+            "expo-localization",
+        ],
         android: {
             ...config.android,
             package: getPackage(),

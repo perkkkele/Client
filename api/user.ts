@@ -92,6 +92,7 @@ export interface DigitalTwinAppearance {
     liveAvatarId?: string | null;
     liveAvatarName?: string | null;
     liveAvatarPreview?: string | null;
+    liveAvatarGender?: string | null;
     liveVoiceId?: string | null;
     liveVoiceName?: string | null;
     liveVoiceGender?: string | null;
@@ -101,6 +102,13 @@ export interface DigitalTwinAppearance {
 export interface DigitalTwinTtsConfig {
     voice?: string;  // OpenAI TTS voice: alloy, nova, shimmer, echo, fable, onyx
     speed?: number;  // TTS speed: 0.25 to 4.0
+}
+
+export interface WidgetChannels {
+    chat?: boolean;
+    voice?: boolean;
+    video?: boolean;
+    text?: boolean;
 }
 
 export interface DigitalTwin {
@@ -116,6 +124,8 @@ export interface DigitalTwin {
     activatedAt?: string | null;
     sessionLimitMinutes?: number;  // Per-client session time limit (0 = no limit)
     disclaimer?: string | null;  // Professional's disclaimer text for clients
+    widgetChannels?: WidgetChannels;  // Widget channel configuration
+    widgetTheme?: 'light' | 'dark' | null;  // Widget theme preference
 }
 
 export interface EscalationTriggers {
