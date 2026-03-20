@@ -61,7 +61,7 @@ export default function RegisterProScreen() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(true);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [acceptAnalytics, setAcceptAnalytics] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
