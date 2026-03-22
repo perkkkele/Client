@@ -93,10 +93,10 @@ export default function TwinBlock({
                         onPress={handleTestGemini}
                     >
                         <View style={styles.twinIconContainer}>
-                            <MaterialIcons name="smart-toy" size={28} color="#FFFFFF" />
+                            <MaterialIcons name="smart-toy" size={28} color="#137fec" />
                         </View>
                         <View style={styles.testHintRow}>
-                            <MaterialIcons name="touch-app" size={10} color="rgba(255,255,255,0.5)" />
+                            <MaterialIcons name="touch-app" size={10} color="#9ca3af" />
                             <Text style={styles.testHint}>{t('twinBlock.test')}</Text>
                         </View>
                     </TouchableOpacity>
@@ -116,9 +116,9 @@ export default function TwinBlock({
                     <Switch
                         value={geminiActive}
                         onValueChange={onGeminiChange}
-                        trackColor={{ false: "rgba(0,0,0,0.3)", true: "#4ade80" }}
+                        trackColor={{ false: "#d1d5db", true: "#4ade80" }}
                         thumbColor="#FFFFFF"
-                        ios_backgroundColor="rgba(0,0,0,0.3)"
+                        ios_backgroundColor="#d1d5db"
                     />
                 </View>
                 <TouchableOpacity style={styles.configureButton} onPress={onConfigureGemini}>
@@ -136,11 +136,11 @@ export default function TwinBlock({
                     activeOpacity={0.7}
                 >
                     <View style={styles.usageRow}>
-                        <MaterialIcons name="timer" size={16} color="rgba(255,255,255,0.7)" />
+                        <MaterialIcons name="timer" size={16} color="#6b7280" />
                         <Text style={styles.usageText}>
                             {minutesUsed} / {minutesIncluded} min
                         </Text>
-                        <MaterialIcons name="chevron-right" size={18} color="rgba(255,255,255,0.4)" />
+                        <MaterialIcons name="chevron-right" size={18} color="#9ca3af" />
                     </View>
                     <View style={styles.usageBarBg}>
                         <View
@@ -170,15 +170,15 @@ export default function TwinBlock({
                         <View style={styles.escalationSection}>
                             <View style={styles.escalationHeader}>
                                 <View style={styles.escalationHeaderLeft}>
-                                    <MaterialIcons name="support-agent" size={20} color="#FFFFFF" />
+                                    <MaterialIcons name="support-agent" size={20} color="#137fec" />
                                     <Text style={styles.escalationTitle}>{t('twinBlock.escalationTitle')}</Text>
                                 </View>
                                 <Switch
                                     value={escalation.enabled}
                                     onValueChange={handleEscalationToggle}
-                                    trackColor={{ false: "rgba(0,0,0,0.3)", true: "#60a5fa" }}
+                                    trackColor={{ false: "#d1d5db", true: "#60a5fa" }}
                                     thumbColor="#FFFFFF"
-                                    ios_backgroundColor="rgba(0,0,0,0.3)"
+                                    ios_backgroundColor="#d1d5db"
                                 />
                             </View>
                             <Text style={styles.escalationHint}>
@@ -286,9 +286,11 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginBottom: 20,
         borderRadius: 20,
-        backgroundColor: "#1a1a2e",
+        backgroundColor: "#FFFFFF",
         overflow: "hidden",
         position: "relative",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
     },
     twinCardGlow1: {
         position: "absolute",
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: "rgba(19, 127, 236, 0.3)",
+        backgroundColor: "rgba(19, 127, 236, 0.05)",
     },
     twinCardGlow2: {
         position: "absolute",
@@ -306,7 +308,7 @@ const styles = StyleSheet.create({
         width: 150,
         height: 150,
         borderRadius: 75,
-        backgroundColor: "rgba(147, 51, 234, 0.2)",
+        backgroundColor: "rgba(147, 51, 234, 0.03)",
     },
     twinCardContent: {
         padding: 20,
@@ -330,7 +332,7 @@ const styles = StyleSheet.create({
         width: 52,
         height: 52,
         borderRadius: 16,
-        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        backgroundColor: "rgba(19, 127, 236, 0.1)",
         alignItems: "center",
         justifyContent: "center",
     },
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
     twinTitle: {
         fontSize: 20,
         fontWeight: "700",
-        color: "#FFFFFF",
+        color: "#111418",
         marginBottom: 6,
     },
     twinStatus: {
@@ -360,7 +362,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 14,
-        color: "rgba(255, 255, 255, 0.8)",
+        color: "#6b7280",
     },
     testHintRow: {
         flexDirection: "row",
@@ -369,7 +371,7 @@ const styles = StyleSheet.create({
     },
     testHint: {
         fontSize: 11,
-        color: "rgba(255, 255, 255, 0.5)",
+        color: "#9ca3af",
         fontStyle: "italic",
         marginLeft: 4,
     },
@@ -377,7 +379,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        backgroundColor: "#f0f7ff",
         borderRadius: 12,
         padding: 14,
         marginBottom: 16,
@@ -394,7 +396,7 @@ const styles = StyleSheet.create({
     },
     appointmentsDivider: {
         height: 1,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "#e5e7eb",
         marginBottom: 16,
     },
     appointmentsRow: {
@@ -406,7 +408,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        backgroundColor: "rgba(19, 127, 236, 0.1)",
         alignItems: "center",
         justifyContent: "center",
         marginRight: 12,
@@ -417,17 +419,17 @@ const styles = StyleSheet.create({
     appointmentsLabel: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#FFFFFF",
+        color: "#111418",
     },
     appointmentsHint: {
         fontSize: 11,
-        color: "rgba(255, 255, 255, 0.6)",
+        color: "#9ca3af",
         marginTop: 2,
     },
     // Escalation styles
     escalationDivider: {
         height: 1,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "#e5e7eb",
         marginVertical: 16,
     },
     escalationSection: {
@@ -447,11 +449,11 @@ const styles = StyleSheet.create({
     escalationTitle: {
         fontSize: 15,
         fontWeight: "600",
-        color: "#FFFFFF",
+        color: "#111418",
     },
     escalationHint: {
         fontSize: 12,
-        color: "rgba(255, 255, 255, 0.5)",
+        color: "#9ca3af",
         marginBottom: 8,
     },
     escalationExpandButton: {
@@ -462,7 +464,7 @@ const styles = StyleSheet.create({
     },
     escalationExpandText: {
         fontSize: 13,
-        color: "rgba(255, 255, 255, 0.7)",
+        color: "#6b7280",
     },
     escalationOptions: {
         marginTop: 8,
@@ -476,7 +478,7 @@ const styles = StyleSheet.create({
     },
     checkboxLabel: {
         fontSize: 14,
-        color: "rgba(255, 255, 255, 0.8)",
+        color: "#374151",
     },
     keywordsSection: {
         marginTop: 12,
@@ -490,12 +492,12 @@ const styles = StyleSheet.create({
     },
     keywordInput: {
         flex: 1,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "#f3f4f6",
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 8,
         fontSize: 14,
-        color: "#FFFFFF",
+        color: "#111418",
     },
     addKeywordButton: {
         width: 36,
@@ -521,7 +523,7 @@ const styles = StyleSheet.create({
     },
     keywordTagText: {
         fontSize: 12,
-        color: "#FFFFFF",
+        color: "#137fec",
     },
     // Session Limit Styles
     sessionLimitRow: {
@@ -544,14 +546,16 @@ const styles = StyleSheet.create({
     },
     sessionLimitLabel: {
         fontSize: 14,
-        color: "rgba(255,255,255,0.7)",
+        color: "#6b7280",
     },
     // Minutes Usage Bar
     usageSection: {
-        backgroundColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "#f8fafc",
         borderRadius: 12,
         padding: 14,
         marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
     },
     usageRow: {
         flexDirection: "row",
@@ -563,11 +567,11 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         fontWeight: "600",
-        color: "rgba(255,255,255,0.85)",
+        color: "#374151",
     },
     usageBarBg: {
         height: 6,
-        backgroundColor: "rgba(255,255,255,0.12)",
+        backgroundColor: "#e5e7eb",
         borderRadius: 3,
         overflow: "hidden",
     },

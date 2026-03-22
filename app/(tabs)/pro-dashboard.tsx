@@ -584,28 +584,59 @@ export default function ProDashboardScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={["top"]}>
-            <StatusBar style="dark" />
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
-                    <MaterialIcons name="menu" size={24} color={COLORS.textMain} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('proDashboard.headerTitle')}</Text>
-                <TouchableOpacity
-                    style={styles.notificationButton}
-                    onPress={() => router.push("/(settings)/pro-notifications")}
-                >
-                    <MaterialIcons name="notifications" size={24} color={COLORS.textMain} />
-                    {/* Unread badge */}
-                    {unreadNotificationCount > 0 && (
-                        <View style={styles.notificationBadge}>
-                            <Text style={styles.notificationBadgeText}>
-                                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
-                            </Text>
+        <View style={styles.container}>
+            <StatusBar style="light" />
+            {/* Premium Dark Header */}
+            <View style={styles.headerWrapper}>
+                <SafeAreaView edges={["top"]}>
+                    {/* Top bar */}
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
+                            <MaterialIcons name="menu" size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>{t('proDashboard.headerTitle')}</Text>
+                        <TouchableOpacity
+                            style={styles.notificationButton}
+                            onPress={() => router.push("/(settings)/pro-notifications")}
+                        >
+                            <MaterialIcons name="notifications" size={24} color="#FFFFFF" />
+                            {unreadNotificationCount > 0 && (
+                                <View style={styles.notificationBadge}>
+                                    <Text style={styles.notificationBadgeText}>
+                                        {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Greeting inside dark header */}
+                    <View style={styles.greetingSection}>
+                        <TouchableOpacity style={styles.greetingProfileButton} onPress={handleEditProfile}>
+                            {avatarUrl ? (
+                                <Image source={{ uri: avatarUrl }} style={styles.greetingProfileAvatar} />
+                            ) : (
+                                <View style={styles.greetingProfileAvatarPlaceholder}>
+                                    <MaterialIcons name="person" size={24} color="#94a3b8" />
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        <View style={styles.greetingTextContainer}>
+                            <View style={styles.greetingRow}>
+                                <Text style={styles.greetingText}>{t('proDashboard.greeting', { name: displayName })}</Text>
+                                <MaterialIcons name="waving-hand" size={24} color="#D4AF37" />
+                            </View>
                         </View>
-                    )}
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.greetingHelpButton}
+                            onPress={() => router.push("/(settings)/help-pro-dashboard")}
+                        >
+                            <MaterialIcons name="help-outline" size={24} color="#94a3b8" />
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+                {/* Decorative gold line */}
+                <View style={styles.goldLine} />
             </View>
 
             {/* Main Content */}
@@ -617,32 +648,6 @@ export default function ProDashboardScreen() {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
                 }
             >
-                {/* Greeting */}
-                <View style={styles.greetingSection}>
-                    <TouchableOpacity style={styles.greetingProfileButton} onPress={handleEditProfile}>
-                        {avatarUrl ? (
-                            <Image source={{ uri: avatarUrl }} style={styles.greetingProfileAvatar} />
-                        ) : (
-                            <View style={styles.greetingProfileAvatarPlaceholder}>
-                                <MaterialIcons name="person" size={24} color={COLORS.gray400} />
-                            </View>
-                        )}
-                        <View style={styles.greetingOnlineIndicator} />
-                    </TouchableOpacity>
-                    <View style={styles.greetingTextContainer}>
-                        <View style={styles.greetingRow}>
-                            <Text style={styles.greetingText}>{t('proDashboard.greeting', { name: displayName })}</Text>
-                            <MaterialIcons name="waving-hand" size={24} color={COLORS.primary} />
-                        </View>
-                    </View>
-                    <TouchableOpacity
-                        style={styles.greetingHelpButton}
-                        onPress={() => router.push("/(settings)/help-pro-dashboard")}
-                    >
-                        <MaterialIcons name="help-outline" size={24} color={COLORS.gray500} />
-                    </TouchableOpacity>
-                </View>
-
                 {/* Edit Mode Banner */}
                 {editMode && (
                     <View style={styles.editModeBanner}>
@@ -1198,7 +1203,7 @@ export default function ProDashboardScreen() {
                 featureName={upgradeModalFeature}
                 requiredPlan={upgradeModalPlan}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -1208,15 +1213,51 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.backgroundLight,
     },
     // Header
+    headerWrapper: {
+        backgroundColor: "#0f172a",
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 24,
+        elevation: 12,
+        zIndex: 10,
+        overflow: "hidden",
+    },
+    goldLine: {
+        height: 2,
+        backgroundColor: "rgba(212, 175, 55, 0.3)",
+    },
     header: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: COLORS.surfaceLight,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.gray100,
+        paddingHorizontal: 24,
+        paddingTop: 8,
+        paddingBottom: 8,
+    },
+    headerCenter: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    proBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: "rgba(212, 175, 55, 0.15)",
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: "rgba(212, 175, 55, 0.3)",
+    },
+    proBadgeText: {
+        fontSize: 11,
+        fontWeight: "800",
+        color: "#D4AF37",
+        letterSpacing: 1,
     },
     menuButton: {
         width: 40,
@@ -1228,7 +1269,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: "bold",
-        color: COLORS.textMain,
+        color: "#FFFFFF",
     },
     notificationButton: {
         width: 40,
@@ -1288,23 +1329,26 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
+        paddingTop: 20,
         paddingBottom: 40,
     },
     // Greeting
     greetingSection: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 16,
-        paddingTop: 24,
-        paddingBottom: 8,
+        paddingHorizontal: 24,
+        paddingTop: 12,
+        paddingBottom: 20,
         gap: 12,
     },
     greetingProfileButton: {
         width: 52,
         height: 52,
         borderRadius: 26,
-        backgroundColor: COLORS.gray200,
+        backgroundColor: "#1e293b",
         overflow: "hidden",
+        borderWidth: 2,
+        borderColor: "rgba(212, 175, 55, 0.4)",
     },
     greetingProfileAvatar: {
         width: "100%",
@@ -1315,7 +1359,7 @@ const styles = StyleSheet.create({
         height: "100%",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: COLORS.gray200,
+        backgroundColor: "#1e293b",
     },
     greetingOnlineIndicator: {
         position: "absolute",
@@ -1326,7 +1370,7 @@ const styles = StyleSheet.create({
         borderRadius: 7,
         backgroundColor: COLORS.green500,
         borderWidth: 2,
-        borderColor: COLORS.surfaceLight,
+        borderColor: "#0f172a",
     },
     greetingTextContainer: {
         flex: 1,
@@ -1342,7 +1386,7 @@ const styles = StyleSheet.create({
     greetingText: {
         fontSize: 24,
         fontWeight: "bold",
-        color: COLORS.textMain,
+        color: "#FFFFFF",
     },
     greetingSubtext: {
         fontSize: 14,
@@ -2151,18 +2195,7 @@ const styles = StyleSheet.create({
     menuItemLabelLocked: {
         color: COLORS.gray500,
     },
-    proBadge: {
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        marginLeft: 8,
-    },
-    proBadgeText: {
-        fontSize: 9,
-        fontWeight: "bold",
-        color: "#FFFFFF",
-        letterSpacing: 0.5,
-    },
+    
     // Locked block styles for subscription gating
     lockedBlock: {
         backgroundColor: COLORS.surfaceLight,

@@ -27,7 +27,7 @@ export default function ProfileBlock({ userId }: ProfileBlockProps) {
             <View style={styles.profilePreviewContent}>
                 <View style={styles.profilePreviewLeft}>
                     <View style={styles.profilePreviewIcon}>
-                        <MaterialIcons name="visibility" size={22} color="#FFFFFF" />
+                        <MaterialIcons name="visibility" size={22} color="#137fec" />
                     </View>
                     <View style={styles.profilePreviewText}>
                         <Text style={styles.profilePreviewTitle}>{t('profileBlock.viewPublicProfile')}</Text>
@@ -35,7 +35,7 @@ export default function ProfileBlock({ userId }: ProfileBlockProps) {
                     </View>
                 </View>
                 <View style={styles.profilePreviewArrow}>
-                    <MaterialIcons name="arrow-forward-ios" size={16} color="#FFFFFF" />
+                    <MaterialIcons name="arrow-forward-ios" size={16} color="#9ca3af" />
                 </View>
             </View>
         </TouchableOpacity>
@@ -48,8 +48,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         borderRadius: 16,
         overflow: "hidden",
-        backgroundColor: COLORS.primary,
+        backgroundColor: "#FFFFFF",
         position: "relative",
+        borderWidth: 1,
+        borderColor: "#e5e7eb",
     },
     profilePreviewGlow: {
         position: "absolute",
@@ -58,7 +60,7 @@ const styles = StyleSheet.create({
         width: 150,
         height: 150,
         borderRadius: 75,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "rgba(19, 127, 236, 0.05)",
     },
     profilePreviewContent: {
         flexDirection: "row",
@@ -75,7 +77,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        backgroundColor: "rgba(19, 127, 236, 0.1)",
         alignItems: "center",
         justifyContent: "center",
         marginRight: 12,
@@ -86,18 +88,18 @@ const styles = StyleSheet.create({
     profilePreviewTitle: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#FFFFFF",
+        color: "#111418",
         marginBottom: 2,
     },
     profilePreviewSubtitle: {
         fontSize: 13,
-        color: "rgba(255, 255, 255, 0.8)",
+        color: "#6b7280",
     },
     profilePreviewArrow: {
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        backgroundColor: "#f3f4f6",
         alignItems: "center",
         justifyContent: "center",
     },
