@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState, useCallback } from "react";
 import {
     ActivityIndicator,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import BottomNavBar from "../../components/BottomNavBar";
 import { useAuth } from "../../context";
 import * as userApi from "../../api/user";
 import { getAssetUrl } from "../../api";
@@ -21,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 const COLORS = {
     primary: "#f9f506",
     backgroundLight: "#f8f8f5",
-    backgroundDark: "#23220f",
+    backgroundDark: "#000000",
     slate900: "#0f172a",
     slate800: "#1e293b",
     slate700: "#334155",
@@ -212,7 +214,7 @@ export default function FavoritesScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
+            <StatusBar style="light" />
             <View style={styles.header}>
                 <SafeAreaView edges={["top"]}>
                     <View style={styles.headerTop}>
@@ -276,33 +278,7 @@ export default function FavoritesScreen() {
                 )}
             </View>
 
-            {/* Bottom Navigation */}
-            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
-                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>{t('nav.chats')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
-                    <MaterialIcons name="diversity-2" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>{t('nav.directory')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={styles.navItemActive}>
-                        <MaterialIcons name="favorite" size={24} color={COLORS.textMain} />
-                    </View>
-                    <Text style={styles.navLabelActive}>{t('nav.favorites')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => {
-                    if (user?.userType === 'userpro') {
-                        router.push("/(tabs)/pro-dashboard");
-                    } else {
-                        router.push("/(tabs)/become-pro");
-                    }
-                }}>
-                    <MaterialIcons name="badge" size={24} color={COLORS.slate500} />
-                    <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomNavBar activeTab="favorites" />
         </View>
     );
 }
@@ -340,8 +316,9 @@ const styles = StyleSheet.create({
     logoIcon: {
         width: 40,
         height: 40,
-        borderRadius: 12,
+        borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
         borderBottomLeftRadius: 4,
         backgroundColor: COLORS.backgroundDark,
         borderWidth: 3,
@@ -580,42 +557,5 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "bold",
         color: COLORS.white,
-    },
-    // Bottom Navigation
-    bottomNav: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        flexDirection: "row",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderTopWidth: 1,
-        borderTopColor: "#e2e8f0",
-        paddingTop: 12,
-        paddingBottom: 32,
-        paddingHorizontal: 24,
-    },
-    navItem: {
-        flex: 1,
-        alignItems: "center",
-        gap: 4,
-    },
-    navItemActive: {
-        width: 48,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: "rgba(249, 245, 6, 0.2)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    navLabel: {
-        fontSize: 11,
-        color: COLORS.slate500,
-        fontWeight: "500",
-    },
-    navLabelActive: {
-        fontSize: 11,
-        color: COLORS.textMain,
-        fontWeight: "bold",
     },
 });

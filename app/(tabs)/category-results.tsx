@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
     ActivityIndicator,
@@ -15,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import BottomNavBar from "../../components/BottomNavBar";
 import { useAuth } from "../../context";
 import { professionalApi, userApi, getAssetUrl } from "../../api";
 import { Professional } from "../../api/professional";
@@ -350,7 +352,7 @@ export default function CategoryResultsScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
+            <StatusBar style="light" />
             <View style={styles.header}>
                 <SafeAreaView edges={["top"]}>
                     {/* Top bar */}
@@ -689,33 +691,7 @@ export default function CategoryResultsScreen() {
                 </View>
             </Modal>
 
-            {/* Bottom Navigation */}
-            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
-                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>{t('nav.chats')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={selectedCategory === "todos" ? styles.navItemActive : undefined}>
-                        <MaterialIcons name="diversity-2" size={24} color={selectedCategory === "todos" ? COLORS.textMain : COLORS.gray500} />
-                    </View>
-                    <Text style={selectedCategory === "todos" ? styles.navLabelActive : styles.navLabel}>{t('nav.directory')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
-                    <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>{t('nav.favorites')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => {
-                    if (user?.userType === 'userpro') {
-                        router.push("/(tabs)/pro-dashboard");
-                    } else {
-                        router.push("/(tabs)/become-pro");
-                    }
-                }}>
-                    <MaterialIcons name="badge" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomNavBar activeTab="directory" />
         </View>
     );
 }
@@ -1264,43 +1240,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#FFFFFF",
     },
-    // Bottom Navigation
-    bottomNav: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        flexDirection: "row",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderTopWidth: 1,
-        borderTopColor: "#e2e8f0",
-        paddingTop: 12,
-        paddingBottom: 32,
-        paddingHorizontal: 24,
-    },
-    navItem: {
-        flex: 1,
-        alignItems: "center",
-        gap: 4,
-    },
-    navItemActive: {
-        width: 48,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: "rgba(249, 245, 6, 0.2)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    navLabel: {
-        fontSize: 11,
-        color: COLORS.gray500,
-        fontWeight: "500",
-    },
-    navLabelActive: {
-        fontSize: 11,
-        color: COLORS.textMain,
-        fontWeight: "bold",
-    },
+
     // Featured Professionals Carousel
     featuredSection: {
         paddingVertical: 16,

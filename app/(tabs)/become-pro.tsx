@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import {
     ScrollView,
     StyleSheet,
@@ -8,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import BottomNavBar from "../../components/BottomNavBar";
 
 const COLORS = {
     primary: "#f9f506",
@@ -84,6 +86,7 @@ export default function BecomeProScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
+            <StatusBar style="light" />
             {/* Hero Header - More compact */}
             <View style={styles.heroContainer}>
                 <View style={styles.heroHeader}>
@@ -141,27 +144,7 @@ export default function BecomeProScreen() {
                 </View>
             </ScrollView>
 
-            {/* Bottom Navigation */}
-            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-                <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation("chats")}>
-                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.slate400} />
-                    <Text style={styles.navLabel}>Chats</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation("directory")}>
-                    <MaterialIcons name="diversity-2" size={24} color={COLORS.slate400} />
-                    <Text style={styles.navLabel}>Directorio</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => handleNavigation("favorites")}>
-                    <MaterialIcons name="favorite" size={24} color={COLORS.slate400} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={styles.navItemActive}>
-                        <MaterialIcons name="badge" size={24} color={COLORS.textMain} />
-                    </View>
-                    <Text style={styles.navLabelActive}>Perfil Pro</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomNavBar activeTab="pro" />
         </SafeAreaView>
     );
 }
@@ -325,43 +308,5 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: COLORS.slate400,
         fontWeight: "500",
-    },
-    // Bottom Nav - Compact
-    bottomNav: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-around",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderTopWidth: 1,
-        borderTopColor: "rgba(0,0,0,0.05)",
-        paddingTop: 12,
-        paddingBottom: 32,
-        paddingHorizontal: 24,
-    },
-    navItem: {
-        alignItems: "center",
-        gap: 4,
-    },
-    navLabel: {
-        fontSize: 10,
-        color: COLORS.slate400,
-        fontWeight: "500",
-    },
-    navItemActive: {
-        width: 40,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "rgba(249, 245, 6, 0.2)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    navLabelActive: {
-        fontSize: 10,
-        color: COLORS.textMain,
-        fontWeight: "bold",
     },
 });

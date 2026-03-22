@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useTranslation } from "react-i18next";
 import { useCallback, useState, useEffect } from "react";
 import { useSubscription, FeatureName } from "../../hooks/useSubscription";
@@ -19,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import BottomNavBar from "../../components/BottomNavBar";
 import * as SecureStore from "expo-secure-store";
 import { useAuth } from "../../context";
 import { userApi, analyticsApi, getAssetUrl } from "../../api";
@@ -583,6 +585,7 @@ export default function ProDashboardScreen() {
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
+            <StatusBar style="dark" />
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
@@ -795,27 +798,7 @@ export default function ProDashboardScreen() {
                 })}
             </ScrollView>
 
-            {/* Bottom Navigation */}
-            <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
-                    <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>{t('proDashboard.navChats')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
-                    <MaterialIcons name="diversity-2" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>{t('proDashboard.navDirectory')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
-                    <MaterialIcons name="favorite" size={24} color={COLORS.gray400} />
-                    <Text style={styles.navLabel}>{t('proDashboard.navFavorites')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <View style={styles.navItemActive}>
-                        <MaterialIcons name="badge" size={24} color={COLORS.textMain} />
-                    </View>
-                    <Text style={styles.navLabelActive}>{t('proDashboard.navProProfile')}</Text>
-                </TouchableOpacity>
-            </View>
+            <BottomNavBar activeTab="pro" />
 
             {/* FAB - Toggle Edit Mode */}
             <TouchableOpacity
@@ -2066,40 +2049,7 @@ const styles = StyleSheet.create({
         elevation: 8,
         zIndex: 30,
     },
-    // Bottom Navigation
-    bottomNav: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-around",
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderTopWidth: 1,
-        borderTopColor: "rgba(0,0,0,0.05)",
-        paddingTop: 12,
-        paddingBottom: 32,
-        paddingHorizontal: 24,
-    },
-    navItem: {
-        alignItems: "center",
-        gap: 4,
-    },
-    navLabel: {
-        fontSize: 10,
-        color: COLORS.gray400,
-        fontWeight: "500",
-    },
-    navItemActive: {
-        width: 40,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "rgba(19, 127, 236, 0.15)",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    navLabelActive: {
-        fontSize: 10,
-        color: COLORS.textMain,
-        fontWeight: "bold",
-    },
+
 
     // Appointments Toggle inside Twin Card
     appointmentsDivider: {

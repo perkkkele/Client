@@ -15,6 +15,7 @@ import {
   Modal,
   Alert,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getAssetUrl, chatApi, professionalApi } from "../../api";
@@ -22,6 +23,7 @@ import type { Chat, EscalatedChat } from "../../api/chat";
 import type { Professional } from "../../api/professional";
 import { useAuth } from "../../context";
 import { useTranslation } from 'react-i18next';
+import BottomNavBar from "../../components/BottomNavBar";
 import { LOCALE_MAP, type SupportedLanguage } from '../../services/i18n';
 import { getCategoriesWithEmoji, getCategoryLabel, CATEGORY_COLORS } from '../../utils/categoryUtils';
 
@@ -364,24 +366,26 @@ export default function TwinProHomeScreen() {
   const userAvatarUrl = getUserAvatar();
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={styles.container}>
+      <StatusBar style="light" />
       {/* Header negro con bordes redondeados */}
       <View style={styles.headerContainer}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <MaterialIcons name="group" size={22} color={COLORS.primary} />
+        <SafeAreaView edges={["top"]}>
+          {/* Top bar */}
+          <View style={styles.topBar}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoIcon}>
+                <MaterialIcons name="group" size={24} color={COLORS.primary} />
+              </View>
+              <View>
+                <Text style={styles.logoTitle}>TwinPro</Text>
+                <Text style={styles.logoSubtitle}>Professional Chat</Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.logoTitle}>TwinPro</Text>
-              <Text style={styles.logoSubtitle}>Professional Chat</Text>
-            </View>
+            <TouchableOpacity style={styles.qrButton} onPress={() => router.push("/(tabs)/qr-scanner")}>
+              <MaterialIcons name="qr-code-scanner" size={24} color={COLORS.slate400} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.qrButton} onPress={() => router.push("/(tabs)/qr-scanner")}>
-            <Ionicons name="qr-code-outline" size={24} color={COLORS.slate400} />
-          </TouchableOpacity>
-        </View>
 
         {/* Saludo con avatar */}
         <View style={styles.greetingContainer}>
@@ -468,6 +472,7 @@ export default function TwinProHomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        </SafeAreaView>
       </View>
 
       {/* Contenido principal */}
@@ -732,34 +737,7 @@ export default function TwinProHomeScreen() {
         )}
       </ScrollView>
 
-      {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <TouchableOpacity style={styles.navItem}>
-          <View style={styles.navItemActive}>
-            <MaterialIcons name="chat-bubble" size={24} color={COLORS.black} />
-          </View>
-          <Text style={styles.navLabelActive}>{t('nav.chats')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
-          <MaterialIcons name="diversity-2" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>{t('nav.directory')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
-          <MaterialIcons name="favorite" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>{t('nav.favorites')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => {
-          // Check if user is a professional (userpro)
-          if (user?.userType === 'userpro') {
-            router.push("/(tabs)/pro-dashboard");
-          } else {
-            router.push("/(tabs)/become-pro");
-          }
-        }}>
-          <MaterialIcons name="badge" size={24} color={COLORS.gray} />
-          <Text style={styles.navLabel}>{t('nav.proPerfil')}</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNavBar activeTab="chats" />
 
       {/* Context Menu Modal */}
       <Modal
@@ -797,7 +775,7 @@ export default function TwinProHomeScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -818,12 +796,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.black,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
-    paddingTop: 8,
     paddingBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
     elevation: 10,
     zIndex: 10,
   },
@@ -831,8 +808,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   logoContainer: {
     flexDirection: "row",
@@ -875,7 +853,7 @@ const styles = StyleSheet.create({
   greetingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     marginBottom: 16,
     gap: 16,
   },
@@ -914,7 +892,7 @@ const styles = StyleSheet.create({
 
   // Search
   searchContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     marginBottom: 16,
   },
   searchInputContainer: {
@@ -1286,43 +1264,7 @@ const styles = StyleSheet.create({
     color: COLORS.black,
   },
 
-  // Bottom navigation
-  bottomNav: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
-    paddingTop: 12,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  navItemActive: {
-    width: 48,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(249, 245, 6, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navLabel: {
-    fontSize: 11,
-    color: COLORS.gray,
-    fontWeight: "500",
-  },
-  navLabelActive: {
-    fontSize: 11,
-    color: COLORS.black,
-    fontWeight: "bold",
-  },
+
   // Search Results Styles
   searchLoadingContainer: {
     padding: 40,
