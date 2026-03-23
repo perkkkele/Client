@@ -1193,5 +1193,275 @@
         "menuContactSupport": "Contactar con soporte",
         "menuSendFeedback": "Enviar comentarios",
         "menuTermsPrivacy": "Condiciones y Política de privacidad"
+    },
+    "subscriptionCancel": {
+        "title": "Proceso Cancelado",
+        "message": "Has cancelado el proceso de suscripción. No se ha realizado ningún cargo.",
+        "subMessage": "Puedes intentarlo de nuevo cuando quieras.",
+        "viewPlans": "Ver Planes",
+        "goToDashboard": "Ir al Dashboard"
+    },
+    "subscriptionSuccess": {
+        "title": "¡Suscripción Activada!",
+        "message": "Tu plan se ha activado correctamente. Ahora tienes acceso a todas las funcionalidades incluidas.",
+        "subMessage": "Tu suscripción se renovará automáticamente cada mes.",
+        "viewPlan": "Ver Mi Plan",
+        "goToDashboard": "Ir al Dashboard"
+    },
+    "twinDisclaimer": {
+        "headerTitle": "Alcance y Límites",
+        "professionalFallback": "el profesional",
+        "professionFallback": "Profesional",
+        "defaultDisclaimer": "Las respuestas proporcionadas por este asistente virtual tienen carácter informativo y orientativo. No sustituyen el consejo profesional especializado. La información puede requerir actualización o adaptación a su situación específica. Consulte siempre con profesionales cualificados para tomar decisiones importantes.",
+        "disclaimerTitle": "Descargo de Responsabilidad",
+        "infoNote": "Este texto ha sido proporcionado por {{name}} para establecer las condiciones y límites del servicio de su gemelo digital.",
+        "helpTitle": "¿Qué significa esto?",
+        "helpItem1": "Estás interactuando con un asistente virtual basado en IA",
+        "helpItem2": "Las respuestas son orientativas y no sustituyen al profesional",
+        "helpItem3": "Puedes solicitar hablar con el profesional en cualquier momento",
+        "legalTitle": "AVISO LEGAL",
+        "legalText": "Este documento detalla las condiciones legales, responsabilidades y limitaciones de uso de la plataforma TwinPro. El uso de la plataforma implica la aceptación de todos los términos aquí descritos.",
+        "legalLink": "Ver documento completo",
+        "understood": "Entendido"
+    },
+    "bookAppointment": {
+        "headerTitle": "Agendar Cita",
+        "headerSubtitle": "con {{name}}",
+        "professionalFallback": "Profesional",
+        "appointmentType": "Tipo de Cita",
+        "videoCall": "Videollamada",
+        "inPerson": "Presencial",
+        "selectDate": "Seleccionar Fecha",
+        "availableSlots": "Horarios Disponibles",
+        "loadingSlots": "Cargando horarios...",
+        "noSlots": "No hay horarios disponibles para esta fecha",
+        "rates": "Tarifas del Profesional",
+        "noRates": "Este profesional no ha configurado tarifas para este tipo de cita.",
+        "consultLabel": "Consulta {{duration}} min",
+        "defaultDuration": "Duración por defecto",
+        "briefConsult": "Consulta breve",
+        "fullConsult": "Consulta completa",
+        "confirmButton": "Confirmar Cita",
+        "termsNotice": "Al confirmar, aceptas los términos y condiciones de la consulta.",
+        "fiscalNotice": "El servicio es prestado por {{name}}. Para solicitar factura, contacta directamente con el profesional. TwinPro actúa como intermediario de pagos.",
+        "alertSelectDateTime": "Por favor selecciona una fecha y hora",
+        "alertAppointmentBooked": "¡Cita Agendada!",
+        "alertContinue": "Continuar",
+        "alertPaymentError": "No se pudo abrir el enlace de pago",
+        "alertPaymentInitError": "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.",
+        "alertInPersonBooked": "Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.",
+        "alertBookingError": "No se pudo agendar la cita. Inténtalo de nuevo.",
+        "weekdays": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+        "weekdaysSunFirst": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+        "months": ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+        "navChats": "Chats",
+        "navDirectory": "Directorio",
+        "navFavorites": "Favoritos",
+        "navSettings": "Ajustes"
+    },
+    "professionalProfile": {
+        "headerTitle": "Perfil del Profesional",
+        "notFound": "Profesional no encontrado",
+        "goBack": "Volver",
+        "professionFallback": "Profesional",
+        "reviewsCount": "({{count}} reseñas)",
+        "appointmentsUnavailable": "Citas no disponibles",
+        "understood": "Entendido",
+        "verifiedTitle": "✓ Profesional Verificado",
+        "verifiedMessage": "Este profesional ha verificado su actividad profesional mediante declaración jurada.\n\nTwinPro ha comprobado su identidad y profesión para ofrecerte una experiencia segura y fiable.",
+        "verifiedBadge": "Profesional Verificado",
+        "startChat": "Iniciar Chat",
+        "bookAppointment": "Agendar Cita",
+        "aboutTitle": "SOBRE MÍ",
+        "noBio": "Este profesional aún no ha añadido una descripción.",
+        "specialties": "Especialidades",
+        "contactTitle": "DATOS DE CONTACTO",
+        "socialLinks": "Redes Sociales",
+        "locationTitle": "UBICACIÓN",
+        "openInMaps": "Abrir en Maps",
+        "scheduleTitle": "HORARIO LABORAL",
+        "scheduleDays": {
+            "mon": "Lun",
+            "tue": "Mar",
+            "wed": "Mié",
+            "thu": "Jue",
+            "fri": "Vie",
+            "sat": "Sáb",
+            "sun": "Dom"
+        },
+        "reviewsSection": "Reseñas de clientes",
+        "reviewSingular": "valoración",
+        "reviewPlural": "valoraciones",
+        "beFirstToReview": "Sé el primero en opinar",
+        "viewAllReviews": "Ver todas las reseñas",
+        "writeReview": "Escribir una reseña",
+        "navChats": "Chats",
+        "navDirectory": "Directorio",
+        "navFavorites": "Favoritos",
+        "navSettings": "Ajustes"
+    },
+    "avatarChat": {
+        "professionFallback": "Profesional",
+        "infoBubble": {
+            "profile": {
+                "title": "Sobre mí",
+                "content": "Especialista con más de 15 años de experiencia. Formación en las mejores instituciones. Comprometido con tu bienestar."
+            },
+            "contact": {
+                "title": "Contacto",
+                "content": "Disponible de lunes a viernes de 9:00 a 18:00. Respuesta garantizada en menos de 24 horas."
+            },
+            "location": {
+                "title": "Ubicación",
+                "content": "Consulta principal en Centro Médico. También disponible para consultas online desde cualquier lugar."
+            },
+            "share": {
+                "title": "Compartir",
+                "content": "Comparte este perfil con amigos o familiares que puedan beneficiarse de una consulta profesional."
+            },
+            "private": {
+                "title": "Conversación Privada",
+                "subtitle": "Modo incógnito",
+                "content": "Al activar esta opción, los mensajes de esta sesión no aparecerán en el historial, proporcionando máxima seguridad y privacidad."
+            },
+            "appointments": {
+                "title": "Agendar Cita",
+                "content": "Agenda una cita con el profesional para una consulta presencial o virtual."
+            },
+            "escalation": {
+                "title": "Atención personalizada",
+                "subtitle": "con el profesional",
+                "content": "El gemelo ofrece ayuda inmediata. Al escalar, la sesión se pausará y la respuesta puede no ser inmediata."
+            },
+            "escalationKeyword": {
+                "title": "Para asegurarme de ayudarte de la mejor forma posible…",
+                "content": "¿Quieres hablar directamente con el profesional?\n\nPor lo que comentas, puede que este tema requiera atención humana.\n\nPuedes seguir hablando con el gemelo digital o, si lo deseas, escalar la conversación. Ten en cuenta que al hacerlo la respuesta del profesional puede no ser inmediata.\n\nPara una atención directa, también puedes reservar una cita."
+            },
+            "viewFullProfile": "Ver perfil completo"
+        },
+        "viewFullProfile": "Ver perfil completo",
+        "clearHistory": {
+            "title": "Borrar todo el historial",
+            "message": "¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.",
+            "cancel": "Cancelar",
+            "confirm": "Borrar todo",
+            "error": "No se pudo borrar el historial"
+        },
+        "conversationTitle": "Conversación {{index}}",
+        "noMessages": "Sin mensajes",
+        "dateToday": "Hoy",
+        "dateYesterday": "Ayer",
+        "dayNames": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+        "chip": {
+            "live": "👤 EN VIVO",
+            "contacting": "Contactando...",
+            "contactProfessional": "Contactar con profesional"
+        },
+        "pause": {
+            "label": "EN PAUSA",
+            "hint": "Toca para reanudar",
+            "messagePaused": "⏸️ La comunicación está en pausa. Toca el video para reanudar."
+        },
+        "session": {
+            "connecting": "Conectando con el avatar...",
+            "liveBadge": "EN VIVO",
+            "connectionError": "Error de conexión",
+            "retry": "Reintentar",
+            "errorNoAvatar": "El profesional no tiene un avatar configurado",
+            "errorSyncFailed": "Error al sincronizar el gemelo digital",
+            "errorNoContext": "El gemelo digital no está completamente configurado. Falta el contexto.",
+            "errorConnect": "Error al conectar con el avatar",
+            "errorConnecting": "Error conectando con el avatar"
+        },
+        "personalAttention": {
+            "title": "Atención personal",
+            "text": "Este profesional ha decidido atender personalmente las consultas. Puedes escribir tu mensaje y te responderá lo antes posible.",
+            "bookAppointment": "Reservar cita"
+        },
+        "sessionExpired": {
+            "title": "Tu tiempo con el gemelo digital ha terminado",
+            "text": "Has utilizado todo el tiempo disponible en esta sesión. Si tu consulta no ha quedado resuelta, puedes enviarla directamente al profesional.",
+            "sendToProfessional": "Enviar al profesional",
+            "bookAppointment": "Agendar una cita",
+            "resolved": "Ya resolví mi duda"
+        },
+        "mute": {
+            "audioMuted": "Audio silenciado",
+            "tapToEnable": "Tocar para activar"
+        },
+        "disclaimer": {
+            "text": "Las respuestas de este gemelo digital tienen carácter informativo.",
+            "link": "Consulta el alcance y límites del gemelo digital"
+        },
+        "minimized": {
+            "tapToExpand": "Toca para expandir"
+        },
+        "contact": {
+            "mobile": "Móvil",
+            "callNow": "LLAMAR AHORA",
+            "email": "Email",
+            "website": "Sitio Web",
+            "socialLinks": "Redes Sociales",
+            "addressUnavailable": "Dirección no disponible",
+            "getDirections": "Cómo llegar",
+            "call": "Llamar",
+            "openInMaps": "Abrir en Maps",
+            "open": "Abierto",
+            "loadingMap": "Cargando mapa..."
+        },
+        "share": {
+            "recommend": "👋 Te recomiendo que veas esto",
+            "talkToTwin": "Puedes hablar con su gemelo digital aquí 👇",
+            "talkToTwinShort": "Puedes hablar con su gemelo digital aquí."
+        },
+        "appointment": {
+            "title": "Agendar Cita",
+            "schedule": "Horario: {{start}} - {{end}}",
+            "loadingSlots": "Cargando horarios...",
+            "noSlots": "No hay horarios disponibles",
+            "continue": "CONTINUAR",
+            "selectTypeInfo": "Selecciona el tipo de cita y duración en la siguiente pantalla."
+        },
+        "escalation": {
+            "whatToDo": "¿Qué quieres hacer?",
+            "bookAppointment": "Reservar una cita",
+            "bookAppointmentWithPro": "Reservar cita con el profesional",
+            "escalateAndWait": "Escalar y esperar respuesta",
+            "escalateKeywordAndWait": "Escalar conversación y esperar respuesta",
+            "continueWithTwin": "Seguir con el gemelo digital",
+            "escalated": "📞 Conversación escalada. El gemelo está en pausa mientras esperas al profesional.",
+            "escalateError": "⚠️ No se pudo contactar al profesional. Inténtalo de nuevo.",
+            "cancelledResume": "✓ Has retomado la conversación con el gemelo digital.",
+            "waitingForPro": "Esperando al profesional...",
+            "backToTwin": "Volver al gemelo",
+            "proJoiningSoon": "El profesional se unirá pronto"
+        },
+        "errors": {
+            "processingError": "Error al procesar tu mensaje. Por favor intenta de nuevo.",
+            "sendError": "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+            "avatarNotConnected": "El avatar no está conectado. Espera a que se establezca la conexión."
+        },
+        "farewell": "¡Cita reservada! Ha sido un placer, nos vemos pronto. 😊",
+        "proBadge": "Profesional",
+        "todaySeparator": "Hoy",
+        "inputPlaceholder": "Escribe un mensaje...",
+        "drawer": {
+            "title": "Conversaciones",
+            "searchPlaceholder": "Buscar conversaciones...",
+            "newConversation": "Nueva Conversación",
+            "loadingHistory": "Cargando historial...",
+            "noConversations": "Sin conversaciones",
+            "noConversationsHint": "Tus conversaciones con este profesional aparecerán aquí",
+            "privateMode": "Modo privado · No se guardará esta conversación",
+            "reportProblem": "Reportar un problema",
+            "clearAll": "Borrar todo el historial"
+        },
+        "voice": {
+            "processing": "Procesando...",
+            "listening": "Escuchando...",
+            "ready": "Listo para escuchar",
+            "voiceConnecting": "Conectando...",
+            "appointmentProposal": "Propuesta de cita: {{date}} a las {{time}}"
+        }
     }
 }

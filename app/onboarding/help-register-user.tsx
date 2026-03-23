@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFED00",
@@ -38,32 +39,16 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Qué es TwinPro?",
-        answer: "TwinPro es una plataforma que conecta usuarios con profesionales a través de gemelos digitales con IA. Puedes chatear con el gemelo digital de un profesional 24/7 y recibir respuestas inmediatas.",
-    },
-    {
-        question: "¿Qué puedo hacer como usuario?",
-        answer: "Como usuario puedes buscar profesionales, chatear con sus gemelos digitales, reservar citas, escribir reseñas y guardar tus profesionales favoritos.",
-    },
-    {
-        question: "¿Qué datos necesito para crear mi cuenta?",
-        answer: "Solo necesitas tu nombre, un email válido y una contraseña de al menos 6 caracteres. La confirmación de contraseña debe coincidir.",
-    },
-    {
-        question: "¿Qué es la opción de analítica?",
-        answer: "Es opcional. Si la aceptas, nos ayudas a mejorar la plataforma mediante datos anónimos de uso. No afecta tu experiencia si la rechazas.",
-    },
-    {
-        question: "¿Puedo usar mi cuenta de Google?",
-        answer: "Sí, puedes registrarte o iniciar sesión con Google para un acceso más rápido sin necesidad de crear una contraseña.",
-    },
-    {
-        question: "¿Mis datos están seguros?",
-        answer: "Sí. Utilizamos encriptación para proteger tu información. Puedes consultar nuestra Política de Privacidad para más detalles.",
-    },
-];
+function getFaqItems(t: any): FAQItem[] {
+    return [
+        { question: t('helpRegisterUserFaq.q1'), answer: t('helpRegisterUserFaq.a1') },
+        { question: t('helpRegisterUserFaq.q2'), answer: t('helpRegisterUserFaq.a2') },
+        { question: t('helpRegisterUserFaq.q3'), answer: t('helpRegisterUserFaq.a3') },
+        { question: t('helpRegisterUserFaq.q4'), answer: t('helpRegisterUserFaq.a4') },
+        { question: t('helpRegisterUserFaq.q5'), answer: t('helpRegisterUserFaq.a5') },
+        { question: t('helpRegisterUserFaq.q6'), answer: t('helpRegisterUserFaq.a6') },
+    ];
+}
 
 interface GuideItem {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -71,27 +56,20 @@ interface GuideItem {
     duration: string;
 }
 
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "person-add",
-        title: "Cómo completar tu registro",
-        duration: "1 min de lectura",
-    },
-    {
-        icon: "smart-toy",
-        title: "Cómo chatear con un gemelo digital",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "calendar-today",
-        title: "Cómo reservar una cita",
-        duration: "1:30 min",
-    },
-];
+function getGuideItems(t: any): GuideItem[] {
+    return [
+        { icon: "app-registration", title: t('helpRegisterUserFaq.guide1Title'), duration: t('helpRegisterUserFaq.guide1Duration') },
+        { icon: "smart-toy", title: t('helpRegisterUserFaq.guide2Title'), duration: t('helpRegisterUserFaq.guide2Duration') },
+        { icon: "calendar-today", title: t('helpRegisterUserFaq.guide3Title'), duration: t('helpRegisterUserFaq.guide3Duration') },
+    ];
+}
 
 export default function HelpRegisterUserScreen() {
+    const { t } = useTranslation('onboarding');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+    const FAQ_ITEMS = getFaqItems(t);
+    const GUIDE_ITEMS = getGuideItems(t);
 
     function handleClose() {
         router.back();
@@ -119,13 +97,13 @@ export default function HelpRegisterUserScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda para Registro</Text>
+                    <Text style={styles.headerTitle}>{t('helpRegisterUser.title')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Encuentra respuestas sobre cómo crear tu cuenta de usuario en TwinPro.
+                    {t('helpRegisterUser.subtitle')}
                 </Text>
             </View>
 
@@ -140,7 +118,7 @@ export default function HelpRegisterUserScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.primaryDark} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en la ayuda..."
+                            placeholder={t('helpCommon.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -150,7 +128,7 @@ export default function HelpRegisterUserScreen() {
 
                 {/* FAQs */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.faqSection')}</Text>
                     <View style={styles.faqContainer}>
                         {filteredFAQs.map((item, index) => (
                             <TouchableOpacity
@@ -177,7 +155,7 @@ export default function HelpRegisterUserScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -187,7 +165,7 @@ export default function HelpRegisterUserScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
@@ -196,7 +174,7 @@ export default function HelpRegisterUserScreen() {
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.guidesSection')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity

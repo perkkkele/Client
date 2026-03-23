@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useVoiceSearch } from "../../hooks/useVoiceSearch";
 import {
     ActivityIndicator,
     FlatList,
@@ -63,6 +64,11 @@ export default function CategoryResultsScreen() {
     const [selectedCategory, setSelectedCategory] = useState(category || "todos");
     const [sortBy, setSortBy] = useState<SortOption>("relevance");
     const [searchText, setSearchText] = useState(search || "");
+
+    // Voice search
+    const { isListening, toggleListening } = useVoiceSearch({
+        onResult: (text) => setSearchText(text),
+    });
 
     // GPS / proximity
     const { requestLocation, loading: gpsLoading, permissionDenied, moduleUnavailable } = useUserLocation(token);
@@ -394,14 +400,22 @@ export default function CategoryResultsScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.gray400} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder={t('directory.searchPlaceholder')}
-                            placeholderTextColor={COLORS.gray400}
+                            placeholder={isListening ? 'Escuchando...' : t('directory.searchPlaceholder')}
+                            placeholderTextColor={isListening ? '#ef4444' : COLORS.gray400}
                             value={searchText}
                             onChangeText={setSearchText}
+                            onSubmitEditing={() => loadProfessionals()}
+                            returnKeyType="search"
                         />
-                        <TouchableOpacity style={styles.micButton}>
-                            <MaterialIcons name="mic" size={20} color={COLORS.gray400} />
-                        </TouchableOpacity>
+                        {searchText.trim() ? (
+                            <TouchableOpacity style={styles.sendSearchButton} onPress={() => loadProfessionals()}>
+                                <MaterialIcons name="send" size={16} color="#137fec" />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity style={styles.micButton} onPress={toggleListening}>
+                                <MaterialIcons name={isListening ? "mic" : "mic-none"} size={20} color={isListening ? '#ef4444' : COLORS.gray400} />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* Category filter */}
@@ -808,6 +822,14 @@ const styles = StyleSheet.create({
     micButton: {
         width: 40,
         height: 40,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    sendSearchButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "#111418",
         alignItems: "center",
         justifyContent: "center",
     },

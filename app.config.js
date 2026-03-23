@@ -35,6 +35,13 @@ module.exports = () => {
         plugins: [
             ...(config.plugins || []),
             "expo-localization",
+            [
+                "expo-speech-recognition",
+                {
+                    "microphonePermission": "TwinPro necesita acceso al micrófono para la búsqueda por voz",
+                    "speechRecognitionPermission": "TwinPro necesita acceso al reconocimiento de voz para transcribir tu búsqueda"
+                }
+            ],
         ],
         android: {
             ...config.android,

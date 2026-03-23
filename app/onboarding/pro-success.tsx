@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FDE047",
@@ -30,6 +31,7 @@ const COLORS = {
 };
 
 export default function ProSuccessScreen() {
+    const { t } = useTranslation('onboarding');
     const floatAnim = useRef(new Animated.Value(0)).current;
     const popAnim = useRef(new Animated.Value(0)).current;
 
@@ -108,11 +110,11 @@ export default function ProSuccessScreen() {
                     {/* Title */}
                     <Animated.View style={{ transform: [{ scale: popAnim }], opacity: popAnim }}>
                         <Text style={styles.title}>
-                            ¡Todo listo para{"\n"}
-                            <Text style={styles.titleHighlight}>brillar!</Text>
+                            {t('proSuccess.titleLine1')}{"\n"}
+                            <Text style={styles.titleHighlight}>{t('proSuccess.titleHighlight')}</Text>
                         </Text>
                         <Text style={styles.subtitle}>
-                            Ahora tienes acceso a tu perfil completo y tu <Text style={styles.subtitleBold}>Gemelo Digital</Text> está activo 24/7.
+                            {t('proSuccess.subtitle')}<Text style={styles.subtitleBold}>{t('proSuccess.subtitleBold')}</Text>{t('proSuccess.subtitleEnd')}
                         </Text>
                     </Animated.View>
 
@@ -123,8 +125,8 @@ export default function ProSuccessScreen() {
                                 <MaterialIcons name="smart-toy" size={24} color={COLORS.accentBlue} />
                             </View>
                             <View style={styles.benefitContent}>
-                                <Text style={styles.benefitTitle}>Gemelo Digital Activo</Text>
-                                <Text style={styles.benefitSubtitle}>Interactúa con usuarios automáticamente</Text>
+                                <Text style={styles.benefitTitle}>{t('proSuccess.benefitTwinTitle')}</Text>
+                                <Text style={styles.benefitSubtitle}>{t('proSuccess.benefitTwinSubtitle')}</Text>
                             </View>
                         </View>
 
@@ -135,8 +137,8 @@ export default function ProSuccessScreen() {
                                 <MaterialIcons name="event-available" size={24} color={COLORS.accentGreen} />
                             </View>
                             <View style={styles.benefitContent}>
-                                <Text style={styles.benefitTitle}>Empieza a recibir citas</Text>
-                                <Text style={styles.benefitSubtitle}>Tu agenda se llena sola 24/7</Text>
+                                <Text style={styles.benefitTitle}>{t('proSuccess.benefitAppointmentsTitle')}</Text>
+                                <Text style={styles.benefitSubtitle}>{t('proSuccess.benefitAppointmentsSubtitle')}</Text>
                             </View>
                         </View>
 
@@ -147,8 +149,8 @@ export default function ProSuccessScreen() {
                                 <MaterialIcons name="visibility" size={24} color={COLORS.accentPurple} />
                             </View>
                             <View style={styles.benefitContent}>
-                                <Text style={styles.benefitTitle}>Visibilidad Aumentada</Text>
-                                <Text style={styles.benefitSubtitle}>Los usuarios te encontrarán fácilmente</Text>
+                                <Text style={styles.benefitTitle}>{t('proSuccess.benefitVisibilityTitle')}</Text>
+                                <Text style={styles.benefitSubtitle}>{t('proSuccess.benefitVisibilitySubtitle')}</Text>
                             </View>
                         </View>
                     </View>
@@ -161,7 +163,7 @@ export default function ProSuccessScreen() {
                         onPress={handleGoToDashboard}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.dashboardButtonText}>Ir a mi Área personal Pro</Text>
+                        <Text style={styles.dashboardButtonText}>{t('proSuccess.goToDashboard')}</Text>
                         <View style={styles.dashboardButtonIcon}>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </View>

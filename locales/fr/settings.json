@@ -1193,5 +1193,275 @@
         "menuContactSupport": "Contacter le support",
         "menuSendFeedback": "Envoyer des commentaires",
         "menuTermsPrivacy": "Conditions et Politique de confidentialité"
+    },
+    "subscriptionCancel": {
+        "title": "Processus annulé",
+        "message": "Vous avez annulé le processus d'abonnement. Aucun frais n'a été facturé.",
+        "subMessage": "Vous pouvez réessayer quand vous le souhaitez.",
+        "viewPlans": "Voir les forfaits",
+        "goToDashboard": "Aller au tableau de bord"
+    },
+    "subscriptionSuccess": {
+        "title": "Abonnement activé !",
+        "message": "Votre forfait a été activé avec succès. Vous avez désormais accès à toutes les fonctionnalités incluses.",
+        "subMessage": "Votre abonnement sera renouvelé automatiquement chaque mois.",
+        "viewPlan": "Voir mon forfait",
+        "goToDashboard": "Aller au tableau de bord"
+    },
+    "twinDisclaimer": {
+        "headerTitle": "Portée et limites",
+        "professionalFallback": "le professionnel",
+        "professionFallback": "Professionnel",
+        "defaultDisclaimer": "Les réponses fournies par cet assistant virtuel sont à titre informatif et indicatif. Elles ne remplacent pas les conseils professionnels spécialisés. Les informations peuvent nécessiter une mise à jour ou une adaptation à votre situation spécifique. Consultez toujours des professionnels qualifiés pour prendre des décisions importantes.",
+        "disclaimerTitle": "Clause de non-responsabilité",
+        "infoNote": "Ce texte a été fourni par {{name}} pour établir les conditions et limites du service de son jumeau numérique.",
+        "helpTitle": "Qu'est-ce que cela signifie ?",
+        "helpItem1": "Vous interagissez avec un assistant virtuel basé sur l'IA",
+        "helpItem2": "Les réponses sont indicatives et ne remplacent pas le professionnel",
+        "helpItem3": "Vous pouvez demander à parler avec le professionnel à tout moment",
+        "legalTitle": "MENTIONS LÉGALES",
+        "legalText": "Ce document détaille les conditions juridiques, responsabilités et limitations d'utilisation de la plateforme TwinPro. L'utilisation de la plateforme implique l'acceptation de tous les termes décrits ici.",
+        "legalLink": "Voir le document complet",
+        "understood": "Compris"
+    },
+    "bookAppointment": {
+        "headerTitle": "Prendre rendez-vous",
+        "headerSubtitle": "avec {{name}}",
+        "professionalFallback": "Professionnel",
+        "appointmentType": "Type de rendez-vous",
+        "videoCall": "Appel vidéo",
+        "inPerson": "En personne",
+        "selectDate": "Sélectionner la date",
+        "availableSlots": "Créneaux disponibles",
+        "loadingSlots": "Chargement des créneaux...",
+        "noSlots": "Aucun créneau disponible pour cette date",
+        "rates": "Tarifs du professionnel",
+        "noRates": "Ce professionnel n'a pas configuré de tarifs pour ce type de rendez-vous.",
+        "consultLabel": "Consultation {{duration}} min",
+        "defaultDuration": "Durée par défaut",
+        "briefConsult": "Consultation brève",
+        "fullConsult": "Consultation complète",
+        "confirmButton": "Confirmer le rendez-vous",
+        "termsNotice": "En confirmant, vous acceptez les conditions générales de la consultation.",
+        "fiscalNotice": "Le service est fourni par {{name}}. Pour demander une facture, contactez directement le professionnel. TwinPro agit en tant qu'intermédiaire de paiement.",
+        "alertSelectDateTime": "Veuillez sélectionner une date et une heure",
+        "alertAppointmentBooked": "Rendez-vous pris !",
+        "alertContinue": "Continuer",
+        "alertPaymentError": "Impossible d'ouvrir le lien de paiement",
+        "alertPaymentInitError": "Impossible de démarrer le paiement. Vous pourrez payer depuis les détails du rendez-vous.",
+        "alertInPersonBooked": "Votre rendez-vous en personne a été réservé. Vous paierez directement le professionnel lors de votre visite.",
+        "alertBookingError": "Impossible de prendre le rendez-vous. Veuillez réessayer.",
+        "weekdays": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+        "weekdaysSunFirst": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+        "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+        "navChats": "Discussions",
+        "navDirectory": "Annuaire",
+        "navFavorites": "Favoris",
+        "navSettings": "Paramètres"
+    },
+    "professionalProfile": {
+        "headerTitle": "Profil du professionnel",
+        "notFound": "Professionnel introuvable",
+        "goBack": "Retour",
+        "professionFallback": "Professionnel",
+        "reviewsCount": "({{count}} avis)",
+        "appointmentsUnavailable": "Rendez-vous non disponibles",
+        "understood": "Compris",
+        "verifiedTitle": "✓ Professionnel vérifié",
+        "verifiedMessage": "Ce professionnel a vérifié son activité professionnelle par déclaration sur l'honneur.\n\nTwinPro a vérifié son identité et sa profession pour vous offrir une expérience sûre et fiable.",
+        "verifiedBadge": "Professionnel vérifié",
+        "startChat": "Démarrer le chat",
+        "bookAppointment": "Prendre rendez-vous",
+        "aboutTitle": "À PROPOS",
+        "noBio": "Ce professionnel n'a pas encore ajouté de description.",
+        "specialties": "Spécialités",
+        "contactTitle": "COORDONNÉES",
+        "socialLinks": "Réseaux sociaux",
+        "locationTitle": "LOCALISATION",
+        "openInMaps": "Ouvrir dans Maps",
+        "scheduleTitle": "HORAIRES DE TRAVAIL",
+        "scheduleDays": {
+            "mon": "Lun",
+            "tue": "Mar",
+            "wed": "Mer",
+            "thu": "Jeu",
+            "fri": "Ven",
+            "sat": "Sam",
+            "sun": "Dim"
+        },
+        "reviewsSection": "Avis des clients",
+        "reviewSingular": "avis",
+        "reviewPlural": "avis",
+        "beFirstToReview": "Soyez le premier à donner votre avis",
+        "viewAllReviews": "Voir tous les avis",
+        "writeReview": "Écrire un avis",
+        "navChats": "Discussions",
+        "navDirectory": "Annuaire",
+        "navFavorites": "Favoris",
+        "navSettings": "Paramètres"
+    },
+    "avatarChat": {
+        "professionFallback": "Professionnel",
+        "infoBubble": {
+            "profile": {
+                "title": "À propos de moi",
+                "content": "Spécialiste avec plus de 15 ans d'expérience. Formé dans les meilleures institutions. Engagé pour votre bien-être."
+            },
+            "contact": {
+                "title": "Contact",
+                "content": "Disponible du lundi au vendredi de 9h00 à 18h00. Réponse garantie en moins de 24 heures."
+            },
+            "location": {
+                "title": "Localisation",
+                "content": "Cabinet principal au Centre Médical. Également disponible pour des consultations en ligne depuis n'importe où."
+            },
+            "share": {
+                "title": "Partager",
+                "content": "Partagez ce profil avec des amis ou de la famille qui pourraient bénéficier d'une consultation professionnelle."
+            },
+            "private": {
+                "title": "Conversation Privée",
+                "subtitle": "Mode incognito",
+                "content": "En activant cette option, les messages de cette session n'apparaîtront pas dans l'historique, offrant une sécurité et une confidentialité maximales."
+            },
+            "appointments": {
+                "title": "Prendre Rendez-vous",
+                "content": "Planifiez un rendez-vous avec le professionnel pour une consultation en personne ou virtuelle."
+            },
+            "escalation": {
+                "title": "Attention personnalisée",
+                "subtitle": "avec le professionnel",
+                "content": "Le jumeau offre une aide immédiate. Lors de l'escalade, la session sera mise en pause et la réponse peut ne pas être immédiate."
+            },
+            "escalationKeyword": {
+                "title": "Pour m'assurer de vous aider de la meilleure façon possible…",
+                "content": "Souhaitez-vous parler directement avec le professionnel ?\n\nD'après ce que vous dites, ce sujet peut nécessiter une attention humaine.\n\nVous pouvez continuer à parler avec le jumeau numérique ou, si vous le souhaitez, escalader la conversation. Gardez à l'esprit que la réponse du professionnel peut ne pas être immédiate.\n\nPour une attention directe, vous pouvez également prendre rendez-vous."
+            },
+            "viewFullProfile": "Voir le profil complet"
+        },
+        "viewFullProfile": "Voir le profil complet",
+        "clearHistory": {
+            "title": "Effacer tout l'historique",
+            "message": "Êtes-vous sûr de vouloir supprimer toutes les conversations ? Cette action est irréversible.",
+            "cancel": "Annuler",
+            "confirm": "Tout supprimer",
+            "error": "Impossible d'effacer l'historique"
+        },
+        "conversationTitle": "Conversation {{index}}",
+        "noMessages": "Aucun message",
+        "dateToday": "Aujourd'hui",
+        "dateYesterday": "Hier",
+        "dayNames": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+        "chip": {
+            "live": "👤 EN DIRECT",
+            "contacting": "Contact en cours...",
+            "contactProfessional": "Contacter le professionnel"
+        },
+        "pause": {
+            "label": "EN PAUSE",
+            "hint": "Appuyez pour reprendre",
+            "messagePaused": "⏸️ La communication est en pause. Appuyez sur la vidéo pour reprendre."
+        },
+        "session": {
+            "connecting": "Connexion à l'avatar...",
+            "liveBadge": "EN DIRECT",
+            "connectionError": "Erreur de connexion",
+            "retry": "Réessayer",
+            "errorNoAvatar": "Le professionnel n'a pas d'avatar configuré",
+            "errorSyncFailed": "Erreur de synchronisation du jumeau numérique",
+            "errorNoContext": "Le jumeau numérique n'est pas entièrement configuré. Le contexte est manquant.",
+            "errorConnect": "Erreur de connexion à l'avatar",
+            "errorConnecting": "Erreur de connexion à l'avatar"
+        },
+        "personalAttention": {
+            "title": "Attention personnelle",
+            "text": "Ce professionnel a choisi de traiter personnellement les consultations. Vous pouvez écrire votre message et il vous répondra dès que possible.",
+            "bookAppointment": "Prendre rendez-vous"
+        },
+        "sessionExpired": {
+            "title": "Votre temps avec le jumeau numérique est terminé",
+            "text": "Vous avez utilisé tout le temps disponible dans cette session. Si votre question n'a pas été résolue, vous pouvez l'envoyer directement au professionnel.",
+            "sendToProfessional": "Envoyer au professionnel",
+            "bookAppointment": "Prendre un rendez-vous",
+            "resolved": "Ma question a été résolue"
+        },
+        "mute": {
+            "audioMuted": "Audio coupé",
+            "tapToEnable": "Appuyez pour activer"
+        },
+        "disclaimer": {
+            "text": "Les réponses de ce jumeau numérique sont à titre informatif.",
+            "link": "Consultez la portée et les limites du jumeau numérique"
+        },
+        "minimized": {
+            "tapToExpand": "Appuyez pour agrandir"
+        },
+        "contact": {
+            "mobile": "Mobile",
+            "callNow": "APPELER MAINTENANT",
+            "email": "E-mail",
+            "website": "Site Web",
+            "socialLinks": "Réseaux Sociaux",
+            "addressUnavailable": "Adresse non disponible",
+            "getDirections": "Itinéraire",
+            "call": "Appeler",
+            "openInMaps": "Ouvrir dans Maps",
+            "open": "Ouvert",
+            "loadingMap": "Chargement de la carte..."
+        },
+        "share": {
+            "recommend": "👋 Je vous recommande de voir ceci",
+            "talkToTwin": "Vous pouvez parler avec son jumeau numérique ici 👇",
+            "talkToTwinShort": "Vous pouvez parler avec son jumeau numérique ici."
+        },
+        "appointment": {
+            "title": "Prendre Rendez-vous",
+            "schedule": "Horaire : {{start}} - {{end}}",
+            "loadingSlots": "Chargement des créneaux...",
+            "noSlots": "Aucun créneau disponible",
+            "continue": "CONTINUER",
+            "selectTypeInfo": "Sélectionnez le type de rendez-vous et la durée sur l'écran suivant."
+        },
+        "escalation": {
+            "whatToDo": "Que souhaitez-vous faire ?",
+            "bookAppointment": "Prendre un rendez-vous",
+            "bookAppointmentWithPro": "Prendre rendez-vous avec le professionnel",
+            "escalateAndWait": "Escalader et attendre la réponse",
+            "escalateKeywordAndWait": "Escalader la conversation et attendre la réponse",
+            "continueWithTwin": "Continuer avec le jumeau numérique",
+            "escalated": "📞 Conversation escaladée. Le jumeau est en pause pendant que vous attendez le professionnel.",
+            "escalateError": "⚠️ Impossible de contacter le professionnel. Veuillez réessayer.",
+            "cancelledResume": "✓ Vous avez repris la conversation avec le jumeau numérique.",
+            "waitingForPro": "En attente du professionnel...",
+            "backToTwin": "Retour au jumeau",
+            "proJoiningSoon": "Le professionnel vous rejoindra bientôt"
+        },
+        "errors": {
+            "processingError": "Erreur lors du traitement de votre message. Veuillez réessayer.",
+            "sendError": "Erreur lors de l'envoi du message à l'avatar. Veuillez réessayer.",
+            "avatarNotConnected": "L'avatar n'est pas connecté. Attendez que la connexion soit établie."
+        },
+        "farewell": "Rendez-vous réservé ! Ce fut un plaisir, à bientôt. 😊",
+        "proBadge": "Professionnel",
+        "todaySeparator": "Aujourd'hui",
+        "inputPlaceholder": "Écrivez un message...",
+        "drawer": {
+            "title": "Conversations",
+            "searchPlaceholder": "Rechercher des conversations...",
+            "newConversation": "Nouvelle Conversation",
+            "loadingHistory": "Chargement de l'historique...",
+            "noConversations": "Aucune conversation",
+            "noConversationsHint": "Vos conversations avec ce professionnel apparaîtront ici",
+            "privateMode": "Mode privé · Cette conversation ne sera pas sauvegardée",
+            "reportProblem": "Signaler un problème",
+            "clearAll": "Effacer tout l'historique"
+        },
+        "voice": {
+            "processing": "Traitement...",
+            "listening": "Écoute...",
+            "ready": "Prêt à écouter",
+            "voiceConnecting": "Connexion...",
+            "appointmentProposal": "Proposition de rendez-vous : {{date}} à {{time}}"
+        }
     }
 }

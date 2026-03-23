@@ -1193,5 +1193,275 @@
         "menuContactSupport": "Support kontaktieren",
         "menuSendFeedback": "Feedback senden",
         "menuTermsPrivacy": "AGB und Datenschutzrichtlinie"
+    },
+    "subscriptionCancel": {
+        "title": "Vorgang abgebrochen",
+        "message": "Sie haben den Abonnementvorgang abgebrochen. Es wurden keine Gebühren erhoben.",
+        "subMessage": "Sie können es jederzeit erneut versuchen.",
+        "viewPlans": "Pläne ansehen",
+        "goToDashboard": "Zum Dashboard"
+    },
+    "subscriptionSuccess": {
+        "title": "Abonnement aktiviert!",
+        "message": "Ihr Plan wurde erfolgreich aktiviert. Sie haben jetzt Zugang zu allen enthaltenen Funktionen.",
+        "subMessage": "Ihr Abonnement wird jeden Monat automatisch verlängert.",
+        "viewPlan": "Meinen Plan ansehen",
+        "goToDashboard": "Zum Dashboard"
+    },
+    "twinDisclaimer": {
+        "headerTitle": "Umfang und Grenzen",
+        "professionalFallback": "der Fachmann",
+        "professionFallback": "Fachmann",
+        "defaultDisclaimer": "Die Antworten dieses virtuellen Assistenten dienen ausschließlich der Information und Orientierung. Sie ersetzen keine spezialisierte professionelle Beratung. Die Informationen können eine Aktualisierung oder Anpassung an Ihre spezifische Situation erfordern. Konsultieren Sie stets qualifizierte Fachleute für wichtige Entscheidungen.",
+        "disclaimerTitle": "Haftungsausschluss",
+        "infoNote": "Dieser Text wurde von {{name}} bereitgestellt, um die Bedingungen und Grenzen des Dienstes seines digitalen Zwillings festzulegen.",
+        "helpTitle": "Was bedeutet das?",
+        "helpItem1": "Sie interagieren mit einem KI-basierten virtuellen Assistenten",
+        "helpItem2": "Antworten dienen der Orientierung und ersetzen nicht den Fachmann",
+        "helpItem3": "Sie können jederzeit darum bitten, mit dem Fachmann zu sprechen",
+        "legalTitle": "RECHTSHINWEIS",
+        "legalText": "Dieses Dokument beschreibt die rechtlichen Bedingungen, Verantwortlichkeiten und Nutzungseinschränkungen der TwinPro-Plattform. Die Nutzung der Plattform impliziert die Akzeptanz aller hier beschriebenen Bedingungen.",
+        "legalLink": "Vollständiges Dokument ansehen",
+        "understood": "Verstanden"
+    },
+    "bookAppointment": {
+        "headerTitle": "Termin buchen",
+        "headerSubtitle": "mit {{name}}",
+        "professionalFallback": "Fachmann",
+        "appointmentType": "Terminart",
+        "videoCall": "Videoanruf",
+        "inPerson": "Vor Ort",
+        "selectDate": "Datum auswählen",
+        "availableSlots": "Verfügbare Zeitfenster",
+        "loadingSlots": "Zeitfenster werden geladen...",
+        "noSlots": "Keine Zeitfenster für dieses Datum verfügbar",
+        "rates": "Preise des Fachmanns",
+        "noRates": "Dieser Fachmann hat keine Preise für diese Terminart konfiguriert.",
+        "consultLabel": "Beratung {{duration}} Min.",
+        "defaultDuration": "Standarddauer",
+        "briefConsult": "Kurze Beratung",
+        "fullConsult": "Vollständige Beratung",
+        "confirmButton": "Termin bestätigen",
+        "termsNotice": "Mit der Bestätigung akzeptieren Sie die Allgemeinen Geschäftsbedingungen der Beratung.",
+        "fiscalNotice": "Der Service wird von {{name}} erbracht. Für eine Rechnung kontaktieren Sie den Fachmann direkt. TwinPro fungiert als Zahlungsvermittler.",
+        "alertSelectDateTime": "Bitte wählen Sie ein Datum und eine Uhrzeit",
+        "alertAppointmentBooked": "Termin gebucht!",
+        "alertContinue": "Weiter",
+        "alertPaymentError": "Der Zahlungslink konnte nicht geöffnet werden",
+        "alertPaymentInitError": "Zahlung konnte nicht gestartet werden. Sie können über die Termindetails bezahlen.",
+        "alertInPersonBooked": "Ihr Vor-Ort-Termin wurde gebucht. Sie zahlen direkt beim Fachmann vor Ort.",
+        "alertBookingError": "Der Termin konnte nicht gebucht werden. Bitte versuchen Sie es erneut.",
+        "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+        "weekdaysSunFirst": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+        "months": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+        "navChats": "Chats",
+        "navDirectory": "Verzeichnis",
+        "navFavorites": "Favoriten",
+        "navSettings": "Einstellungen"
+    },
+    "professionalProfile": {
+        "headerTitle": "Profil des Fachmanns",
+        "notFound": "Fachmann nicht gefunden",
+        "goBack": "Zurück",
+        "professionFallback": "Fachmann",
+        "reviewsCount": "({{count}} Bewertungen)",
+        "appointmentsUnavailable": "Termine nicht verfügbar",
+        "understood": "Verstanden",
+        "verifiedTitle": "✓ Verifizierter Fachmann",
+        "verifiedMessage": "Dieser Fachmann hat seine berufliche Tätigkeit durch eine eidesstattliche Erklärung verifiziert.\n\nTwinPro hat seine Identität und seinen Beruf überprüft, um Ihnen ein sicheres und zuverlässiges Erlebnis zu bieten.",
+        "verifiedBadge": "Verifizierter Fachmann",
+        "startChat": "Chat starten",
+        "bookAppointment": "Termin buchen",
+        "aboutTitle": "ÜBER MICH",
+        "noBio": "Dieser Fachmann hat noch keine Beschreibung hinzugefügt.",
+        "specialties": "Fachgebiete",
+        "contactTitle": "KONTAKTDATEN",
+        "socialLinks": "Soziale Medien",
+        "locationTitle": "STANDORT",
+        "openInMaps": "In Maps öffnen",
+        "scheduleTitle": "ARBEITSZEITEN",
+        "scheduleDays": {
+            "mon": "Mo",
+            "tue": "Di",
+            "wed": "Mi",
+            "thu": "Do",
+            "fri": "Fr",
+            "sat": "Sa",
+            "sun": "So"
+        },
+        "reviewsSection": "Kundenbewertungen",
+        "reviewSingular": "Bewertung",
+        "reviewPlural": "Bewertungen",
+        "beFirstToReview": "Seien Sie der Erste, der bewertet",
+        "viewAllReviews": "Alle Bewertungen ansehen",
+        "writeReview": "Eine Bewertung schreiben",
+        "navChats": "Chats",
+        "navDirectory": "Verzeichnis",
+        "navFavorites": "Favoriten",
+        "navSettings": "Einstellungen"
+    },
+    "avatarChat": {
+        "professionFallback": "Fachmann",
+        "infoBubble": {
+            "profile": {
+                "title": "Über mich",
+                "content": "Spezialist mit über 15 Jahren Erfahrung. Ausgebildet an Top-Institutionen. Engagiert für Ihr Wohlbefinden."
+            },
+            "contact": {
+                "title": "Kontakt",
+                "content": "Verfügbar von Montag bis Freitag von 9:00 bis 18:00 Uhr. Garantierte Antwort innerhalb von 24 Stunden."
+            },
+            "location": {
+                "title": "Standort",
+                "content": "Hauptpraxis im medizinischen Zentrum. Auch für Online-Konsultationen von überall verfügbar."
+            },
+            "share": {
+                "title": "Teilen",
+                "content": "Teilen Sie dieses Profil mit Freunden oder Familie, die von einer professionellen Beratung profitieren könnten."
+            },
+            "private": {
+                "title": "Privates Gespräch",
+                "subtitle": "Inkognito-Modus",
+                "content": "Durch das Aktivieren dieser Option erscheinen Nachrichten dieser Sitzung nicht im Verlauf und bieten maximale Sicherheit und Privatsphäre."
+            },
+            "appointments": {
+                "title": "Termin buchen",
+                "content": "Vereinbaren Sie einen Termin mit dem Fachmann für eine persönliche oder virtuelle Beratung."
+            },
+            "escalation": {
+                "title": "Persönliche Betreuung",
+                "subtitle": "mit dem Fachmann",
+                "content": "Der Zwilling bietet sofortige Hilfe. Bei einer Eskalation wird die Sitzung pausiert und die Antwort ist möglicherweise nicht sofort."
+            },
+            "escalationKeyword": {
+                "title": "Um sicherzustellen, dass ich Ihnen bestmöglich helfe…",
+                "content": "Möchten Sie direkt mit dem Fachmann sprechen?\n\nBasierend auf dem, was Sie sagen, erfordert dieses Thema möglicherweise menschliche Aufmerksamkeit.\n\nSie können weiter mit dem digitalen Zwilling sprechen oder, wenn Sie möchten, das Gespräch eskalieren. Beachten Sie, dass die Antwort des Fachmanns möglicherweise nicht sofort erfolgt.\n\nFür direkte Betreuung können Sie auch einen Termin buchen."
+            },
+            "viewFullProfile": "Vollständiges Profil ansehen"
+        },
+        "viewFullProfile": "Vollständiges Profil ansehen",
+        "clearHistory": {
+            "title": "Gesamten Verlauf löschen",
+            "message": "Sind Sie sicher, dass Sie alle Gespräche löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "cancel": "Abbrechen",
+            "confirm": "Alle löschen",
+            "error": "Verlauf konnte nicht gelöscht werden"
+        },
+        "conversationTitle": "Gespräch {{index}}",
+        "noMessages": "Keine Nachrichten",
+        "dateToday": "Heute",
+        "dateYesterday": "Gestern",
+        "dayNames": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+        "chip": {
+            "live": "👤 LIVE",
+            "contacting": "Verbindungsaufbau...",
+            "contactProfessional": "Fachmann kontaktieren"
+        },
+        "pause": {
+            "label": "PAUSIERT",
+            "hint": "Tippen zum Fortsetzen",
+            "messagePaused": "⏸️ Die Kommunikation ist pausiert. Tippen Sie auf das Video zum Fortsetzen."
+        },
+        "session": {
+            "connecting": "Verbindung zum Avatar...",
+            "liveBadge": "LIVE",
+            "connectionError": "Verbindungsfehler",
+            "retry": "Erneut versuchen",
+            "errorNoAvatar": "Der Fachmann hat keinen Avatar konfiguriert",
+            "errorSyncFailed": "Fehler bei der Synchronisierung des digitalen Zwillings",
+            "errorNoContext": "Der digitale Zwilling ist nicht vollständig konfiguriert. Der Kontext fehlt.",
+            "errorConnect": "Fehler bei der Verbindung zum Avatar",
+            "errorConnecting": "Fehler bei der Verbindung zum Avatar"
+        },
+        "personalAttention": {
+            "title": "Persönliche Betreuung",
+            "text": "Dieser Fachmann hat sich entschieden, Anfragen persönlich zu bearbeiten. Sie können Ihre Nachricht schreiben und er wird so schnell wie möglich antworten.",
+            "bookAppointment": "Termin buchen"
+        },
+        "sessionExpired": {
+            "title": "Ihre Zeit mit dem digitalen Zwilling ist abgelaufen",
+            "text": "Sie haben die gesamte verfügbare Zeit in dieser Sitzung verbraucht. Wenn Ihre Frage nicht beantwortet wurde, können Sie sie direkt an den Fachmann senden.",
+            "sendToProfessional": "An Fachmann senden",
+            "bookAppointment": "Einen Termin buchen",
+            "resolved": "Meine Frage wurde beantwortet"
+        },
+        "mute": {
+            "audioMuted": "Audio stummgeschaltet",
+            "tapToEnable": "Tippen zum Aktivieren"
+        },
+        "disclaimer": {
+            "text": "Die Antworten dieses digitalen Zwillings dienen nur zu Informationszwecken.",
+            "link": "Umfang und Grenzen des digitalen Zwillings anzeigen"
+        },
+        "minimized": {
+            "tapToExpand": "Tippen zum Vergrößern"
+        },
+        "contact": {
+            "mobile": "Mobil",
+            "callNow": "JETZT ANRUFEN",
+            "email": "E-Mail",
+            "website": "Website",
+            "socialLinks": "Soziale Medien",
+            "addressUnavailable": "Adresse nicht verfügbar",
+            "getDirections": "Route berechnen",
+            "call": "Anrufen",
+            "openInMaps": "In Maps öffnen",
+            "open": "Geöffnet",
+            "loadingMap": "Karte wird geladen..."
+        },
+        "share": {
+            "recommend": "👋 Ich empfehle Ihnen, sich das anzuschauen",
+            "talkToTwin": "Sie können mit seinem digitalen Zwilling hier sprechen 👇",
+            "talkToTwinShort": "Sie können mit seinem digitalen Zwilling hier sprechen."
+        },
+        "appointment": {
+            "title": "Termin buchen",
+            "schedule": "Zeitplan: {{start}} - {{end}}",
+            "loadingSlots": "Zeitfenster werden geladen...",
+            "noSlots": "Keine Zeitfenster verfügbar",
+            "continue": "WEITER",
+            "selectTypeInfo": "Wählen Sie den Termintyp und die Dauer auf dem nächsten Bildschirm."
+        },
+        "escalation": {
+            "whatToDo": "Was möchten Sie tun?",
+            "bookAppointment": "Einen Termin buchen",
+            "bookAppointmentWithPro": "Termin beim Fachmann buchen",
+            "escalateAndWait": "Eskalieren und auf Antwort warten",
+            "escalateKeywordAndWait": "Gespräch eskalieren und auf Antwort warten",
+            "continueWithTwin": "Mit dem digitalen Zwilling fortfahren",
+            "escalated": "📞 Gespräch eskaliert. Der Zwilling ist pausiert, während Sie auf den Fachmann warten.",
+            "escalateError": "⚠️ Der Fachmann konnte nicht kontaktiert werden. Bitte versuchen Sie es erneut.",
+            "cancelledResume": "✓ Sie haben das Gespräch mit dem digitalen Zwilling wieder aufgenommen.",
+            "waitingForPro": "Warten auf Fachmann...",
+            "backToTwin": "Zurück zum Zwilling",
+            "proJoiningSoon": "Der Fachmann wird bald beitreten"
+        },
+        "errors": {
+            "processingError": "Fehler bei der Verarbeitung Ihrer Nachricht. Bitte versuchen Sie es erneut.",
+            "sendError": "Fehler beim Senden der Nachricht an den Avatar. Bitte versuchen Sie es erneut.",
+            "avatarNotConnected": "Avatar nicht verbunden. Warten Sie, bis die Verbindung hergestellt ist."
+        },
+        "farewell": "Termin gebucht! Es war mir ein Vergnügen, bis bald. 😊",
+        "proBadge": "Fachmann",
+        "todaySeparator": "Heute",
+        "inputPlaceholder": "Nachricht schreiben...",
+        "drawer": {
+            "title": "Gespräche",
+            "searchPlaceholder": "Gespräche suchen...",
+            "newConversation": "Neues Gespräch",
+            "loadingHistory": "Verlauf wird geladen...",
+            "noConversations": "Keine Gespräche",
+            "noConversationsHint": "Ihre Gespräche mit diesem Fachmann werden hier angezeigt",
+            "privateMode": "Privater Modus · Dieses Gespräch wird nicht gespeichert",
+            "reportProblem": "Problem melden",
+            "clearAll": "Gesamten Verlauf löschen"
+        },
+        "voice": {
+            "processing": "Verarbeitung...",
+            "listening": "Zuhören...",
+            "ready": "Bereit zum Zuhören",
+            "voiceConnecting": "Verbindung...",
+            "appointmentProposal": "Terminvorschlag: {{date}} um {{time}}"
+        }
     }
 }

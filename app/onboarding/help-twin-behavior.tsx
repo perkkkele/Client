@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFED00",
@@ -44,32 +45,16 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Qué es el objetivo del Gemelo?",
-        answer: "Es el propósito principal que quieres que tu gemelo cumpla. Por ejemplo: 'Atender consultas, agendar citas y responder FAQs'. Cuanto más claro sea, mejor responderá a tus clientes.",
-    },
-    {
-        question: "¿Qué significa el nivel de formalidad?",
-        answer: "'Muy cercano' usa un tono amigable (tuteo), 'Profesional' mantiene un equilibrio, y 'Muy formal' usa usted y lenguaje más distante. Elige según tu marca personal.",
-    },
-    {
-        question: "¿Qué es el nivel de profundidad?",
-        answer: "'Cortas' da respuestas breves y directas. 'Equilibradas' añade contexto útil. 'Detalladas' ofrece explicaciones completas. Depende de la complejidad de tu servicio.",
-    },
-    {
-        question: "¿Cómo funciona el tono emocional?",
-        answer: "'Empático' muestra comprensión y calidez. 'Neutro' es objetivo y factual. 'Directo' va al grano sin rodeos. El empático funciona bien en salud y coaching, el directo en legal y consultoría.",
-    },
-    {
-        question: "¿Qué son los guardarraíles?",
-        answer: "Son reglas de seguridad que controlan lo que tu gemelo puede y no puede hacer. Por ejemplo, puede 'Dar precios' pero no 'Dar consejos médicos'. Esto protege a ti y a tus clientes.",
-    },
-    {
-        question: "¿Puedo añadir mis propias reglas?",
-        answer: "Sí, puedes añadir acciones permitidas y restricciones personalizadas. Simplemente escribe en el campo correspondiente y presiona Enter. Puedes eliminarlas tocando la X.",
-    },
-];
+function getFaqItems(t: any): FAQItem[] {
+    return [
+        { question: t('helpTwinBehaviorFaq.q1'), answer: t('helpTwinBehaviorFaq.a1') },
+        { question: t('helpTwinBehaviorFaq.q2'), answer: t('helpTwinBehaviorFaq.a2') },
+        { question: t('helpTwinBehaviorFaq.q3'), answer: t('helpTwinBehaviorFaq.a3') },
+        { question: t('helpTwinBehaviorFaq.q4'), answer: t('helpTwinBehaviorFaq.a4') },
+        { question: t('helpTwinBehaviorFaq.q5'), answer: t('helpTwinBehaviorFaq.a5') },
+        { question: t('helpTwinBehaviorFaq.q6'), answer: t('helpTwinBehaviorFaq.a6') },
+    ];
+}
 
 interface GuideItem {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -77,27 +62,20 @@ interface GuideItem {
     duration: string;
 }
 
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "psychology",
-        title: "Personalidad ideal para tu profesión",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "security",
-        title: "Configurar guardarraíles efectivos",
-        duration: "1:30 min",
-    },
-    {
-        icon: "lightbulb",
-        title: "Ejemplos de objetivos bien definidos",
-        duration: "2 min de lectura",
-    },
-];
+function getGuideItems(t: any): GuideItem[] {
+    return [
+        { icon: "psychology", title: t('helpTwinBehaviorFaq.guide1Title'), duration: t('helpTwinBehaviorFaq.guide1Duration') },
+        { icon: "security", title: t('helpTwinBehaviorFaq.guide2Title'), duration: t('helpTwinBehaviorFaq.guide2Duration') },
+        { icon: "lightbulb", title: t('helpTwinBehaviorFaq.guide3Title'), duration: t('helpTwinBehaviorFaq.guide3Duration') },
+    ];
+}
 
 export default function HelpTwinBehaviorScreen() {
+    const { t } = useTranslation('onboarding');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+    const FAQ_ITEMS = getFaqItems(t);
+    const GUIDE_ITEMS = getGuideItems(t);
 
     function handleClose() {
         router.back();
@@ -125,13 +103,13 @@ export default function HelpTwinBehaviorScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda Comportamiento</Text>
+                    <Text style={styles.headerTitle}>{t('helpTwinBehavior.title')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Configura cómo responde tu Gemelo Digital y establece límites seguros.
+                    {t('helpTwinBehavior.subtitle')}
                 </Text>
             </View>
 
@@ -146,7 +124,7 @@ export default function HelpTwinBehaviorScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.primaryDark} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en la ayuda..."
+                            placeholder={t('helpCommon.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -167,7 +145,7 @@ export default function HelpTwinBehaviorScreen() {
 
                 {/* FAQs */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.faqSection')}</Text>
                     <View style={styles.faqContainer}>
                         {filteredFAQs.map((item, index) => (
                             <TouchableOpacity
@@ -194,7 +172,7 @@ export default function HelpTwinBehaviorScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -204,7 +182,7 @@ export default function HelpTwinBehaviorScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
@@ -213,7 +191,7 @@ export default function HelpTwinBehaviorScreen() {
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.guidesSection')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity

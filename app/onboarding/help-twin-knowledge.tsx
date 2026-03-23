@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFED00",
@@ -37,36 +38,17 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Para qué sirve la base de conocimientos?",
-        answer: "Es la información que tu Gemelo Digital usará para responder consultas. Cuanta más información relevante cargues, mejores respuestas dará a tus clientes.",
-    },
-    {
-        question: "¿Qué tipo de documentos puedo subir?",
-        answer: "Puedes subir archivos PDF, Word (DOC/DOCX) o texto plano (TXT) de hasta 10MB. También puedes añadir URLs de tu web o escribir contenido manualmente.",
-    },
-    {
-        question: "¿Qué son las categorías de conocimiento?",
-        answer: "Son áreas temáticas predefinidas: FAQs, Servicios, Precios, Políticas y Resolución de problemas. Organizar la info así ayuda al gemelo a dar respuestas más precisas.",
-    },
-    {
-        question: "¿Puedo añadir información manualmente?",
-        answer: "Sí, cada categoría tiene un botón 'Añadir Manual' para escribir directamente. Es útil para FAQs, listas de precios o políticas que no tengas en documento.",
-    },
-    {
-        question: "¿Qué diferencia hay entre URL y subir archivo?",
-        answer: "Con URL, el gemelo puede acceder a páginas web públicas. Con archivos, subes documentos privados. Ambos métodos son válidos y complementarios.",
-    },
-    {
-        question: "¿Puedo activar el gemelo sin subir documentos?",
-        answer: "Sí, pero tu gemelo tendrá información limitada. Recomendamos al menos completar FAQs y servicios para dar respuestas útiles a tus clientes.",
-    },
-    {
-        question: "¿Puedo actualizar la información después?",
-        answer: "Sí, puedes añadir, editar o eliminar documentos desde tu panel profesional en cualquier momento. Los cambios se aplican automáticamente.",
-    },
-];
+function getFaqItems(t: any): FAQItem[] {
+    return [
+        { question: t('helpTwinKnowledgeFaq.q1'), answer: t('helpTwinKnowledgeFaq.a1') },
+        { question: t('helpTwinKnowledgeFaq.q2'), answer: t('helpTwinKnowledgeFaq.a2') },
+        { question: t('helpTwinKnowledgeFaq.q3'), answer: t('helpTwinKnowledgeFaq.a3') },
+        { question: t('helpTwinKnowledgeFaq.q4'), answer: t('helpTwinKnowledgeFaq.a4') },
+        { question: t('helpTwinKnowledgeFaq.q5'), answer: t('helpTwinKnowledgeFaq.a5') },
+        { question: t('helpTwinKnowledgeFaq.q6'), answer: t('helpTwinKnowledgeFaq.a6') },
+        { question: t('helpTwinKnowledgeFaq.q7'), answer: t('helpTwinKnowledgeFaq.a7') },
+    ];
+}
 
 interface GuideItem {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -74,27 +56,20 @@ interface GuideItem {
     duration: string;
 }
 
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "upload-file",
-        title: "Cómo preparar tus documentos",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "quiz",
-        title: "Crear FAQs efectivas",
-        duration: "1:30 min",
-    },
-    {
-        icon: "attach-money",
-        title: "Estructurar tu lista de precios",
-        duration: "2 min de lectura",
-    },
-];
+function getGuideItems(t: any): GuideItem[] {
+    return [
+        { icon: "upload-file", title: t('helpTwinKnowledgeFaq.guide1Title'), duration: t('helpTwinKnowledgeFaq.guide1Duration') },
+        { icon: "quiz", title: t('helpTwinKnowledgeFaq.guide2Title'), duration: t('helpTwinKnowledgeFaq.guide2Duration') },
+        { icon: "attach-money", title: t('helpTwinKnowledgeFaq.guide3Title'), duration: t('helpTwinKnowledgeFaq.guide3Duration') },
+    ];
+}
 
 export default function HelpTwinKnowledgeScreen() {
+    const { t } = useTranslation('onboarding');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+    const FAQ_ITEMS = getFaqItems(t);
+    const GUIDE_ITEMS = getGuideItems(t);
 
     function handleClose() {
         router.back();
@@ -122,13 +97,13 @@ export default function HelpTwinKnowledgeScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda Base de Conocimiento</Text>
+                    <Text style={styles.headerTitle}>{t('helpTwinKnowledge.title')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Aprende a entrenar a tu Gemelo Digital con información relevante.
+                    {t('helpTwinKnowledge.subtitle')}
                 </Text>
             </View>
 
@@ -143,7 +118,7 @@ export default function HelpTwinKnowledgeScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.primaryDark} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en la ayuda..."
+                            placeholder={t('helpCommon.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -155,16 +130,16 @@ export default function HelpTwinKnowledgeScreen() {
                 <View style={styles.infoCard}>
                     <MaterialIcons name="tips-and-updates" size={24} color={COLORS.primaryDark} />
                     <View style={styles.infoContent}>
-                        <Text style={styles.infoTitle}>Consejo de entrenamiento</Text>
+                        <Text style={styles.infoTitle}>{t('helpTwinKnowledgeFaq.quickTipTitle')}</Text>
                         <Text style={styles.infoText}>
-                            Empieza con FAQs y precios. Son las preguntas más frecuentes de los clientes.
+                            {t('helpTwinKnowledgeFaq.quickTipText')}
                         </Text>
                     </View>
                 </View>
 
                 {/* FAQs */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.faqSection')}</Text>
                     <View style={styles.faqContainer}>
                         {filteredFAQs.map((item, index) => (
                             <TouchableOpacity
@@ -191,7 +166,7 @@ export default function HelpTwinKnowledgeScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -201,7 +176,7 @@ export default function HelpTwinKnowledgeScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
@@ -210,7 +185,7 @@ export default function HelpTwinKnowledgeScreen() {
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.guidesSection')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity

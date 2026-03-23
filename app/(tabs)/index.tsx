@@ -1,6 +1,7 @@
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState, useEffect, useMemo } from "react";
+import { useVoiceSearch } from "../../hooks/useVoiceSearch";
 import {
   ActivityIndicator,
   Image,
@@ -88,6 +89,11 @@ export default function TwinProHomeScreen() {
   const [searchResults, setSearchResults] = useState<Professional[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Voice search
+  const { isListening, toggleListening } = useVoiceSearch({
+    onResult: (text) => setSearchQuery(text),
+  });
 
   // Context menu state
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -410,24 +416,29 @@ export default function TwinProHomeScreen() {
             <MaterialIcons name="search" size={22} color={COLORS.gray} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('searchPlaceholder')}
-              placeholderTextColor={COLORS.gray}
+              placeholder={isListening ? t('listening') || 'Escuchando...' : t('searchPlaceholder')}
+              placeholderTextColor={isListening ? '#ef4444' : COLORS.gray}
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
             />
             {searchQuery.trim() ? (
-              <TouchableOpacity style={styles.filterButton} onPress={hasSearched ? clearSearch : handleSearch}>
-                <MaterialIcons
-                  name={hasSearched ? "close" : "arrow-forward"}
-                  size={20}
-                  color={hasSearched ? COLORS.gray : COLORS.primary}
-                />
-              </TouchableOpacity>
+              hasSearched ? (
+                <TouchableOpacity style={styles.filterButton} onPress={clearSearch}>
+                  <MaterialIcons name="close" size={20} color={COLORS.gray} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={styles.sendSearchButton} onPress={handleSearch}>
+                  <MaterialIcons name="send" size={18} color={COLORS.primary} />
+                </TouchableOpacity>
+              )
             ) : (
-              <TouchableOpacity style={styles.filterButton}>
-                <MaterialIcons name="tune" size={20} color={COLORS.gray} />
+              <TouchableOpacity
+                style={[styles.filterButton, isListening && styles.micListening]}
+                onPress={toggleListening}
+              >
+                <MaterialIcons name={isListening ? "mic" : "mic-none"} size={22} color={isListening ? '#ef4444' : COLORS.gray} />
               </TouchableOpacity>
             )}
           </View>
@@ -921,6 +932,17 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  sendSearchButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#111418",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  micListening: {
+    opacity: 1,
   },
 
   // Categories

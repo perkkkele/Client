@@ -23,6 +23,7 @@ import {
 } from "../../api/appointment";
 import { createCheckoutSession } from "../../api/payment";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -51,11 +52,7 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-const MONTHS = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-];
+// WEEKDAYS and MONTHS are now read from translation files
 
 // Format date to YYYY-MM-DD using LOCAL timezone (not UTC)
 function formatLocalDate(date: Date): string {
@@ -83,6 +80,9 @@ export default function BookAppointmentScreen() {
     }>();
     const { token, user } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
+    const WEEKDAYS = t('bookAppointment.weekdays', { returnObjects: true }) as string[];
+    const MONTHS = t('bookAppointment.months', { returnObjects: true }) as string[];
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -143,11 +143,11 @@ export default function BookAppointmentScreen() {
 
                 options.push({
                     id: duration <= 30 ? "30min" : "60min", // Map to ServiceType
-                    label: `Consulta ${duration} min`,
+                    label: t('bookAppointment.consultLabel', { duration }),
                     duration,
                     price: priceInCents,
-                    description: duration === defaultDuration ? "Duración por defecto" :
-                        (duration < 45 ? "Consulta breve" : "Consulta completa"),
+                    description: duration === defaultDuration ? t('bookAppointment.defaultDuration') :
+                        (duration < 45 ? t('bookAppointment.briefConsult') : t('bookAppointment.fullConsult')),
                 });
             }
         }
@@ -274,7 +274,7 @@ export default function BookAppointmentScreen() {
     const formatSelectedDate = () => {
         if (!selectedDate) return "";
         // getDay() returns 0=Sunday, so we need separate lookup
-        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        const dayNames = t('bookAppointment.weekdaysSunFirst', { returnObjects: true }) as string[];
         const dayName = dayNames[selectedDate.getDay()];
         const day = selectedDate.getDate();
         const month = MONTHS[selectedDate.getMonth()].substring(0, 3);
@@ -292,7 +292,7 @@ export default function BookAppointmentScreen() {
 
     const handleConfirmAppointment = async () => {
         if (!selectedDate || !selectedTime || !token || !professionalId) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor selecciona una fecha y hora' });
+            showAlert({ type: 'error', title: 'Error', message: t('bookAppointment.alertSelectDateTime') });
             return;
         }
 
@@ -326,30 +326,30 @@ export default function BookAppointmentScreen() {
                     if (canOpen) {
                         showAlert({
                             type: 'info',
-                            title: '¡Cita Agendada!',
+                            title: t('bookAppointment.alertAppointmentBooked'),
                             message: '',
-                            buttons: [{ text: "Continuar", onPress: () => Linking.openURL(session.url) }]
+                            buttons: [{ text: t('bookAppointment.alertContinue'), onPress: () => Linking.openURL(session.url) }]
                         });
                     } else {
-                        showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
+                        showAlert({ type: 'error', title: 'Error', message: t('bookAppointment.alertPaymentError') });
                         router.replace(`/appointment-details/${appointment._id}` as any);
                     }
                 } catch (payError: any) {
                     console.error("Payment error:", payError);
-                    showAlert({ type: 'error', title: 'Error', message: 'No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.' });
+                    showAlert({ type: 'error', title: 'Error', message: t('bookAppointment.alertPaymentInitError') });
                     router.replace(`/appointment-details/${appointment._id}` as any);
                 }
             } else {
                 // Pago in situ - el profesional cobra directamente
                 showAlert({
                     type: 'info',
-                    title: '¡Cita Agendada!',
-                    message: 'Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.',
+                    title: t('bookAppointment.alertAppointmentBooked'),
+                    message: t('bookAppointment.alertInPersonBooked'),
                     buttons: [{ text: "OK", onPress: () => router.replace(`/appointment-details/${appointment._id}` as any) }]
                 });
             }
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo agendar la cita. Inténtalo de nuevo." });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('bookAppointment.alertBookingError') });
         } finally {
             setIsSubmitting(false);
         }
@@ -420,8 +420,8 @@ export default function BookAppointmentScreen() {
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>Agendar Cita</Text>
-                    <Text style={styles.headerSubtitle}>con {displayName}</Text>
+                <Text style={styles.headerTitle}>{t('bookAppointment.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('bookAppointment.headerSubtitle', { name: displayName })}</Text>
                 </View>
                 <View style={styles.headerPlaceholder} />
             </View>
@@ -434,7 +434,7 @@ export default function BookAppointmentScreen() {
             >
                 {/* Appointment Type Selector */}
                 <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>Tipo de Cita</Text>
+                    <Text style={styles.sectionLabel}>{t('bookAppointment.appointmentType')}</Text>
                     <View style={styles.typeSelector}>
                         <TouchableOpacity
                             style={[
@@ -457,7 +457,7 @@ export default function BookAppointmentScreen() {
                                 styles.typeLabel,
                                 appointmentType === "videoconference" && styles.typeLabelSelected,
                             ]}>
-                                Videollamada
+                                {t('bookAppointment.videoCall')}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -481,7 +481,7 @@ export default function BookAppointmentScreen() {
                                 styles.typeLabel,
                                 appointmentType === "presencial" && styles.typeLabelSelected,
                             ]}>
-                                Presencial
+                                {t('bookAppointment.inPerson')}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -490,7 +490,7 @@ export default function BookAppointmentScreen() {
                 {/* Calendar Card */}
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
-                        <Text style={styles.sectionLabel}>Seleccionar Fecha</Text>
+                        <Text style={styles.sectionLabel}>{t('bookAppointment.selectDate')}</Text>
                         <View style={styles.monthNavigation}>
                             <TouchableOpacity style={styles.monthNavButton} onPress={handlePrevMonth}>
                                 <MaterialIcons name="chevron-left" size={24} color={COLORS.gray600} />
@@ -521,13 +521,13 @@ export default function BookAppointmentScreen() {
                 {selectedDate && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionLabel}>Horarios Disponibles</Text>
+                            <Text style={styles.sectionLabel}>{t('bookAppointment.availableSlots')}</Text>
                             <Text style={styles.sectionHint}>{formatSelectedDate()}</Text>
                         </View>
                         {isLoadingSlots ? (
                             <View style={styles.loadingSlotsContainer}>
                                 <ActivityIndicator size="small" color={COLORS.primary} />
-                                <Text style={styles.loadingSlotsText}>Cargando horarios...</Text>
+                                <Text style={styles.loadingSlotsText}>{t('bookAppointment.loadingSlots')}</Text>
                             </View>
                         ) : timeSlots.length > 0 ? (
                             <View style={styles.timeSlotsGrid}>
@@ -557,7 +557,7 @@ export default function BookAppointmentScreen() {
                         ) : (
                             <View style={styles.noSlotsContainer}>
                                 <MaterialIcons name="event-busy" size={32} color={COLORS.gray400} />
-                                <Text style={styles.noSlotsText}>No hay horarios disponibles para esta fecha</Text>
+                                <Text style={styles.noSlotsText}>{t('bookAppointment.noSlots')}</Text>
                             </View>
                         )}
                     </View>
@@ -565,13 +565,13 @@ export default function BookAppointmentScreen() {
 
                 {/* Rates/Service Selection Card */}
                 <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>Tarifas del Profesional</Text>
+                    <Text style={styles.sectionLabel}>{t('bookAppointment.rates')}</Text>
                     <View style={styles.ratesContainer}>
                         {SERVICE_OPTIONS.length === 0 ? (
                             <View style={{ padding: 24, alignItems: "center" }}>
                                 <MaterialIcons name="info-outline" size={32} color="#9CA3AF" />
                                 <Text style={{ fontSize: 14, color: "#6B7280", textAlign: "center", marginTop: 8 }}>
-                                    Este profesional no ha configurado tarifas para este tipo de cita.
+                                    {t('bookAppointment.noRates')}
                                 </Text>
                             </View>
                         ) : SERVICE_OPTIONS.map((service) => (
@@ -626,20 +626,20 @@ export default function BookAppointmentScreen() {
                     ) : (
                         <>
                             <MaterialIcons name="check-circle" size={22} color={COLORS.textMain} />
-                            <Text style={styles.confirmButtonText}>Confirmar Cita</Text>
+                            <Text style={styles.confirmButtonText}>{t('bookAppointment.confirmButton')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
 
                 <Text style={styles.termsText}>
-                    Al confirmar, aceptas los términos y condiciones de la consulta.
+                    {t('bookAppointment.termsNotice')}
                 </Text>
 
                 {/* Aviso fiscal para el cliente */}
                 <View style={styles.fiscalNotice}>
                     <MaterialIcons name="info-outline" size={14} color={COLORS.gray400} />
                     <Text style={styles.fiscalNoticeText}>
-                        El servicio es prestado por {displayName}. Para solicitar factura, contacta directamente con el profesional. TwinPro actúa como intermediario de pagos.
+                        {t('bookAppointment.fiscalNotice', { name: displayName })}
                     </Text>
                 </View>
 
@@ -651,19 +651,19 @@ export default function BookAppointmentScreen() {
             <View style={styles.bottomNav}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('bookAppointment.navChats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos" as any)}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('bookAppointment.navDirectory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('bookAppointment.navFavorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/settings")}>
                     <MaterialIcons name="settings" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Ajustes</Text>
+                    <Text style={styles.navLabel}>{t('bookAppointment.navSettings')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

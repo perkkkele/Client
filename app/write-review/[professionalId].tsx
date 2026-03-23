@@ -18,6 +18,7 @@ import { useAuth } from "../../context";
 import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -39,15 +40,15 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-const RATING_LABELS = ["", "Muy mala", "Mala", "Regular", "Buena", "Muy Buena"];
+const RATING_LABELS_KEYS = ["", "ratingLabels.1", "ratingLabels.2", "ratingLabels.3", "ratingLabels.4", "ratingLabels.5"];
 
-const TRAIT_TAGS = [
-    { id: "amable", label: "#Amable" },
-    { id: "experto", label: "#Experto" },
-    { id: "rapido", label: "#Rápido" },
-    { id: "claro", label: "#Claro" },
-    { id: "paciente", label: "#Paciente" },
-    { id: "divertido", label: "#Divertido" },
+const TRAIT_TAG_KEYS = [
+    { id: "amable", labelKey: "traitKind" },
+    { id: "experto", labelKey: "traitExpert" },
+    { id: "rapido", labelKey: "traitFast" },
+    { id: "claro", labelKey: "traitClear" },
+    { id: "paciente", labelKey: "traitPatient" },
+    { id: "divertido", labelKey: "traitFun" },
 ];
 
 const MAX_COMMENT_LENGTH = 300;
@@ -56,6 +57,7 @@ export default function WriteReviewScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('reviews');
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,17 +111,17 @@ export default function WriteReviewScreen() {
 
     const handleSubmit = async () => {
         if (!token) {
-            showAlert({ type: 'warning', title: 'Sesión requerida', message: 'Inicia sesión para poder publicar tu reseña.' });
+            showAlert({ type: 'warning', title: t('writeReview.alertSessionTitle'), message: t('writeReview.alertSessionMessage') });
             return;
         }
 
         if (rating === 0) {
-            showAlert({ type: 'warning', title: 'Valoración requerida', message: 'Selecciona una puntuación de estrellas antes de publicar.' });
+            showAlert({ type: 'warning', title: t('writeReview.alertRatingTitle'), message: t('writeReview.alertRatingMessage') });
             return;
         }
 
         if (comment.trim().length < 10) {
-            showAlert({ type: 'warning', title: 'Reseña muy corta', message: 'Escribe al menos 10 caracteres para que tu opinión sea útil.' });
+            showAlert({ type: 'warning', title: t('writeReview.alertShortTitle'), message: t('writeReview.alertShortMessage') });
             return;
         }
 
@@ -145,7 +147,7 @@ export default function WriteReviewScreen() {
             router.replace(`/review-success/${professionalId}?rating=${rating}&comment=${encodeURIComponent(comment)}&tags=${encodeURIComponent(tagsString)}`);
         } catch (error: any) {
             console.error("Error submitting review:", error);
-            showAlert({ type: 'error', title: 'No se pudo publicar', message: error.message || 'Ocurrió un problema al publicar tu reseña. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('writeReview.alertErrorTitle'), message: error.message || t('writeReview.alertErrorMessage') });
             setIsSubmitting(false);
         }
     };
@@ -181,9 +183,9 @@ export default function WriteReviewScreen() {
     if (!professional) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Profesional no encontrado</Text>
+                <Text style={styles.errorText}>{t('writeReview.notFound')}</Text>
                 <TouchableOpacity style={styles.backButtonError} onPress={handleBack}>
-                    <Text style={styles.backButtonErrorText}>Volver</Text>
+                    <Text style={styles.backButtonErrorText}>{t('writeReview.goBack')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -206,7 +208,7 @@ export default function WriteReviewScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Califica tu experiencia</Text>
+                    <Text style={styles.headerTitle}>{t('writeReview.headerTitle')}</Text>
                     <View style={{ width: 40 }} />
                 </View>
             </SafeAreaView>
@@ -236,19 +238,19 @@ export default function WriteReviewScreen() {
                     </View>
                     <Text style={styles.professionalName}>{displayName}</Text>
                     <Text style={styles.professionalProfession}>
-                        {professional.profession || "Profesional"}
+                        {professional.profession || t('writeReview.professionalFallback')}
                     </Text>
                 </View>
 
                 {/* Star Rating */}
                 <View style={styles.ratingSection}>
-                    <Text style={styles.sectionTitle}>Tu valoración</Text>
+                    <Text style={styles.sectionTitle}>{t('writeReview.yourRating')}</Text>
                     <View style={styles.starsContainer}>
                         {renderStars()}
                     </View>
                     {rating > 0 && (
                         <View style={styles.ratingLabelContainer}>
-                            <Text style={styles.ratingLabel}>{RATING_LABELS[rating]}</Text>
+                            <Text style={styles.ratingLabel}>{t(`writeReview.ratingLabels.${rating}`)}</Text>
                         </View>
                     )}
                 </View>
@@ -256,10 +258,10 @@ export default function WriteReviewScreen() {
                 {/* Trait Tags */}
                 <View style={styles.tagsSection}>
                     <Text style={styles.sectionTitleLeft}>
-                        ¿Qué define mejor a {firstName}?
+                        {t('writeReview.whatDefines', { name: firstName })}
                     </Text>
                     <View style={styles.tagsContainer}>
-                        {TRAIT_TAGS.map((tag) => (
+                        {TRAIT_TAG_KEYS.map((tag) => (
                             <TouchableOpacity
                                 key={tag.id}
                                 style={[
@@ -272,7 +274,7 @@ export default function WriteReviewScreen() {
                                     styles.tagText,
                                     selectedTags.has(tag.id) && styles.tagTextSelected
                                 ]}>
-                                    {tag.label}
+                                    {t(`writeReview.${tag.labelKey}`)}
                                 </Text>
                                 {selectedTags.has(tag.id) && (
                                     <MaterialIcons name="check" size={14} color={COLORS.textMain} />
@@ -301,7 +303,7 @@ export default function WriteReviewScreen() {
                             style={styles.commentInput}
                             value={comment}
                             onChangeText={setComment}
-                            placeholder="Escribe aquí tu reseña..."
+                            placeholder={t('writeReview.commentPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             multiline
                             maxLength={MAX_COMMENT_LENGTH}
@@ -310,7 +312,7 @@ export default function WriteReviewScreen() {
                         <View style={styles.commentFooter}>
                             <View style={styles.tipContainer}>
                                 <MaterialIcons name="lightbulb" size={14} color={COLORS.primary} />
-                                <Text style={styles.tipText}>Tu opinión constructiva ayuda a otros ✨</Text>
+                                <Text style={styles.tipText}>{t('writeReview.tipText')}</Text>
                             </View>
                             <View style={styles.charCountContainer}>
                                 <Text style={styles.charCount}>{comment.length}/{MAX_COMMENT_LENGTH}</Text>
@@ -334,7 +336,7 @@ export default function WriteReviewScreen() {
                         <ActivityIndicator size="small" color={COLORS.primary} />
                     ) : (
                         <>
-                            <Text style={styles.submitButtonText}>Publicar Reseña</Text>
+                            <Text style={styles.submitButtonText}>{t('writeReview.submitButton')}</Text>
                             <MaterialIcons name="send" size={18} color={COLORS.primary} />
                         </>
                     )}

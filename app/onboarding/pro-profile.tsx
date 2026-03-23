@@ -51,7 +51,7 @@ type AliasStatus = "idle" | "checking" | "valid" | "invalid" | "taken";
 
 export default function ProProfileScreen() {
     const { token, refreshUser } = useAuth();
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('onboarding');
 
     const BUSINESS_TYPES = useMemo(() => getBusinessTypes(t), [t]);
     const CATEGORIES = useMemo(() => CATEGORY_IDS.map(id => ({ id, label: getCategoryLabel(t, id) })), [t]);
@@ -82,19 +82,19 @@ export default function ProProfileScreen() {
             return { valid: false, error: "" };
         }
         if (value.length < ALIAS_MIN_LENGTH) {
-            return { valid: false, error: `Mínimo ${ALIAS_MIN_LENGTH} caracteres` };
+            return { valid: false, error: t('proProfile.aliasMinChars', { count: ALIAS_MIN_LENGTH }) };
         }
         if (value.length > ALIAS_MAX_LENGTH) {
-            return { valid: false, error: `Máximo ${ALIAS_MAX_LENGTH} caracteres` };
+            return { valid: false, error: t('proProfile.aliasMaxChars', { count: ALIAS_MAX_LENGTH }) };
         }
         if (!ALIAS_REGEX.test(value)) {
             if (/^[0-9]/.test(value)) {
-                return { valid: false, error: "Debe comenzar con una letra" };
+                return { valid: false, error: t('proProfile.aliasStartLetterError') };
             }
             if (/[^a-zA-Z0-9_]/.test(value)) {
-                return { valid: false, error: "Solo letras, números y guiones bajos" };
+                return { valid: false, error: t('proProfile.aliasInvalidChars') };
             }
-            return { valid: false, error: "Formato inválido" };
+            return { valid: false, error: t('proProfile.aliasInvalidFormat') };
         }
         return { valid: true, error: "" };
     };
@@ -126,11 +126,11 @@ export default function ProProfileScreen() {
                 setAliasError("");
             } else {
                 setAliasStatus("taken");
-                setAliasError("Este alias ya está en uso");
+                setAliasError(t('proProfile.aliasTaken'));
             }
         } catch (error) {
             setAliasStatus("invalid");
-            setAliasError("Error al verificar disponibilidad");
+            setAliasError(t('proProfile.aliasCheckError'));
         }
     }, []);
 
@@ -172,27 +172,27 @@ export default function ProProfileScreen() {
 
     async function handleContinue() {
         if (!alias.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa un alias para tu perfil' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.aliasRequired') });
             return;
         }
         if (aliasStatus !== "valid") {
-            showAlert({ type: 'error', title: 'Error', message: 'El alias no es válido o ya está en uso' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.aliasInvalid') });
             return;
         }
         if (!publicName.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa tu nombre público' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.publicNameRequired') });
             return;
         }
         if (!profession.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor ingresa tu profesión' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.professionRequired') });
             return;
         }
         if (!category) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor selecciona una categoría' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.categoryRequired') });
             return;
         }
         if (category === 'otro' && !customCategory.trim()) {
-            showAlert({ type: 'error', title: 'Error', message: 'Por favor describe tu categoría profesional' });
+            showAlert({ type: 'error', title: 'Error', message: t('proProfile.customCategoryRequired') });
             return;
         }
 
@@ -224,7 +224,7 @@ export default function ProProfileScreen() {
 
             router.push("/onboarding/pro-contact");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar el perfil" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('proProfile.saveError') });
         } finally {
             setIsLoading(false);
         }
@@ -258,7 +258,7 @@ export default function ProProfileScreen() {
                     {/* Spacer izquierdo para centrar */}
                     <View style={styles.headerSpacer} />
                     <View style={styles.stepIndicator}>
-                        <Text style={styles.stepText}>Paso 1 de 2</Text>
+                        <Text style={styles.stepText}>{t('proProfile.stepOf', { current: 1, total: 2 })}</Text>
                         <View style={styles.stepDots}>
                             <View style={[styles.stepDot, styles.stepDotActive]} />
                             <View style={styles.stepDot} />
@@ -272,8 +272,8 @@ export default function ProProfileScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Perfil Profesional</Text>
-                    <Text style={styles.headerSubtitle}>Completa tu ficha para conectar mejor.</Text>
+                    <Text style={styles.headerTitle}>{t('proProfile.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('proProfile.headerSubtitle')}</Text>
                 </View>
             </View>
 
@@ -289,12 +289,12 @@ export default function ProProfileScreen() {
                 >
                     {/* Alias - Campo principal */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Alias</Text>
+                        <Text style={styles.inputLabel}>{t('proProfile.aliasLabel')}</Text>
                         <View style={[styles.inputContainer, getAliasInputStyle()]}>
                             <Text style={styles.aliasPrefix}>@</Text>
                             <TextInput
                                 style={styles.aliasInput}
-                                placeholder="Ej. DrJuanPerez"
+                                placeholder={t('proProfile.aliasPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={alias}
                                 onChangeText={setAlias}
@@ -307,7 +307,7 @@ export default function ProProfileScreen() {
                             </View>
                         </View>
                         <Text style={styles.aliasHelpText}>
-                            Tu alias será tu identidad única y permanente en TwinPro. Se usará en tu URL: twinpro.app/@{alias || "alias"}
+                            {t('proProfile.aliasHelpText', { alias: alias || 'alias' })}
                         </Text>
 
                         {/* Reglas del alias */}
@@ -319,7 +319,7 @@ export default function ProProfileScreen() {
                                     color={alias.length >= ALIAS_MIN_LENGTH ? COLORS.green500 : COLORS.gray400}
                                 />
                                 <Text style={[styles.aliasRuleText, alias.length >= ALIAS_MIN_LENGTH && styles.aliasRuleValid]}>
-                                    Mínimo {ALIAS_MIN_LENGTH} caracteres
+                                    {t('proProfile.aliasMinChars', { count: ALIAS_MIN_LENGTH })}
                                 </Text>
                             </View>
                             <View style={styles.aliasRule}>
@@ -329,7 +329,7 @@ export default function ProProfileScreen() {
                                     color={!alias ? COLORS.gray400 : (/^[a-zA-Z]/.test(alias) ? COLORS.green500 : COLORS.red500)}
                                 />
                                 <Text style={[styles.aliasRuleText, /^[a-zA-Z]/.test(alias) && styles.aliasRuleValid]}>
-                                    Comenzar con una letra
+                                    {t('proProfile.aliasStartLetter')}
                                 </Text>
                             </View>
                             <View style={styles.aliasRule}>
@@ -339,7 +339,7 @@ export default function ProProfileScreen() {
                                     color={!alias ? COLORS.gray400 : (ALIAS_REGEX.test(alias) ? COLORS.green500 : COLORS.red500)}
                                 />
                                 <Text style={[styles.aliasRuleText, ALIAS_REGEX.test(alias) && styles.aliasRuleValid]}>
-                                    Solo letras, números y guiones bajos (_)
+                                    {t('proProfile.aliasOnlyValid')}
                                 </Text>
                             </View>
                         </View>
@@ -356,12 +356,12 @@ export default function ProProfileScreen() {
 
                     {/* Nombre público */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Nombre público</Text>
+                        <Text style={styles.inputLabel}>{t('proProfile.publicNameLabel')}</Text>
                         <View style={styles.inputContainer}>
                             <MaterialIcons name="person" size={18} color={COLORS.gray400} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Ej. Dr. Juan Pérez"
+                                placeholder={t('proProfile.publicNamePlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={publicName}
                                 onChangeText={setPublicName}
@@ -371,12 +371,12 @@ export default function ProProfileScreen() {
 
                     {/* Profesión */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Profesión</Text>
+                        <Text style={styles.inputLabel}>{t('proProfile.professionLabel')}</Text>
                         <View style={styles.inputContainer}>
                             <MaterialIcons name="work" size={18} color={COLORS.gray400} style={styles.inputIcon} />
                             <TextInput
                                 style={styles.input}
-                                placeholder="Abogado"
+                                placeholder={t('proProfile.professionPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={profession}
                                 onChangeText={setProfession}
@@ -392,15 +392,15 @@ export default function ProProfileScreen() {
                     {/* Empresa / Marca profesional (Opcional) */}
                     <View style={styles.inputGroup}>
                         <View style={styles.labelRow}>
-                            <Text style={styles.inputLabel}>Empresa / Marca profesional</Text>
-                            <Text style={styles.optionalLabel}>Opcional</Text>
+                            <Text style={styles.inputLabel}>{t('proProfile.businessLabel')}</Text>
+                            <Text style={styles.optionalLabel}>{t('proProfile.optionalLabel')}</Text>
                         </View>
                         <View style={styles.businessRow}>
                             <View style={[styles.inputContainer, styles.businessNameInput]}>
                                 <MaterialIcons name="business" size={18} color={COLORS.gray400} style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Nombre de empresa..."
+                                    placeholder={t('proProfile.businessPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={businessName}
                                     onChangeText={setBusinessName}
@@ -411,7 +411,7 @@ export default function ProProfileScreen() {
                                 onPress={() => setShowBusinessTypePicker(!showBusinessTypePicker)}
                             >
                                 <Text style={[styles.businessTypeText, !businessType && styles.placeholder]}>
-                                    {BUSINESS_TYPES.find(bt => bt.id === businessType)?.label || "Tipo"}
+                                    {BUSINESS_TYPES.find(bt => bt.id === businessType)?.label || t('proProfile.businessTypePlaceholder')}
                                 </Text>
                                 <MaterialIcons name="expand-more" size={18} color={COLORS.gray400} />
                             </TouchableOpacity>
@@ -438,14 +438,14 @@ export default function ProProfileScreen() {
 
                     {/* Categoría */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Categoría</Text>
+                        <Text style={styles.inputLabel}>{t('proProfile.categoryLabel')}</Text>
                         <TouchableOpacity
                             style={styles.inputContainer}
                             onPress={() => setShowCategoryPicker(!showCategoryPicker)}
                         >
                             <MaterialIcons name="category" size={18} color={COLORS.gray400} style={styles.inputIcon} />
                             <Text style={[styles.input, !category && styles.placeholder]}>
-                                {category ? CATEGORIES.find(c => c.id === category)?.label : "Elegir..."}
+                                {category ? CATEGORIES.find(c => c.id === category)?.label : t('proProfile.categoryPlaceholder')}
                             </Text>
                             <MaterialIcons name="expand-more" size={20} color={COLORS.gray400} />
                         </TouchableOpacity>
@@ -477,7 +477,7 @@ export default function ProProfileScreen() {
                                 <MaterialIcons name="edit" size={18} color={COLORS.gray400} style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Describe tu categoría..."
+                                    placeholder={t('proProfile.customCategoryPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={customCategory}
                                     onChangeText={setCustomCategory}
@@ -489,7 +489,7 @@ export default function ProProfileScreen() {
 
                     {/* Especialidades */}
                     <View style={styles.inputGroup}>
-                        <Text style={styles.inputLabel}>Especialidades</Text>
+                        <Text style={styles.inputLabel}>{t('proProfile.specialtiesLabel')}</Text>
                         <View style={styles.specialtiesCard}>
                             {specialties.length > 0 && (
                                 <View style={styles.specialtiesTags}>
@@ -506,7 +506,7 @@ export default function ProProfileScreen() {
                             <View style={styles.addSpecialtyRow}>
                                 <TextInput
                                     style={styles.specialtyInput}
-                                    placeholder="Añadir especialidad..."
+                                    placeholder={t('proProfile.specialtyPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={newSpecialty}
                                     onChangeText={setNewSpecialty}
@@ -523,12 +523,12 @@ export default function ProProfileScreen() {
                     {/* Presentación/Bio */}
                     <View style={styles.inputGroup}>
                         <View style={styles.bioHeader}>
-                            <Text style={styles.inputLabel}>Presentación</Text>
+                            <Text style={styles.inputLabel}>{t('proProfile.bioLabel')}</Text>
                             <Text style={styles.bioCounter}>{bio.length}/{bioMaxLength}</Text>
                         </View>
                         <TextInput
                             style={styles.bioInput}
-                            placeholder="Describe tu experiencia y enfoque..."
+                            placeholder={t('proProfile.bioPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={bio}
                             onChangeText={(text) => setBio(text.slice(0, bioMaxLength))}
@@ -552,7 +552,7 @@ export default function ProProfileScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.continueButtonText}>Guardar y Continuar</Text>
+                            <Text style={styles.continueButtonText}>{t('proProfile.saveAndContinue')}</Text>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </>
                     )}

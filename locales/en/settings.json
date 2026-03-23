@@ -1193,5 +1193,275 @@
         "menuContactSupport": "Contact support",
         "menuSendFeedback": "Send feedback",
         "menuTermsPrivacy": "Terms and Privacy Policy"
+    },
+    "subscriptionCancel": {
+        "title": "Process Cancelled",
+        "message": "You have cancelled the subscription process. No charges have been made.",
+        "subMessage": "You can try again whenever you want.",
+        "viewPlans": "View Plans",
+        "goToDashboard": "Go to Dashboard"
+    },
+    "subscriptionSuccess": {
+        "title": "Subscription Activated!",
+        "message": "Your plan has been activated successfully. You now have access to all included features.",
+        "subMessage": "Your subscription will renew automatically each month.",
+        "viewPlan": "View My Plan",
+        "goToDashboard": "Go to Dashboard"
+    },
+    "twinDisclaimer": {
+        "headerTitle": "Scope and Limits",
+        "professionalFallback": "the professional",
+        "professionFallback": "Professional",
+        "defaultDisclaimer": "The responses provided by this virtual assistant are informational and for guidance only. They do not replace specialized professional advice. The information may require updating or adaptation to your specific situation. Always consult qualified professionals for important decisions.",
+        "disclaimerTitle": "Disclaimer",
+        "infoNote": "This text has been provided by {{name}} to establish the conditions and limits of their digital twin service.",
+        "helpTitle": "What does this mean?",
+        "helpItem1": "You are interacting with an AI-based virtual assistant",
+        "helpItem2": "Responses are for guidance and do not replace the professional",
+        "helpItem3": "You can request to speak with the professional at any time",
+        "legalTitle": "LEGAL NOTICE",
+        "legalText": "This document details the legal conditions, responsibilities and limitations of use of the TwinPro platform. Use of the platform implies acceptance of all terms described herein.",
+        "legalLink": "View full document",
+        "understood": "Understood"
+    },
+    "bookAppointment": {
+        "headerTitle": "Book Appointment",
+        "headerSubtitle": "with {{name}}",
+        "professionalFallback": "Professional",
+        "appointmentType": "Appointment Type",
+        "videoCall": "Video Call",
+        "inPerson": "In Person",
+        "selectDate": "Select Date",
+        "availableSlots": "Available Time Slots",
+        "loadingSlots": "Loading time slots...",
+        "noSlots": "No time slots available for this date",
+        "rates": "Professional Rates",
+        "noRates": "This professional has not configured rates for this appointment type.",
+        "consultLabel": "Consultation {{duration}} min",
+        "defaultDuration": "Default duration",
+        "briefConsult": "Brief consultation",
+        "fullConsult": "Full consultation",
+        "confirmButton": "Confirm Appointment",
+        "termsNotice": "By confirming, you accept the terms and conditions of the consultation.",
+        "fiscalNotice": "The service is provided by {{name}}. To request an invoice, contact the professional directly. TwinPro acts as a payment intermediary.",
+        "alertSelectDateTime": "Please select a date and time",
+        "alertAppointmentBooked": "Appointment Booked!",
+        "alertContinue": "Continue",
+        "alertPaymentError": "Could not open the payment link",
+        "alertPaymentInitError": "Could not start payment. You can pay from the appointment details.",
+        "alertInPersonBooked": "Your in-person appointment has been booked. You will pay the professional directly when you attend.",
+        "alertBookingError": "Could not book the appointment. Please try again.",
+        "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "weekdaysSunFirst": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+        "navChats": "Chats",
+        "navDirectory": "Directory",
+        "navFavorites": "Favorites",
+        "navSettings": "Settings"
+    },
+    "professionalProfile": {
+        "headerTitle": "Professional Profile",
+        "notFound": "Professional not found",
+        "goBack": "Go back",
+        "professionFallback": "Professional",
+        "reviewsCount": "({{count}} reviews)",
+        "appointmentsUnavailable": "Appointments not available",
+        "understood": "Understood",
+        "verifiedTitle": "✓ Verified Professional",
+        "verifiedMessage": "This professional has verified their professional activity through a sworn declaration.\n\nTwinPro has verified their identity and profession to provide you with a safe and reliable experience.",
+        "verifiedBadge": "Verified Professional",
+        "startChat": "Start Chat",
+        "bookAppointment": "Book Appointment",
+        "aboutTitle": "ABOUT ME",
+        "noBio": "This professional has not added a description yet.",
+        "specialties": "Specialties",
+        "contactTitle": "CONTACT DETAILS",
+        "socialLinks": "Social Media",
+        "locationTitle": "LOCATION",
+        "openInMaps": "Open in Maps",
+        "scheduleTitle": "WORKING HOURS",
+        "scheduleDays": {
+            "mon": "Mon",
+            "tue": "Tue",
+            "wed": "Wed",
+            "thu": "Thu",
+            "fri": "Fri",
+            "sat": "Sat",
+            "sun": "Sun"
+        },
+        "reviewsSection": "Client reviews",
+        "reviewSingular": "review",
+        "reviewPlural": "reviews",
+        "beFirstToReview": "Be the first to review",
+        "viewAllReviews": "View all reviews",
+        "writeReview": "Write a review",
+        "navChats": "Chats",
+        "navDirectory": "Directory",
+        "navFavorites": "Favorites",
+        "navSettings": "Settings"
+    },
+    "avatarChat": {
+        "professionFallback": "Professional",
+        "infoBubble": {
+            "profile": {
+                "title": "About Me",
+                "content": "Specialist with over 15 years of experience. Trained at top institutions. Committed to your well-being."
+            },
+            "contact": {
+                "title": "Contact",
+                "content": "Available Monday to Friday from 9:00 to 18:00. Guaranteed response within 24 hours."
+            },
+            "location": {
+                "title": "Location",
+                "content": "Main office at Medical Center. Also available for online consultations from anywhere."
+            },
+            "share": {
+                "title": "Share",
+                "content": "Share this profile with friends or family who could benefit from a professional consultation."
+            },
+            "private": {
+                "title": "Private Conversation",
+                "subtitle": "Incognito mode",
+                "content": "By enabling this option, messages from this session won't appear in the history, providing maximum security and privacy."
+            },
+            "appointments": {
+                "title": "Book Appointment",
+                "content": "Schedule an appointment with the professional for an in-person or virtual consultation."
+            },
+            "escalation": {
+                "title": "Personalized attention",
+                "subtitle": "with the professional",
+                "content": "The twin provides immediate help. When escalating, the session will pause and the response may not be immediate."
+            },
+            "escalationKeyword": {
+                "title": "To make sure I help you in the best way possible…",
+                "content": "Would you like to speak directly with the professional?\n\nBased on what you're saying, this topic may require human attention.\n\nYou can continue talking with the digital twin or, if you wish, escalate the conversation. Keep in mind that the professional's response may not be immediate.\n\nFor direct attention, you can also book an appointment."
+            },
+            "viewFullProfile": "View full profile"
+        },
+        "viewFullProfile": "View full profile",
+        "clearHistory": {
+            "title": "Clear all history",
+            "message": "Are you sure you want to delete all conversations? This action cannot be undone.",
+            "cancel": "Cancel",
+            "confirm": "Delete all",
+            "error": "Could not clear the history"
+        },
+        "conversationTitle": "Conversation {{index}}",
+        "noMessages": "No messages",
+        "dateToday": "Today",
+        "dateYesterday": "Yesterday",
+        "dayNames": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        "chip": {
+            "live": "👤 LIVE",
+            "contacting": "Contacting...",
+            "contactProfessional": "Contact professional"
+        },
+        "pause": {
+            "label": "PAUSED",
+            "hint": "Tap to resume",
+            "messagePaused": "⏸️ Communication is paused. Tap the video to resume."
+        },
+        "session": {
+            "connecting": "Connecting to avatar...",
+            "liveBadge": "LIVE",
+            "connectionError": "Connection error",
+            "retry": "Retry",
+            "errorNoAvatar": "The professional doesn't have an avatar configured",
+            "errorSyncFailed": "Error syncing the digital twin",
+            "errorNoContext": "The digital twin is not fully configured. Context is missing.",
+            "errorConnect": "Error connecting to avatar",
+            "errorConnecting": "Error connecting to avatar"
+        },
+        "personalAttention": {
+            "title": "Personal attention",
+            "text": "This professional has chosen to personally handle consultations. You can write your message and they will respond as soon as possible.",
+            "bookAppointment": "Book appointment"
+        },
+        "sessionExpired": {
+            "title": "Your time with the digital twin has ended",
+            "text": "You have used all available time in this session. If your query wasn't resolved, you can send it directly to the professional.",
+            "sendToProfessional": "Send to professional",
+            "bookAppointment": "Book an appointment",
+            "resolved": "My question was answered"
+        },
+        "mute": {
+            "audioMuted": "Audio muted",
+            "tapToEnable": "Tap to enable"
+        },
+        "disclaimer": {
+            "text": "The responses of this digital twin are for informational purposes.",
+            "link": "View the scope and limits of the digital twin"
+        },
+        "minimized": {
+            "tapToExpand": "Tap to expand"
+        },
+        "contact": {
+            "mobile": "Mobile",
+            "callNow": "CALL NOW",
+            "email": "Email",
+            "website": "Website",
+            "socialLinks": "Social Media",
+            "addressUnavailable": "Address not available",
+            "getDirections": "Get directions",
+            "call": "Call",
+            "openInMaps": "Open in Maps",
+            "open": "Open",
+            "loadingMap": "Loading map..."
+        },
+        "share": {
+            "recommend": "👋 I recommend you check this out",
+            "talkToTwin": "You can talk to their digital twin here 👇",
+            "talkToTwinShort": "You can talk to their digital twin here."
+        },
+        "appointment": {
+            "title": "Book Appointment",
+            "schedule": "Schedule: {{start}} - {{end}}",
+            "loadingSlots": "Loading time slots...",
+            "noSlots": "No time slots available",
+            "continue": "CONTINUE",
+            "selectTypeInfo": "Select appointment type and duration on the next screen."
+        },
+        "escalation": {
+            "whatToDo": "What would you like to do?",
+            "bookAppointment": "Book an appointment",
+            "bookAppointmentWithPro": "Book appointment with professional",
+            "escalateAndWait": "Escalate and wait for response",
+            "escalateKeywordAndWait": "Escalate conversation and wait for response",
+            "continueWithTwin": "Continue with digital twin",
+            "escalated": "📞 Conversation escalated. The twin is paused while you wait for the professional.",
+            "escalateError": "⚠️ Could not contact the professional. Please try again.",
+            "cancelledResume": "✓ You have resumed the conversation with the digital twin.",
+            "waitingForPro": "Waiting for professional...",
+            "backToTwin": "Back to twin",
+            "proJoiningSoon": "The professional will join soon"
+        },
+        "errors": {
+            "processingError": "Error processing your message. Please try again.",
+            "sendError": "Error sending message to avatar. Please try again.",
+            "avatarNotConnected": "Avatar not connected. Wait for the connection to be established."
+        },
+        "farewell": "Appointment booked! It was a pleasure, see you soon. 😊",
+        "proBadge": "Professional",
+        "todaySeparator": "Today",
+        "inputPlaceholder": "Write a message...",
+        "drawer": {
+            "title": "Conversations",
+            "searchPlaceholder": "Search conversations...",
+            "newConversation": "New Conversation",
+            "loadingHistory": "Loading history...",
+            "noConversations": "No conversations",
+            "noConversationsHint": "Your conversations with this professional will appear here",
+            "privateMode": "Private mode · This conversation won't be saved",
+            "reportProblem": "Report a problem",
+            "clearAll": "Clear all history"
+        },
+        "voice": {
+            "processing": "Processing...",
+            "listening": "Listening...",
+            "ready": "Ready to listen",
+            "voiceConnecting": "Connecting...",
+            "appointmentProposal": "Appointment proposal: {{date}} at {{time}}"
+        }
     }
 }

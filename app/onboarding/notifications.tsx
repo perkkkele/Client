@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFF200",
@@ -22,6 +23,7 @@ const COLORS = {
 };
 
 export default function NotificationsScreen() {
+    const { t } = useTranslation('onboarding');
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
     function handleSkip() {
@@ -39,7 +41,7 @@ export default function NotificationsScreen() {
             <View style={styles.topBar}>
                 <View style={{ width: 48 }} />
                 <TouchableOpacity onPress={handleSkip}>
-                    <Text style={styles.skipText}>Omitir</Text>
+                    <Text style={styles.skipText}>{t('notificationsScreen.skip')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -70,9 +72,9 @@ export default function NotificationsScreen() {
 
                 {/* Text content */}
                 <View style={styles.textContent}>
-                    <Text style={styles.title}>Mantente al día</Text>
+                    <Text style={styles.title}>{t('notificationsScreen.title')}</Text>
                     <Text style={styles.description}>
-                        Activa las notificaciones para no perderte mensajes importantes y actualizaciones de citas. Solo te avisaremos cuando sea realmente importante.
+                        {t('notificationsScreen.description')}
                     </Text>
                 </View>
 
@@ -83,8 +85,8 @@ export default function NotificationsScreen() {
                             <MaterialIcons name="notifications" size={24} color={COLORS.primaryDark} />
                         </View>
                         <View style={styles.toggleText}>
-                            <Text style={styles.toggleTitle}>Notificaciones</Text>
-                            <Text style={styles.toggleSubtitle}>Alertas de mensajes y citas</Text>
+                            <Text style={styles.toggleTitle}>{t('notificationsScreen.toggleTitle')}</Text>
+                            <Text style={styles.toggleSubtitle}>{t('notificationsScreen.toggleSubtitle')}</Text>
                         </View>
                     </View>
                     <Switch
@@ -104,11 +106,11 @@ export default function NotificationsScreen() {
                     onPress={handleContinue}
                     activeOpacity={0.9}
                 >
-                    <Text style={styles.continueButtonText}>Continuar</Text>
+                    <Text style={styles.continueButtonText}>{t('notificationsScreen.continueButton')}</Text>
                     <Ionicons name="arrow-forward" size={18} color="#000000" />
                 </TouchableOpacity>
                 <Text style={styles.footerNote}>
-                    Puedes cambiar estos ajustes más tarde en tu perfil.
+                    {t('notificationsScreen.footerNote')}
                 </Text>
             </View>
         </SafeAreaView>

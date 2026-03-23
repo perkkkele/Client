@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#137fec",
@@ -21,6 +22,7 @@ const COLORS = {
 };
 
 export default function SubscriptionCancelScreen() {
+    const { t } = useTranslation('settings');
     const handleRetry = () => {
         router.replace("/(settings)/plans-credits" as any);
     };
@@ -40,12 +42,12 @@ export default function SubscriptionCancelScreen() {
                 </View>
 
                 {/* Title and Message */}
-                <Text style={styles.title}>Proceso Cancelado</Text>
+                <Text style={styles.title}>{t('subscriptionCancel.title')}</Text>
                 <Text style={styles.message}>
-                    Has cancelado el proceso de suscripción. No se ha realizado ningún cargo.
+                    {t('subscriptionCancel.message')}
                 </Text>
                 <Text style={styles.subMessage}>
-                    Puedes intentarlo de nuevo cuando quieras.
+                    {t('subscriptionCancel.subMessage')}
                 </Text>
 
                 {/* Buttons */}
@@ -55,14 +57,14 @@ export default function SubscriptionCancelScreen() {
                         onPress={handleRetry}
                     >
                         <MaterialIcons name="refresh" size={20} color={COLORS.white} />
-                        <Text style={styles.primaryButtonText}>Ver Planes</Text>
+                        <Text style={styles.primaryButtonText}>{t('subscriptionCancel.viewPlans')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.secondaryButton}
                         onPress={handleGoHome}
                     >
-                        <Text style={styles.secondaryButtonText}>Ir al Dashboard</Text>
+                        <Text style={styles.secondaryButtonText}>{t('subscriptionCancel.goToDashboard')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

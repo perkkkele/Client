@@ -16,6 +16,7 @@ import { useAuth } from "../../context";
 import { userApi, getAssetUrl, chatApi, analyticsApi } from "../../api";
 import { User } from "../../api/user";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -43,6 +44,7 @@ export default function ProfessionalProfileScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token, user } = useAuth();
   const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -104,9 +106,9 @@ export default function ProfessionalProfileScreen() {
         if (!professional.appointmentsEnabled) {
             showAlert({
     type: 'warning',
-    title: 'Citas no disponibles',
+    title: t('professionalProfile.appointmentsUnavailable'),
     message: '',
-    buttons: [{ text: "Entendido", style: "default" }]
+    buttons: [{ text: t('professionalProfile.understood'), style: "default" }]
 });
             return;
         }
@@ -155,9 +157,9 @@ export default function ProfessionalProfileScreen() {
     if (!professional) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Profesional no encontrado</Text>
+                <Text style={styles.errorText}>{t('professionalProfile.notFound')}</Text>
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                    <Text style={styles.backButtonText}>Volver</Text>
+                    <Text style={styles.backButtonText}>{t('professionalProfile.goBack')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -177,7 +179,7 @@ export default function ProfessionalProfileScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Perfil del Profesional</Text>
+                    <Text style={styles.headerTitle}>{t('professionalProfile.headerTitle')}</Text>
                     <TouchableOpacity style={styles.headerButton} onPress={toggleFavorite}>
                         <MaterialIcons
                             name={isFavorite ? "favorite" : "favorite-border"}
@@ -217,7 +219,7 @@ export default function ProfessionalProfileScreen() {
 
                     {/* Name and Profession */}
                     <Text style={styles.name}>{displayName}</Text>
-                    <Text style={styles.profession}>{professional.profession || "Profesional"}</Text>
+                    <Text style={styles.profession}>{professional.profession || t('professionalProfile.professionFallback')}</Text>
 
                     {/* Rating and Verification */}
                     <View style={styles.badgesRow}>
@@ -228,7 +230,7 @@ export default function ProfessionalProfileScreen() {
                             >
                                 <MaterialIcons name="star" size={16} color={COLORS.amber500} />
                                 <Text style={styles.ratingValue}>{professional.rating.toFixed(1)}</Text>
-                                <Text style={styles.ratingCount}>({professional.ratingCount || 0} reseñas)</Text>
+                                <Text style={styles.ratingCount}>{t('professionalProfile.reviewsCount', { count: professional.ratingCount || 0 })}</Text>
                             </TouchableOpacity>
                         )}
                         {professional.verification?.professionalVerified && (
@@ -236,13 +238,13 @@ export default function ProfessionalProfileScreen() {
                                 style={styles.verifiedBadge}
                                 onPress={() => showAlert({
     type: 'success',
-    title: '✓ Profesional Verificado',
-    message: 'Este profesional ha verificado su actividad profesional mediante declaración jurada.\n\nTwinPro ha comprobado su identidad y profesión para ofrecerte una experiencia segura y fiable.',
-    buttons: [{ text: "Entendido", style: "default" }]
+    title: t('professionalProfile.verifiedTitle'),
+    message: t('professionalProfile.verifiedMessage'),
+    buttons: [{ text: t('professionalProfile.understood'), style: "default" }]
 })}
                             >
                                 <MaterialIcons name="workspace-premium" size={16} color={COLORS.blue500} />
-                                <Text style={styles.verifiedText}>Profesional Verificado</Text>
+                                <Text style={styles.verifiedText}>{t('professionalProfile.verifiedBadge')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -251,13 +253,13 @@ export default function ProfessionalProfileScreen() {
                     <View style={styles.actionButtons}>
                         <TouchableOpacity style={styles.primaryButton} onPress={handleStartChat}>
                             <MaterialIcons name="chat-bubble" size={20} color={COLORS.textMain} />
-                            <Text style={styles.primaryButtonText}>Iniciar Chat</Text>
+                            <Text style={styles.primaryButtonText}>{t('professionalProfile.startChat')}</Text>
                         </TouchableOpacity>
                         {/* Only show Agendar Cita for Professional/Premium plans */}
                         {(professional.subscription?.plan === 'professional' || professional.subscription?.plan === 'premium') && (
                             <TouchableOpacity style={styles.secondaryButton} onPress={handleBookAppointment}>
                                 <MaterialIcons name="calendar-month" size={20} color={COLORS.textMain} />
-                                <Text style={styles.secondaryButtonText}>Agendar Cita</Text>
+                                <Text style={styles.secondaryButtonText}>{t('professionalProfile.bookAppointment')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -265,14 +267,14 @@ export default function ProfessionalProfileScreen() {
 
                 {/* About Section */}
                 <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>SOBRE MÍ</Text>
+                    <Text style={styles.sectionTitle}>{t('professionalProfile.aboutTitle')}</Text>
                     <Text style={styles.bioText}>
-                        {professional.bio || "Este profesional aún no ha añadido una descripción."}
+                        {professional.bio || t('professionalProfile.noBio')}
                     </Text>
 
                     {professional.specialties && professional.specialties.length > 0 && (
                         <>
-                            <Text style={styles.subsectionTitle}>Especialidades</Text>
+                            <Text style={styles.subsectionTitle}>{t('professionalProfile.specialties')}</Text>
                             <View style={styles.tagsContainer}>
                                 {professional.specialties.map((specialty, index) => (
                                     <View key={index} style={styles.tag}>
@@ -286,7 +288,7 @@ export default function ProfessionalProfileScreen() {
 
                 {/* Contact Section */}
                 <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>DATOS DE CONTACTO</Text>
+                    <Text style={styles.sectionTitle}>{t('professionalProfile.contactTitle')}</Text>
 
                     {professional.phone && (professional.contactVisibility?.phone !== false) && (
                         <TouchableOpacity style={styles.contactRow} onPress={() => callPhone(professional.phone)}>
@@ -318,7 +320,7 @@ export default function ProfessionalProfileScreen() {
                     {/* Social Links */}
                     {professional.socialLinks && (
                         <View style={styles.socialSection}>
-                            <Text style={styles.subsectionTitle}>Redes Sociales</Text>
+                            <Text style={styles.subsectionTitle}>{t('professionalProfile.socialLinks')}</Text>
                             <View style={styles.socialRow}>
                                 {professional.socialLinks.linkedin && (
                                     <TouchableOpacity
@@ -360,7 +362,7 @@ export default function ProfessionalProfileScreen() {
                 {/* Location Section - Show only if professional has location with coordinates */}
                 {professional.location?.lat && professional.location?.lng && (
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>UBICACIÓN</Text>
+                        <Text style={styles.sectionTitle}>{t('professionalProfile.locationTitle')}</Text>
 
                         {/* Address if available */}
                         {(professional.location.address || professional.location.city) && (
@@ -411,7 +413,7 @@ export default function ProfessionalProfileScreen() {
                                 }}
                             >
                                 <MaterialIcons name="open-in-new" size={14} color="#fff" />
-                                <Text style={styles.mapOverlayText}>Abrir en Maps</Text>
+                                <Text style={styles.mapOverlayText}>{t('professionalProfile.openInMaps')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -420,16 +422,16 @@ export default function ProfessionalProfileScreen() {
                 {/* Schedule Section */}
                 {professional.workSchedule && professional.workSchedule.workDays && professional.workSchedule.workDays.length > 0 && (
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>HORARIO LABORAL</Text>
+                        <Text style={styles.sectionTitle}>{t('professionalProfile.scheduleTitle')}</Text>
                         <View style={styles.scheduleGrid}>
                             {[
-                                { key: 1, label: "Lun" },
-                                { key: 2, label: "Mar" },
-                                { key: 3, label: "Mié" },
-                                { key: 4, label: "Jue" },
-                                { key: 5, label: "Vie" },
-                                { key: 6, label: "Sáb" },
-                                { key: 0, label: "Dom" },
+                                { key: 1, label: t('professionalProfile.scheduleDays.mon') },
+                                { key: 2, label: t('professionalProfile.scheduleDays.tue') },
+                                { key: 3, label: t('professionalProfile.scheduleDays.wed') },
+                                { key: 4, label: t('professionalProfile.scheduleDays.thu') },
+                                { key: 5, label: t('professionalProfile.scheduleDays.fri') },
+                                { key: 6, label: t('professionalProfile.scheduleDays.sat') },
+                                { key: 0, label: t('professionalProfile.scheduleDays.sun') },
                             ].map((day) => {
                                 const isEnabled = professional.workSchedule?.workDays?.includes(day.key);
                                 const dayOverride = professional.workSchedule?.dayOverrides?.find(
@@ -499,13 +501,13 @@ export default function ProfessionalProfileScreen() {
                             <MaterialIcons name="star" size={24} color={COLORS.amber500} />
                         </View>
                         <View style={styles.reviewsTitleContainer}>
-                            <Text style={styles.reviewsTitle}>Reseñas de clientes</Text>
+                            <Text style={styles.reviewsTitle}>{t('professionalProfile.reviewsSection')}</Text>
                             {professional.ratingCount && professional.ratingCount > 0 ? (
                                 <Text style={styles.reviewsSubtitle}>
-                                    {professional.ratingCount} {professional.ratingCount === 1 ? 'valoración' : 'valoraciones'}
+                                    {professional.ratingCount} {professional.ratingCount === 1 ? t('professionalProfile.reviewSingular') : t('professionalProfile.reviewPlural')}
                                 </Text>
                             ) : (
-                                <Text style={styles.reviewsSubtitle}>Sé el primero en opinar</Text>
+                                <Text style={styles.reviewsSubtitle}>{t('professionalProfile.beFirstToReview')}</Text>
                             )}
                         </View>
                         <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
@@ -530,8 +532,8 @@ export default function ProfessionalProfileScreen() {
                     <View style={styles.reviewsCTA}>
                         <Text style={styles.reviewsCTAText}>
                             {professional.ratingCount && professional.ratingCount > 0
-                                ? "Ver todas las reseñas"
-                                : "Escribir una reseña"}
+                                ? t('professionalProfile.viewAllReviews')
+                                : t('professionalProfile.writeReview')}
                         </Text>
                         <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
                     </View>
@@ -545,19 +547,19 @@ export default function ProfessionalProfileScreen() {
             <View style={styles.bottomNav}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('professionalProfile.navChats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('professionalProfile.navDirectory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('professionalProfile.navFavorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/settings")}>
                     <MaterialIcons name="settings" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Ajustes</Text>
+                    <Text style={styles.navLabel}>{t('professionalProfile.navSettings')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

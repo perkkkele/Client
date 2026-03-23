@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFED00",
@@ -38,32 +39,16 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Qué es el alias?",
-        answer: "Tu alias es tu identificador único en TwinPro (ej: @DrMartinez). Aparecerá en tu URL pública y no podrá cambiarse, así que elige uno que represente bien tu marca profesional.",
-    },
-    {
-        question: "¿Qué es el nombre público?",
-        answer: "Es el nombre que verán tus clientes. Puede incluir títulos profesionales como 'Dr.', 'Abog.', etc. Puedes cambiarlo cuando quieras.",
-    },
-    {
-        question: "¿Cómo elijo la categoría correcta?",
-        answer: "Selecciona la categoría que mejor represente tu área principal de trabajo. Esto ayudará a los clientes a encontrarte más fácilmente en el directorio.",
-    },
-    {
-        question: "¿Para qué sirven las especialidades?",
-        answer: "Las especialidades permiten detallar tus áreas de expertise. Por ejemplo, si eres abogado, puedes añadir 'Derecho Laboral', 'Divorcios', etc.",
-    },
-    {
-        question: "¿Qué debo poner en la presentación?",
-        answer: "Describe brevemente tu experiencia, enfoque profesional y qué te diferencia. Es tu oportunidad de conectar con potenciales clientes antes de que te contacten.",
-    },
-    {
-        question: "¿Puedo editar esto después?",
-        answer: "Sí, todos los campos excepto el alias son editables desde tu panel profesional en cualquier momento.",
-    },
-];
+function getFaqItems(t: any): FAQItem[] {
+    return [
+        { question: t('helpProProfileFaq.q1'), answer: t('helpProProfileFaq.a1') },
+        { question: t('helpProProfileFaq.q2'), answer: t('helpProProfileFaq.a2') },
+        { question: t('helpProProfileFaq.q3'), answer: t('helpProProfileFaq.a3') },
+        { question: t('helpProProfileFaq.q4'), answer: t('helpProProfileFaq.a4') },
+        { question: t('helpProProfileFaq.q5'), answer: t('helpProProfileFaq.a5') },
+        { question: t('helpProProfileFaq.q6'), answer: t('helpProProfileFaq.a6') },
+    ];
+}
 
 interface GuideItem {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -71,27 +56,20 @@ interface GuideItem {
     duration: string;
 }
 
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "person-pin",
-        title: "Cómo crear un perfil atractivo",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "smart-toy",
-        title: "Qué es un gemelo digital",
-        duration: "1:30 min",
-    },
-    {
-        icon: "trending-up",
-        title: "Consejos para destacar en TwinPro",
-        duration: "3 min de lectura",
-    },
-];
+function getGuideItems(t: any): GuideItem[] {
+    return [
+        { icon: "person-pin", title: t('helpProProfileFaq.guide1Title'), duration: t('helpProProfileFaq.guide1Duration') },
+        { icon: "smart-toy", title: t('helpProProfileFaq.guide2Title'), duration: t('helpProProfileFaq.guide2Duration') },
+        { icon: "trending-up", title: t('helpProProfileFaq.guide3Title'), duration: t('helpProProfileFaq.guide3Duration') },
+    ];
+}
 
 export default function HelpProProfileScreen() {
+    const { t } = useTranslation('onboarding');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+    const FAQ_ITEMS = getFaqItems(t);
+    const GUIDE_ITEMS = getGuideItems(t);
 
     function handleClose() {
         router.back();
@@ -119,13 +97,13 @@ export default function HelpProProfileScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda Perfil Profesional</Text>
+                    <Text style={styles.headerTitle}>{t('helpProProfile.title')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Aprende a configurar tu perfil profesional para conectar con más clientes.
+                    {t('helpProProfile.subtitle')}
                 </Text>
             </View>
 
@@ -140,7 +118,7 @@ export default function HelpProProfileScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.primaryDark} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en la ayuda..."
+                            placeholder={t('helpCommon.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -150,7 +128,7 @@ export default function HelpProProfileScreen() {
 
                 {/* FAQs */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.faqSection')}</Text>
                     <View style={styles.faqContainer}>
                         {filteredFAQs.map((item, index) => (
                             <TouchableOpacity
@@ -177,7 +155,7 @@ export default function HelpProProfileScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -187,7 +165,7 @@ export default function HelpProProfileScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
@@ -196,7 +174,7 @@ export default function HelpProProfileScreen() {
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.guidesSection')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity

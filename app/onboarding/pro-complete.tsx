@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FDE047",
@@ -24,6 +25,7 @@ const COLORS = {
 };
 
 export default function ProCompleteScreen() {
+    const { t } = useTranslation('onboarding');
     const floatAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -60,15 +62,15 @@ export default function ProCompleteScreen() {
                     {/* Badge */}
                     <View style={styles.badge}>
                         <MaterialIcons name="check-circle" size={14} color={COLORS.textBlue200} />
-                        <Text style={styles.badgeText}>Perfil Completo</Text>
+                        <Text style={styles.badgeText}>{t('proComplete.badge')}</Text>
                     </View>
 
                     {/* Title */}
                     <Text style={styles.title}>
-                        ¡Es hora de crear tu{"\n"}Gemelo Digital!
+                        {t('proComplete.title')}
                     </Text>
                     <Text style={styles.subtitle}>
-                        Tu asistente de IA personalizado que interactuará con tus usuarios las 24/7.
+                        {t('proComplete.subtitle')}
                     </Text>
 
                     {/* Animation */}
@@ -107,8 +109,8 @@ export default function ProCompleteScreen() {
                                 <MaterialIcons name="schedule" size={24} color={COLORS.textBlue200} />
                             </View>
                             <View style={styles.benefitContent}>
-                                <Text style={styles.benefitTitle}>Ahorro de Tiempo</Text>
-                                <Text style={styles.benefitSubtitle}>Automatiza respuestas frecuentes.</Text>
+                                <Text style={styles.benefitTitle}>{t('proComplete.benefitTimeTitle')}</Text>
+                                <Text style={styles.benefitSubtitle}>{t('proComplete.benefitTimeSubtitle')}</Text>
                             </View>
                         </View>
 
@@ -117,8 +119,8 @@ export default function ProCompleteScreen() {
                                 <MaterialIcons name="all-inclusive" size={24} color={COLORS.accentCyan} />
                             </View>
                             <View style={styles.benefitContent}>
-                                <Text style={styles.benefitTitle}>Atención Continua</Text>
-                                <Text style={styles.benefitSubtitle}>Disponible 24/7 para tus clientes.</Text>
+                                <Text style={styles.benefitTitle}>{t('proComplete.benefitContinuousTitle')}</Text>
+                                <Text style={styles.benefitSubtitle}>{t('proComplete.benefitContinuousSubtitle')}</Text>
                             </View>
                         </View>
                     </View>
@@ -131,10 +133,10 @@ export default function ProCompleteScreen() {
                         onPress={handleContinue}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.continueButtonText}>Empezar Configuración del Gemelo</Text>
+                        <Text style={styles.continueButtonText}>{t('proComplete.continueButton')}</Text>
                         <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                     </TouchableOpacity>
-                    <Text style={styles.stepIndicator}>Paso 1 de 3: Configuración inicial</Text>
+                    <Text style={styles.stepIndicator}>{t('proComplete.stepIndicator')}</Text>
                 </View>
             </SafeAreaView>
         </View>

@@ -13,6 +13,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { User } from "../../api/user";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -37,14 +38,14 @@ const COLORS = {
     blue500: "#3B82F6",
 };
 
-// Default disclaimer when professional hasn't set one
-const DEFAULT_DISCLAIMER = `Las respuestas proporcionadas por este asistente virtual tienen carácter informativo y orientativo. No sustituyen el consejo profesional especializado. La información puede requerir actualización o adaptación a su situación específica. Consulte siempre con profesionales cualificados para tomar decisiones importantes.`;
+// Default disclaimer is now in translation files
 
 export default function TwinDisclaimerScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token } = useAuth();
     const [professional, setProfessional] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const { t } = useTranslation('settings');
 
     useEffect(() => {
         loadProfessional();
@@ -64,12 +65,12 @@ export default function TwinDisclaimerScreen() {
         }
     };
 
-    const disclaimerText = professional?.digitalTwin?.disclaimer || DEFAULT_DISCLAIMER;
+    const disclaimerText = professional?.digitalTwin?.disclaimer || t('twinDisclaimer.defaultDisclaimer');
     const professionalName = professional?.publicName
         || (professional?.firstname && professional?.lastname
             ? `${professional.firstname} ${professional.lastname}`
             : professional?.firstname)
-        || "el profesional";
+        || t('twinDisclaimer.professionalFallback');
 
     const getCategoryIcon = (category?: string | null) => {
         const icons: Record<string, string> = {
@@ -98,7 +99,7 @@ export default function TwinDisclaimerScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Alcance y Límites</Text>
+                    <Text style={styles.headerTitle}>{t('twinDisclaimer.headerTitle')}</Text>
                     <View style={styles.headerButton} />
                 </View>
                 <View style={styles.loadingContainer}>
@@ -115,7 +116,7 @@ export default function TwinDisclaimerScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Alcance y Límites</Text>
+                <Text style={styles.headerTitle}>{t('twinDisclaimer.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -136,7 +137,7 @@ export default function TwinDisclaimerScreen() {
                     <View style={styles.professionalInfo}>
                         <Text style={styles.professionalName}>{professionalName}</Text>
                         <Text style={styles.professionalProfession}>
-                            {professional?.profession || "Profesional"}
+                            {professional?.profession || t('twinDisclaimer.professionFallback')}
                         </Text>
                     </View>
                 </View>
@@ -144,7 +145,7 @@ export default function TwinDisclaimerScreen() {
                 {/* Disclaimer Title */}
                 <View style={styles.sectionHeader}>
                     <MaterialIcons name="verified-user" size={20} color={COLORS.amber500} />
-                    <Text style={styles.sectionTitle}>Descargo de Responsabilidad</Text>
+                    <Text style={styles.sectionTitle}>{t('twinDisclaimer.disclaimerTitle')}</Text>
                 </View>
 
                 {/* Disclaimer Content */}
@@ -156,30 +157,29 @@ export default function TwinDisclaimerScreen() {
                 <View style={styles.infoNote}>
                     <MaterialIcons name="info-outline" size={18} color={COLORS.blue500} />
                     <Text style={styles.infoNoteText}>
-                        Este texto ha sido proporcionado por {professionalName} para establecer
-                        las condiciones y límites del servicio de su gemelo digital.
+                        {t('twinDisclaimer.infoNote', { name: professionalName })}
                     </Text>
                 </View>
 
                 {/* What this means */}
                 <View style={styles.helpSection}>
-                    <Text style={styles.helpTitle}>¿Qué significa esto?</Text>
+                    <Text style={styles.helpTitle}>{t('twinDisclaimer.helpTitle')}</Text>
                     <View style={styles.helpItem}>
                         <MaterialIcons name="smart-toy" size={16} color={COLORS.gray400} />
                         <Text style={styles.helpText}>
-                            Estás interactuando con un asistente virtual basado en IA
+                            {t('twinDisclaimer.helpItem1')}
                         </Text>
                     </View>
                     <View style={styles.helpItem}>
                         <MaterialIcons name="psychology" size={16} color={COLORS.gray400} />
                         <Text style={styles.helpText}>
-                            Las respuestas son orientativas y no sustituyen al profesional
+                            {t('twinDisclaimer.helpItem2')}
                         </Text>
                     </View>
                     <View style={styles.helpItem}>
                         <MaterialIcons name="support-agent" size={16} color={COLORS.gray400} />
                         <Text style={styles.helpText}>
-                            Puedes solicitar hablar con el profesional en cualquier momento
+                            {t('twinDisclaimer.helpItem3')}
                         </Text>
                     </View>
                 </View>
@@ -188,17 +188,17 @@ export default function TwinDisclaimerScreen() {
                 <View style={styles.legalNoticeSection}>
                     <View style={styles.legalNoticeHeader}>
                         <MaterialIcons name="gavel" size={18} color={COLORS.amber600} />
-                        <Text style={styles.legalNoticeTitle}>AVISO LEGAL</Text>
+                        <Text style={styles.legalNoticeTitle}>{t('twinDisclaimer.legalTitle')}</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.legalNoticeCard}
                         onPress={() => router.push("/legal/legal-notice" as any)}
                     >
                         <Text style={styles.legalNoticeText}>
-                            Este documento detalla las condiciones legales, responsabilidades y limitaciones de uso de la plataforma TwinPro. El uso de la plataforma implica la aceptación de todos los términos aquí descritos.
+                            {t('twinDisclaimer.legalText')}
                         </Text>
                         <View style={styles.legalNoticeLink}>
-                            <Text style={styles.legalNoticeLinkText}>Ver documento completo</Text>
+                            <Text style={styles.legalNoticeLinkText}>{t('twinDisclaimer.legalLink')}</Text>
                             <MaterialIcons name="arrow-forward" size={16} color="#2563EB" />
                         </View>
                     </TouchableOpacity>
@@ -209,7 +209,7 @@ export default function TwinDisclaimerScreen() {
                     style={styles.understandButton}
                     onPress={() => router.back()}
                 >
-                    <Text style={styles.understandButtonText}>Entendido</Text>
+                    <Text style={styles.understandButtonText}>{t('twinDisclaimer.understood')}</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>

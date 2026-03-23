@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
 import { User } from "../../api/user";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -46,6 +47,7 @@ export default function ReviewSuccessScreen() {
         tags: string;
     }>();
     const { token } = useAuth();
+    const { t } = useTranslation('reviews');
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -146,7 +148,7 @@ export default function ReviewSuccessScreen() {
     const avatarUrl = getAvatarUrl(professional?.avatar);
     const displayName = professional?.publicName ||
         `${professional?.firstname || ""} ${professional?.lastname || ""}`.trim() ||
-        professional?.email?.split("@")[0] || "Profesional";
+        professional?.email?.split("@")[0] || t('reviewSuccess.professionalFallback');
     const ratingValue = parseInt(rating || "0", 10);
     const selectedTags = tags ? tags.split(",") : [];
     const reviewComment = comment || "";
@@ -208,15 +210,15 @@ export default function ReviewSuccessScreen() {
                         }]
                     }
                 ]}>
-                    <Text style={styles.successTitle}>¡Reseña Publicada!</Text>
+                    <Text style={styles.successTitle}>{t('reviewSuccess.successTitle')}</Text>
                     <Text style={styles.successMessage}>
-                        Gracias por tu valiosa opinión. Tu reseña ayuda a otros usuarios de nuestra comunidad a tomar mejores decisiones.
+                        {t('reviewSuccess.successMessage')}
                     </Text>
 
                     {/* Points Badge */}
                     <View style={styles.pointsBadge}>
                         <Text style={styles.pointsEmoji}>🎉</Text>
-                        <Text style={styles.pointsText}>+50 Puntos ganados</Text>
+                        <Text style={styles.pointsText}>{t('reviewSuccess.pointsEarned')}</Text>
                     </View>
                 </Animated.View>
 
@@ -280,11 +282,11 @@ export default function ReviewSuccessScreen() {
                 }
             ]}>
                 <TouchableOpacity style={styles.primaryButton} onPress={handleExplore}>
-                    <Text style={styles.primaryButtonText}>Explorar más profesionales</Text>
+                    <Text style={styles.primaryButtonText}>{t('reviewSuccess.exploreButton')}</Text>
                     <MaterialIcons name="arrow-forward" size={20} color={COLORS.white} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryButton} onPress={handleGoHome}>
-                    <Text style={styles.secondaryButtonText}>Volver al Inicio</Text>
+                    <Text style={styles.secondaryButtonText}>{t('reviewSuccess.homeButton')}</Text>
                 </TouchableOpacity>
             </Animated.View>
         </SafeAreaView>

@@ -20,6 +20,7 @@ import { userApi } from "../../api";
 import * as calendarApi from "../../api/calendar";
 import AddressAutocomplete from "../../components/AddressAutocomplete";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FDE047",
@@ -64,7 +65,8 @@ const TIME_OPTIONS = [
 
 export default function ProContactScreen() {
     const { token, user, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
     const [website, setWebsite] = useState("");
@@ -242,7 +244,7 @@ export default function ProContactScreen() {
                 router.push("/onboarding/pro-complete");
             }
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('proContact.saveError') });
         } finally {
             setIsLoading(false);
         }
@@ -258,19 +260,19 @@ export default function ProContactScreen() {
                         <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                     <View style={styles.stepIndicator}>
-                        <Text style={styles.stepText}>Paso 2 de 2</Text>
+                        <Text style={styles.stepText}>{t('proContact.stepOf', { current: 2, total: 2 })}</Text>
                         <View style={styles.stepDots}>
                             <View style={styles.stepDotDone} />
                             <View style={[styles.stepDot, styles.stepDotActive]} />
                         </View>
                     </View>
                     <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-                        <Text style={styles.skipText}>Omitir</Text>
+                        <Text style={styles.skipText}>{t('proContact.skip')}</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Datos de Contacto</Text>
-                    <Text style={styles.headerSubtitle}>Gestiona tu disponibilidad y canales.</Text>
+                    <Text style={styles.headerTitle}>{t('proContact.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('proContact.headerSubtitle')}</Text>
                 </View>
             </View>
 
@@ -285,7 +287,7 @@ export default function ProContactScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Información de Contacto */}
-                    <Text style={styles.sectionTitle}>Información de Contacto</Text>
+                    <Text style={styles.sectionTitle}>{t('proContact.contactInfoSection')}</Text>
 
                     {/* Email */}
                     <View style={styles.contactCard}>
@@ -293,10 +295,10 @@ export default function ProContactScreen() {
                             <MaterialIcons name="mail" size={20} color={COLORS.gray400} />
                         </View>
                         <View style={styles.contactContent}>
-                            <Text style={styles.contactLabel}>Email Profesional</Text>
+                            <Text style={styles.contactLabel}>{t('proContact.emailLabel')}</Text>
                             <TextInput
                                 style={styles.contactInput}
-                                placeholder="contacto@email.com"
+                                placeholder={t('proContact.emailPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={contactEmail}
                                 onChangeText={setContactEmail}
@@ -315,10 +317,10 @@ export default function ProContactScreen() {
                             <MaterialIcons name="phone" size={20} color={COLORS.gray400} />
                         </View>
                         <View style={styles.contactContent}>
-                            <Text style={styles.contactLabel}>Móvil de Trabajo</Text>
+                            <Text style={styles.contactLabel}>{t('proContact.phoneLabel')}</Text>
                             <TextInput
                                 style={styles.contactInput}
-                                placeholder="+34 600 000 000"
+                                placeholder={t('proContact.phonePlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={contactPhone}
                                 onChangeText={setContactPhone}
@@ -336,10 +338,10 @@ export default function ProContactScreen() {
                             <MaterialIcons name="language" size={20} color={COLORS.gray400} />
                         </View>
                         <View style={styles.contactContent}>
-                            <Text style={styles.contactLabel}>Sitio Web</Text>
+                            <Text style={styles.contactLabel}>{t('proContact.websiteLabel')}</Text>
                             <TextInput
                                 style={styles.contactInput}
-                                placeholder="https://tuweb.com"
+                                placeholder={t('proContact.websitePlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={website}
                                 onChangeText={setWebsite}
@@ -358,7 +360,7 @@ export default function ProContactScreen() {
                             <View style={styles.contactIcon}>
                                 <MaterialIcons name="location-on" size={20} color={COLORS.gray400} />
                             </View>
-                            <Text style={styles.contactLabel}>Ubicación / Consulta</Text>
+                            <Text style={styles.contactLabel}>{t('proContact.locationLabel')}</Text>
                         </View>
                         <AddressAutocomplete
                             value={location}
@@ -372,14 +374,14 @@ export default function ProContactScreen() {
                                     lng: address.lng,
                                 });
                             }}
-                            placeholder="Escribe una dirección..."
+                            placeholder={t('proContact.locationPlaceholder')}
                         />
                     </View>
 
                     {/* Horario Laboral */}
-                    <Text style={styles.sectionTitle}>Horario Laboral</Text>
+                    <Text style={styles.sectionTitle}>{t('proContact.scheduleSection')}</Text>
                     <View style={styles.scheduleCard}>
-                        <Text style={styles.scheduleLabel}>Días Laborables</Text>
+                        <Text style={styles.scheduleLabel}>{t('proContact.workDaysLabel')}</Text>
                         <View style={styles.daysRow}>
                             {DAYS.map((day) => (
                                 <TouchableOpacity
@@ -400,10 +402,10 @@ export default function ProContactScreen() {
                             ))}
                         </View>
 
-                        <Text style={[styles.scheduleLabel, { marginTop: 16 }]}>Franja Horaria</Text>
+                        <Text style={[styles.scheduleLabel, { marginTop: 16 }]}>{t('proContact.timeSlotLabel')}</Text>
                         <View style={styles.timeRow}>
                             <TouchableOpacity style={styles.timeBox} onPress={() => openTimePicker("start")}>
-                                <Text style={styles.timeLabel}>Inicio</Text>
+                                <Text style={styles.timeLabel}>{t('proContact.timeStart')}</Text>
                                 <View style={styles.timePickerRow}>
                                     <Text style={styles.timeInput}>{workStart}</Text>
                                     <MaterialIcons name="arrow-drop-down" size={20} color={COLORS.gray400} />
@@ -411,7 +413,7 @@ export default function ProContactScreen() {
                             </TouchableOpacity>
                             <Text style={styles.timeSeparator}>-</Text>
                             <TouchableOpacity style={styles.timeBox} onPress={() => openTimePicker("end")}>
-                                <Text style={styles.timeLabel}>Fin</Text>
+                                <Text style={styles.timeLabel}>{t('proContact.timeEnd')}</Text>
                                 <View style={styles.timePickerRow}>
                                     <Text style={styles.timeInput}>{workEnd}</Text>
                                     <MaterialIcons name="arrow-drop-down" size={20} color={COLORS.gray400} />
@@ -427,11 +429,11 @@ export default function ProContactScreen() {
                                 <MaterialIcons name="event" size={20} color={COLORS.blue600} />
                             </View>
                             <View style={styles.calendarTextContainer}>
-                                <Text style={styles.calendarTitle}>Integrar Calendario</Text>
-                                <Text style={styles.calendarSubtitle}>Sincroniza para evitar conflictos</Text>
+                                <Text style={styles.calendarTitle}>{t('proContact.calendarTitle')}</Text>
+                                <Text style={styles.calendarSubtitle}>{t('proContact.calendarSubtitle')}</Text>
                             </View>
                             <View style={styles.recommendedBadge}>
-                                <Text style={styles.recommendedText}>Recomendado</Text>
+                                <Text style={styles.recommendedText}>{t('proContact.recommended')}</Text>
                             </View>
                         </View>
                         <View style={styles.calendarButtons}>
@@ -439,13 +441,13 @@ export default function ProContactScreen() {
                                 <View style={styles.calendarConnectedBadge}>
                                     <MaterialIcons name="check-circle" size={16} color="#059669" />
                                     <Text style={styles.calendarConnectedText}>
-                                        {calendarProvider === "google" ? "Google Calendar" : "Outlook"} conectado
+                                        {t('proContact.calendarConnected', { provider: calendarProvider === "google" ? "Google Calendar" : "Outlook" })}
                                     </Text>
                                 </View>
                             ) : isConnectingCalendar ? (
                                 <View style={styles.calendarConnectedBadge}>
                                     <ActivityIndicator size="small" color={COLORS.textMain} />
-                                    <Text style={styles.calendarConnectedText}>Conectando...</Text>
+                                    <Text style={styles.calendarConnectedText}>{t('proContact.connecting')}</Text>
                                 </View>
                             ) : (
                                 <>
@@ -463,7 +465,7 @@ export default function ProContactScreen() {
                     </View>
 
                     {/* Redes Sociales */}
-                    <Text style={styles.sectionTitle}>Redes Sociales</Text>
+                    <Text style={styles.sectionTitle}>{t('proContact.socialSection')}</Text>
                     <View style={styles.socialCard}>
                         <View style={styles.socialRow}>
                             <View style={[styles.socialIcon, { backgroundColor: "#0077b5" }]}>
@@ -553,7 +555,7 @@ export default function ProContactScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.continueButtonText}>Guardar y Continuar</Text>
+                            <Text style={styles.continueButtonText}>{t('proContact.saveAndContinue')}</Text>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </>
                     )}

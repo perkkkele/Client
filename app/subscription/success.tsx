@@ -11,6 +11,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#137fec",
@@ -26,6 +27,7 @@ const COLORS = {
 
 export default function SubscriptionSuccessScreen() {
     const { refreshUser } = useAuth();
+    const { t } = useTranslation('settings');
 
     // Refresh user data to get updated subscription
     // Uses polling to handle race condition with Stripe webhook
@@ -67,12 +69,12 @@ export default function SubscriptionSuccessScreen() {
                 </View>
 
                 {/* Title and Message */}
-                <Text style={styles.title}>¡Suscripción Activada!</Text>
+                <Text style={styles.title}>{t('subscriptionSuccess.title')}</Text>
                 <Text style={styles.message}>
-                    Tu plan se ha activado correctamente. Ahora tienes acceso a todas las funcionalidades incluidas.
+                    {t('subscriptionSuccess.message')}
                 </Text>
                 <Text style={styles.subMessage}>
-                    Tu suscripción se renovará automáticamente cada mes.
+                    {t('subscriptionSuccess.subMessage')}
                 </Text>
 
                 {/* Buttons */}
@@ -82,14 +84,14 @@ export default function SubscriptionSuccessScreen() {
                         onPress={handleViewPlans}
                     >
                         <MaterialIcons name="credit-card" size={20} color={COLORS.white} />
-                        <Text style={styles.primaryButtonText}>Ver Mi Plan</Text>
+                        <Text style={styles.primaryButtonText}>{t('subscriptionSuccess.viewPlan')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.secondaryButton}
                         onPress={handleGoHome}
                     >
-                        <Text style={styles.secondaryButtonText}>Ir al Dashboard</Text>
+                        <Text style={styles.secondaryButtonText}>{t('subscriptionSuccess.goToDashboard')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

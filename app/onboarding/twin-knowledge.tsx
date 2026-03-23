@@ -19,6 +19,7 @@ import { userApi, liveAvatarApi, customTwinApi } from "../../api";
 import { KnowledgeDocument } from "../../api/user";
 import { getCategoryInstruction } from "../../constants/digitalTwinPresets";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FDE047",
@@ -56,11 +57,11 @@ interface KnowledgeCategory {
 }
 
 const INITIAL_CATEGORIES: KnowledgeCategory[] = [
-    { id: "faq", title: "Preguntas Frecuentes", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0, url: "", manualContent: "" },
-    { id: "services", title: "Servicios y Productos", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0, url: "", manualContent: "" },
-    { id: "pricing", title: "Tarifa de Precios", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0, url: "", manualContent: "" },
-    { id: "policy", title: "Política de Empresa", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0, url: "", manualContent: "" },
-    { id: "troubleshooting", title: "Resolución de Problemas", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "faq", title: "faq", icon: "quiz", color: COLORS.accentBlue, bgColor: "rgba(59, 130, 246, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "services", title: "services", icon: "inventory-2", color: COLORS.accentGreen, bgColor: "rgba(16, 185, 129, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "pricing", title: "pricing", icon: "attach-money", color: COLORS.accentYellow, bgColor: "rgba(245, 158, 11, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "policy", title: "policy", icon: "policy", color: COLORS.accentPurple, bgColor: "rgba(99, 102, 241, 0.1)", count: 0, url: "", manualContent: "" },
+    { id: "troubleshooting", title: "troubleshooting", icon: "build", color: COLORS.accentRed, bgColor: "rgba(239, 68, 68, 0.1)", count: 0, url: "", manualContent: "" },
 ];
 
 // Helper to build prompt from user data
@@ -143,7 +144,8 @@ function buildContextLinks(categories: KnowledgeCategory[], otherUrl: string): {
 
 export default function TwinKnowledgeScreen() {
     const { user, token, refreshUser } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     const [categories, setCategories] = useState(INITIAL_CATEGORIES);
     const [otherUrl, setOtherUrl] = useState("");
     const [trainingProgress] = useState(5); // 5% por defecto
@@ -256,11 +258,11 @@ export default function TwinKnowledgeScreen() {
                 count: response.documents.filter(d => d.category === cat.id).length
             })));
 
-            showAlert({ type: 'success', title: 'Éxito', message: `Documento "${file.name}" subido correctamente` });
+            showAlert({ type: 'success', title: t('twinKnowledge.success'), message: t('twinKnowledge.uploadSuccess', { name: file.name }) });
 
         } catch (error: any) {
             console.error("Upload error:", error);
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo subir el documento" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinKnowledge.uploadError') });
         } finally {
             setIsUploading(false);
         }
@@ -271,12 +273,12 @@ export default function TwinKnowledgeScreen() {
 
         showAlert({
     type: 'warning',
-    title: 'Eliminar documento',
-    message: '¿Estás seguro de que quieres eliminar este documento?',
+    title: t('twinKnowledge.deleteTitle'),
+    message: t('twinKnowledge.deleteMessage'),
     buttons: [
-                { text: "Cancelar", style: "cancel" },
+                { text: t('twinKnowledge.cancel'), style: "cancel" },
                 {
-                    text: "Eliminar",
+                    text: t('twinKnowledge.delete'),
                     style: "destructive",
                     onPress: async () => {
                         try {
@@ -287,9 +289,9 @@ export default function TwinKnowledgeScreen() {
                                 ...cat,
                                 count: response.documents.filter(d => d.category === cat.id).length
                             })));
-                            showAlert({ type: 'success', title: 'Éxito', message: 'Documento eliminado' });
+                            showAlert({ type: 'success', title: t('twinKnowledge.success'), message: t('twinKnowledge.deleteSuccess') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo eliminar el documento" });
+                            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinKnowledge.deleteError') });
                         }
                     }
                 }
@@ -498,7 +500,7 @@ export default function TwinKnowledgeScreen() {
                         <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                     <View style={styles.stepIndicator}>
-                        <Text style={styles.stepText}>Paso 3 de 3</Text>
+                        <Text style={styles.stepText}>{t('twinKnowledge.stepOf', { current: 3, total: 3 })}</Text>
                         <View style={styles.stepDots}>
                             <View style={styles.stepDotDone} />
                             <View style={styles.stepDotDone} />
@@ -509,12 +511,12 @@ export default function TwinKnowledgeScreen() {
                         style={styles.helpButton}
                         onPress={() => router.push("/onboarding/help-twin-knowledge")}
                     >
-                        <Text style={styles.helpText}>Ayuda</Text>
+                        <Text style={styles.helpText}>{t('twinKnowledge.help')}</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Base de Conocimientos</Text>
-                    <Text style={styles.headerSubtitle}>Sube documentos para entrenar a tu Gemelo Digital.</Text>
+                    <Text style={styles.headerTitle}>{t('twinKnowledge.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('twinKnowledge.headerSubtitle')}</Text>
                 </View>
             </View>
 
@@ -530,8 +532,8 @@ export default function TwinKnowledgeScreen() {
                             <MaterialIcons name="psychology" size={24} color={COLORS.primary} />
                         </View>
                         <View style={styles.progressTextContainer}>
-                            <Text style={styles.progressTitle}>Estado del Entrenamiento</Text>
-                            <Text style={styles.progressSubtitle}>Aprendizaje Inicial</Text>
+                            <Text style={styles.progressTitle}>{t('twinKnowledge.trainingStatus')}</Text>
+                            <Text style={styles.progressSubtitle}>{t('twinKnowledge.trainingInitial')}</Text>
                         </View>
                         <Text style={styles.progressPercent}>{trainingProgress}%</Text>
                     </View>
@@ -540,10 +542,10 @@ export default function TwinKnowledgeScreen() {
                     </View>
                     <View style={styles.progressFooter}>
                         <Text style={styles.progressFooterText}>
-                            {filledCount > 0 ? `${filledCount} Categorías completadas` : "0/5 Categorías completadas"}
+                            {filledCount > 0 ? t('twinKnowledge.categoriesCompleted', { count: filledCount }) : t('twinKnowledge.categoriesNone')}
                         </Text>
                         <Text style={styles.progressFooterHint}>
-                            {filledCount > 0 ? "Información añadida" : "Falta información clave"}
+                            {filledCount > 0 ? t('twinKnowledge.infoAdded') : t('twinKnowledge.infoMissing')}
                         </Text>
                     </View>
                 </View>
@@ -555,10 +557,10 @@ export default function TwinKnowledgeScreen() {
                             <View style={[styles.categoryIcon, { backgroundColor: category.bgColor }]}>
                                 <MaterialIcons name={category.icon as any} size={18} color={category.color} />
                             </View>
-                            <Text style={styles.categoryTitle}>{category.title}</Text>
+                            <Text style={styles.categoryTitle}>{t(`twinKnowledge.cat${category.id.charAt(0).toUpperCase() + category.id.slice(1)}`)}</Text>
                             <View style={styles.categoryBadge}>
                                 <Text style={styles.categoryBadgeText}>
-                                    {category.url.trim() ? "URL" : `${category.count} Cargados`}
+                                    {category.url.trim() ? t('twinKnowledge.urlBadge') : t('twinKnowledge.uploaded', { count: category.count })}
                                 </Text>
                             </View>
                         </View>
@@ -576,11 +578,11 @@ export default function TwinKnowledgeScreen() {
                                     <MaterialIcons name="upload-file" size={20} color={COLORS.gray400} />
                                 )}
                                 <Text style={styles.categoryButtonText}>
-                                    {category.id === "pricing" ? "Subir Tarifas" :
-                                        category.id === "services" ? "Subir Catálogo" :
-                                            category.id === "policy" ? "Subir Política" :
-                                                category.id === "troubleshooting" ? "Subir Guía" :
-                                                    "Subir PDF/DOC"}
+                                    {category.id === "pricing" ? t('twinKnowledge.uploadPricing') :
+                                        category.id === "services" ? t('twinKnowledge.uploadServices') :
+                                            category.id === "policy" ? t('twinKnowledge.uploadPolicy') :
+                                                category.id === "troubleshooting" ? t('twinKnowledge.uploadTroubleshooting') :
+                                                    t('twinKnowledge.uploadDefault')}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -589,11 +591,11 @@ export default function TwinKnowledgeScreen() {
                             >
                                 <MaterialIcons name="edit-note" size={20} color={COLORS.gray400} />
                                 <Text style={styles.categoryButtonText}>
-                                    {category.id === "pricing" ? "Añadir Precios" :
-                                        category.id === "services" ? "Listar Manual" :
-                                            category.id === "policy" ? "Escribir Política" :
-                                                category.id === "troubleshooting" ? "Añadir Solución" :
-                                                    "Añadir Manual"}
+                                    {category.id === "pricing" ? t('twinKnowledge.manualPricing') :
+                                        category.id === "services" ? t('twinKnowledge.manualServices') :
+                                            category.id === "policy" ? t('twinKnowledge.manualPolicy') :
+                                                category.id === "troubleshooting" ? t('twinKnowledge.manualTroubleshooting') :
+                                                    t('twinKnowledge.manualDefault')}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -629,7 +631,7 @@ export default function TwinKnowledgeScreen() {
                         >
                             <MaterialIcons name="link" size={16} color={COLORS.accentBlue} />
                             <Text style={styles.urlToggleText}>
-                                {expandedCategory === category.id ? "Ocultar URL" : "Añadir URL"}
+                                {expandedCategory === category.id ? t('twinKnowledge.hideUrl') : t('twinKnowledge.addUrlToCategory')}
                             </Text>
                             <MaterialIcons
                                 name={expandedCategory === category.id ? "expand-less" : "expand-more"}
@@ -644,7 +646,7 @@ export default function TwinKnowledgeScreen() {
                                 <MaterialIcons name="link" size={18} color={COLORS.gray400} />
                                 <TextInput
                                     style={styles.urlInput}
-                                    placeholder={`https://tudominio.com/${category.id}`}
+                                    placeholder={t('twinKnowledge.urlPlaceholderCategory')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={category.url}
                                     onChangeText={(text) => updateCategoryUrl(category.id, text)}
@@ -669,26 +671,26 @@ export default function TwinKnowledgeScreen() {
                             <MaterialIcons name="folder-open" size={18} color={COLORS.gray500} />
                         </View>
                         <View style={styles.otherDocsTextContainer}>
-                            <Text style={styles.categoryTitle}>Otros Documentos (Libre)</Text>
-                            <Text style={styles.otherDocsSubtitle}>Archivos adicionales no categorizados</Text>
+                            <Text style={styles.categoryTitle}>{t('twinKnowledge.otherDocsTitle')}</Text>
+                            <Text style={styles.otherDocsSubtitle}>{t('twinKnowledge.otherDocsSubtitle')}</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.uploadZone} onPress={() => handleUpload("other")}>
                         <View style={styles.uploadIconContainer}>
                             <MaterialIcons name="cloud-upload" size={24} color={COLORS.gray400} />
                         </View>
-                        <Text style={styles.uploadTitle}>Subir Documento Libre</Text>
-                        <Text style={styles.uploadSubtitle}>Soporta PDF, DOCX, TXT</Text>
+                        <Text style={styles.uploadTitle}>{t('twinKnowledge.uploadFreeDoc')}</Text>
+                        <Text style={styles.uploadSubtitle}>{t('twinKnowledge.supportedFormats')}</Text>
                     </TouchableOpacity>
 
                     {/* URL Input for Other Documents */}
                     <View style={styles.urlInputContainerOther}>
-                        <Text style={styles.urlLabel}>O añade una URL:</Text>
+                        <Text style={styles.urlLabel}>{t('twinKnowledge.addUrlLabel')}</Text>
                         <View style={styles.urlInputRow}>
                             <MaterialIcons name="link" size={18} color={COLORS.gray400} />
                             <TextInput
                                 style={styles.urlInput}
-                                placeholder="https://tudominio.com/otros"
+                                placeholder={t('twinKnowledge.urlPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={otherUrl}
                                 onChangeText={setOtherUrl}
@@ -705,7 +707,7 @@ export default function TwinKnowledgeScreen() {
                     </View>
                 </View>
 
-                <Text style={styles.disclaimer}>Los documentos se procesarán de forma segura.</Text>
+                <Text style={styles.disclaimer}>{t('twinKnowledge.disclaimer')}</Text>
             </ScrollView>
 
             {/* Footer */}
@@ -721,7 +723,7 @@ export default function TwinKnowledgeScreen() {
                     ) : (
                         <>
                             <MaterialIcons name="rocket-launch" size={20} color="#000000" />
-                            <Text style={styles.activateButtonText}>Activar Gemelo Digital</Text>
+                            <Text style={styles.activateButtonText}>{t('twinKnowledge.finishSetup')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
@@ -747,25 +749,25 @@ export default function TwinKnowledgeScreen() {
                                     color={editingCategory?.color || COLORS.gray500}
                                 />
                             </View>
-                            <Text style={styles.modalTitle}>{editingCategory?.title || "Añadir Contenido"}</Text>
+                            <Text style={styles.modalTitle}>{editingCategory ? t(`twinKnowledge.cat${editingCategory.id.charAt(0).toUpperCase() + editingCategory.id.slice(1)}`) : t('twinKnowledge.addContent')}</Text>
                             <TouchableOpacity onPress={handleCancelManualEdit} style={styles.modalCloseButton}>
                                 <MaterialIcons name="close" size={24} color={COLORS.gray400} />
                             </TouchableOpacity>
                         </View>
 
                         <Text style={styles.modalHint}>
-                            {editingCategory?.id === "faq" && "Escribe preguntas frecuentes y sus respuestas. Ej:\n\n¿Cuál es tu horario? De 9:00 a 18:00 de lunes a viernes."}
-                            {editingCategory?.id === "services" && "Lista tus servicios o productos con descripciones. Ej:\n\n- Consulta inicial: Evaluación completa de 60 min.\n- Seguimiento: Sesión de 30 min."}
-                            {editingCategory?.id === "pricing" && "Indica tus tarifas y precios. Ej:\n\n- Consulta: 50€\n- Sesión completa: 80€\n- Pack 5 sesiones: 350€"}
-                            {editingCategory?.id === "policy" && "Describe las políticas de tu empresa. Ej:\n\nCancelaciones: Con 24h de antelación sin cargo.\nFormas de pago: Efectivo, tarjeta, transferencia."}
-                            {editingCategory?.id === "troubleshooting" && "Añade soluciones a problemas comunes. Ej:\n\nSi tienes problemas para reservar, contacta por WhatsApp.\nSi no recibes confirmación, revisa tu carpeta de spam."}
+                            {editingCategory?.id === "faq" && t('twinKnowledge.hintFaq')}
+                            {editingCategory?.id === "services" && t('twinKnowledge.hintServices')}
+                            {editingCategory?.id === "pricing" && t('twinKnowledge.hintPricing')}
+                            {editingCategory?.id === "policy" && t('twinKnowledge.hintPolicy')}
+                            {editingCategory?.id === "troubleshooting" && t('twinKnowledge.hintTroubleshooting')}
                         </Text>
 
                         <TextInput
                             style={styles.modalTextInput}
                             multiline
                             numberOfLines={8}
-                            placeholder="Escribe aquí el contenido..."
+                            placeholder={t('twinKnowledge.contentPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={editingContent}
                             onChangeText={setEditingContent}
@@ -777,14 +779,14 @@ export default function TwinKnowledgeScreen() {
                                 style={styles.modalCancelButton}
                                 onPress={handleCancelManualEdit}
                             >
-                                <Text style={styles.modalCancelText}>Cancelar</Text>
+                                <Text style={styles.modalCancelText}>{t('twinKnowledge.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.modalSaveButton}
                                 onPress={handleSaveManualContent}
                             >
                                 <MaterialIcons name="check" size={18} color="#000000" />
-                                <Text style={styles.modalSaveText}>Guardar</Text>
+                                <Text style={styles.modalSaveText}>{t('twinKnowledge.save')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

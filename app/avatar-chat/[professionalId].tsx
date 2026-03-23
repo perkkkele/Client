@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import {
     ActivityIndicator,
     Image,
@@ -157,60 +158,77 @@ const MOCK_CONVERSATIONS: Conversation[] = [
     },
 ];
 
-const INFO_BUBBLE_CONTENT: Record<Exclude<InfoBubbleType, null>, { title: string; content: string; icon: string; subtitle?: string }> = {
-    profile: {
-        title: "Sobre mí",
-        content: "Especialista con más de 15 años de experiencia. Formación en las mejores instituciones. Comprometido con tu bienestar.",
-        icon: "person",
-    },
-    contact: {
-        title: "Contacto",
-        content: "Disponible de lunes a viernes de 9:00 a 18:00. Respuesta garantizada en menos de 24 horas.",
-        icon: "call",
-    },
-    location: {
-        title: "Ubicación",
-        content: "Consulta principal en Centro Médico. También disponible para consultas online desde cualquier lugar.",
-        icon: "location-on",
-    },
-    share: {
-        title: "Compartir",
-        content: "Comparte este perfil con amigos o familiares que puedan beneficiarse de una consulta profesional.",
-        icon: "share",
-    },
-    private: {
-        title: "Conversación Privada",
-        subtitle: "Modo incógnito",
-        content: "Al activar esta opción, los mensajes de esta sesión no aparecerán en el historial, proporcionando máxima seguridad y privacidad.",
-        icon: "lock",
-    },
-    appointments: {
-        title: "Agendar Cita",
-        content: "Agenda una cita con el profesional para una consulta presencial o virtual.",
-        icon: "event",
-    },
-    escalation: {
-        title: "Atención personalizada",
-        subtitle: "con el profesional",
-        content: "El gemelo ofrece ayuda inmediata. Al escalar, la sesión se pausará y la respuesta puede no ser inmediata.",
-        icon: "support-agent",
-    },
-    escalation_keyword: {
-        title: "Para asegurarme de ayudarte de la mejor forma posible…",
-        subtitle: "",
-        content: "¿Quieres hablar directamente con el profesional?\n\nPor lo que comentas, puede que este tema requiera atención humana.\n\nPuedes seguir hablando con el gemelo digital o, si lo deseas, escalar la conversación. Ten en cuenta que al hacerlo la respuesta del profesional puede no ser inmediata.\n\nPara una atención directa, también puedes reservar una cita.",
-        icon: "priority-high",
-    },
+const INFO_BUBBLE_ICONS: Record<Exclude<InfoBubbleType, null>, string> = {
+    profile: "person",
+    contact: "call",
+    location: "location-on",
+    share: "share",
+    private: "lock",
+    appointments: "event",
+    escalation: "support-agent",
+    escalation_keyword: "priority-high",
 };
 
 export default function AvatarChatScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
-
+    const { t } = useTranslation('settings');
 
     const { token, user: currentUser } = useAuth();
     const { showAlert } = useAlert();
     const { subscribeToMessages } = useIncomingCall();
     const insets = useSafeAreaInsets();
+
+    const INFO_BUBBLE_CONTENT = useMemo(() => ({
+        profile: {
+            title: t('avatarChat.infoBubble.profile.title'),
+            content: t('avatarChat.infoBubble.profile.content'),
+            icon: INFO_BUBBLE_ICONS.profile,
+            subtitle: undefined,
+        },
+        contact: {
+            title: t('avatarChat.infoBubble.contact.title'),
+            content: t('avatarChat.infoBubble.contact.content'),
+            icon: INFO_BUBBLE_ICONS.contact,
+            subtitle: undefined,
+        },
+        location: {
+            title: t('avatarChat.infoBubble.location.title'),
+            content: t('avatarChat.infoBubble.location.content'),
+            icon: INFO_BUBBLE_ICONS.location,
+            subtitle: undefined,
+        },
+        share: {
+            title: t('avatarChat.infoBubble.share.title'),
+            content: t('avatarChat.infoBubble.share.content'),
+            icon: INFO_BUBBLE_ICONS.share,
+            subtitle: undefined,
+        },
+        private: {
+            title: t('avatarChat.infoBubble.private.title'),
+            subtitle: t('avatarChat.infoBubble.private.subtitle'),
+            content: t('avatarChat.infoBubble.private.content'),
+            icon: INFO_BUBBLE_ICONS.private,
+        },
+        appointments: {
+            title: t('avatarChat.infoBubble.appointments.title'),
+            content: t('avatarChat.infoBubble.appointments.content'),
+            icon: INFO_BUBBLE_ICONS.appointments,
+            subtitle: undefined,
+        },
+        escalation: {
+            title: t('avatarChat.infoBubble.escalation.title'),
+            subtitle: t('avatarChat.infoBubble.escalation.subtitle'),
+            content: t('avatarChat.infoBubble.escalation.content'),
+            icon: INFO_BUBBLE_ICONS.escalation,
+        },
+        escalation_keyword: {
+            title: t('avatarChat.infoBubble.escalationKeyword.title'),
+            subtitle: "",
+            content: t('avatarChat.infoBubble.escalationKeyword.content'),
+            icon: INFO_BUBBLE_ICONS.escalation_keyword,
+        },
+    }), [t]);
+
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -397,7 +415,7 @@ export default function AvatarChatScreen() {
             const proposalMsg: Message = {
                 id: `appointment-${Date.now()}`,
                 type: 'action_card',
-                content: `Propuesta de cita: ${proposalData.date} a las ${proposalData.time}`,
+                content: `${t('avatarChat.voice.appointmentProposal', { date: proposalData.date, time: proposalData.time })}`,
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString('es-ES', {
                     hour: '2-digit',
@@ -665,15 +683,15 @@ export default function AvatarChatScreen() {
     const handleClearAllHistory = () => {
         showAlert({
             type: 'warning',
-            title: 'Borrar todo el historial',
-            message: '¿Estás seguro de que quieres borrar todas las conversaciones? Esta acción no se puede deshacer.',
+            title: t('avatarChat.clearHistory.title'),
+            message: t('avatarChat.clearHistory.message'),
             buttons: [
                 {
-                    text: "Cancelar",
+                    text: t('avatarChat.clearHistory.cancel'),
                     style: "cancel"
                 },
                 {
-                    text: "Borrar todo",
+                    text: t('avatarChat.clearHistory.confirm'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token || !professionalId) return;
@@ -685,7 +703,7 @@ export default function AvatarChatScreen() {
                             closeDrawer();
                         } catch (error) {
                             console.error("Error clearing history:", error);
-                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar el historial' });
+                            showAlert({ type: 'error', title: 'Error', message: t('avatarChat.clearHistory.error') });
                         }
                     }
                 }
@@ -974,7 +992,7 @@ export default function AvatarChatScreen() {
 
         } catch (error: any) {
             console.error("Error initializing LiveAvatar session:", error);
-            setSessionError(error.message || "Error al conectar con el avatar");
+            setSessionError(error.message || t('avatarChat.session.errorConnect'));
             setSessionStatus('error');
         }
     }, [professional]);
@@ -1123,7 +1141,7 @@ export default function AvatarChatScreen() {
         } catch (error: any) {
             console.error("[AvatarChat] CUSTOM mode error:", error);
             // Fall back to static preview on error
-            setSessionError(error.message || "Error conectando con el avatar");
+            setSessionError(error.message || t('avatarChat.session.errorConnecting'));
             setSessionStatus('active'); // Still allow chat to work
         }
     }, [professional, isSessionExpired, currentChatId, token, currentUser, professionalId]);
@@ -1377,7 +1395,7 @@ export default function AvatarChatScreen() {
                         const errorMessage: Message = {
                             id: `error-${Date.now()}`,
                             type: "text",
-                            content: "Error al procesar tu mensaje. Por favor intenta de nuevo.",
+                            content: t('avatarChat.errors.processingError'),
                             isUser: false,
                             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         };
@@ -1403,7 +1421,7 @@ export default function AvatarChatScreen() {
                         const errorMessage: Message = {
                             id: (Date.now() + 1).toString(),
                             type: "text",
-                            content: "Error al enviar el mensaje al avatar. Por favor intenta de nuevo.",
+                            content: t('avatarChat.errors.sendError'),
                             isUser: false,
                             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                         };
@@ -1415,7 +1433,7 @@ export default function AvatarChatScreen() {
                     const infoMessage: Message = {
                         id: (Date.now() + 1).toString(),
                         type: "text",
-                        content: "El avatar no está conectado. Espera a que se establezca la conexión.",
+                        content: t('avatarChat.errors.avatarNotConnected'),
                         isUser: false,
                         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
                     };
@@ -1552,7 +1570,7 @@ export default function AvatarChatScreen() {
             const escalationMessage: Message = {
                 id: `escalation-${Date.now()}`,
                 type: "text",
-                content: "📞 Conversación escalada. El gemelo está en pausa mientras esperas al profesional.",
+                content: t('avatarChat.escalation.escalated'),
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             };
@@ -1562,7 +1580,7 @@ export default function AvatarChatScreen() {
             const errorMessage: Message = {
                 id: `error-${Date.now()}`,
                 type: "text",
-                content: "⚠️ No se pudo contactar al profesional. Inténtalo de nuevo.",
+                content: t('avatarChat.escalation.escalateError'),
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
             };
@@ -1581,7 +1599,7 @@ export default function AvatarChatScreen() {
         const cancelMessage: Message = {
             id: `cancel-escalation-${Date.now()}`,
             type: "text",
-            content: "✓ Has retomado la conversación con el gemelo digital.",
+            content: t('avatarChat.escalation.cancelledResume'),
             isUser: false,
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -1606,14 +1624,14 @@ export default function AvatarChatScreen() {
     const generateNextDays = () => {
         const days = [];
         const today = new Date();
-        const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+        const dayNames = (t('avatarChat.dayNames', { returnObjects: true }) as string[]);
 
         for (let i = 0; i < 7; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
             days.push({
                 date: date.toISOString().split("T")[0],
-                dayName: i === 0 ? "Hoy" : dayNames[date.getDay()],
+                dayName: i === 0 ? t('avatarChat.dateToday') : dayNames[date.getDay()],
                 dayNum: date.getDate().toString(),
             });
         }
@@ -1678,7 +1696,7 @@ export default function AvatarChatScreen() {
     const twinAvatarUrl = professional?.digitalTwin?.appearance?.liveAvatarPreview || null;
     const displayName = professional?.publicName ||
         `${professional?.firstname || ""} ${professional?.lastname || ""}`.trim() ||
-        professional?.email?.split("@")[0] || "Profesional";
+        professional?.email?.split("@")[0] || t('avatarChat.professionFallback');
 
     return (
         <KeyboardAvoidingView
@@ -1737,16 +1755,16 @@ export default function AvatarChatScreen() {
                                     isHumanSession && { color: '#F59E0B', fontWeight: '600' }
                                 ]}>
                                     {isHumanSession
-                                        ? "👤 EN VIVO"
+                                        ? t('avatarChat.chip.live')
                                         : isEscalating
-                                            ? "Contactando..."
+                                            ? t('avatarChat.chip.contacting')
                                             : (professional?.escalation?.enabled &&
                                                 professional?.escalation?.triggers?.clientRequest &&
                                                 escalationStatus === 'none' &&
                                                 currentChatId &&
                                                 !isTwinDisabled)
-                                                ? "Contactar con profesional"
-                                                : `${professional?.profession || "Profesional"} AI`
+                                                ? t('avatarChat.chip.contactProfessional')
+                                                : `${professional?.profession || t('avatarChat.professionFallback')} AI`
                                     }
                                 </Text>
                             </View>
@@ -1841,8 +1859,8 @@ export default function AvatarChatScreen() {
                                 <View style={styles.pauseIconContainer}>
                                     <MaterialIcons name="play-arrow" size={48} color={COLORS.white} />
                                 </View>
-                                <Text style={styles.pauseText}>EN PAUSA</Text>
-                                <Text style={styles.pauseHint}>Toca para reanudar</Text>
+                                <Text style={styles.pauseText}>{t('avatarChat.pause.label')}</Text>
+                                <Text style={styles.pauseHint}>{t('avatarChat.pause.hint')}</Text>
                             </View>
                         )}
 
@@ -2029,7 +2047,7 @@ export default function AvatarChatScreen() {
                         {sessionStatus === 'connecting' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionOverlay}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
-                                <Text style={styles.sessionOverlayText}>Conectando con el avatar...</Text>
+                                <Text style={styles.sessionOverlayText}>{t('avatarChat.session.connecting')}</Text>
                             </View>
                         )}
 
@@ -2037,7 +2055,7 @@ export default function AvatarChatScreen() {
                         {sessionStatus === 'active' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionBadge}>
                                 <View style={styles.sessionBadgeDot} />
-                                <Text style={styles.sessionBadgeText}>EN VIVO</Text>
+                                <Text style={styles.sessionBadgeText}>{t('avatarChat.session.liveBadge')}</Text>
                             </View>
                         )}
 
@@ -2075,7 +2093,7 @@ export default function AvatarChatScreen() {
                         {sessionStatus === 'error' && !isVideoMinimized && !isHumanSession && (
                             <View style={styles.sessionOverlay}>
                                 <MaterialIcons name="error-outline" size={48} color={COLORS.gray400} />
-                                <Text style={styles.sessionOverlayText}>{sessionError || 'Error de conexión'}</Text>
+                                <Text style={styles.sessionOverlayText}>{sessionError || t('avatarChat.session.connectionError')}</Text>
                                 <TouchableOpacity
                                     style={styles.retryButton}
                                     onPress={() => {
@@ -2083,7 +2101,7 @@ export default function AvatarChatScreen() {
                                         setSessionError(null);
                                     }}
                                 >
-                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                    <Text style={styles.retryButtonText}>{t('avatarChat.session.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -2094,9 +2112,9 @@ export default function AvatarChatScreen() {
                                 <View style={styles.personalAttentionIcon}>
                                     <MaterialIcons name="person" size={40} color={COLORS.primary} />
                                 </View>
-                                <Text style={styles.personalAttentionTitle}>Atención personal</Text>
+                                <Text style={styles.personalAttentionTitle}>{t('avatarChat.personalAttention.title')}</Text>
                                 <Text style={styles.personalAttentionText}>
-                                    Este profesional ha decidido atender personalmente las consultas. Puedes escribir tu mensaje y te responderá lo antes posible.
+                                    {t('avatarChat.personalAttention.text')}
                                 </Text>
                                 {professional?.appointmentsEnabled && (
                                     <TouchableOpacity
@@ -2108,7 +2126,7 @@ export default function AvatarChatScreen() {
                                         }}
                                     >
                                         <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                        <Text style={styles.personalAttentionButtonText}>Reservar cita</Text>
+                                        <Text style={styles.personalAttentionButtonText}>{t('avatarChat.personalAttention.bookAppointment')}</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
@@ -2120,9 +2138,9 @@ export default function AvatarChatScreen() {
                                 <View style={[styles.personalAttentionIcon, { backgroundColor: '#FEF3C7' }]}>
                                     <MaterialIcons name="schedule" size={40} color="#F59E0B" />
                                 </View>
-                                <Text style={styles.personalAttentionTitle}>Tu tiempo con el gemelo digital ha terminado</Text>
+                                <Text style={styles.personalAttentionTitle}>{t('avatarChat.sessionExpired.title')}</Text>
                                 <Text style={styles.personalAttentionText}>
-                                    Has utilizado todo el tiempo disponible en esta sesión. Si tu consulta no ha quedado resuelta, puedes enviarla directamente al profesional.
+                                    {t('avatarChat.sessionExpired.text')}
                                 </Text>
 
                                 {/* Option 1: Send to professional */}
@@ -2141,7 +2159,7 @@ export default function AvatarChatScreen() {
                                         }}
                                     >
                                         <MaterialIcons name="chat" size={16} color="#FFFFFF" />
-                                        <Text style={[styles.personalAttentionButtonText, { color: '#FFFFFF' }]}>Enviar al profesional</Text>
+                                        <Text style={[styles.personalAttentionButtonText, { color: '#FFFFFF' }]}>{t('avatarChat.sessionExpired.sendToProfessional')}</Text>
                                     </TouchableOpacity>
                                 )}
 
@@ -2156,7 +2174,7 @@ export default function AvatarChatScreen() {
                                         }}
                                     >
                                         <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                        <Text style={styles.personalAttentionButtonText}>Agendar una cita</Text>
+                                        <Text style={styles.personalAttentionButtonText}>{t('avatarChat.sessionExpired.bookAppointment')}</Text>
                                     </TouchableOpacity>
                                 )}
 
@@ -2166,7 +2184,7 @@ export default function AvatarChatScreen() {
                                     style={{ marginTop: 12, paddingVertical: 6 }}
                                 >
                                     <Text style={{ fontSize: 13, color: COLORS.gray500, textDecorationLine: 'underline' }}>
-                                        Ya resolví mi duda
+                                        {t('avatarChat.sessionExpired.resolved')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -2201,8 +2219,8 @@ export default function AvatarChatScreen() {
                                 activeOpacity={0.9}
                             >
                                 <MaterialIcons name="volume-off" size={14} color={COLORS.white} />
-                                <Text style={styles.muteReminderText}>Audio silenciado</Text>
-                                <Text style={styles.muteReminderAction}>Tocar para activar</Text>
+                                <Text style={styles.muteReminderText}>{t('avatarChat.mute.audioMuted')}</Text>
+                                <Text style={styles.muteReminderAction}>{t('avatarChat.mute.tapToEnable')}</Text>
                             </TouchableOpacity>
                         )}
 
@@ -2210,7 +2228,7 @@ export default function AvatarChatScreen() {
                         {showDisclaimerBanner && !isHumanSession && !isTwinEffectivelyDisabled && !isVideoMinimized && (
                             <View style={styles.disclaimerBanner}>
                                 <Text style={styles.disclaimerText}>
-                                    Las respuestas de este gemelo digital tienen carácter informativo.{" "}
+                                    {t('avatarChat.disclaimer.text')}{" "}
                                     <Text
                                         style={styles.disclaimerLink}
                                         onPress={() => {
@@ -2219,7 +2237,7 @@ export default function AvatarChatScreen() {
                                             }
                                         }}
                                     >
-                                        Consulta el alcance y límites del gemelo digital
+                                        {t('avatarChat.disclaimer.link')}
                                     </Text>
                                 </Text>
                             </View>
@@ -2296,7 +2314,7 @@ export default function AvatarChatScreen() {
                         {/* Minimized indicator text */}
                         {isVideoMinimized && (
                             <View style={styles.minimizedOverlay}>
-                                <Text style={styles.minimizedText}>Toca para expandir</Text>
+                                <Text style={styles.minimizedText}>{t('avatarChat.minimized.tapToExpand')}</Text>
                             </View>
                         )}
                     </TouchableOpacity>
@@ -2401,9 +2419,9 @@ export default function AvatarChatScreen() {
                                         </View>
                                         <View style={styles.contactItemInfo}>
                                             <View style={styles.contactLabelRow}>
-                                                <Text style={styles.contactLabel}>Móvil</Text>
+                                                <Text style={styles.contactLabel}>{t('avatarChat.contact.mobile')}</Text>
                                                 <View style={styles.callNowBadge}>
-                                                    <Text style={styles.callNowText}>LLAMAR AHORA</Text>
+                                                    <Text style={styles.callNowText}>{t('avatarChat.contact.callNow')}</Text>
                                                 </View>
                                             </View>
                                             <Text style={styles.contactValue}>{professional.phone}</Text>
@@ -2422,7 +2440,7 @@ export default function AvatarChatScreen() {
                                             <MaterialIcons name="mail" size={20} color={COLORS.indigo600} />
                                         </View>
                                         <View style={styles.contactItemInfo}>
-                                            <Text style={styles.contactLabel}>Email</Text>
+                                            <Text style={styles.contactLabel}>{t('avatarChat.contact.email')}</Text>
                                             <Text style={styles.contactValue}>{professional.professionalEmail}</Text>
                                         </View>
                                     </TouchableOpacity>
@@ -2443,7 +2461,7 @@ export default function AvatarChatScreen() {
                                             <MaterialIcons name="language" size={20} color={COLORS.indigo600} />
                                         </View>
                                         <View style={styles.contactItemInfo}>
-                                            <Text style={styles.contactLabel}>Sitio Web</Text>
+                                            <Text style={styles.contactLabel}>{t('avatarChat.contact.website')}</Text>
                                             <Text style={styles.contactValue}>{professional.website}</Text>
                                         </View>
                                     </TouchableOpacity>
@@ -2452,7 +2470,7 @@ export default function AvatarChatScreen() {
                                 {/* Social Links */}
                                 {professional.socialLinks && (
                                     <View style={styles.socialSection}>
-                                        <Text style={styles.socialTitle}>Redes Sociales</Text>
+                                        <Text style={styles.socialTitle}>{t('avatarChat.contact.socialLinks')}</Text>
                                         <View style={styles.socialLinks}>
                                             {professional.socialLinks.instagram && (
                                                 <TouchableOpacity
@@ -2527,7 +2545,7 @@ export default function AvatarChatScreen() {
                                         {!mapLoaded && (
                                             <View style={styles.mapLoading}>
                                                 <ActivityIndicator size="large" color={COLORS.primary} />
-                                                <Text style={styles.mapLoadingText}>Cargando mapa...</Text>
+                                                <Text style={styles.mapLoadingText}>{t('avatarChat.contact.loadingMap')}</Text>
                                             </View>
                                         )}
                                         {/* Overlay button to open in external maps */}
@@ -2541,14 +2559,14 @@ export default function AvatarChatScreen() {
                                         >
                                             <View style={styles.mapTapHint}>
                                                 <MaterialIcons name="open-in-new" size={14} color={COLORS.white} />
-                                                <Text style={styles.mapTapText}>Abrir en Maps</Text>
+                                                <Text style={styles.mapTapText}>{t('avatarChat.contact.openInMaps')}</Text>
                                             </View>
                                         </TouchableOpacity>
                                     </View>
                                     {/* Open indicator */}
                                     <View style={styles.openIndicator}>
                                         <View style={styles.openDot} />
-                                        <Text style={styles.openText}>Abierto</Text>
+                                        <Text style={styles.openText}>{t('avatarChat.contact.open')}</Text>
                                     </View>
                                 </View>
 
@@ -2563,7 +2581,7 @@ export default function AvatarChatScreen() {
                                                 {professional.publicName || `${professional.firstname} ${professional.lastname}`}
                                             </Text>
                                             <Text style={styles.locationAddress}>
-                                                {professional.location.address || "Dirección no disponible"}
+                                                {professional.location.address || t('avatarChat.contact.addressUnavailable')}
                                                 {professional.location.city && `, ${professional.location.city}`}
                                             </Text>
                                         </View>
@@ -2580,7 +2598,7 @@ export default function AvatarChatScreen() {
                                             }}
                                         >
                                             <MaterialIcons name="directions" size={20} color={COLORS.textMain} />
-                                            <Text style={styles.directionsButtonText}>Cómo llegar</Text>
+                                            <Text style={styles.directionsButtonText}>{t('avatarChat.contact.getDirections')}</Text>
                                         </TouchableOpacity>
 
                                         {professional.phone && (professional.contactVisibility?.phone !== false) && (
@@ -2589,7 +2607,7 @@ export default function AvatarChatScreen() {
                                                 onPress={() => Linking.openURL(`tel:${professional.phone}`)}
                                             >
                                                 <MaterialIcons name="call" size={20} color={COLORS.textMain} />
-                                                <Text style={styles.callLocationButtonText}>Llamar</Text>
+                                                <Text style={styles.callLocationButtonText}>{t('avatarChat.contact.call')}</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -2602,23 +2620,23 @@ export default function AvatarChatScreen() {
                                 : `https://twinpro.app/user/${professional._id}`;
 
                             // Build share message from professional data
-                            const name = professional.publicName || professional.firstname || "Profesional";
+                            const name = professional.publicName || professional.firstname || t('avatarChat.professionFallback');
                             const profession = professional.profession;
                             const bio = professional.bio || null;
 
                             // Clean message: card-like format with professional info
                             const shareMessage = [
-                                `👋 Te recomiendo que veas esto`,
+                                t('avatarChat.share.recommend'),
                                 ``,
                                 `${name}${profession ? ` · ${profession}` : ""}`,
                                 bio ? `\n${bio}` : null,
                                 ``,
-                                `Puedes hablar con su gemelo digital aquí 👇`,
+                                t('avatarChat.share.talkToTwin'),
                                 shareUrl,
                             ].filter(line => line !== null).join("\n");
 
                             // Short version for X/Twitter (max ~280 chars)
-                            const twitterMessage = `👋 Te recomiendo que veas esto — ${name}${profession ? ` (${profession})` : ""}. Puedes hablar con su gemelo digital aquí 👇 ${shareUrl}`;
+                            const twitterMessage = `${t('avatarChat.share.recommend')} — ${name}${profession ? ` (${profession})` : ""}. ${t('avatarChat.share.talkToTwinShort')} ${shareUrl}`;
 
                             return (
                                 <View style={styles.shareContent}>
@@ -2641,7 +2659,7 @@ export default function AvatarChatScreen() {
                                         <TouchableOpacity
                                             style={styles.shareButton}
                                             onPress={() => {
-                                                const quote = `👋 Te recomiendo que veas esto — ${name}${profession ? ` (${profession})` : ""}. Puedes hablar con su gemelo digital aquí.`;
+                                                const quote = `${t('avatarChat.share.recommend')} — ${name}${profession ? ` (${profession})` : ""}. ${t('avatarChat.share.talkToTwinShort')}`;
                                                 Linking.openURL(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(quote)}`);
                                             }}
                                         >
@@ -2711,11 +2729,11 @@ export default function AvatarChatScreen() {
                                     {/* Header */}
                                     <View style={styles.appointmentHeader}>
                                         <View>
-                                            <Text style={styles.appointmentTitle}>Agendar Cita</Text>
+                                            <Text style={styles.appointmentTitle}>{t('avatarChat.appointment.title')}</Text>
                                             <View style={styles.appointmentScheduleRow}>
                                                 <MaterialIcons name="schedule" size={14} color={COLORS.gray400} />
                                                 <Text style={styles.appointmentScheduleText}>
-                                                    Horario: {professional.appointmentHours?.start || "09:00"} - {professional.appointmentHours?.end || "18:00"}
+                                                    {t('avatarChat.appointment.schedule', { start: professional.appointmentHours?.start || "09:00", end: professional.appointmentHours?.end || "18:00" })}
                                                 </Text>
                                             </View>
                                         </View>
@@ -2764,10 +2782,10 @@ export default function AvatarChatScreen() {
                                         {loadingSlots ? (
                                             <View style={styles.appointmentSlotsLoading}>
                                                 <ActivityIndicator size="small" color={COLORS.primary} />
-                                                <Text style={styles.appointmentSlotsLoadingText}>Cargando horarios...</Text>
+                                                <Text style={styles.appointmentSlotsLoadingText}>{t('avatarChat.appointment.loadingSlots')}</Text>
                                             </View>
                                         ) : availableSlots.length === 0 ? (
-                                            <Text style={styles.appointmentNoSlots}>No hay horarios disponibles</Text>
+                                            <Text style={styles.appointmentNoSlots}>{t('avatarChat.appointment.noSlots')}</Text>
                                         ) : (
                                             <View style={styles.appointmentSlotsGrid}>
                                                 {availableSlots.map((slot) => (
@@ -2803,13 +2821,13 @@ export default function AvatarChatScreen() {
                                         disabled={!selectedDate || !selectedTime}
                                         onPress={handleConfirmAppointment}
                                     >
-                                        <Text style={styles.appointmentConfirmText}>CONTINUAR</Text>
+                                        <Text style={styles.appointmentConfirmText}>{t('avatarChat.appointment.continue')}</Text>
                                         <MaterialIcons name="arrow-forward" size={16} color={COLORS.black} />
                                     </TouchableOpacity>
 
                                     {/* Info */}
                                     <Text style={styles.appointmentTerms}>
-                                        Selecciona el tipo de cita y duración en la siguiente pantalla.
+                                        {t('avatarChat.appointment.selectTypeInfo')}
                                     </Text>
                                 </View>
                             ) : activeInfoBubble === "escalation" ? (
@@ -2820,7 +2838,7 @@ export default function AvatarChatScreen() {
                                     </Text>
 
                                     <Text style={styles.escalationDialogQuestion}>
-                                        ¿Qué quieres hacer?
+                                        {t('avatarChat.escalation.whatToDo')}
                                     </Text>
 
                                     {/* Book Appointment - Primary action (only if professional has appointments enabled) */}
@@ -2836,7 +2854,7 @@ export default function AvatarChatScreen() {
                                         >
                                             <MaterialIcons name="event" size={18} color={COLORS.textMain} />
                                             <Text style={styles.escalationDialogButtonPrimaryText}>
-                                                Reservar una cita
+                                                {t('avatarChat.escalation.bookAppointment')}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
@@ -2852,7 +2870,7 @@ export default function AvatarChatScreen() {
                                     >
                                         <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
                                         <Text style={styles.escalationDialogButtonSecondaryText}>
-                                            {isEscalating ? 'Contactando...' : 'Escalar y esperar respuesta'}
+                                            {isEscalating ? t('avatarChat.chip.contacting') : t('avatarChat.escalation.escalateAndWait')}
                                         </Text>
                                     </TouchableOpacity>
 
@@ -2862,7 +2880,7 @@ export default function AvatarChatScreen() {
                                         onPress={() => setActiveInfoBubble(null)}
                                     >
                                         <Text style={styles.escalationDialogButtonTertiaryText}>
-                                            Seguir con el gemelo digital
+                                            {t('avatarChat.escalation.continueWithTwin')}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -2886,7 +2904,7 @@ export default function AvatarChatScreen() {
                                         >
                                             <MaterialIcons name="event" size={18} color={COLORS.textMain} />
                                             <Text style={styles.escalationDialogButtonPrimaryText}>
-                                                Reservar cita con el profesional
+                                                {t('avatarChat.escalation.bookAppointmentWithPro')}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
@@ -2902,7 +2920,7 @@ export default function AvatarChatScreen() {
                                     >
                                         <MaterialIcons name="support-agent" size={18} color={COLORS.gray600} />
                                         <Text style={styles.escalationDialogButtonSecondaryText}>
-                                            {isEscalating ? 'Contactando...' : 'Escalar conversación y esperar respuesta'}
+                                            {isEscalating ? t('avatarChat.chip.contacting') : t('avatarChat.escalation.escalateKeywordAndWait')}
                                         </Text>
                                     </TouchableOpacity>
 
@@ -2912,7 +2930,7 @@ export default function AvatarChatScreen() {
                                         onPress={() => setActiveInfoBubble(null)}
                                     >
                                         <Text style={styles.escalationDialogButtonTertiaryText}>
-                                            Seguir con el gemelo digital
+                                            {t('avatarChat.escalation.continueWithTwin')}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -2929,7 +2947,7 @@ export default function AvatarChatScreen() {
                                             style={styles.infoBubbleAction}
                                             onPress={handleViewProfile}
                                         >
-                                            <Text style={styles.infoBubbleActionText}>Ver perfil completo</Text>
+                                            <Text style={styles.infoBubbleActionText}>{t('avatarChat.viewFullProfile')}</Text>
                                             <MaterialIcons name="arrow-forward" size={16} color={COLORS.textMain} />
                                         </TouchableOpacity>
                                     )}
@@ -2948,7 +2966,7 @@ export default function AvatarChatScreen() {
             >
                 {/* Today Separator */}
                 <View style={styles.daySeparator}>
-                    <Text style={styles.daySeparatorText}>Hoy</Text>
+                    <Text style={styles.daySeparatorText}>{t('avatarChat.todaySeparator')}</Text>
                 </View>
 
                 {/* Messages */}
@@ -3014,7 +3032,7 @@ export default function AvatarChatScreen() {
                                     {message.isFromProfessional && (
                                         <View style={styles.proBadgeInMessage}>
                                             <MaterialIcons name="person" size={10} color={COLORS.primary} />
-                                            <Text style={styles.proBadgeTextAsync}>Profesional</Text>
+                                            <Text style={styles.proBadgeTextAsync}>{t('avatarChat.proBadge')}</Text>
                                         </View>
                                     )}
                                     <Text style={[
@@ -3071,7 +3089,7 @@ export default function AvatarChatScreen() {
                                             const farewellMsg: Message = {
                                                 id: `farewell-${Date.now()}`,
                                                 type: 'text',
-                                                content: '¡Cita reservada! Ha sido un placer, nos vemos pronto. 😊',
+                                                content: t('avatarChat.farewell'),
                                                 isUser: false,
                                                 timestamp: new Date().toLocaleTimeString('es-ES', {
                                                     hour: '2-digit',
@@ -3097,7 +3115,7 @@ export default function AvatarChatScreen() {
                                             const farewellMsg: Message = {
                                                 id: `farewell-${Date.now()}`,
                                                 type: 'text',
-                                                content: '¡Cita reservada! Ha sido un placer, nos vemos pronto. 😊',
+                                                content: t('avatarChat.farewell'),
                                                 isUser: false,
                                                 timestamp: new Date().toLocaleTimeString('es-ES', {
                                                     hour: '2-digit',
@@ -3167,7 +3185,7 @@ export default function AvatarChatScreen() {
                         <View style={styles.escalationBannerContent}>
                             <MaterialIcons name="hourglass-top" size={14} color="#F59E0B" />
                             <Text style={styles.escalationBannerText}>
-                                Esperando al profesional...
+                                {t('avatarChat.escalation.waitingForPro')}
                             </Text>
                         </View>
                         <TouchableOpacity
@@ -3175,7 +3193,7 @@ export default function AvatarChatScreen() {
                             onPress={handleCancelEscalation}
                         >
                             <Text style={styles.escalationBannerCancelText}>
-                                Volver al gemelo
+                                {t('avatarChat.escalation.backToTwin')}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -3185,7 +3203,7 @@ export default function AvatarChatScreen() {
                     <View style={[styles.escalationBanner, styles.escalationBannerAccepted]}>
                         <MaterialIcons name="check-circle" size={14} color="#22C55E" />
                         <Text style={[styles.escalationBannerText, { color: '#22C55E' }]}>
-                            El profesional se unirá pronto
+                            {t('avatarChat.escalation.proJoiningSoon')}
                         </Text>
                     </View>
                 )}
@@ -3210,12 +3228,12 @@ export default function AvatarChatScreen() {
                             streamingVoice.isProcessing && { color: COLORS.primary }
                         ]}>
                             {streamingVoice.isProcessing
-                                ? 'Procesando...'
+                                ? t('avatarChat.voice.processing')
                                 : streamingVoice.isSpeaking
-                                    ? 'Escuchando...'
+                                    ? t('avatarChat.voice.listening')
                                     : streamingVoice.isReady
-                                        ? 'Listo para escuchar'
-                                        : 'Conectando...'}
+                                        ? t('avatarChat.voice.ready')
+                                        : t('avatarChat.voice.voiceConnecting')}
                         </Text>
                         {streamingVoice.partialTranscript && (
                             <Text style={{ color: COLORS.gray600, fontSize: 12, marginLeft: 8 }}>
@@ -3242,7 +3260,7 @@ export default function AvatarChatScreen() {
                             style={styles.textInput}
                             value={inputText}
                             onChangeText={setInputText}
-                            placeholder="Escribe un mensaje..."
+                            placeholder={t('avatarChat.inputPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             multiline
                             maxLength={500}
@@ -3321,7 +3339,7 @@ export default function AvatarChatScreen() {
                     >
                         {/* Drawer Header */}
                         <View style={styles.drawerHeader}>
-                            <Text style={styles.drawerTitle}>Conversaciones</Text>
+                            <Text style={styles.drawerTitle}>{t('avatarChat.drawer.title')}</Text>
                             <TouchableOpacity
                                 style={styles.drawerCloseButton}
                                 onPress={closeDrawer}
@@ -3336,7 +3354,7 @@ export default function AvatarChatScreen() {
                                 <MaterialIcons name="search" size={20} color={COLORS.gray400} />
                                 <TextInput
                                     style={styles.drawerSearchInput}
-                                    placeholder="Buscar conversaciones..."
+                                    placeholder={t('avatarChat.drawer.searchPlaceholder')}
                                     placeholderTextColor={COLORS.gray400}
                                     value={drawerSearchText}
                                     onChangeText={setDrawerSearchText}
@@ -3344,7 +3362,7 @@ export default function AvatarChatScreen() {
                             </View>
                             <TouchableOpacity style={styles.newConversationButton} onPress={handleNewConversation}>
                                 <MaterialIcons name="add-comment" size={20} color={COLORS.white} />
-                                <Text style={styles.newConversationText}>Nueva Conversación</Text>
+                                <Text style={styles.newConversationText}>{t('avatarChat.drawer.newConversation')}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -3360,14 +3378,14 @@ export default function AvatarChatScreen() {
                             {loadingConversations ? (
                                 <View style={{ padding: 40, alignItems: 'center' }}>
                                     <ActivityIndicator size="small" color={COLORS.primary} />
-                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>Cargando historial...</Text>
+                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>{t('avatarChat.drawer.loadingHistory')}</Text>
                                 </View>
                             ) : conversations.length === 0 ? (
                                 <View style={{ padding: 40, alignItems: 'center' }}>
                                     <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.gray300} />
-                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>Sin conversaciones</Text>
+                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>{t('avatarChat.drawer.noConversations')}</Text>
                                     <Text style={{ color: COLORS.gray400, marginTop: 4, fontSize: 12, textAlign: 'center' }}>
-                                        Tus conversaciones con este profesional aparecerán aquí
+                                        {t('avatarChat.drawer.noConversationsHint')}
                                     </Text>
                                 </View>
                             ) : (
@@ -3426,7 +3444,7 @@ export default function AvatarChatScreen() {
                                 <View style={styles.drawerPrivateBanner}>
                                     <MaterialIcons name="lock" size={16} color="#F59E0B" />
                                     <Text style={styles.drawerPrivateBannerText}>
-                                        Modo privado · No se guardará esta conversación
+                                        {t('avatarChat.drawer.privateMode')}
                                     </Text>
                                 </View>
                             ) : (
@@ -3439,7 +3457,7 @@ export default function AvatarChatScreen() {
                             <View style={styles.drawerDivider} />
                             <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
                                 <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
-                                <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
+                                <Text style={styles.drawerFooterOptionText}>{t('avatarChat.drawer.reportProblem')}</Text>
                             </TouchableOpacity>
                             <View style={styles.drawerDivider} />
                             <TouchableOpacity
@@ -3447,7 +3465,7 @@ export default function AvatarChatScreen() {
                                 onPress={handleClearAllHistory}
                             >
                                 <MaterialIcons name="delete-sweep" size={18} color="#EF4444" />
-                                <Text style={styles.drawerDeleteAllText}>Borrar todo el historial</Text>
+                                <Text style={styles.drawerDeleteAllText}>{t('avatarChat.drawer.clearAll')}</Text>
                             </TouchableOpacity>
                         </View>
                     </Animated.View>

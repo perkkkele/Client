@@ -14,6 +14,7 @@ import * as Sentry from '@sentry/react-native';
 
 // Initialize i18n — must be imported before any component that uses translations
 import '../services/i18n';
+import { useLanguage } from '../hooks/useLanguage';
 
 Sentry.init({
   dsn: 'https://736dd6efd3d3c513c7b6dc648627a9df@o4510754066333696.ingest.de.sentry.io/4510754069413968',
@@ -110,6 +111,9 @@ function RootLayoutNav() {
   const segments = useSegments();
   const notificationListener = useRef<Notifications.EventSubscription | null>(null);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  // Sync i18n language with user profile (reads user.language from backend)
+  useLanguage();
 
   // Handle notification navigation based on type
   const handleNotificationNavigation = (data: any) => {

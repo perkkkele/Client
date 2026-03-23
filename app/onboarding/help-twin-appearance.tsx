@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFED00",
@@ -40,32 +41,16 @@ interface FAQItem {
     answer: string;
 }
 
-const FAQ_ITEMS: FAQItem[] = [
-    {
-        question: "¿Qué es un Gemelo Digital?",
-        answer: "Un Gemelo Digital es una representación virtual de ti que utiliza inteligencia artificial. Puede atender consultas de tus clientes 24/7, responder preguntas frecuentes y agendar citas, todo con tu estilo y conocimientos.",
-    },
-    {
-        question: "¿Qué diferencia hay entre avatar predefinido y entrenado?",
-        answer: "El avatar predefinido usa una imagen del catálogo de TwinPro. El entrenado (Premium) crea un avatar con tu rostro real a partir de un video, logrando máxima autenticidad.",
-    },
-    {
-        question: "¿Cómo elijo la voz correcta?",
-        answer: "Las voces estándar son gratuitas y de alta calidad. Elige una que coincida con tu género y estilo. Con Premium, puedes clonar tu propia voz para que tu gemelo suene exactamente como tú.",
-    },
-    {
-        question: "¿Mis clientes sabrán que hablan con IA?",
-        answer: "Sí, siempre mostramos un aviso legal. Es transparente y genera confianza. Además, los clientes pueden solicitar hablar directamente contigo en cualquier momento.",
-    },
-    {
-        question: "¿Puedo cambiar la apariencia después?",
-        answer: "Sí, puedes cambiar el avatar y la voz desde tu panel profesional cuando quieras. Si tienes Premium, puedes crear varios avatares entrenados.",
-    },
-    {
-        question: "¿Qué necesito para entrenar un avatar con mi rostro?",
-        answer: "Necesitas grabar un video de 2-3 minutos mirando a la cámara, con buena iluminación y sin interrupciones. El proceso de entrenamiento toma unas horas.",
-    },
-];
+function getFaqItems(t: any): FAQItem[] {
+    return [
+        { question: t('helpTwinAppearanceFaq.q1'), answer: t('helpTwinAppearanceFaq.a1') },
+        { question: t('helpTwinAppearanceFaq.q2'), answer: t('helpTwinAppearanceFaq.a2') },
+        { question: t('helpTwinAppearanceFaq.q3'), answer: t('helpTwinAppearanceFaq.a3') },
+        { question: t('helpTwinAppearanceFaq.q4'), answer: t('helpTwinAppearanceFaq.a4') },
+        { question: t('helpTwinAppearanceFaq.q5'), answer: t('helpTwinAppearanceFaq.a5') },
+        { question: t('helpTwinAppearanceFaq.q6'), answer: t('helpTwinAppearanceFaq.a6') },
+    ];
+}
 
 interface GuideItem {
     icon: keyof typeof MaterialIcons.glyphMap;
@@ -73,27 +58,20 @@ interface GuideItem {
     duration: string;
 }
 
-const GUIDE_ITEMS: GuideItem[] = [
-    {
-        icon: "face",
-        title: "Cómo elegir el mejor avatar",
-        duration: "2 min de lectura",
-    },
-    {
-        icon: "record-voice-over",
-        title: "Seleccionar la voz ideal",
-        duration: "1:30 min",
-    },
-    {
-        icon: "videocam",
-        title: "Grabar video para avatar entrenado",
-        duration: "3 min de lectura",
-    },
-];
+function getGuideItems(t: any): GuideItem[] {
+    return [
+        { icon: "face", title: t('helpTwinAppearanceFaq.guide1Title'), duration: t('helpTwinAppearanceFaq.guide1Duration') },
+        { icon: "record-voice-over", title: t('helpTwinAppearanceFaq.guide2Title'), duration: t('helpTwinAppearanceFaq.guide2Duration') },
+        { icon: "videocam", title: t('helpTwinAppearanceFaq.guide3Title'), duration: t('helpTwinAppearanceFaq.guide3Duration') },
+    ];
+}
 
 export default function HelpTwinAppearanceScreen() {
+    const { t } = useTranslation('onboarding');
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
+    const FAQ_ITEMS = getFaqItems(t);
+    const GUIDE_ITEMS = getGuideItems(t);
 
     function handleClose() {
         router.back();
@@ -121,13 +99,13 @@ export default function HelpTwinAppearanceScreen() {
             {/* Header Negro */}
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>Ayuda Gemelo Digital</Text>
+                    <Text style={styles.headerTitle}>{t('helpTwinAppearance.title')}</Text>
                     <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <MaterialIcons name="close" size={20} color={COLORS.gray400} />
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
-                    Aprende a configurar la apariencia y voz de tu Gemelo Digital.
+                    {t('helpTwinAppearance.subtitle')}
                 </Text>
             </View>
 
@@ -142,7 +120,7 @@ export default function HelpTwinAppearanceScreen() {
                         <MaterialIcons name="search" size={20} color={COLORS.primaryDark} />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Buscar en la ayuda..."
+                            placeholder={t('helpCommon.searchPlaceholder')}
                             placeholderTextColor={COLORS.gray400}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
@@ -154,16 +132,16 @@ export default function HelpTwinAppearanceScreen() {
                 <View style={styles.infoCard}>
                     <MaterialIcons name="tips-and-updates" size={24} color={COLORS.primaryDark} />
                     <View style={styles.infoContent}>
-                        <Text style={styles.infoTitle}>Consejo rápido</Text>
+                        <Text style={styles.infoTitle}>{t('helpTwinAppearanceFaq.quickTipTitle')}</Text>
                         <Text style={styles.infoText}>
-                            Elige un avatar y voz que representen tu marca profesional. Los clientes confían más en perfiles bien configurados.
+                            {t('helpTwinAppearanceFaq.quickTipText')}
                         </Text>
                     </View>
                 </View>
 
                 {/* FAQs */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>PREGUNTAS FRECUENTES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.faqSection')}</Text>
                     <View style={styles.faqContainer}>
                         {filteredFAQs.map((item, index) => (
                             <TouchableOpacity
@@ -190,7 +168,7 @@ export default function HelpTwinAppearanceScreen() {
 
                 {/* Contact Support */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>¿NECESITAS MÁS AYUDA?</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.needMoreHelp')}</Text>
                     <TouchableOpacity
                         style={styles.contactCard}
                         onPress={handleSendEmail}
@@ -200,7 +178,7 @@ export default function HelpTwinAppearanceScreen() {
                             <MaterialIcons name="mail-outline" size={22} color={COLORS.blue600} />
                         </View>
                         <View style={styles.contactInfo}>
-                            <Text style={styles.contactLabel}>Contactar soporte</Text>
+                            <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
                             <Text style={styles.contactHint}>soporte@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
@@ -209,7 +187,7 @@ export default function HelpTwinAppearanceScreen() {
 
                 {/* Guides */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>GUÍAS Y TUTORIALES</Text>
+                    <Text style={styles.sectionTitle}>{t('helpCommon.guidesSection')}</Text>
                     <View style={styles.guidesCard}>
                         {GUIDE_ITEMS.map((item, index) => (
                             <TouchableOpacity

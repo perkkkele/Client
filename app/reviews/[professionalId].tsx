@@ -18,6 +18,7 @@ import { userApi, getAssetUrl, reviewApi } from "../../api";
 import { User } from "../../api/user";
 import { Review as APIReview } from "../../api/review";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -44,27 +45,30 @@ const COLORS = {
 };
 
 // Opciones de ordenamiento
-const SORT_OPTIONS = [
-    { id: 'recent', label: 'Más recientes' },
-    { id: 'highest', label: 'Mejor valoradas' },
-    { id: 'lowest', label: 'Peor valoradas' },
+const SORT_OPTION_KEYS = [
+    { id: 'recent', labelKey: 'reviews.sortRecent' },
+    { id: 'highest', labelKey: 'reviews.sortHighest' },
+    { id: 'lowest', labelKey: 'reviews.sortLowest' },
 ] as const;
 
-type SortOption = typeof SORT_OPTIONS[number]['id'];
+type SortOption = typeof SORT_OPTION_KEYS[number]['id'];
 
-// Helper para formatear fecha relativa
-function formatRelativeDate(dateString: string): string {
+// Helper to format relative date - now accepts t function
+function formatRelativeDate(dateString: string, t: any): string {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return 'Hoy';
-    if (diffDays === 1) return 'Ayer';
-    if (diffDays < 7) return `Hace ${diffDays} días`;
-    if (diffDays < 30) return `Hace ${Math.floor(diffDays / 7)} semana${Math.floor(diffDays / 7) > 1 ? 's' : ''}`;
-    if (diffDays < 365) return `Hace ${Math.floor(diffDays / 30)} mes${Math.floor(diffDays / 30) > 1 ? 'es' : ''}`;
-    return `Hace ${Math.floor(diffDays / 365)} año${Math.floor(diffDays / 365) > 1 ? 's' : ''}`;
+    if (diffDays === 0) return t('reviews.today');
+    if (diffDays === 1) return t('reviews.yesterday');
+    if (diffDays < 7) return t('reviews.daysAgo', { count: diffDays });
+    const weeks = Math.floor(diffDays / 7);
+    if (diffDays < 30) return t('reviews.weeksAgo', { count: weeks });
+    const months = Math.floor(diffDays / 30);
+    if (diffDays < 365) return t('reviews.monthsAgo', { count: months });
+    const years = Math.floor(diffDays / 365);
+    return t('reviews.yearsAgo', { count: years });
 }
 
 // Helper para obtener iniciales
@@ -90,6 +94,7 @@ export default function ProfessionalReviewsScreen() {
     const { professionalId } = useLocalSearchParams<{ professionalId: string }>();
     const { token, user } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('reviews');
     const [professional, setProfessional] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
@@ -130,7 +135,7 @@ export default function ProfessionalReviewsScreen() {
                 userAvatar: r.author.avatar,
                 userInitials: getInitials(r.author.firstname, r.author.lastname),
                 rating: r.rating,
-                date: formatRelativeDate(r.createdAt),
+                date: formatRelativeDate(r.createdAt, t),
                 comment: r.comment,
                 hasReply: !!(r.reply && r.reply.text && r.reply.text.trim()),
                 replyText: r.reply?.text?.trim() || '',
@@ -229,7 +234,7 @@ export default function ProfessionalReviewsScreen() {
     // Handle sending a reply to a review (owner only)
     const handleSendReply = async (reviewId: string) => {
         if (!token || !replyText.trim()) {
-            showAlert({ type: 'warning', title: 'Respuesta vacía', message: 'Escribe una respuesta antes de enviar.' });
+            showAlert({ type: 'warning', title: t('reviews.alertEmptyReply'), message: t('reviews.alertEmptyReplyMessage') });
             return;
         }
 
@@ -246,9 +251,9 @@ export default function ProfessionalReviewsScreen() {
 
             setReplyingTo(null);
             setReplyText("");
-            showAlert({ type: 'success', title: '¡Respuesta publicada!', message: 'Tu respuesta ya es visible para todos los usuarios.' });
+            showAlert({ type: 'success', title: t('reviews.alertReplySuccess'), message: t('reviews.alertReplySuccessMessage') });
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'No se pudo enviar', message: error.message || 'Ocurrió un problema al enviar tu respuesta. Inténtalo de nuevo.' });
+            showAlert({ type: 'error', title: t('reviews.alertReplyError'), message: error.message || t('reviews.alertReplyErrorMessage') });
         } finally {
             setIsSendingReply(false);
         }
@@ -308,11 +313,11 @@ export default function ProfessionalReviewsScreen() {
                         <View style={styles.replyFormContainer}>
                             <View style={styles.replyFormHeader}>
                                 <MaterialIcons name="reply" size={18} color={COLORS.textMain} />
-                                <Text style={styles.replyFormTitle}>Responder a esta reseña</Text>
+                                <Text style={styles.replyFormTitle}>{t('reviews.replyToReview')}</Text>
                             </View>
                             <TextInput
                                 style={styles.replyInput}
-                                placeholder="Escribe tu respuesta aquí..."
+                                placeholder={t('reviews.replyPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 multiline
                                 value={replyText}
@@ -324,7 +329,7 @@ export default function ProfessionalReviewsScreen() {
                                     onPress={() => { setReplyingTo(null); setReplyText(""); }}
                                     disabled={isSendingReply}
                                 >
-                                    <Text style={styles.replyCancelButton}>Cancelar</Text>
+                                    <Text style={styles.replyCancelButton}>{t('reviews.replyCancel')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[
@@ -337,7 +342,7 @@ export default function ProfessionalReviewsScreen() {
                                     {isSendingReply ? (
                                         <ActivityIndicator size="small" color={COLORS.textMain} />
                                     ) : (
-                                        <Text style={styles.replySendButtonText}>Enviar</Text>
+                                        <Text style={styles.replySendButtonText}>{t('reviews.replySend')}</Text>
                                     )}
                                 </TouchableOpacity>
                             </View>
@@ -349,7 +354,7 @@ export default function ProfessionalReviewsScreen() {
                             activeOpacity={0.8}
                         >
                             <MaterialIcons name="reply" size={16} color={COLORS.gray500} />
-                            <Text style={styles.replyButtonOwnerText}>Responder</Text>
+                            <Text style={styles.replyButtonOwnerText}>{t('reviews.replyButton')}</Text>
                         </TouchableOpacity>
                     )
                 )}
@@ -368,9 +373,9 @@ export default function ProfessionalReviewsScreen() {
     if (!professional) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Profesional no encontrado</Text>
+                <Text style={styles.errorText}>{t('reviews.notFound')}</Text>
                 <TouchableOpacity style={styles.backButtonError} onPress={handleBack}>
-                    <Text style={styles.backButtonErrorText}>Volver</Text>
+                    <Text style={styles.backButtonErrorText}>{t('reviews.goBack')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -389,7 +394,7 @@ export default function ProfessionalReviewsScreen() {
                     <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                         <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Reseñas del Profesional</Text>
+                    <Text style={styles.headerTitle}>{t('reviews.headerTitle')}</Text>
                     <View style={{ width: 40 }} />
                 </View>
             </SafeAreaView>
@@ -416,7 +421,7 @@ export default function ProfessionalReviewsScreen() {
                     {/* Name */}
                     <Text style={styles.professionalName}>{displayName}</Text>
                     <Text style={styles.professionalProfession}>
-                        {professional.profession || "Profesional"}
+                        {professional.profession || t('reviews.professionalFallback')}
                     </Text>
 
                     {/* Rating Summary */}
@@ -429,7 +434,7 @@ export default function ProfessionalReviewsScreen() {
                                 {renderRatingStars(professional.rating || 0)}
                             </View>
                             <Text style={styles.reviewCountText}>
-                                {professional.ratingCount || 0} reseñas
+                                {professional.ratingCount || 0} {t('reviews.reviewCount', { count: professional.ratingCount || 0 }).split(' ').slice(1).join(' ')}
                             </Text>
                         </View>
                     </View>
@@ -438,7 +443,7 @@ export default function ProfessionalReviewsScreen() {
                     {topTags.length > 0 && (
                         <View style={styles.traitsSection}>
                             <Text style={styles.traitsTitle}>
-                                ¿Qué define mejor a {displayName?.split(" ")[0]}?
+                                {t('reviews.whatDefines', { name: displayName?.split(" ")[0] })}
                             </Text>
                             <View style={styles.tagsContainer}>
                                 {topTags.slice(0, 6).map((tagData, index) => (
@@ -468,7 +473,7 @@ export default function ProfessionalReviewsScreen() {
                 {/* Sort Menu Dropdown */}
                 {showSortMenu && (
                     <View style={styles.sortMenu}>
-                        {SORT_OPTIONS.map(option => (
+                        {SORT_OPTION_KEYS.map(option => (
                             <TouchableOpacity
                                 key={option.id}
                                 style={[
@@ -481,7 +486,7 @@ export default function ProfessionalReviewsScreen() {
                                     styles.sortMenuItemText,
                                     sortBy === option.id && styles.sortMenuItemTextActive
                                 ]}>
-                                    {option.label}
+                                    {t(option.labelKey)}
                                 </Text>
                                 {sortBy === option.id && (
                                     <MaterialIcons name="check" size={16} color={COLORS.primary} />
@@ -499,7 +504,7 @@ export default function ProfessionalReviewsScreen() {
                     >
                         <MaterialIcons name="sort" size={18} color={COLORS.gray500} />
                         <Text style={styles.sortButtonText}>
-                            {SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Más recientes'}
+                            {t(SORT_OPTION_KEYS.find(o => o.id === sortBy)?.labelKey || 'reviews.sortRecent')}
                         </Text>
                         <MaterialIcons
                             name={showSortMenu ? "expand-less" : "expand-more"}
@@ -512,7 +517,7 @@ export default function ProfessionalReviewsScreen() {
                         onPress={() => router.push(`/write-review/${professionalId}`)}
                     >
                         <MaterialIcons name="edit" size={18} color={COLORS.textMain} />
-                        <Text style={styles.writeReviewText}>Escribir reseña</Text>
+                        <Text style={styles.writeReviewText}>{t('reviews.writeReview')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -528,7 +533,7 @@ export default function ProfessionalReviewsScreen() {
                 {/* End Message */}
                 <View style={styles.endMessage}>
                     <Text style={styles.endMessageText}>
-                        Has visto todas las reseñas recientes
+                        {t('reviews.endMessage')}
                     </Text>
                 </View>
 
@@ -540,19 +545,19 @@ export default function ProfessionalReviewsScreen() {
             <View style={styles.bottomNav}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Chats</Text>
+                    <Text style={styles.navLabel}>{t('reviews.navChats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos")}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('reviews.navDirectory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('reviews.navFavorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/settings")}>
                     <MaterialIcons name="settings" size={24} color={COLORS.gray500} />
-                    <Text style={styles.navLabel}>Ajustes</Text>
+                    <Text style={styles.navLabel}>{t('reviews.navSettings')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

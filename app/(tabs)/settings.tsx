@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Modal,
     ScrollView,
     StyleSheet,
     Text,
@@ -16,6 +17,8 @@ import { useAuth } from "../../context";
 import { userApi, getAssetUrl } from "../../api";
 import { useAlert } from "../../components/TwinProAlert";
 import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../hooks/useLanguage';
+import { type SupportedLanguage } from '../../services/i18n';
 
 const COLORS = {
     primary: "#f9f506",
@@ -39,6 +42,13 @@ const COLORS = {
     green600: "#16A34A",
 };
 
+const LANGUAGES: { id: SupportedLanguage; name: string; flag: string }[] = [
+    { id: 'es', name: 'Español', flag: '🇪🇸' },
+    { id: 'en', name: 'English', flag: '🇺🇸' },
+    { id: 'fr', name: 'Français', flag: '🇫🇷' },
+    { id: 'de', name: 'Deutsch', flag: '🇩🇪' },
+];
+
 interface SettingsItem {
     icon: string;
     iconColor: string;
@@ -57,7 +67,9 @@ export default function SettingsScreen() {
     const { user, token, updateUserProfile } = useAuth();
     const { showAlert } = useAlert();
     const { t } = useTranslation('settings');
+    const { language, setLanguage, isChanging } = useLanguage();
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
     const avatarUrl = getAvatarUrl(user?.avatar);
     const displayName = user?.firstname
@@ -158,7 +170,8 @@ export default function SettingsScreen() {
             iconColor: COLORS.orange600,
             iconBg: COLORS.orange100,
             label: t('items.language'),
-            value: t('languages.es'),
+            value: LANGUAGES.find(l => l.id === language)?.name || t('languages.es'),
+            onPress: () => setShowLanguagePicker(true),
         },
     ];
 
@@ -312,6 +325,47 @@ export default function SettingsScreen() {
                 {renderSettingsGroup(t('sections.helpAndFeedback'), helpItems)}
                 {renderSettingsGroup(t('sections.accountManagement'), accountItems)}
             </ScrollView>
+
+            {/* Language Picker Modal */}
+            <Modal
+                visible={showLanguagePicker}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowLanguagePicker(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowLanguagePicker(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{t('items.language')}</Text>
+                        {LANGUAGES.map((lang) => (
+                            <TouchableOpacity
+                                key={lang.id}
+                                style={[
+                                    styles.languageOption,
+                                    language === lang.id && styles.languageOptionSelected,
+                                ]}
+                                onPress={async () => {
+                                    await setLanguage(lang.id);
+                                    setShowLanguagePicker(false);
+                                }}
+                                disabled={isChanging}
+                            >
+                                <Text style={styles.languageFlag}>{lang.flag}</Text>
+                                <Text style={[
+                                    styles.languageName,
+                                    language === lang.id && styles.languageNameSelected,
+                                ]}>{lang.name}</Text>
+                                {language === lang.id && (
+                                    <Ionicons name="checkmark-circle" size={20} color={COLORS.green600} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -496,5 +550,55 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: COLORS.gray100,
         marginLeft: 56,
+    },
+    // Language Picker Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 32,
+    },
+    modalContent: {
+        backgroundColor: COLORS.surfaceLight,
+        borderRadius: 20,
+        padding: 24,
+        width: "100%",
+        maxWidth: 340,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 24,
+        elevation: 8,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: COLORS.textMain,
+        marginBottom: 16,
+        textAlign: "center",
+    },
+    languageOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 14,
+        borderRadius: 12,
+        gap: 12,
+    },
+    languageOptionSelected: {
+        backgroundColor: COLORS.green100,
+    },
+    languageFlag: {
+        fontSize: 24,
+    },
+    languageName: {
+        fontSize: 16,
+        fontWeight: "500",
+        color: COLORS.textMain,
+        flex: 1,
+    },
+    languageNameSelected: {
+        fontWeight: "700",
+        color: COLORS.green600,
     },
 });

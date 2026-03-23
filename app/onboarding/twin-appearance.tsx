@@ -23,6 +23,7 @@ import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar, getAvatarG
 import { useSubscription } from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 import LiveAvatarVideo from "../../components/LiveAvatarVideo";
 
 // Video requirements constants
@@ -88,6 +89,7 @@ function getAvatarUrl(avatarPath: string | undefined): string | null {
 export default function TwinAppearanceScreen() {
     const { user, token, refreshUser } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
     // Inicializar con valores guardados del usuario o defaults sensatos
     const [videoType, setVideoType] = useState<"predefined" | "trained">(
         user?.digitalTwin?.appearance?.videoType || "predefined"
@@ -245,7 +247,7 @@ export default function TwinAppearanceScreen() {
             setPublicAvatars(avatars);
         } catch (error) {
             console.error("Error loading avatars:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar los avatares' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadAvatarsError') });
         } finally {
             setLoadingAvatars(false);
         }
@@ -258,7 +260,7 @@ export default function TwinAppearanceScreen() {
             setCustomAvatars(avatars);
         } catch (error) {
             console.error("Error loading custom avatars:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar los avatares personalizados' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadCustomAvatarsError') });
         } finally {
             setLoadingCustomAvatars(false);
         }
@@ -293,7 +295,7 @@ export default function TwinAppearanceScreen() {
             setPublicVoices(mappedVoices);
         } catch (error) {
             console.error("Error loading voices:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las voces' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadVoicesError') });
         } finally {
             setLoadingVoices(false);
         }
@@ -306,7 +308,7 @@ export default function TwinAppearanceScreen() {
             setPrivateVoices(voices);
         } catch (error) {
             console.error("Error loading private voices:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudieron cargar las voces privadas' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadPrivateVoicesError') });
         } finally {
             setLoadingPrivateVoices(false);
         }
@@ -314,7 +316,7 @@ export default function TwinAppearanceScreen() {
 
     async function playVoicePreview(voice: PublicVoice) {
         if (!Audio) {
-            showAlert({ type: 'warning', title: 'No disponible', message: 'La reproducción de audio requiere un build de desarrollo' });
+            showAlert({ type: 'warning', title: t('twinAppearance.audioNotAvailable'), message: t('twinAppearance.audioNotAvailableMessage') });
             return;
         }
 
@@ -335,7 +337,7 @@ export default function TwinAppearanceScreen() {
 
         if (!previewUrl) {
             setPlayingVoiceId(null);
-            showAlert({ type: 'warning', title: 'Sin muestra', message: 'Esta voz no tiene una muestra de audio disponible' });
+            showAlert({ type: 'warning', title: t('twinAppearance.noSample'), message: t('twinAppearance.noSampleMessage') });
             return;
         }
 
@@ -369,7 +371,7 @@ export default function TwinAppearanceScreen() {
         } catch (error) {
             console.error("Error playing voice preview:", error);
             setPlayingVoiceId(null);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo reproducir la muestra de voz' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.playVoiceError') });
         }
     }
 
@@ -385,17 +387,17 @@ export default function TwinAppearanceScreen() {
         }
 
         if (!selectedAvatar) {
-            showAlert({ type: 'warning', title: 'Selecciona un avatar', message: 'Primero elige un avatar del catálogo para ver la vista previa' });
+            showAlert({ type: 'warning', title: t('twinAppearance.selectAvatarFirst'), message: t('twinAppearance.selectAvatarMessage') });
             return;
         }
 
         if (!selectedVoice) {
-            showAlert({ type: 'warning', title: 'Selecciona una voz', message: 'Primero elige una voz del catálogo para escuchar la vista previa' });
+            showAlert({ type: 'warning', title: t('twinAppearance.selectVoiceFirst'), message: t('twinAppearance.selectVoiceMessage') });
             return;
         }
 
         if (!token) {
-            showAlert({ type: 'error', title: 'Error', message: 'Sesión no válida' });
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.invalidSession') });
             return;
         }
 
@@ -473,14 +475,14 @@ export default function TwinAppearanceScreen() {
                     if (speakResult.error === 'VOICE_NOT_COMPATIBLE') {
                         showAlert({
                             type: 'warning',
-                            title: 'Voz no compatible',
-                            message: 'La voz actual es del avatar por defecto. Selecciona una voz del catálogo de "Voz Estándar" para previsualizar.',
+                            title: t('twinAppearance.voiceNotCompatible'),
+                            message: t('twinAppearance.voiceNotCompatibleMessage'),
                         });
                     } else {
                         showAlert({
                             type: 'error',
                             title: 'Error',
-                            message: speakResult.error || 'No se pudo reproducir la vista previa',
+                            message: speakResult.error || t('twinAppearance.previewPlayError'),
                         });
                     }
                 }
@@ -491,7 +493,7 @@ export default function TwinAppearanceScreen() {
             setIsPreviewLoading(false);
             setIsPreviewPlaying(false);
             setIsLivePreviewActive(false);
-            showAlert({ type: 'error', title: 'Error', message: error.message || 'No se pudo iniciar la vista previa' });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinAppearance.previewError') });
         }
     }
 
@@ -518,9 +520,9 @@ export default function TwinAppearanceScreen() {
         }
         showAlert({
             type: 'info',
-            title: 'Próximamente',
-            message: 'La creación de avatares personalizados con tu propio vídeo estará disponible muy pronto. Estamos trabajando para traerte esta funcionalidad.',
-            buttons: [{ text: 'Entendido' }],
+            title: t('twinAppearance.comingSoon'),
+            message: t('twinAppearance.trainedComingSoonMessage'),
+            buttons: [{ text: t('twinAppearance.understood') }],
         });
     }
 
@@ -535,18 +537,18 @@ export default function TwinAppearanceScreen() {
         if (avatar.status === 'processing' || avatar.status === 'pending') {
             showAlert({
                 type: 'success',
-                title: 'Avatar en Proceso',
-                message: 'Este avatar aún está siendo procesado. Puede tardar hasta 24 horas. Por favor, selecciona otro avatar o espera a que esté listo.',
-                buttons: [{ text: "Entendido" }]
+                title: t('twinAppearance.avatarProcessing'),
+                message: t('twinAppearance.avatarProcessingMessage'),
+                buttons: [{ text: t('twinAppearance.understood') }]
             });
             return;
         }
         if (avatar.status === 'failed') {
             showAlert({
                 type: 'error',
-                title: 'Avatar Fallido',
-                message: 'Este avatar no pudo ser procesado correctamente. Por favor, intenta crear uno nuevo.',
-                buttons: [{ text: "Entendido" }]
+                title: t('twinAppearance.avatarFailed'),
+                message: t('twinAppearance.avatarFailedMessage'),
+                buttons: [{ text: t('twinAppearance.understood') }]
             });
             return;
         }
@@ -568,9 +570,9 @@ export default function TwinAppearanceScreen() {
         }
         showAlert({
             type: 'info',
-            title: 'Próximamente',
-            message: 'La opción de usar tu propia voz clonada estará disponible muy pronto. Mientras tanto, puedes elegir entre las voces profesionales del catálogo.',
-            buttons: [{ text: 'Entendido' }],
+            title: t('twinAppearance.comingSoon'),
+            message: t('twinAppearance.clonedComingSoonMessage'),
+            buttons: [{ text: t('twinAppearance.understood') }],
         });
     }
 
@@ -582,7 +584,7 @@ export default function TwinAppearanceScreen() {
             const microphonePermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
             if (cameraPermission.status !== 'granted') {
-                showAlert({ type: 'warning', title: 'Permiso Requerido', message: 'Necesitamos acceso a la cámara para grabar tu video de entrenamiento.' });
+                showAlert({ type: 'warning', title: t('twinAppearance.cameraPermission'), message: t('twinAppearance.cameraPermissionMessage') });
                 return;
             }
 
@@ -605,9 +607,9 @@ export default function TwinAppearanceScreen() {
             if (durationSeconds < VIDEO_REQUIREMENTS.minDurationSeconds) {
                 showAlert({
                     type: 'info',
-                    title: 'Video Demasiado Corto',
+                    title: t('twinAppearance.videoTooShort'),
                     message: '',
-                    buttons: [{ text: "Reintentar", onPress: handleRecordFromCamera }]
+                    buttons: [{ text: t('twinAppearance.retry'), onPress: handleRecordFromCamera }]
                 });
                 return;
             }
@@ -616,24 +618,24 @@ export default function TwinAppearanceScreen() {
             await uploadVideoForAvatar(videoAsset.uri);
         } catch (error: any) {
             console.error("Error recording video:", error);
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo grabar el video" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinAppearance.recordVideoError') });
         }
     }
 
     // Upload video and create custom avatar
     async function uploadVideoForAvatar(videoUri: string) {
         setUploadingVideo(true);
-        setUploadProgress("Subiendo video...");
+        setUploadProgress(t('twinAppearance.uploadingVideo'));
         setShowVideoModal(false);
 
         try {
             // Upload the video
-            setUploadProgress("Subiendo video a la nube...");
+            setUploadProgress(t('twinAppearance.uploadingToCloud'));
             const videoUrl = await liveAvatarApi.uploadTrainingVideo(videoUri);
 
             // Create the custom avatar
-            setUploadProgress("Creando avatar personalizado...");
-            const userName = user?.firstname || "Usuario";
+            setUploadProgress(t('twinAppearance.creatingAvatar'));
+            const userName = user?.firstname || "User";
             const avatarResponse = await liveAvatarApi.createCustomAvatar(
                 videoUrl,
                 `Avatar de ${userName}`
@@ -645,29 +647,29 @@ export default function TwinAppearanceScreen() {
             if (avatarResponse.status === 'processing' || avatarResponse.status === 'pending') {
                 showAlert({
                     type: 'success',
-                    title: '¡Avatar en Proceso!',
-                    message: 'Tu avatar personalizado está siendo creado. Este proceso puede tomar unos minutos. Te notificaremos cuando esté listo.\n\nPor ahora, puedes continuar con un avatar predefinido o esperar.',
+                    title: t('twinAppearance.avatarInProcess'),
+                    message: t('twinAppearance.avatarInProcessMessage'),
                     buttons: [
-                        { text: "Continuar con Predefinido", onPress: () => setShowAvatarModal(true) },
-                        { text: "Esperar", style: "cancel" }
+                        { text: t('twinAppearance.continueWithPredefined'), onPress: () => setShowAvatarModal(true) },
+                        { text: t('twinAppearance.wait'), style: "cancel" }
                     ]
                 });
             } else if (avatarResponse.status === 'ready') {
                 // Avatar is ready, update selection
                 setSelectedAvatar({
                     id: avatarResponse.id,
-                    name: avatarResponse.name || `Avatar Personalizado`,
+                    name: avatarResponse.name || t('twinAppearance.customAvatar'),
                     preview_url: avatarResponse.preview_url || "",
                 });
-                showAlert({ type: 'success', title: '¡Éxito!', message: 'Tu avatar personalizado ha sido creado correctamente.' });
+                showAlert({ type: 'success', title: t('twinAppearance.avatarCreatedSuccess'), message: t('twinAppearance.avatarCreatedMessage') });
             }
         } catch (error: any) {
             console.error("Error uploading video for avatar:", error);
             showAlert({
                 type: 'error',
-                title: 'Error al Crear Avatar',
+                title: t('twinAppearance.createAvatarError'),
                 message: '',
-                buttons: [{ text: "Reintentar", onPress: () => setShowVideoModal(true) }]
+                buttons: [{ text: t('twinAppearance.retry'), onPress: () => setShowVideoModal(true) }]
             });
         } finally {
             setUploadingVideo(false);
@@ -679,9 +681,9 @@ export default function TwinAppearanceScreen() {
     function handleGoogleDrive() {
         showAlert({
             type: 'warning',
-            title: 'Próximamente',
-            message: 'La integración con Google Drive estará disponible pronto.',
-            buttons: [{ text: "Entendido" }]
+            title: t('twinAppearance.comingSoon'),
+            message: t('twinAppearance.googleDriveComingSoon'),
+            buttons: [{ text: t('twinAppearance.understood') }]
         });
     }
 
@@ -689,9 +691,9 @@ export default function TwinAppearanceScreen() {
     function handleAwsS3() {
         showAlert({
             type: 'warning',
-            title: 'Próximamente',
-            message: 'La integración con AWS S3 estará disponible pronto.',
-            buttons: [{ text: "Entendido" }]
+            title: t('twinAppearance.comingSoon'),
+            message: t('twinAppearance.awsS3ComingSoon'),
+            buttons: [{ text: t('twinAppearance.understood') }]
         });
     }
 
@@ -821,7 +823,7 @@ export default function TwinAppearanceScreen() {
 
             router.push("/onboarding/twin-behavior");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinAppearance.saveError') });
         } finally {
             setIsLoading(false);
         }
@@ -1046,7 +1048,7 @@ export default function TwinAppearanceScreen() {
                         <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                     <View style={styles.stepIndicator}>
-                        <Text style={styles.stepText}>PASO 1 DE 3</Text>
+                        <Text style={styles.stepText}>{t('twinAppearance.stepOf', { current: 1, total: 3 }).toUpperCase()}</Text>
                         <View style={styles.stepDots}>
                             <View style={[styles.stepDot, styles.stepDotActive]} />
                             <View style={styles.stepDot} />
@@ -1054,12 +1056,12 @@ export default function TwinAppearanceScreen() {
                         </View>
                     </View>
                     <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/onboarding/help-twin-appearance")}>
-                        <Text style={styles.helpText}>Ayuda</Text>
+                        <Text style={styles.helpText}>{t('twinAppearance.help')}</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Apariencia y Voz</Text>
-                    <Text style={styles.headerSubtitle}>Configura la presencia de tu Gemelo Digital.</Text>
+                    <Text style={styles.headerTitle}>{t('twinAppearance.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('twinAppearance.headerSubtitle')}</Text>
                 </View>
             </View>
 
@@ -1094,7 +1096,7 @@ export default function TwinAppearanceScreen() {
                     {isPreviewLoading && (
                         <View style={styles.previewLoadingOverlay}>
                             <ActivityIndicator size="large" color="#FFFFFF" />
-                            <Text style={styles.previewLoadingText}>Preparando vista previa...</Text>
+                            <Text style={styles.previewLoadingText}>{t('twinAppearance.loadingPreview')}</Text>
                         </View>
                     )}
 
@@ -1102,7 +1104,7 @@ export default function TwinAppearanceScreen() {
                     <View style={styles.previewBadge}>
                         <View style={[styles.previewDot, isLivePreviewActive && { backgroundColor: '#EF4444' }]} />
                         <Text style={styles.previewBadgeText}>
-                            {isLivePreviewActive ? 'EN VIVO' : 'VISTA PREVIA'}
+                            {isLivePreviewActive ? 'EN VIVO' : t('twinAppearance.previewLabel')}
                         </Text>
                     </View>
 
@@ -1133,10 +1135,10 @@ export default function TwinAppearanceScreen() {
                                 ))}
                             </View>
                             <Text style={styles.voiceLabel}>
-                                Voz: <Text style={styles.voiceName}>{selectedVoice ? selectedVoice.name : "Elige una voz"}</Text>
+                                {t('twinAppearance.voiceLabel')} <Text style={styles.voiceName}>{selectedVoice ? selectedVoice.name : t('twinAppearance.chooseVoice')}</Text>
                             </Text>
                             {!selectedVoice && (
-                                <Text style={styles.voiceHint}>Pulsa "Voz Estándar" para elegir</Text>
+                                <Text style={styles.voiceHint}>{t('twinAppearance.voiceHint')}</Text>
                             )}
                         </View>
                     </View>
@@ -1147,9 +1149,9 @@ export default function TwinAppearanceScreen() {
                     {/* Appearance Section */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionLabel}>APARIENCIA</Text>
+                            <Text style={styles.sectionLabel}>{t('twinAppearance.videoSection')}</Text>
                             <View style={styles.recommendedBadge}>
-                                <Text style={styles.recommendedText}>RECOMENDADO</Text>
+                                <Text style={styles.recommendedText}>{t('twinAppearance.recommendedBadge')}</Text>
                             </View>
                         </View>
                         <View style={styles.optionsGrid}>
@@ -1166,9 +1168,9 @@ export default function TwinAppearanceScreen() {
                                 <View style={[styles.optionIcon, videoType === "predefined" && styles.optionIconSelected]}>
                                     <MaterialIcons name="face" size={18} color={videoType === "predefined" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
-                                <Text style={[styles.optionTitle, videoType === "predefined" && styles.optionTitleSelected]}>Avatar Predefinido</Text>
+                                <Text style={[styles.optionTitle, videoType === "predefined" && styles.optionTitleSelected]}>{t('twinAppearance.predefinedOption')}</Text>
                                 <Text style={styles.optionSubtitle}>
-                                    {selectedAvatar ? selectedAvatar.name : "Elegir del catálogo"}
+                                    {selectedAvatar ? selectedAvatar.name : t('twinAppearance.chooseFallback')}
                                 </Text>
                             </TouchableOpacity>
 
@@ -1189,15 +1191,15 @@ export default function TwinAppearanceScreen() {
                                 <View style={[styles.optionIcon, videoType === "trained" && styles.optionIconSelected]}>
                                     <MaterialIcons name="videocam" size={18} color={videoType === "trained" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
-                                <Text style={[styles.optionTitle, videoType === "trained" && styles.optionTitleSelected]}>Entrenar con Video</Text>
-                                <Text style={styles.optionSubtitle}>Máxima autenticidad</Text>
+                                <Text style={[styles.optionTitle, videoType === "trained" && styles.optionTitleSelected]}>{t('twinAppearance.trainedOption')}</Text>
+                                <Text style={styles.optionSubtitle}>{t('twinAppearance.trainedDescription')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* Voice Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>VOZ DEL PROFESIONAL</Text>
+                        <Text style={styles.sectionLabel}>{t('twinAppearance.voiceSection')}</Text>
                         <View style={styles.optionsGrid}>
                             <TouchableOpacity
                                 style={[
@@ -1212,9 +1214,9 @@ export default function TwinAppearanceScreen() {
                                 <View style={[styles.optionIcon, voiceType === "standard" && styles.optionIconSelected]}>
                                     <MaterialIcons name="graphic-eq" size={18} color={voiceType === "standard" ? COLORS.primaryDark : COLORS.gray500} />
                                 </View>
-                                <Text style={[styles.optionTitle, voiceType === "standard" && styles.optionTitleSelected]}>Voz Estándar</Text>
+                                <Text style={[styles.optionTitle, voiceType === "standard" && styles.optionTitleSelected]}>{t('twinAppearance.standardVoice')}</Text>
                                 <Text style={styles.optionSubtitle}>
-                                    {selectedVoice ? selectedVoice.name : "Elegir del catálogo"}
+                                    {selectedVoice ? selectedVoice.name : t('twinAppearance.chooseFallback')}
                                 </Text>
                             </TouchableOpacity>
 
@@ -1237,7 +1239,7 @@ export default function TwinAppearanceScreen() {
                                 <View style={[styles.optionIcon, voiceType === "cloned" && styles.optionIconPurple]}>
                                     <MaterialIcons name="mic" size={18} color={voiceType === "cloned" ? COLORS.accentPurple : COLORS.gray500} />
                                 </View>
-                                <Text style={[styles.optionTitle, voiceType === "cloned" && styles.optionTitleSelected]}>Voz Privada</Text>
+                                <Text style={[styles.optionTitle, voiceType === "cloned" && styles.optionTitleSelected]}>{t('twinAppearance.clonedVoice')}</Text>
                                 <Text style={styles.optionSubtitle}>
                                     {voiceType === "cloned" && selectedVoice ? selectedVoice.name : "Ver voces clonadas"}
                                 </Text>
@@ -1259,7 +1261,7 @@ export default function TwinAppearanceScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.continueButtonText}>Guardar y Continuar</Text>
+                            <Text style={styles.continueButtonText}>{t('twinAppearance.continueButton')}</Text>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </>
                     )}
@@ -1278,8 +1280,8 @@ export default function TwinAppearanceScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Catálogo de Avatares</Text>
-                                <Text style={styles.modalSubtitle}>Elige la apariencia de tu gemelo digital</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.avatarModalTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.avatarModalSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1293,14 +1295,14 @@ export default function TwinAppearanceScreen() {
                         {loadingAvatars ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
-                                <Text style={styles.loadingText}>Cargando avatares...</Text>
+                                <Text style={styles.loadingText}>{t('twinAppearance.loadingAvatars')}</Text>
                             </View>
                         ) : publicAvatars.length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <MaterialIcons name="face" size={64} color={COLORS.gray400} />
-                                <Text style={styles.emptyText}>No hay avatares disponibles</Text>
+                                <Text style={styles.emptyText}>{t('twinAppearance.noAvatarsAvailable')}</Text>
                                 <TouchableOpacity style={styles.retryButton} onPress={loadPublicAvatars}>
-                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                    <Text style={styles.retryButtonText}>{t('twinAppearance.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -1322,7 +1324,7 @@ export default function TwinAppearanceScreen() {
                                     style={styles.confirmButton}
                                     onPress={() => setShowAvatarModal(false)}
                                 >
-                                    <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
+                                    <Text style={styles.confirmButtonText}>{t('twinAppearance.confirmSelection')}</Text>
                                     <MaterialIcons name="check" size={20} color="#000000" />
                                 </TouchableOpacity>
                             </View>
@@ -1343,8 +1345,8 @@ export default function TwinAppearanceScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Catálogo de Voces</Text>
-                                <Text style={styles.modalSubtitle}>Elige la voz de tu gemelo digital</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.voiceCatalogTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.voiceModalSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1358,14 +1360,14 @@ export default function TwinAppearanceScreen() {
                         {loadingVoices ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
-                                <Text style={styles.loadingText}>Cargando voces...</Text>
+                                <Text style={styles.loadingText}>{t('twinAppearance.loadingVoices')}</Text>
                             </View>
                         ) : publicVoices.length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <MaterialIcons name="mic-off" size={64} color={COLORS.gray400} />
-                                <Text style={styles.emptyText}>No hay voces disponibles</Text>
+                                <Text style={styles.emptyText}>{t('twinAppearance.noVoicesAvailable')}</Text>
                                 <TouchableOpacity style={styles.retryButton} onPress={loadPublicVoices}>
-                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                    <Text style={styles.retryButtonText}>{t('twinAppearance.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -1385,7 +1387,7 @@ export default function TwinAppearanceScreen() {
                                     style={styles.confirmButton}
                                     onPress={() => setShowVoiceModal(false)}
                                 >
-                                    <Text style={styles.confirmButtonText}>Confirmar Selección</Text>
+                                    <Text style={styles.confirmButtonText}>{t('twinAppearance.confirmSelection')}</Text>
                                     <MaterialIcons name="check" size={20} color="#000000" />
                                 </TouchableOpacity>
                             </View>
@@ -1406,8 +1408,8 @@ export default function TwinAppearanceScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Voces Privadas</Text>
-                                <Text style={styles.modalSubtitle}>Voces clonadas disponibles en tu cuenta</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.privateVoiceTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.privateVoiceSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1421,17 +1423,17 @@ export default function TwinAppearanceScreen() {
                         {loadingPrivateVoices ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={COLORS.accentPurple} />
-                                <Text style={styles.loadingText}>Cargando voces privadas...</Text>
+                                <Text style={styles.loadingText}>{t('twinAppearance.loadingPrivateVoices')}</Text>
                             </View>
                         ) : privateVoices.length === 0 ? (
                             <View style={styles.emptyContainer}>
                                 <MaterialIcons name="mic-off" size={64} color={COLORS.gray400} />
-                                <Text style={styles.emptyText}>No hay voces privadas disponibles</Text>
+                                <Text style={styles.emptyText}>{t('twinAppearance.noPrivateVoicesAvailable')}</Text>
                                 <Text style={[styles.emptyText, { fontSize: 12, marginTop: 8 }]}>
-                                    Las voces clonadas aparecerán aquí cuando estén disponibles
+                                    {t('twinAppearance.privateVoicesHint')}
                                 </Text>
                                 <TouchableOpacity style={styles.retryButton} onPress={loadPrivateVoices}>
-                                    <Text style={styles.retryButtonText}>Reintentar</Text>
+                                    <Text style={styles.retryButtonText}>{t('twinAppearance.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -1451,7 +1453,7 @@ export default function TwinAppearanceScreen() {
                                     style={[styles.confirmButton, { backgroundColor: COLORS.accentPurple }]}
                                     onPress={() => setShowPrivateVoiceModal(false)}
                                 >
-                                    <Text style={[styles.confirmButtonText, { color: "#FFFFFF" }]}>Confirmar Selección</Text>
+                                    <Text style={[styles.confirmButtonText, { color: "#FFFFFF" }]}>{t('twinAppearance.confirmSelection')}</Text>
                                     <MaterialIcons name="check" size={20} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
@@ -1472,8 +1474,8 @@ export default function TwinAppearanceScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Crear Avatar Personalizado</Text>
-                                <Text style={styles.modalSubtitle}>Sube un video para entrenar tu avatar</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.createCustomAvatarTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.createCustomAvatarSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1487,23 +1489,23 @@ export default function TwinAppearanceScreen() {
                         <View style={styles.videoRequirements}>
                             <View style={styles.requirementHeader}>
                                 <MaterialIcons name="info" size={20} color={COLORS.accentBlue} />
-                                <Text style={styles.requirementTitle}>Requisitos del Video</Text>
+                                <Text style={styles.requirementTitle}>{t('twinAppearance.videoRequirementsTitle')}</Text>
                             </View>
-                            <Text style={styles.requirementDuration}>⏱️ Duración mínima: 2 minutos</Text>
+                            <Text style={styles.requirementDuration}>{t('twinAppearance.videoDuration')}</Text>
                             <View style={styles.requirementList}>
-                                <Text style={styles.requirementItem}>• 15 segundos en estado de escucha</Text>
-                                <Text style={styles.requirementItem}>• 90 segundos hablando naturalmente</Text>
-                                <Text style={styles.requirementItem}>• 15 segundos en espera activa</Text>
+                                <Text style={styles.requirementItem}>{t('twinAppearance.videoReq1')}</Text>
+                                <Text style={styles.requirementItem}>{t('twinAppearance.videoReq2')}</Text>
+                                <Text style={styles.requirementItem}>{t('twinAppearance.videoReq3')}</Text>
                             </View>
                             <View style={styles.tipBox}>
                                 <MaterialIcons name="lightbulb" size={16} color={COLORS.primaryDark} />
-                                <Text style={styles.tipText}>Habla con posturas naturales, gestos suaves y ritmo pausado.</Text>
+                                <Text style={styles.tipText}>{t('twinAppearance.videoTip')}</Text>
                             </View>
                         </View>
 
                         {/* Upload Options */}
                         <View style={styles.uploadOptions}>
-                            <Text style={styles.uploadOptionsTitle}>Selecciona una opción:</Text>
+                            <Text style={styles.uploadOptionsTitle}>{t('twinAppearance.selectOption')}</Text>
 
                             {/* Camera Option */}
                             <TouchableOpacity
@@ -1514,8 +1516,8 @@ export default function TwinAppearanceScreen() {
                                     <MaterialIcons name="videocam" size={28} color={COLORS.accentBlue} />
                                 </View>
                                 <View style={styles.uploadOptionContent}>
-                                    <Text style={styles.uploadOptionTitle}>Grabar Video</Text>
-                                    <Text style={styles.uploadOptionSubtitle}>Usa la cámara de tu dispositivo</Text>
+                                    <Text style={styles.uploadOptionTitle}>{t('twinAppearance.recordVideo')}</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>{t('twinAppearance.recordVideoSubtitle')}</Text>
                                 </View>
                                 <MaterialIcons name="chevron-right" size={24} color={COLORS.gray400} />
                             </TouchableOpacity>
@@ -1530,10 +1532,10 @@ export default function TwinAppearanceScreen() {
                                 </View>
                                 <View style={styles.uploadOptionContent}>
                                     <Text style={styles.uploadOptionTitle}>Google Drive</Text>
-                                    <Text style={styles.uploadOptionSubtitle}>Próximamente</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>{t('twinAppearance.comingSoonLabel')}</Text>
                                 </View>
                                 <View style={styles.comingSoonBadge}>
-                                    <Text style={styles.comingSoonText}>PRONTO</Text>
+                                    <Text style={styles.comingSoonText}>{t('twinAppearance.comingSoonBadge')}</Text>
                                 </View>
                             </TouchableOpacity>
 
@@ -1547,10 +1549,10 @@ export default function TwinAppearanceScreen() {
                                 </View>
                                 <View style={styles.uploadOptionContent}>
                                     <Text style={styles.uploadOptionTitle}>AWS S3</Text>
-                                    <Text style={styles.uploadOptionSubtitle}>Próximamente</Text>
+                                    <Text style={styles.uploadOptionSubtitle}>{t('twinAppearance.comingSoonLabel')}</Text>
                                 </View>
                                 <View style={styles.comingSoonBadge}>
-                                    <Text style={styles.comingSoonText}>PRONTO</Text>
+                                    <Text style={styles.comingSoonText}>{t('twinAppearance.comingSoonBadge')}</Text>
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -1569,8 +1571,8 @@ export default function TwinAppearanceScreen() {
                     <View style={[styles.modalContent, { maxHeight: '80%' }]}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Ayuda</Text>
-                                <Text style={styles.modalSubtitle}>Cómo configurar tu Gemelo Digital</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.helpModalTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.helpModalSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1585,21 +1587,21 @@ export default function TwinAppearanceScreen() {
                             <View style={styles.helpSection}>
                                 <View style={styles.helpSectionHeader}>
                                     <MaterialIcons name="face" size={24} color={COLORS.accentBlue} />
-                                    <Text style={styles.helpSectionTitle}>Apariencia del Avatar</Text>
+                                    <Text style={styles.helpSectionTitle}>{t('twinAppearance.helpAvatarTitle')}</Text>
                                 </View>
                                 <Text style={styles.helpModalText}>
-                                    Elige cómo se verá tu gemelo digital cuando hable con tus clientes:
+                                    {t('twinAppearance.helpAvatarIntro')}
                                 </Text>
                                 <View style={styles.helpBullet}>
                                     <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
                                     <Text style={styles.helpBulletText}>
-                                        <Text style={{ fontWeight: '700' }}>Avatar Predefinido:</Text> Selecciona uno de nuestros avatares profesionales del catálogo. Recomendado para comenzar rápidamente.
+                                        <Text style={{ fontWeight: '700' }}>{t('twinAppearance.helpPredefinedLabel')}</Text> {t('twinAppearance.helpPredefinedDesc')}
                                     </Text>
                                 </View>
                                 <View style={styles.helpBullet}>
                                     <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
                                     <Text style={styles.helpBulletText}>
-                                        <Text style={{ fontWeight: '700' }}>Entrenar con Video:</Text> Sube un video de ti mismo de al menos 2 minutos para crear un avatar personalizado que se parezca a ti.
+                                        <Text style={{ fontWeight: '700' }}>{t('twinAppearance.helpTrainedLabel')}</Text> {t('twinAppearance.helpTrainedDesc')}
                                     </Text>
                                 </View>
                             </View>
@@ -1608,21 +1610,21 @@ export default function TwinAppearanceScreen() {
                             <View style={styles.helpSection}>
                                 <View style={styles.helpSectionHeader}>
                                     <MaterialIcons name="graphic-eq" size={24} color={COLORS.accentPurple} />
-                                    <Text style={styles.helpSectionTitle}>Voz del Profesional</Text>
+                                    <Text style={styles.helpSectionTitle}>{t('twinAppearance.helpVoiceTitle')}</Text>
                                 </View>
                                 <Text style={styles.helpModalText}>
-                                    Define cómo sonará tu gemelo digital:
+                                    {t('twinAppearance.helpVoiceIntro')}
                                 </Text>
                                 <View style={styles.helpBullet}>
                                     <MaterialIcons name="check-circle" size={16} color={COLORS.accentGreen} />
                                     <Text style={styles.helpBulletText}>
-                                        <Text style={{ fontWeight: '700' }}>Voz Estándar:</Text> Elige una voz profesional de nuestro catálogo. Hay opciones masculinas y femeninas en varios idiomas.
+                                        <Text style={{ fontWeight: '700' }}>{t('twinAppearance.helpStandardLabel')}</Text> {t('twinAppearance.helpStandardDesc')}
                                     </Text>
                                 </View>
                                 <View style={styles.helpBullet}>
                                     <MaterialIcons name="info" size={16} color={COLORS.gray400} />
                                     <Text style={styles.helpBulletText}>
-                                        <Text style={{ fontWeight: '700' }}>Clonar mi Voz:</Text> Función próximamente disponible para crear una voz idéntica a la tuya.
+                                        <Text style={{ fontWeight: '700' }}>{t('twinAppearance.helpClonedLabel')}</Text> {t('twinAppearance.helpClonedDesc')}
                                     </Text>
                                 </View>
                             </View>
@@ -1631,12 +1633,12 @@ export default function TwinAppearanceScreen() {
                             <View style={[styles.helpSection, { backgroundColor: COLORS.primary + '20', borderRadius: 12, padding: 16 }]}>
                                 <View style={styles.helpSectionHeader}>
                                     <MaterialIcons name="lightbulb" size={24} color={COLORS.primaryDark} />
-                                    <Text style={[styles.helpSectionTitle, { color: COLORS.primaryDark }]}>Consejos</Text>
+                                    <Text style={[styles.helpSectionTitle, { color: COLORS.primaryDark }]}>{t('twinAppearance.helpTipsTitle')}</Text>
                                 </View>
                                 <Text style={styles.helpModalText}>
-                                    • Los avatares predefinidos funcionan perfecto con voces estándar.{'\n'}
-                                    • Puedes cambiar la configuración en cualquier momento.{'\n'}
-                                    • Prueba el botón de play para escuchar la voz seleccionada.
+                                    {t('twinAppearance.helpTip1')}{'\n'}
+                                    {t('twinAppearance.helpTip2')}{'\n'}
+                                    {t('twinAppearance.helpTip3')}
                                 </Text>
                             </View>
                         </ScrollView>
@@ -1645,7 +1647,7 @@ export default function TwinAppearanceScreen() {
                             style={[styles.continueButton, { marginTop: 16 }]}
                             onPress={() => setShowHelpModal(false)}
                         >
-                            <Text style={styles.continueButtonText}>Entendido</Text>
+                            <Text style={styles.continueButtonText}>{t('twinAppearance.helpUnderstood')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -1663,8 +1665,8 @@ export default function TwinAppearanceScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Mis Avatares Personalizados</Text>
-                                <Text style={styles.modalSubtitle}>Selecciona o crea un nuevo avatar</Text>
+                                <Text style={styles.modalTitle}>{t('twinAppearance.customAvatarModalTitle')}</Text>
+                                <Text style={styles.modalSubtitle}>{t('twinAppearance.customAvatarModalSubtitle')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
@@ -1680,14 +1682,14 @@ export default function TwinAppearanceScreen() {
                             onPress={handleCreateNewAvatar}
                         >
                             <MaterialIcons name="add-circle" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                            <Text style={styles.continueButtonText}>Crear Nuevo Avatar con Video</Text>
+                            <Text style={styles.continueButtonText}>{t('twinAppearance.createNewAvatarButton')}</Text>
                         </TouchableOpacity>
 
                         {/* Info Banner */}
                         <View style={styles.infoBanner}>
                             <MaterialIcons name="info" size={20} color={COLORS.accentBlue} />
                             <Text style={styles.infoBannerText}>
-                                Los avatares pueden tardar hasta 24 horas en procesarse después de subir el video.
+                                {t('twinAppearance.avatarProcessingInfo')}
                             </Text>
                         </View>
 
@@ -1695,7 +1697,7 @@ export default function TwinAppearanceScreen() {
                         {loadingCustomAvatars ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
-                                <Text style={styles.loadingText}>Cargando avatares...</Text>
+                                <Text style={styles.loadingText}>{t('twinAppearance.loadingCustomAvatars')}</Text>
                             </View>
                         ) : customAvatars.length === 0 ? (
                             <View style={styles.emptyContainer}>

@@ -14,6 +14,7 @@ import { useAuth } from "../../context";
 import { userApi } from "../../api";
 import { getPresetForProfessional } from "../../constants/digitalTwinPresets";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FDE047",
@@ -38,9 +39,9 @@ const COLORS = {
     headerMiddle: "#1e3a8a",
 };
 
-const FORMALITY_LABELS = ["Muy cercano", "Profesional", "Muy formal"];
-const DEPTH_LABELS = ["Cortas", "Equilibradas", "Detalladas"];
-const TONE_LABELS = ["Empático", "Neutro", "Directo"];
+const FORMALITY_LABELS_FALLBACK = ["Muy cercano", "Profesional", "Muy formal"];
+const DEPTH_LABELS_FALLBACK = ["Cortas", "Equilibradas", "Detalladas"];
+const TONE_LABELS_FALLBACK = ["Empático", "Neutro", "Directo"];
 
 // Custom segmented control component
 function SegmentedControl({
@@ -111,7 +112,11 @@ const segmentStyles = StyleSheet.create({
 
 export default function TwinBehaviorScreen() {
     const { token, refreshUser, user } = useAuth();
-  const { showAlert } = useAlert();
+    const { showAlert } = useAlert();
+    const { t } = useTranslation('onboarding');
+    const FORMALITY_LABELS = t('twinBehavior.formalityOptions', { returnObjects: true }) as string[] || FORMALITY_LABELS_FALLBACK;
+    const DEPTH_LABELS = t('twinBehavior.depthOptions', { returnObjects: true }) as string[] || DEPTH_LABELS_FALLBACK;
+    const TONE_LABELS = t('twinBehavior.toneOptions', { returnObjects: true }) as string[] || TONE_LABELS_FALLBACK;
     const [formality, setFormality] = useState(1);
     const [depth, setDepth] = useState(1);
     const [tone, setTone] = useState(0);
@@ -279,7 +284,7 @@ export default function TwinBehaviorScreen() {
 
             router.push("/onboarding/twin-knowledge");
         } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "Error al guardar" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('twinBehavior.saveError') });
         } finally {
             setIsLoading(false);
         }
@@ -293,7 +298,7 @@ export default function TwinBehaviorScreen() {
                         <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                     <View style={styles.stepIndicator}>
-                        <Text style={styles.stepText}>Paso 2 de 3</Text>
+                        <Text style={styles.stepText}>{t('twinBehavior.stepOf', { current: 2, total: 3 })}</Text>
                         <View style={styles.stepDots}>
                             <View style={styles.stepDotDone} />
                             <View style={[styles.stepDot, styles.stepDotActive]} />
@@ -304,12 +309,12 @@ export default function TwinBehaviorScreen() {
                         style={styles.helpButton}
                         onPress={() => router.push("/onboarding/help-twin-behavior")}
                     >
-                        <Text style={styles.helpText}>Ayuda</Text>
+                        <Text style={styles.helpText}>{t('twinBehavior.help')}</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Comportamiento y Límites</Text>
-                    <Text style={styles.headerSubtitle}>Define la personalidad y reglas de tu Gemelo.</Text>
+                    <Text style={styles.headerTitle}>{t('twinBehavior.headerTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('twinBehavior.headerSubtitle')}</Text>
                 </View>
             </View>
 
@@ -322,14 +327,14 @@ export default function TwinBehaviorScreen() {
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <MaterialIcons name="flag" size={20} color={COLORS.accentGreen} />
-                        <Text style={styles.cardTitle}>Objetivo del Gemelo</Text>
+                        <Text style={styles.cardTitle}>{t('twinBehavior.objectiveTitle')}</Text>
                     </View>
                     <Text style={styles.objectiveDescription}>
-                        Define el propósito principal de tu gemelo digital. ¿Qué quieres que logre por ti?
+                        {t('twinBehavior.objectiveDescription')}
                     </Text>
                     <TextInput
                         style={styles.objectiveInput}
-                        placeholder="Ej: Atender consultas de clientes, agendar citas, responder preguntas frecuentes sobre mis servicios..."
+                        placeholder={t('twinBehavior.objectivePlaceholder')}
                         placeholderTextColor={COLORS.gray400}
                         value={objective}
                         onChangeText={setObjective}
@@ -342,11 +347,11 @@ export default function TwinBehaviorScreen() {
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <MaterialIcons name="tune" size={20} color={COLORS.primary} />
-                        <Text style={styles.cardTitle}>Interacción</Text>
+                        <Text style={styles.cardTitle}>{t('twinBehavior.interactionTitle')}</Text>
                     </View>
 
                     <View style={styles.sliderGroup}>
-                        <Text style={styles.sliderLabel}>Nivel de formalidad</Text>
+                        <Text style={styles.sliderLabel}>{t('twinBehavior.formalityLabel')}</Text>
                         <SegmentedControl
                             options={FORMALITY_LABELS}
                             value={formality}
@@ -355,7 +360,7 @@ export default function TwinBehaviorScreen() {
                     </View>
 
                     <View style={styles.sliderGroup}>
-                        <Text style={styles.sliderLabel}>Nivel de profundidad</Text>
+                        <Text style={styles.sliderLabel}>{t('twinBehavior.depthLabel')}</Text>
                         <SegmentedControl
                             options={DEPTH_LABELS}
                             value={depth}
@@ -364,7 +369,7 @@ export default function TwinBehaviorScreen() {
                     </View>
 
                     <View style={styles.sliderGroup}>
-                        <Text style={styles.sliderLabel}>Tono emocional</Text>
+                        <Text style={styles.sliderLabel}>{t('twinBehavior.toneLabel')}</Text>
                         <SegmentedControl
                             options={TONE_LABELS}
                             value={tone}
@@ -387,7 +392,7 @@ export default function TwinBehaviorScreen() {
                             <View style={[styles.ruleIcon, { backgroundColor: COLORS.accentGreen }]}>
                                 <MaterialIcons name="check" size={12} color="#FFFFFF" />
                             </View>
-                            <Text style={styles.rulesSectionTitle}>El gemelo SÍ puede</Text>
+                            <Text style={styles.rulesSectionTitle}>{t('twinBehavior.allowedTitle')}</Text>
                         </View>
                         {allowedActions.map((action) => (
                             <View key={action.id} style={styles.ruleItem}>
@@ -404,7 +409,7 @@ export default function TwinBehaviorScreen() {
                             <MaterialIcons name="add" size={16} color={COLORS.gray400} />
                             <TextInput
                                 style={styles.addRuleInput}
-                                placeholder="Añadir otra acción permitida..."
+                                placeholder={t('twinBehavior.addAllowedPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={newAllowed}
                                 onChangeText={setNewAllowed}
@@ -421,7 +426,7 @@ export default function TwinBehaviorScreen() {
                             <View style={[styles.ruleIcon, { backgroundColor: COLORS.accentRed }]}>
                                 <MaterialIcons name="close" size={12} color="#FFFFFF" />
                             </View>
-                            <Text style={styles.rulesSectionTitle}>El gemelo NO puede</Text>
+                            <Text style={styles.rulesSectionTitle}>{t('twinBehavior.restrictedTitle')}</Text>
                         </View>
                         {restrictedActions.map((action) => (
                             <View key={action.id} style={styles.ruleItem}>
@@ -438,7 +443,7 @@ export default function TwinBehaviorScreen() {
                             <MaterialIcons name="add" size={16} color={COLORS.gray400} />
                             <TextInput
                                 style={styles.addRuleInput}
-                                placeholder="Añadir otra restricción..."
+                                placeholder={t('twinBehavior.addRestrictedPlaceholder')}
                                 placeholderTextColor={COLORS.gray400}
                                 value={newRestricted}
                                 onChangeText={setNewRestricted}
@@ -461,7 +466,7 @@ export default function TwinBehaviorScreen() {
                         <ActivityIndicator color="#000000" />
                     ) : (
                         <>
-                            <Text style={styles.continueButtonText}>Guardar y Continuar</Text>
+                            <Text style={styles.continueButtonText}>{t('twinBehavior.saveAndContinue')}</Text>
                             <MaterialIcons name="arrow-forward" size={20} color="#000000" />
                         </>
                     )}
