@@ -208,6 +208,13 @@ export default function TwinAppearanceScreen() {
         }
     }, [selectedAvatar?.id]);
 
+    // Clear voice cache when user language changes (forces reload with correct language)
+    useEffect(() => {
+        if (publicVoices.length > 0) {
+            setPublicVoices([]);
+        }
+    }, [user?.language]);
+
     // Load private voices when modal opens
     useEffect(() => {
         if (showPrivateVoiceModal && privateVoices.length === 0) {

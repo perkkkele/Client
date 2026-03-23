@@ -1251,9 +1251,38 @@
         "alertPaymentInitError": "Impossible de démarrer le paiement. Vous pourrez payer depuis les détails du rendez-vous.",
         "alertInPersonBooked": "Votre rendez-vous en personne a été réservé. Vous paierez directement le professionnel lors de votre visite.",
         "alertBookingError": "Impossible de prendre le rendez-vous. Veuillez réessayer.",
-        "weekdays": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
-        "weekdaysSunFirst": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
-        "months": ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"],
+        "weekdays": [
+            "Lun",
+            "Mar",
+            "Mer",
+            "Jeu",
+            "Ven",
+            "Sam",
+            "Dim"
+        ],
+        "weekdaysSunFirst": [
+            "Dim",
+            "Lun",
+            "Mar",
+            "Mer",
+            "Jeu",
+            "Ven",
+            "Sam"
+        ],
+        "months": [
+            "Janvier",
+            "Février",
+            "Mars",
+            "Avril",
+            "Mai",
+            "Juin",
+            "Juillet",
+            "Août",
+            "Septembre",
+            "Octobre",
+            "Novembre",
+            "Décembre"
+        ],
         "navChats": "Discussions",
         "navDirectory": "Annuaire",
         "navFavorites": "Favoris",
@@ -1351,7 +1380,15 @@
         "noMessages": "Aucun message",
         "dateToday": "Aujourd'hui",
         "dateYesterday": "Hier",
-        "dayNames": ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"],
+        "dayNames": [
+            "Dim",
+            "Lun",
+            "Mar",
+            "Mer",
+            "Jeu",
+            "Ven",
+            "Sam"
+        ],
         "chip": {
             "live": "👤 EN DIRECT",
             "contacting": "Contact en cours...",
@@ -1463,5 +1500,38 @@
             "voiceConnecting": "Connexion...",
             "appointmentProposal": "Proposition de rendez-vous : {{date}} à {{time}}"
         }
+    },
+    "legalNotice": {
+        "headerTitle": "Mentions Légales",
+        "section1Title": "1. Avis Juridique Général – Utilisation de TwinPro",
+        "section1Intro": "TwinPro est une plateforme technologique qui facilite la communication entre utilisateurs et professionnels, y compris les interactions via des jumeaux numériques basés sur l'intelligence artificielle.",
+        "natureLabel": "Nature du Service :",
+        "natureText": "TwinPro ne fournit pas de services professionnels et ne remplace pas l'attention directe d'un professionnel humain.",
+        "characterLabel": "Nature de l'Information :",
+        "characterText": "Les informations fournies via la plateforme, que ce soit par les jumeaux numériques ou par les professionnels, sont purement informatives et indicatives.",
+        "guaranteesLabel": "Garanties et Responsabilité :",
+        "guaranteesText": "TwinPro ne garantit pas l'exactitude, l'intégralité ou l'actualité des contenus et n'est pas responsable des décisions, actions ou conséquences découlant de l'utilisation des informations obtenues via la plateforme.",
+        "userResponsibilityLabel": "Responsabilité de l'Utilisateur :",
+        "userResponsibilityText": "L'utilisateur accepte que l'utilisation de TwinPro se fait sous sa propre responsabilité.",
+        "section2Title": "2. Avis Général sur les Jumeaux Numériques",
+        "warningText": "IMPORTANT : Les réponses générées par les jumeaux numériques de TwinPro sont produites par des systèmes automatisés d'intelligence artificielle et peuvent être inexactes, incomplètes, obsolètes ou incorrectes.",
+        "noSubstitutionLabel": "Pas de Substitution :",
+        "noSubstitutionText": "Les jumeaux numériques ne remplacent en aucun cas les conseils, diagnostics, évaluations ou interventions d'un professionnel humain qualifié.",
+        "decisionLimitLabel": "Limitation des Décisions :",
+        "decisionLimitText": "L'utilisateur s'engage à ne pas baser ses décisions personnelles, professionnelles, juridiques, médicales, financières ou de tout autre type exclusivement sur les informations fournies par un jumeau numérique.",
+        "understood": "Compris"
+    },
+    "chatMemory": {
+        "label": "Mémoire du jumeau",
+        "errorTitle": "Erreur de configuration",
+        "errorMessage": "Impossible de mettre à jour la mémoire du jumeau. Veuillez réessayer.",
+        "deleteTitle": "Supprimer la mémoire",
+        "deleteMessage": "Supprimer ce que le jumeau a appris de vos conversations avec {{name}} ?",
+        "deleteCancel": "Annuler",
+        "deleteConfirm": "Supprimer",
+        "successTitle": "Terminé !",
+        "successMessage": "La mémoire du jumeau concernant vos conversations a été supprimée.",
+        "deleteErrorTitle": "Erreur",
+        "deleteErrorMessage": "Impossible de supprimer la mémoire. Veuillez réessayer plus tard."
     }
 }

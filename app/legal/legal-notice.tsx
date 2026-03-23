@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -31,6 +32,8 @@ const COLORS = {
 };
 
 export default function LegalNoticeScreen() {
+    const { t } = useTranslation('settings');
+
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
             {/* Header */}
@@ -38,7 +41,7 @@ export default function LegalNoticeScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Aviso Legal</Text>
+                <Text style={styles.headerTitle}>{t('legalNotice.headerTitle')}</Text>
                 <View style={styles.headerButton} />
             </View>
 
@@ -49,18 +52,18 @@ export default function LegalNoticeScreen() {
             >
                 {/* Section 1 - General Legal Notice */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>1. Aviso Legal General – Uso de TwinPro</Text>
+                    <Text style={styles.sectionTitle}>{t('legalNotice.section1Title')}</Text>
                     <Text style={styles.paragraph}>
-                        TwinPro es una plataforma tecnológica que facilita la comunicación entre usuarios y profesionales, incluyendo interacciones mediante gemelos digitales basados en inteligencia artificial.
+                        {t('legalNotice.section1Intro')}
                     </Text>
 
                     <View style={styles.bulletList}>
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>Naturaleza del Servicio:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.natureLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    TwinPro no presta servicios profesionales ni sustituye la atención directa de un profesional humano.
+                                    {t('legalNotice.natureText')}
                                 </Text>
                             </View>
                         </View>
@@ -68,9 +71,9 @@ export default function LegalNoticeScreen() {
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>Carácter de la Información:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.characterLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    La información proporcionada a través de la plataforma, ya sea por gemelos digitales o por profesionales, tiene un carácter meramente informativo y orientativo.
+                                    {t('legalNotice.characterText')}
                                 </Text>
                             </View>
                         </View>
@@ -78,9 +81,9 @@ export default function LegalNoticeScreen() {
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>Garantías y Responsabilidad:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.guaranteesLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    TwinPro no garantiza la exactitud, integridad o actualidad de los contenidos y no se responsabiliza de las decisiones, acciones o consecuencias derivadas del uso de la información obtenida a través de la plataforma.
+                                    {t('legalNotice.guaranteesText')}
                                 </Text>
                             </View>
                         </View>
@@ -88,9 +91,9 @@ export default function LegalNoticeScreen() {
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>Responsabilidad del Usuario:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.userResponsibilityLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    El usuario acepta que el uso de TwinPro se realiza bajo su propia responsabilidad.
+                                    {t('legalNotice.userResponsibilityText')}
                                 </Text>
                             </View>
                         </View>
@@ -99,12 +102,12 @@ export default function LegalNoticeScreen() {
 
                 {/* Section 2 - Digital Twins Notice */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>2. Aviso General de Gemelos Digitales</Text>
+                    <Text style={styles.sectionTitle}>{t('legalNotice.section2Title')}</Text>
 
                     <View style={styles.warningCard}>
                         <MaterialIcons name="warning" size={20} color={COLORS.amber600} />
                         <Text style={styles.warningText}>
-                            IMPORTANTE: Las respuestas generadas por los gemelos digitales de TwinPro son producidas mediante sistemas automatizados de inteligencia artificial y pueden ser inexactas, incompletas, desactualizadas o incorrectas.
+                            {t('legalNotice.warningText')}
                         </Text>
                     </View>
 
@@ -112,9 +115,9 @@ export default function LegalNoticeScreen() {
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>No Sustitución:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.noSubstitutionLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    Los gemelos digitales no sustituyen en ningún caso el asesoramiento, diagnóstico, evaluación o intervención de un profesional humano cualificado.
+                                    {t('legalNotice.noSubstitutionText')}
                                 </Text>
                             </View>
                         </View>
@@ -122,9 +125,9 @@ export default function LegalNoticeScreen() {
                         <View style={styles.bulletItem}>
                             <View style={styles.bulletDot} />
                             <View style={styles.bulletContent}>
-                                <Text style={styles.bulletLabel}>Limitación de Decisiones:</Text>
+                                <Text style={styles.bulletLabel}>{t('legalNotice.decisionLimitLabel')}</Text>
                                 <Text style={styles.bulletText}>
-                                    El usuario se compromete a no basar decisiones personales, profesionales, legales, médicas, financieras o de cualquier otro tipo exclusivamente en la información proporcionada por un gemelo digital.
+                                    {t('legalNotice.decisionLimitText')}
                                 </Text>
                             </View>
                         </View>
@@ -136,7 +139,7 @@ export default function LegalNoticeScreen() {
                     style={styles.understandButton}
                     onPress={() => router.back()}
                 >
-                    <Text style={styles.understandButtonText}>Entendido</Text>
+                    <Text style={styles.understandButtonText}>{t('legalNotice.understood')}</Text>
                 </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>

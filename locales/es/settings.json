@@ -1251,9 +1251,38 @@
         "alertPaymentInitError": "No se pudo iniciar el pago. Podrás pagar desde los detalles de la cita.",
         "alertInPersonBooked": "Tu cita presencial ha sido reservada. Pagarás directamente al profesional cuando asistas.",
         "alertBookingError": "No se pudo agendar la cita. Inténtalo de nuevo.",
-        "weekdays": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
-        "weekdaysSunFirst": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
-        "months": ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"],
+        "weekdays": [
+            "Lun",
+            "Mar",
+            "Mié",
+            "Jue",
+            "Vie",
+            "Sáb",
+            "Dom"
+        ],
+        "weekdaysSunFirst": [
+            "Dom",
+            "Lun",
+            "Mar",
+            "Mié",
+            "Jue",
+            "Vie",
+            "Sáb"
+        ],
+        "months": [
+            "Enero",
+            "Febrero",
+            "Marzo",
+            "Abril",
+            "Mayo",
+            "Junio",
+            "Julio",
+            "Agosto",
+            "Septiembre",
+            "Octubre",
+            "Noviembre",
+            "Diciembre"
+        ],
         "navChats": "Chats",
         "navDirectory": "Directorio",
         "navFavorites": "Favoritos",
@@ -1351,7 +1380,15 @@
         "noMessages": "Sin mensajes",
         "dateToday": "Hoy",
         "dateYesterday": "Ayer",
-        "dayNames": ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"],
+        "dayNames": [
+            "Dom",
+            "Lun",
+            "Mar",
+            "Mié",
+            "Jue",
+            "Vie",
+            "Sáb"
+        ],
         "chip": {
             "live": "👤 EN VIVO",
             "contacting": "Contactando...",
@@ -1463,5 +1500,38 @@
             "voiceConnecting": "Conectando...",
             "appointmentProposal": "Propuesta de cita: {{date}} a las {{time}}"
         }
+    },
+    "legalNotice": {
+        "headerTitle": "Aviso Legal",
+        "section1Title": "1. Aviso Legal General – Uso de TwinPro",
+        "section1Intro": "TwinPro es una plataforma tecnológica que facilita la comunicación entre usuarios y profesionales, incluyendo interacciones mediante gemelos digitales basados en inteligencia artificial.",
+        "natureLabel": "Naturaleza del Servicio:",
+        "natureText": "TwinPro no presta servicios profesionales ni sustituye la atención directa de un profesional humano.",
+        "characterLabel": "Carácter de la Información:",
+        "characterText": "La información proporcionada a través de la plataforma, ya sea por gemelos digitales o por profesionales, tiene un carácter meramente informativo y orientativo.",
+        "guaranteesLabel": "Garantías y Responsabilidad:",
+        "guaranteesText": "TwinPro no garantiza la exactitud, integridad o actualidad de los contenidos y no se responsabiliza de las decisiones, acciones o consecuencias derivadas del uso de la información obtenida a través de la plataforma.",
+        "userResponsibilityLabel": "Responsabilidad del Usuario:",
+        "userResponsibilityText": "El usuario acepta que el uso de TwinPro se realiza bajo su propia responsabilidad.",
+        "section2Title": "2. Aviso General de Gemelos Digitales",
+        "warningText": "IMPORTANTE: Las respuestas generadas por los gemelos digitales de TwinPro son producidas mediante sistemas automatizados de inteligencia artificial y pueden ser inexactas, incompletas, desactualizadas o incorrectas.",
+        "noSubstitutionLabel": "No Sustitución:",
+        "noSubstitutionText": "Los gemelos digitales no sustituyen en ningún caso el asesoramiento, diagnóstico, evaluación o intervención de un profesional humano cualificado.",
+        "decisionLimitLabel": "Limitación de Decisiones:",
+        "decisionLimitText": "El usuario se compromete a no basar decisiones personales, profesionales, legales, médicas, financieras o de cualquier otro tipo exclusivamente en la información proporcionada por un gemelo digital.",
+        "understood": "Entendido"
+    },
+    "chatMemory": {
+        "label": "Memoria del gemelo",
+        "errorTitle": "Error de configuración",
+        "errorMessage": "No se pudo actualizar la memoria del gemelo. Inténtalo de nuevo.",
+        "deleteTitle": "Eliminar memoria",
+        "deleteMessage": "¿Eliminar lo que el gemelo ha aprendido de tus conversaciones con {{name}}?",
+        "deleteCancel": "Cancelar",
+        "deleteConfirm": "Eliminar",
+        "successTitle": "¡Listo!",
+        "successMessage": "La memoria del gemelo sobre tus conversaciones ha sido eliminada.",
+        "deleteErrorTitle": "Error",
+        "deleteErrorMessage": "No se pudo eliminar la memoria. Inténtalo de nuevo más tarde."
     }
 }

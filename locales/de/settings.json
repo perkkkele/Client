@@ -1251,9 +1251,38 @@
         "alertPaymentInitError": "Zahlung konnte nicht gestartet werden. Sie können über die Termindetails bezahlen.",
         "alertInPersonBooked": "Ihr Vor-Ort-Termin wurde gebucht. Sie zahlen direkt beim Fachmann vor Ort.",
         "alertBookingError": "Der Termin konnte nicht gebucht werden. Bitte versuchen Sie es erneut.",
-        "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
-        "weekdaysSunFirst": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
-        "months": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+        "weekdays": [
+            "Mo",
+            "Di",
+            "Mi",
+            "Do",
+            "Fr",
+            "Sa",
+            "So"
+        ],
+        "weekdaysSunFirst": [
+            "So",
+            "Mo",
+            "Di",
+            "Mi",
+            "Do",
+            "Fr",
+            "Sa"
+        ],
+        "months": [
+            "Januar",
+            "Februar",
+            "März",
+            "April",
+            "Mai",
+            "Juni",
+            "Juli",
+            "August",
+            "September",
+            "Oktober",
+            "November",
+            "Dezember"
+        ],
         "navChats": "Chats",
         "navDirectory": "Verzeichnis",
         "navFavorites": "Favoriten",
@@ -1351,7 +1380,15 @@
         "noMessages": "Keine Nachrichten",
         "dateToday": "Heute",
         "dateYesterday": "Gestern",
-        "dayNames": ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+        "dayNames": [
+            "So",
+            "Mo",
+            "Di",
+            "Mi",
+            "Do",
+            "Fr",
+            "Sa"
+        ],
         "chip": {
             "live": "👤 LIVE",
             "contacting": "Verbindungsaufbau...",
@@ -1463,5 +1500,38 @@
             "voiceConnecting": "Verbindung...",
             "appointmentProposal": "Terminvorschlag: {{date}} um {{time}}"
         }
+    },
+    "legalNotice": {
+        "headerTitle": "Rechtlicher Hinweis",
+        "section1Title": "1. Allgemeiner Rechtshinweis – Nutzung von TwinPro",
+        "section1Intro": "TwinPro ist eine Technologieplattform, die die Kommunikation zwischen Nutzern und Fachleuten erleichtert, einschließlich Interaktionen über KI-basierte digitale Zwillinge.",
+        "natureLabel": "Art des Dienstes:",
+        "natureText": "TwinPro erbringt keine professionellen Dienstleistungen und ersetzt nicht die direkte Betreuung durch einen menschlichen Fachmann.",
+        "characterLabel": "Art der Information:",
+        "characterText": "Die über die Plattform bereitgestellten Informationen, sei es durch digitale Zwillinge oder Fachleute, sind rein informativer und orientierender Natur.",
+        "guaranteesLabel": "Garantien und Haftung:",
+        "guaranteesText": "TwinPro garantiert nicht die Richtigkeit, Vollständigkeit oder Aktualität der Inhalte und haftet nicht für Entscheidungen, Handlungen oder Konsequenzen, die sich aus der Nutzung der über die Plattform erhaltenen Informationen ergeben.",
+        "userResponsibilityLabel": "Verantwortung des Nutzers:",
+        "userResponsibilityText": "Der Nutzer akzeptiert, dass die Nutzung von TwinPro auf eigene Verantwortung erfolgt.",
+        "section2Title": "2. Allgemeiner Hinweis zu Digitalen Zwillingen",
+        "warningText": "WICHTIG: Die von den digitalen Zwillingen von TwinPro generierten Antworten werden durch automatisierte Systeme der künstlichen Intelligenz erzeugt und können ungenau, unvollständig, veraltet oder fehlerhaft sein.",
+        "noSubstitutionLabel": "Kein Ersatz:",
+        "noSubstitutionText": "Digitale Zwillinge ersetzen in keinem Fall die Beratung, Diagnose, Bewertung oder Intervention eines qualifizierten menschlichen Fachmanns.",
+        "decisionLimitLabel": "Entscheidungsbeschränkung:",
+        "decisionLimitText": "Der Nutzer verpflichtet sich, persönliche, berufliche, rechtliche, medizinische, finanzielle oder sonstige Entscheidungen nicht ausschließlich auf die von einem digitalen Zwilling bereitgestellten Informationen zu stützen.",
+        "understood": "Verstanden"
+    },
+    "chatMemory": {
+        "label": "Zwillings-Gedächtnis",
+        "errorTitle": "Konfigurationsfehler",
+        "errorMessage": "Das Gedächtnis des Zwillings konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.",
+        "deleteTitle": "Gedächtnis löschen",
+        "deleteMessage": "Soll das, was der Zwilling aus Ihren Gesprächen mit {{name}} gelernt hat, gelöscht werden?",
+        "deleteCancel": "Abbrechen",
+        "deleteConfirm": "Löschen",
+        "successTitle": "Fertig!",
+        "successMessage": "Das Gedächtnis des Zwillings über Ihre Gespräche wurde gelöscht.",
+        "deleteErrorTitle": "Fehler",
+        "deleteErrorMessage": "Das Gedächtnis konnte nicht gelöscht werden. Bitte versuchen Sie es später erneut."
     }
 }

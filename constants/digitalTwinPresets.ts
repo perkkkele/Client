@@ -1,4 +1,5 @@
 import { CategoryType } from '../api/user';
+import { getCategoryPresetTexts, getCategoryInstructionText } from './presetTranslations';
 
 /**
  * Preset de configuración para el gemelo digital
@@ -487,64 +488,84 @@ function normalizeGender(profession: string): string {
  */
 export function getPresetForProfessional(
     category?: CategoryType | null,
-    profession?: string | null
+    profession?: string | null,
+    language: string = 'es'
 ): DigitalTwinPreset {
+    // Helper: overlay translated texts onto a base preset
+    function withTranslatedTexts(basePreset: DigitalTwinPreset, cat: CategoryType): DigitalTwinPreset {
+        if (language === 'es') return basePreset; // Spanish is the base, no translation needed
+        const translated = getCategoryPresetTexts(language, cat);
+        return {
+            ...basePreset,
+            objective: translated.objective,
+            allowed: translated.allowed,
+            restricted: translated.restricted,
+        };
+    }
+
     // 1. Intentar preset por profesión específica
     if (profession) {
         const normalizedProfession = profession.toLowerCase().trim();
 
         // Búsqueda exacta (ya en minúsculas)
         if (PROFESSION_PRESETS[normalizedProfession]) {
-            return PROFESSION_PRESETS[normalizedProfession];
+            const matchedPreset = PROFESSION_PRESETS[normalizedProfession];
+            // For profession presets, use the parent category's translations
+            const cat = category || 'otros';
+            return withTranslatedTexts(matchedPreset, cat as CategoryType);
         }
 
         // Búsqueda sin acentos
         const withoutAccents = normalizeProfession(profession);
         if (PROFESSION_PRESETS[withoutAccents]) {
-            return PROFESSION_PRESETS[withoutAccents];
+            const cat = category || 'otros';
+            return withTranslatedTexts(PROFESSION_PRESETS[withoutAccents], cat as CategoryType);
         }
 
         // Intentar con normalización de género (femenino → masculino)
         const genderNormalized = normalizeGender(normalizedProfession);
         if (PROFESSION_PRESETS[genderNormalized]) {
-            return PROFESSION_PRESETS[genderNormalized];
+            const cat = category || 'otros';
+            return withTranslatedTexts(PROFESSION_PRESETS[genderNormalized], cat as CategoryType);
         }
 
         // Intentar género + sin acentos
         const genderAndAccents = normalizeProfession(genderNormalized);
         if (PROFESSION_PRESETS[genderAndAccents]) {
-            return PROFESSION_PRESETS[genderAndAccents];
+            const cat = category || 'otros';
+            return withTranslatedTexts(PROFESSION_PRESETS[genderAndAccents], cat as CategoryType);
         }
 
         // Búsqueda parcial (contiene) - también con normalización de género
         for (const [key, preset] of Object.entries(PROFESSION_PRESETS)) {
             const normalizedKey = key.toLowerCase();
             if (normalizedProfession.includes(normalizedKey) || normalizedKey.includes(normalizedProfession)) {
-                return preset;
+                const cat = category || 'otros';
+                return withTranslatedTexts(preset, cat as CategoryType);
             }
-            // Intentar con la versión normalizada por género
             if (genderNormalized.includes(normalizedKey) || normalizedKey.includes(genderNormalized)) {
-                return preset;
+                const cat = category || 'otros';
+                return withTranslatedTexts(preset, cat as CategoryType);
             }
         }
     }
 
     // 2. Fallback a preset de categoría
     if (category && CATEGORY_PRESETS[category]) {
-        return CATEGORY_PRESETS[category];
+        return withTranslatedTexts(CATEGORY_PRESETS[category], category);
     }
 
     // 3. Fallback final: preset genérico
-    return CATEGORY_PRESETS.otros;
+    return withTranslatedTexts(CATEGORY_PRESETS.otros, 'otros');
 }
 
 /**
  * Obtiene la instrucción específica para una categoría
  * Usado en buildContextPrompt para añadir contexto de industria
  */
-export function getCategoryInstruction(category?: CategoryType | null): string | null {
-    if (category && CATEGORY_INSTRUCTIONS[category]) {
-        return CATEGORY_INSTRUCTIONS[category];
+export function getCategoryInstruction(category?: CategoryType | null, language: string = 'es'): string | null {
+    if (category) {
+        return getCategoryInstructionText(language, category);
     }
     return null;
 }

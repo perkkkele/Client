@@ -205,7 +205,7 @@ export default function TwinBehaviorScreen() {
                 hasCategory: !!user?.category,
                 hasProfession: !!user?.profession
             });
-            const preset = getPresetForProfessional(user?.category, user?.profession);
+            const preset = getPresetForProfessional(user?.category, user?.profession, user?.language || 'es');
             console.log('[TwinBehavior] Preset applied:', preset);
 
             setFormality(preset.formality);
@@ -381,9 +381,9 @@ export default function TwinBehaviorScreen() {
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
                         <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.accentPurple} />
-                        <Text style={styles.cardTitle}>Guardarraíles</Text>
+                        <Text style={styles.cardTitle}>{t('twinBehavior.guardrailsTitle')}</Text>
                         <View style={styles.securityBadge}>
-                            <Text style={styles.securityBadgeText}>SEGURIDAD IA</Text>
+                            <Text style={styles.securityBadgeText}>{t('twinBehavior.securityBadge')}</Text>
                         </View>
                     </View>
 
