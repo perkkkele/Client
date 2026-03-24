@@ -1,0 +1,25 @@
+name: E2E Tests with Maestro
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  # ─── Android E2E Tests ───
+  android-e2e:
+    name: Android E2E Tests
+    steps:
+      # Step 1: Build APK for emulator
+      - name: Build Android APK
+        uses: eas/build
+        id: build_android
+        with:
+          platform: android
+          profile: e2e-test
+
+      # Step 2: Run Maestro tests against the APK
+      - name: Run Maestro Tests
+        uses: eas/maestro-test
+        with:
+          build_id: ${{ steps.build_android.outputs.build_id }}
+          flow_path: .maestro/

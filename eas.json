@@ -19,6 +19,19 @@
       "env": {
         "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
       }
+    },
+    "e2e-test": {
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
+      "ios": {
+        "simulator": true,
+        "image": "latest"
+      },
+      "env": {
+        "APP_VARIANT": "development"
+      }
     }
   },
   "submit": {
