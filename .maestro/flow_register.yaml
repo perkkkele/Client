@@ -1,0 +1,69 @@
+# Flow 2: Registro de usuario
+# Verifica el flujo completo de registro: selección de idioma → tipo de perfil → formulario
+appId: com.twinpro.chatapp
+name: Register Flow
+---
+
+# Desde la pantalla de login, ir a registro
+- assertVisible: "TwinPro"
+- tapOn:
+    id: "login-create-account-link"
+
+# Pantalla de selección de idioma
+- assertVisible:
+    id: "onboarding-language-screen"
+    timeout: 5000
+
+# Seleccionar español (o el idioma por defecto)
+- tapOn:
+    id: "language-option-es"
+- tapOn:
+    id: "language-continue-button"
+
+# Pantalla de tipo de perfil (usuario normal vs profesional)
+- assertVisible:
+    id: "profile-type-screen"
+    timeout: 5000
+
+# Seleccionar usuario normal
+- tapOn:
+    id: "profile-type-user"
+
+# Pantalla de registro de usuario
+- assertVisible:
+    id: "register-user-screen"
+    timeout: 5000
+
+# Rellenar formulario
+- tapOn:
+    id: "register-firstname-input"
+- inputText: "Test"
+
+- tapOn:
+    id: "register-lastname-input"
+- inputText: "Maestro"
+
+- tapOn:
+    id: "register-email-input"
+- inputText: "test-maestro-${TIMESTAMP}@twinpro.test"
+
+- tapOn:
+    id: "register-password-input"
+- inputText: "TestPassword123!"
+
+- tapOn:
+    id: "register-confirm-password-input"
+- inputText: "TestPassword123!"
+
+# Aceptar términos
+- tapOn:
+    id: "register-terms-checkbox"
+
+# Enviar registro
+- tapOn:
+    id: "register-submit-button"
+
+# Verificar que se completó el registro (pantalla de éxito o tabs)
+- assertVisible:
+    timeout: 15000
+    id: "register-success-screen"

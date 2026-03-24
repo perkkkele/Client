@@ -1,0 +1,53 @@
+# Flow 4: Perfil y Configuración
+# Verifica acceso a perfil, settings, y cierre de sesión
+appId: com.twinpro.chatapp
+name: Profile Flow
+---
+
+# Prerequisito: estar logueado
+- assertVisible:
+    id: "main-tabs-container"
+    timeout: 10000
+
+# Navegar al tab de perfil/settings
+- tapOn:
+    id: "tab-settings"
+
+# Verificar pantalla de settings
+- assertVisible:
+    id: "settings-screen"
+    timeout: 5000
+
+# Ver perfil
+- tapOn:
+    id: "settings-profile-button"
+
+# Verificar pantalla de perfil
+- assertVisible:
+    id: "profile-screen"
+    timeout: 5000
+
+# Volver a settings
+- back
+
+# Verificar que el botón de cerrar sesión existe
+- assertVisible:
+    id: "settings-logout-button"
+
+# Probar cierre de sesión
+- tapOn:
+    id: "settings-logout-button"
+
+# Confirmar cierre de sesión
+- assertVisible:
+    id: "logout-confirm-screen"
+    timeout: 5000
+
+- tapOn:
+    id: "logout-confirm-button"
+
+# Verificar que volvemos a la pantalla de login
+- assertVisible: "TwinPro"
+- assertVisible:
+    id: "login-submit-button"
+    timeout: 10000

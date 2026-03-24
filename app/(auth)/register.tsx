@@ -60,6 +60,7 @@ export default function RegisterScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         editable={!isLoading}
+        testID="register-email-input"
       />
 
       <TextInput
@@ -69,6 +70,7 @@ export default function RegisterScreen() {
         value={password}
         onChangeText={setPassword}
         editable={!isLoading}
+        testID="register-password-input"
       />
 
       <TextInput
@@ -78,12 +80,14 @@ export default function RegisterScreen() {
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         editable={!isLoading}
+        testID="register-confirm-password-input"
       />
 
       <TouchableOpacity
         style={[styles.button, isLoading && styles.buttonDisabled]}
         onPress={handleRegister}
         disabled={isLoading}
+        testID="register-submit-button"
       >
         {isLoading ? (
           <ActivityIndicator color="white" />

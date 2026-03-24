@@ -1,0 +1,41 @@
+# Flow 3: Navegación en el Directorio
+# Verifica que el usuario puede navegar por categorías y ver profesionales
+appId: com.twinpro.chatapp
+name: Directory Flow
+---
+
+# Prerequisito: estar logueado (se ejecuta después de flow_login)
+- assertVisible:
+    id: "main-tabs-container"
+    timeout: 10000
+
+# Comprobar que el directorio está visible
+- assertVisible:
+    id: "directory-screen"
+
+# Buscar categoría "Ver todas"
+- tapOn:
+    id: "directory-see-all-categories"
+
+# Pantalla de categorías
+- assertVisible:
+    id: "all-categories-screen"
+    timeout: 5000
+
+# Seleccionar la primera categoría disponible
+- tapOn:
+    index: 0
+    id: "category-item"
+
+# Verificar que se muestran resultados de la categoría
+- assertVisible:
+    id: "category-results-screen"
+    timeout: 5000
+
+# Volver al directorio
+- back
+- back
+
+# Verificar que seguimos en el directorio
+- assertVisible:
+    id: "directory-screen"

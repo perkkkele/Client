@@ -57,6 +57,7 @@ interface SettingsItem {
     value?: string;
     isDestructive?: boolean;
     onPress?: () => void;
+    testID?: string;
 }
 
 function getAvatarUrl(avatarPath: string | undefined): string | null {
@@ -220,6 +221,7 @@ export default function SettingsScreen() {
             iconBg: COLORS.gray100,
             label: t('items.logout'),
             onPress: handleLogout,
+            testID: 'settings-logout-button',
         },
         {
             icon: "delete-forever",
@@ -245,6 +247,7 @@ export default function SettingsScreen() {
                                 ]}
                                 onPress={item.onPress}
                                 activeOpacity={0.7}
+                                testID={item.testID}
                             >
                                 <View style={styles.settingsItemLeft}>
                                     <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
@@ -274,7 +277,7 @@ export default function SettingsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView style={styles.container} edges={["top"]} testID="settings-screen">
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -314,7 +317,7 @@ export default function SettingsScreen() {
                         </View>
                     </TouchableOpacity>
                     <Text style={styles.displayName}>{displayName}</Text>
-                    <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
+                    <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile} testID="settings-profile-button">
                         <Text style={styles.editProfileButtonText}>{t('editProfile')}</Text>
                     </TouchableOpacity>
                 </View>

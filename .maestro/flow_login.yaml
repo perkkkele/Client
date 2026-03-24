@@ -1,0 +1,32 @@
+# Flow 1: Login exitoso
+# Verifica que un usuario existente puede hacer login y llegar al directorio
+appId: com.twinpro.chatapp
+name: Login Flow
+---
+
+# Esperar a que la pantalla de login cargue
+- assertVisible: "TwinPro"
+
+# Introducir email
+- tapOn:
+    id: "login-email-input"
+- inputText: "${EMAIL}"
+
+# Introducir contraseña
+- tapOn:
+    id: "login-password-input"
+- inputText: "${PASSWORD}"
+
+# Pulsar botón de login
+- tapOn:
+    id: "login-submit-button"
+
+# Esperar navegación al directorio/dashboard
+- assertVisible:
+    id: "main-tabs-container"
+    timeout: 10000
+
+# Verificar que estamos en la pantalla principal
+- assertTrue:
+    visible:
+      id: "directory-screen"

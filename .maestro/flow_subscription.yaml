@@ -1,0 +1,48 @@
+# Flow 5: Flujo de Suscripción
+# Verifica que un profesional puede acceder al flujo de suscripción
+appId: com.twinpro.chatapp
+name: Subscription Flow
+---
+
+# Prerequisito: logueado como profesional
+- assertVisible:
+    id: "main-tabs-container"
+    timeout: 10000
+
+# Ir a settings
+- tapOn:
+    id: "tab-settings"
+
+# Verificar pantalla de settings
+- assertVisible:
+    id: "settings-screen"
+    timeout: 5000
+
+# Buscar sección de suscripción
+- scrollUntilVisible:
+    element:
+      id: "settings-subscription-section"
+    direction: DOWN
+    timeout: 5000
+
+# Pulsar en gestionar suscripción
+- tapOn:
+    id: "settings-subscription-section"
+
+# Verificar que se muestra la pantalla de planes
+- assertVisible:
+    id: "subscription-plans-screen"
+    timeout: 5000
+
+# Verificar que se muestran los planes disponibles
+- assertVisible:
+    id: "plan-professional"
+- assertVisible:
+    id: "plan-premium"
+
+# Verificar que el plan actual está marcado
+- assertVisible:
+    id: "current-plan-badge"
+
+# Nota: No se puede completar el checkout real de Stripe en E2E
+# El test verifica que el flujo llega hasta la pantalla de selección de plan

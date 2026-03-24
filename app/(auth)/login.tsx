@@ -181,6 +181,7 @@ export default function LoginScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!isLoading}
+                  testID="login-email-input"
                 />
               </View>
             </View>
@@ -203,6 +204,7 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={setPassword}
                   editable={!isLoading}
+                  testID="login-password-input"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -232,6 +234,7 @@ export default function LoginScreen() {
               style={[styles.loginButton, isLoading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}
+              testID="login-submit-button"
             >
               {isLoading ? (
                 <ActivityIndicator color="#000000" />
@@ -284,7 +287,7 @@ export default function LoginScreen() {
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>{t('login.noAccount')} </Text>
               <Link href="/onboarding/language" asChild>
-                <TouchableOpacity>
+                <TouchableOpacity testID="login-create-account-link">
                   <Text style={styles.registerLink}>{t('login.createAccount')}</Text>
                 </TouchableOpacity>
               </Link>
