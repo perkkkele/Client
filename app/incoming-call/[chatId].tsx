@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { getAssetUrl } from "../../api";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     backgroundDark: "#0a0f14",
@@ -32,6 +33,7 @@ export default function IncomingCallScreen() {
     const callerId = params.callerId as string | undefined;
 
     const { token } = useAuth();
+    const { t } = useTranslation("settings");
     const [isAnswering, setIsAnswering] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
 
@@ -120,7 +122,7 @@ export default function IncomingCallScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
                 {/* Caller info */}
-                <Text style={styles.incomingText}>Videollamada entrante</Text>
+                <Text style={styles.incomingText}>{t("incomingCallScreen.incomingVideoCall")}</Text>
 
                 {/* Avatar with pulse effect */}
                 <Animated.View style={[styles.avatarContainer, { transform: [{ scale: pulseAnim }] }]}>
@@ -138,7 +140,7 @@ export default function IncomingCallScreen() {
                 </Animated.View>
 
                 <Text style={styles.callerName}>{callerName}</Text>
-                <Text style={styles.callerSubtitle}>te está llamando...</Text>
+                <Text style={styles.callerSubtitle}>{t("incomingCallScreen.callingYou")}</Text>
 
                 {/* Animated phone icon */}
                 <Animated.View style={[styles.phoneIconContainer, { transform: [{ rotate: rotation }] }]}>
@@ -155,7 +157,7 @@ export default function IncomingCallScreen() {
                     disabled={isRejecting || isAnswering}
                 >
                     <MaterialIcons name="call-end" size={32} color={COLORS.textMain} />
-                    <Text style={styles.actionText}>Rechazar</Text>
+                    <Text style={styles.actionText}>{t("incomingCallScreen.reject")}</Text>
                 </TouchableOpacity>
 
                 {/* Accept button */}
@@ -165,7 +167,7 @@ export default function IncomingCallScreen() {
                     disabled={isRejecting || isAnswering}
                 >
                     <MaterialIcons name="videocam" size={32} color={COLORS.textMain} />
-                    <Text style={styles.actionText}>Aceptar</Text>
+                    <Text style={styles.actionText}>{t("incomingCallScreen.accept")}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

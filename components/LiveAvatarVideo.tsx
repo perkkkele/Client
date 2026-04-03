@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface TranscriptionSegment {
     id: string;
@@ -376,6 +377,7 @@ function VideoRenderer({
     muted?: boolean;
 }) {
     const { useTracks, VideoTrack, isTrackReference } = LiveKitModule;
+    const { t: translate } = useTranslation('settings');
 
     // Get all tracks
     const tracks = useTracks ? useTracks() : [];
@@ -390,7 +392,7 @@ function VideoRenderer({
         return (
             <View style={[styles.loadingContainer, style]}>
                 <ActivityIndicator size="small" color="#137fec" />
-                <Text style={styles.loadingText}>Esperando avatar...</Text>
+                <Text style={styles.loadingText}>{translate("liveAvatarVideo.connectingVideo")}</Text>
                 <TextSender onSendTextReady={onSendTextReady} />
                 <AudioSender onSendAudioReady={onSendAudioReady} />
             </View>
@@ -430,6 +432,7 @@ function LiveKitVideoPlayer({
 }: LiveAvatarVideoProps) {
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t: translate } = useTranslation('settings');
 
     const { LiveKitRoom } = LiveKitModule;
 
@@ -464,7 +467,7 @@ function LiveKitVideoPlayer({
             {!isConnected ? (
                 <View style={[styles.loadingContainer, style]}>
                     <ActivityIndicator size="large" color="#137fec" />
-                    <Text style={styles.loadingText}>Conectando video...</Text>
+                    <Text style={styles.loadingText}>{translate("liveAvatarVideo.connectingVideo")}</Text>
                 </View>
             ) : (
                 <VideoRenderer

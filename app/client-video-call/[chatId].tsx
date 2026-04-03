@@ -27,6 +27,7 @@ import { videoCallApi, getAssetUrl, chatApi } from "../../api";
 import { useIncomingCall } from "../../context/IncomingCallContext";
 import HumanVideoCall from "../../components/HumanVideoCall";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const VIDEO_MAX_HEIGHT = SCREEN_WIDTH * 0.75; // Same as avatar-chat
@@ -90,6 +91,7 @@ export default function ClientVideoCallScreen() {
 
     const { token, user: currentUser } = useAuth();
   const { showAlert } = useAlert();
+    const { t: translate } = useTranslation("settings");
     const { subscribeToMessages } = useIncomingCall();
     const insets = useSafeAreaInsets();
     const scrollViewRef = useRef<ScrollView>(null);
@@ -327,12 +329,12 @@ export default function ClientVideoCallScreen() {
     const handleClearAllHistory = useCallback(() => {
         showAlert({
     type: 'warning',
-    title: 'Borrar historial',
-    message: '¿Estás seguro de que quieres borrar todo el historial de videollamadas con este profesional? Esta acción no se puede deshacer.',
+    title: translate("clientVideoCallScreen.deleteHistoryTitle"),
+    message: translate("clientVideoCallScreen.deleteHistoryMessage"),
     buttons: [
-                { text: "Cancelar", style: "cancel" },
+                { text: translate("videoCallScreen.cancel"), style: "cancel" },
                 {
-                    text: "Borrar",
+                    text: translate("clientVideoCallScreen.delete"),
                     style: "destructive",
                     onPress: async () => {
                         // Delete all video call threads
@@ -345,10 +347,10 @@ export default function ClientVideoCallScreen() {
                             // Clear local state and close drawer
                             setConversationThreads([]);
                             closeDrawer();
-                            showAlert({ type: 'info', title: 'Historial borrado', message: 'Se ha eliminado todo el historial de videollamadas.' });
+                            showAlert({ type: 'info', title: translate("clientVideoCallScreen.deleteHistorySuccessTitle"), message: translate("clientVideoCallScreen.deleteHistorySuccess") });
                         } catch (error) {
                             console.error("[ClientVideoCall] Error deleting history:", error);
-                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar el historial. Inténtalo de nuevo.' });
+                            showAlert({ type: 'error', title: 'Error', message: translate("clientVideoCallScreen.deleteHistoryError") });
                         }
                     }
                 }
@@ -359,12 +361,12 @@ export default function ClientVideoCallScreen() {
     const handleDeleteThread = useCallback((threadId: string, threadTitle: string) => {
         showAlert({
     type: 'info',
-    title: 'Borrar conversación',
+    title: translate("clientVideoCallScreen.deleteConversation"),
     message: '',
     buttons: [
-                { text: "Cancelar", style: "cancel" },
+                { text: translate("videoCallScreen.cancel"), style: "cancel" },
                 {
-                    text: "Borrar",
+                    text: translate("clientVideoCallScreen.delete"),
                     style: "destructive",
                     onPress: async () => {
                         if (!token) return;
@@ -374,7 +376,7 @@ export default function ClientVideoCallScreen() {
                             setConversationThreads(prev => prev.filter(t => t.id !== threadId));
                         } catch (error) {
                             console.error("[ClientVideoCall] Error deleting thread:", error);
-                            showAlert({ type: 'error', title: 'Error', message: 'No se pudo borrar la conversación.' });
+                            showAlert({ type: 'error', title: 'Error', message: translate("clientVideoCallScreen.deleteConversationError") });
                         }
                     }
                 }
@@ -391,7 +393,7 @@ export default function ClientVideoCallScreen() {
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.gold500} />
-                    <Text style={styles.loadingText}>Conectando videollamada...</Text>
+                    <Text style={styles.loadingText}>{translate("clientVideoCallScreen.connectingCall")}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -403,12 +405,12 @@ export default function ClientVideoCallScreen() {
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
                     <MaterialIcons name="error-outline" size={64} color={COLORS.gold500} />
-                    <Text style={styles.errorText}>{error || "Error de conexión"}</Text>
+                    <Text style={styles.errorText}>{error || translate("clientVideoCallScreen.connectionError")}</Text>
                     <TouchableOpacity
                         style={styles.backButton}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.backButtonText}>Volver</Text>
+                        <Text style={styles.backButtonText}>{translate("clientVideoCallScreen.back")}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -442,7 +444,7 @@ export default function ClientVideoCallScreen() {
                         <View style={styles.professionalChipText}>
                             <Text style={styles.professionalChipName}>{professionalName}</Text>
                             <Text style={[styles.professionalChipRole, { color: COLORS.gold500, fontWeight: '600' }]}>
-                                {callEnded ? "Llamada finalizada" : "👤 EN VIVO"}
+                                {callEnded ? translate("clientVideoCallScreen.callEnded") : `👤 ${translate("clientVideoCallScreen.live")}`}
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -477,7 +479,7 @@ export default function ClientVideoCallScreen() {
                         <View style={styles.callEndedContainer}>
                             <View style={styles.callEndedBadge}>
                                 <MaterialIcons name="call-end" size={20} color={COLORS.white} />
-                                <Text style={styles.callEndedText}>Llamada finalizada</Text>
+                                <Text style={styles.callEndedText}>{translate("clientVideoCallScreen.callEnded")}</Text>
                             </View>
                         </View>
                     )}
@@ -494,7 +496,7 @@ export default function ClientVideoCallScreen() {
                             <View style={styles.emptyChat}>
                                 <MaterialIcons name="chat-bubble-outline" size={48} color={COLORS.gray300} />
                                 <Text style={styles.emptyChatText}>
-                                    Escribe un mensaje durante la videollamada
+                                    {translate("clientVideoCallScreen.emptyChatHint")}
                                 </Text>
                             </View>
                         )}
@@ -552,7 +554,7 @@ export default function ClientVideoCallScreen() {
                                     style={styles.textInput}
                                     value={inputText}
                                     onChangeText={setInputText}
-                                    placeholder="Escribe un mensaje..."
+                                    placeholder={translate("clientVideoCallScreen.writeMessage")}
                                     placeholderTextColor={COLORS.gray400}
                                     multiline
                                     maxLength={500}
@@ -593,7 +595,7 @@ export default function ClientVideoCallScreen() {
 
                                 {/* Thank you message */}
                                 <Text style={styles.postCallThankYou}>
-                                    ¡Gracias por tu tiempo!
+                                    {translate("clientVideoCallScreen.thankYou")}
                                 </Text>
 
                                 {/* Duration badge */}
@@ -604,11 +606,11 @@ export default function ClientVideoCallScreen() {
 
                                 {/* Review prompt */}
                                 <Text style={styles.postCallQuestion}>
-                                    ¿Cómo ha sido tu experiencia con {professionalName}?
+                                    {translate("clientVideoCallScreen.reviewQuestion", { name: professionalName })}
                                 </Text>
 
                                 <Text style={styles.postCallSubtext}>
-                                    Tu reseña ayuda a otras personas a elegir mejor
+                                    {translate("clientVideoCallScreen.reviewSubtext")}
                                 </Text>
 
                                 {/* Star decoration */}
@@ -630,7 +632,7 @@ export default function ClientVideoCallScreen() {
                                     }}
                                 >
                                     <MaterialIcons name="rate-review" size={24} color={COLORS.textMain} />
-                                    <Text style={styles.reviewButtonLargeText}>Escribir reseña</Text>
+                                    <Text style={styles.reviewButtonLargeText}>{translate("clientVideoCallScreen.writeReview")}</Text>
                                 </TouchableOpacity>
 
                                 {/* Secondary link - Ahora no */}
@@ -644,7 +646,7 @@ export default function ClientVideoCallScreen() {
                                         }
                                     }}
                                 >
-                                    <Text style={styles.skipButtonText}>Ahora no</Text>
+                                    <Text style={styles.skipButtonText}>{translate("clientVideoCallScreen.notNow")}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -670,7 +672,7 @@ export default function ClientVideoCallScreen() {
                     >
                         {/* Drawer Header */}
                         <View style={styles.drawerHeader}>
-                            <Text style={styles.drawerTitle}>Videollamadas</Text>
+                            <Text style={styles.drawerTitle}>{translate("clientVideoCallScreen.videoCalls")}</Text>
                             <TouchableOpacity
                                 style={styles.drawerCloseButton}
                                 onPress={closeDrawer}
@@ -685,7 +687,7 @@ export default function ClientVideoCallScreen() {
                                 <MaterialIcons name="search" size={20} color={COLORS.gray400} />
                                 <TextInput
                                     style={styles.drawerSearchInput}
-                                    placeholder="Buscar videollamadas..."
+                                    placeholder={translate("clientVideoCallScreen.searchCalls")}
                                     placeholderTextColor={COLORS.gray400}
                                     value={drawerSearchText}
                                     onChangeText={setDrawerSearchText}
@@ -701,20 +703,20 @@ export default function ClientVideoCallScreen() {
                         >
                             {/* Debug info */}
                             <Text style={{ color: COLORS.gray400, fontSize: 10, textAlign: 'center', marginBottom: 8 }}>
-                                {loadingThreads ? 'Cargando...' : `${conversationThreads.filter(t => t.isVideoCall).length} videollamadas encontradas`}
+                                {loadingThreads ? translate("clientVideoCallScreen.loading") : translate("clientVideoCallScreen.callsFound", { count: conversationThreads.filter(t => t.isVideoCall).length })}
                             </Text>
 
                             {loadingThreads ? (
                                 <View style={{ padding: 40, alignItems: 'center' }}>
                                     <ActivityIndicator size="small" color={COLORS.primary} />
-                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>Cargando historial...</Text>
+                                    <Text style={{ color: COLORS.gray400, marginTop: 8, fontSize: 12 }}>{translate("clientVideoCallScreen.loadingHistory")}</Text>
                                 </View>
                             ) : conversationThreads.filter(t => t.isVideoCall).length === 0 ? (
                                 <View style={{ padding: 40, alignItems: 'center' }}>
                                     <MaterialIcons name="videocam-off" size={48} color={COLORS.gray300} />
-                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>Sin videollamadas</Text>
+                                    <Text style={{ color: COLORS.gray500, marginTop: 12, fontSize: 14, fontWeight: '600' }}>{translate("clientVideoCallScreen.noCalls")}</Text>
                                     <Text style={{ color: COLORS.gray400, marginTop: 4, fontSize: 12, textAlign: 'center' }}>
-                                        Tu historial de videollamadas aparecerá aquí
+                                        {translate("clientVideoCallScreen.callsHistoryHint")}
                                     </Text>
                                 </View>
                             ) : (
@@ -762,7 +764,7 @@ export default function ClientVideoCallScreen() {
                                                     {thread.title}
                                                 </Text>
                                                 <Text style={styles.drawerConversationPreview} numberOfLines={2}>
-                                                    {thread.preview || "Sin mensajes"}
+                                                    {thread.preview || translate("clientVideoCallScreen.noMessages")}
                                                 </Text>
                                                 {isConvActive && (
                                                     <View style={styles.drawerConversationArrow}>
@@ -791,12 +793,12 @@ export default function ClientVideoCallScreen() {
                             <View style={[styles.drawerFooter, { marginTop: 16 }]}>
                                 <TouchableOpacity style={styles.drawerFooterOption} onPress={handleReportProblem}>
                                     <MaterialIcons name="flag" size={20} color={COLORS.gray400} />
-                                    <Text style={styles.drawerFooterOptionText}>Reportar un problema</Text>
+                                    <Text style={styles.drawerFooterOptionText}>{translate("clientVideoCallScreen.reportProblem")}</Text>
                                 </TouchableOpacity>
                                 <View style={styles.drawerDivider} />
                                 <TouchableOpacity style={styles.drawerDeleteAllButton} onPress={handleClearAllHistory}>
                                     <MaterialIcons name="delete-sweep" size={18} color="#EF4444" />
-                                    <Text style={styles.drawerDeleteAllText}>Borrar todo el historial</Text>
+                                    <Text style={styles.drawerDeleteAllText}>{translate("clientVideoCallScreen.deleteAllHistory")}</Text>
                                 </TouchableOpacity>
                             </View>
 

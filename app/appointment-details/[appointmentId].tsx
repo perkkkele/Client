@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -48,85 +49,85 @@ const COLORS = {
     white: "#FFFFFF",
 };
 
-const MONTHS = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-];
-
 function getAvatarUrl(avatarPath: string | undefined): string | null {
     return getAssetUrl(avatarPath);
 }
 
-function formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    const day = date.getDate();
-    const month = MONTHS[date.getMonth()];
-    const year = date.getFullYear();
-    return `${day} de ${month}, ${year}`;
-}
 
-function formatDuration(minutes: number): string {
-    if (minutes >= 60) {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        if (mins === 0) return `${hours} hora${hours > 1 ? 's' : ''}`;
-        return `${hours}h ${mins}m`;
-    }
-    return `${minutes} minutos`;
-}
-
-function getStatusConfig(status: string) {
-    switch (status) {
-        case "confirmed":
-            return {
-                label: "Confirmada",
-                icon: "check-circle",
-                bgColor: COLORS.green50,
-                textColor: COLORS.green700,
-                borderColor: COLORS.green100,
-            };
-        case "pending":
-            return {
-                label: "Pendiente",
-                icon: "schedule",
-                bgColor: COLORS.yellow50,
-                textColor: COLORS.yellow600,
-                borderColor: "#fef08a",
-            };
-        case "cancelled":
-            return {
-                label: "Cancelada",
-                icon: "cancel",
-                bgColor: COLORS.red50,
-                textColor: COLORS.red600,
-                borderColor: COLORS.red100,
-            };
-        case "completed":
-            return {
-                label: "Completada",
-                icon: "task-alt",
-                bgColor: COLORS.green50,
-                textColor: COLORS.green700,
-                borderColor: COLORS.green100,
-            };
-        default:
-            return {
-                label: status,
-                icon: "info",
-                bgColor: COLORS.gray100,
-                textColor: COLORS.gray500,
-                borderColor: COLORS.gray200,
-            };
-    }
-}
 
 export default function AppointmentDetailsScreen() {
     const { appointmentId } = useLocalSearchParams<{ appointmentId: string }>();
     const { token, user } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation('settings');
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isCancelling, setIsCancelling] = useState(false);
+
+    const months = t('appointmentDetailsScreen.months', { returnObjects: true }) as string[];
+
+    function formatDate(dateStr: string): string {
+        const date = new Date(dateStr);
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return t('appointmentDetailsScreen.dateFormat', { day, month, year });
+    }
+
+    function formatDuration(minutes: number): string {
+        if (minutes >= 60) {
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            if (mins === 0) return `${hours} ${hours > 1 ? t('appointmentDetailsScreen.hoursPlural') : t('appointmentDetailsScreen.hours')}`;
+            return `${hours}h ${mins}m`;
+        }
+        return `${minutes} ${t('appointmentDetailsScreen.minutes')}`;
+    }
+
+    function getStatusConfig(status: string) {
+        switch (status) {
+            case "confirmed":
+                return {
+                    label: t('appointmentDetailsScreen.statusConfirmed'),
+                    icon: "check-circle",
+                    bgColor: COLORS.green50,
+                    textColor: COLORS.green700,
+                    borderColor: COLORS.green100,
+                };
+            case "pending":
+                return {
+                    label: t('appointmentDetailsScreen.statusPending'),
+                    icon: "schedule",
+                    bgColor: COLORS.yellow50,
+                    textColor: COLORS.yellow600,
+                    borderColor: "#fef08a",
+                };
+            case "cancelled":
+                return {
+                    label: t('appointmentDetailsScreen.statusCancelled'),
+                    icon: "cancel",
+                    bgColor: COLORS.red50,
+                    textColor: COLORS.red600,
+                    borderColor: COLORS.red100,
+                };
+            case "completed":
+                return {
+                    label: t('appointmentDetailsScreen.statusCompleted'),
+                    icon: "task-alt",
+                    bgColor: COLORS.green50,
+                    textColor: COLORS.green700,
+                    borderColor: COLORS.green100,
+                };
+            default:
+                return {
+                    label: status,
+                    icon: "info",
+                    bgColor: COLORS.gray100,
+                    textColor: COLORS.gray500,
+                    borderColor: COLORS.gray200,
+                };
+        }
+    }
 
     const loadAppointment = useCallback(async () => {
         console.log("[AppointmentDetails] appointmentId:", appointmentId, "token:", token ? "present" : "missing");
@@ -137,7 +138,7 @@ export default function AppointmentDetailsScreen() {
             setAppointment(data);
         } catch (error) {
             console.error("Error loading appointment:", error);
-            showAlert({ type: 'error', title: 'Error', message: 'No se pudo cargar la cita' });
+            showAlert({ type: 'error', title: 'Error', message: t('appointmentDetailsScreen.loadError') });
         } finally {
             setIsLoading(false);
         }
@@ -158,7 +159,7 @@ export default function AppointmentDetailsScreen() {
 
     const handleCall = () => {
         if (!appointment?.professional.phone) {
-            showAlert({ type: 'info', title: 'Sin teléfono', message: 'Este profesional no tiene teléfono registrado' });
+            showAlert({ type: 'info', title: t('appointmentDetailsScreen.noPhone'), message: t('appointmentDetailsScreen.noPhoneMessage') });
             return;
         }
         Linking.openURL(`tel:${appointment.professional.phone}`);
@@ -166,7 +167,7 @@ export default function AppointmentDetailsScreen() {
 
     const handleJoinMeeting = () => {
         if (!appointment?.meetingLink) {
-            showAlert({ type: 'warning', title: 'Sin enlace', message: 'No hay enlace de reunión disponible' });
+            showAlert({ type: 'warning', title: t('appointmentDetailsScreen.noMeetingLink'), message: t('appointmentDetailsScreen.noMeetingLinkMessage') });
             return;
         }
         Linking.openURL(appointment.meetingLink);
@@ -181,11 +182,11 @@ export default function AppointmentDetailsScreen() {
             if (canOpen) {
                 await Linking.openURL(session.url);
             } else {
-                showAlert({ type: 'error', title: 'Error', message: 'No se pudo abrir el enlace de pago' });
+                showAlert({ type: 'error', title: 'Error', message: t('appointmentDetailsScreen.paymentLinkError') });
             }
         } catch (error: any) {
             console.error("Payment error:", error);
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo iniciar el pago" });
+            showAlert({ type: 'error', title: 'Error', message: error.message || t('appointmentDetailsScreen.paymentStartError') });
         }
     };
 
@@ -198,12 +199,12 @@ export default function AppointmentDetailsScreen() {
     const handleCancel = () => {
         showAlert({
             type: 'warning',
-            title: 'Cancelar Cita',
-            message: '¿Estás seguro de que deseas cancelar esta cita?',
+            title: t('appointmentDetailsScreen.cancelTitle'),
+            message: t('appointmentDetailsScreen.cancelMessage'),
             buttons: [
-                { text: "No", style: "cancel" },
+                { text: t('appointmentDetailsScreen.cancelNo'), style: "cancel" },
                 {
-                    text: "Sí, cancelar",
+                    text: t('appointmentDetailsScreen.cancelYes'),
                     style: "destructive",
                     onPress: async () => {
                         if (!token || !appointmentId) return;
@@ -211,9 +212,9 @@ export default function AppointmentDetailsScreen() {
                         try {
                             await cancelAppointment(token, appointmentId);
                             await loadAppointment();
-                            showAlert({ type: 'info', title: 'Cita Cancelada', message: 'La cita ha sido cancelada correctamente' });
+                            showAlert({ type: 'info', title: t('appointmentDetailsScreen.cancelSuccess'), message: t('appointmentDetailsScreen.cancelSuccessMessage') });
                         } catch (error: any) {
-                            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo cancelar la cita" });
+                            showAlert({ type: 'error', title: 'Error', message: error.message || t('appointmentDetailsScreen.cancelError') });
                         } finally {
                             setIsCancelling(false);
                         }
@@ -234,9 +235,9 @@ export default function AppointmentDetailsScreen() {
     if (!appointment) {
         return (
             <View style={styles.loadingContainer}>
-                <Text style={styles.errorText}>Cita no encontrada</Text>
+                <Text style={styles.errorText}>{t('appointmentDetailsScreen.notFound')}</Text>
                 <TouchableOpacity style={styles.backButtonError} onPress={handleBack}>
-                    <Text style={styles.backButtonErrorText}>Volver</Text>
+                    <Text style={styles.backButtonErrorText}>{t('appointmentDetailsScreen.back')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -255,7 +256,7 @@ export default function AppointmentDetailsScreen() {
                 <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
                     <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Detalles de la Cita</Text>
+                <Text style={styles.headerTitle}>{t('appointmentDetailsScreen.headerTitle')}</Text>
                 <View style={styles.headerPlaceholder} />
             </View>
 
@@ -279,7 +280,7 @@ export default function AppointmentDetailsScreen() {
                     </View>
                     <Text style={styles.professionalName}>{displayName}</Text>
                     <Text style={styles.professionalInfo}>
-                        {appointment.professional.profession || "Profesional"}
+                        {appointment.professional.profession || t('appointmentDetailsScreen.professional')}
                         {appointment.professional.category && ` - ${appointment.professional.category}`}
                     </Text>
                     <View style={[
@@ -304,7 +305,7 @@ export default function AppointmentDetailsScreen() {
 
                 {/* Details Section */}
                 <View style={styles.detailsSection}>
-                    <Text style={styles.sectionTitle}>Información de la Cita</Text>
+                    <Text style={styles.sectionTitle}>{t('appointmentDetailsScreen.appointmentInfo')}</Text>
                     <View style={styles.detailsList}>
                         {/* Date & Time */}
                         <View style={styles.detailRow}>
@@ -312,7 +313,7 @@ export default function AppointmentDetailsScreen() {
                                 <MaterialIcons name="calendar-today" size={20} color={COLORS.primary} />
                             </View>
                             <View style={styles.detailContent}>
-                                <Text style={styles.detailLabel}>Fecha y Hora</Text>
+                                <Text style={styles.detailLabel}>{t('appointmentDetailsScreen.dateAndTime')}</Text>
                                 <Text style={styles.detailValue}>{formatDate(appointment.date)}</Text>
                                 <Text style={styles.detailSubValue}>{appointment.time}</Text>
                             </View>
@@ -324,7 +325,7 @@ export default function AppointmentDetailsScreen() {
                                 <MaterialIcons name="schedule" size={20} color={COLORS.primary} />
                             </View>
                             <View style={styles.detailContent}>
-                                <Text style={styles.detailLabel}>Duración</Text>
+                                <Text style={styles.detailLabel}>{t('appointmentDetailsScreen.duration')}</Text>
                                 <Text style={styles.detailValue}>{formatDuration(appointment.duration)}</Text>
                             </View>
                         </View>
@@ -339,17 +340,17 @@ export default function AppointmentDetailsScreen() {
                                 />
                             </View>
                             <View style={styles.detailContent}>
-                                <Text style={styles.detailLabel}>Ubicación</Text>
+                                <Text style={styles.detailLabel}>{t('appointmentDetailsScreen.location')}</Text>
                                 {appointment.type === "videoconference" ? (
                                     <>
-                                        <Text style={styles.detailValue}>Video-cita en la aplicación TwinPro</Text>
+                                        <Text style={styles.detailValue}>{t('appointmentDetailsScreen.videoAppointment')}</Text>
                                         <Text style={styles.detailSubValue}>
-                                            El profesional te llamará a la hora indicada
+                                            {t('appointmentDetailsScreen.videoCallHint')}
                                         </Text>
                                     </>
                                 ) : (
                                     <>
-                                        <Text style={styles.detailValue}>Presencial</Text>
+                                        <Text style={styles.detailValue}>{t('appointmentDetailsScreen.inPerson')}</Text>
                                         {appointment.location?.address && (
                                             <Text style={styles.detailSubValue}>
                                                 {appointment.location.address}
@@ -367,7 +368,7 @@ export default function AppointmentDetailsScreen() {
                                 <MaterialIcons name="euro" size={20} color={COLORS.primary} />
                             </View>
                             <View style={styles.detailContent}>
-                                <Text style={styles.detailLabel}>Precio</Text>
+                                <Text style={styles.detailLabel}>{t('appointmentDetailsScreen.price')}</Text>
                                 <Text style={styles.detailValue}>
                                     {(appointment.price / 100).toFixed(0)}€
                                 </Text>
@@ -383,7 +384,7 @@ export default function AppointmentDetailsScreen() {
                     <>
                         <View style={styles.notesSection}>
                             <View style={styles.notesHeader}>
-                                <Text style={styles.sectionTitle}>Notas</Text>
+                                <Text style={styles.sectionTitle}>{t('appointmentDetailsScreen.notes')}</Text>
                             </View>
                             <View style={styles.notesBox}>
                                 <Text style={styles.notesText}>{appointment.notes}</Text>
@@ -410,16 +411,16 @@ export default function AppointmentDetailsScreen() {
                                         <View style={styles.paymentCardContent}>
                                             <MaterialIcons name="payment" size={32} color={COLORS.primary} />
                                             <View style={styles.paymentCardText}>
-                                                <Text style={styles.paymentCardTitle}>Pago Pendiente</Text>
+                                                <Text style={styles.paymentCardTitle}>{t('appointmentDetailsScreen.paymentPending')}</Text>
                                                 <Text style={styles.paymentCardSubtitle}>
-                                                    Completa el pago para confirmar tu cita
+                                                    {t('appointmentDetailsScreen.paymentPendingHint')}
                                                 </Text>
                                             </View>
                                         </View>
                                         <TouchableOpacity style={styles.payNowButton} onPress={handlePayNow}>
                                             <MaterialIcons name="lock" size={18} color={COLORS.white} />
                                             <Text style={styles.payNowButtonText}>
-                                                Pagar {(appointment.price / 100).toFixed(0)}€
+                                                {t('appointmentDetailsScreen.payButton', { amount: (appointment.price / 100).toFixed(0) })}
                                             </Text>
                                         </TouchableOpacity>
                                     </View>
@@ -433,9 +434,9 @@ export default function AppointmentDetailsScreen() {
                                         <View style={styles.paymentCardContent}>
                                             <MaterialIcons name="storefront" size={32} color="#0284c7" />
                                             <View style={styles.paymentCardText}>
-                                                <Text style={[styles.paymentCardTitle, { color: '#0369a1' }]}>Pago Presencial</Text>
+                                                <Text style={[styles.paymentCardTitle, { color: '#0369a1' }]}>{t('appointmentDetailsScreen.inSituPayment')}</Text>
                                                 <Text style={[styles.paymentCardSubtitle, { color: '#0369a1' }]}>
-                                                    Pagarás {(appointment.price / 100).toFixed(0)}€ directamente al profesional cuando asistas
+                                                    {t('appointmentDetailsScreen.inSituPaymentHint', { amount: (appointment.price / 100).toFixed(0) })}
                                                 </Text>
                                             </View>
                                         </View>
@@ -446,7 +447,7 @@ export default function AppointmentDetailsScreen() {
                                         >
                                             <MaterialIcons name="payment" size={18} color={COLORS.primary} />
                                             <Text style={styles.optionalPayButtonText}>
-                                                ¿Prefieres pagar ahora?
+                                                {t('appointmentDetailsScreen.preferPayNow')}
                                             </Text>
                                         </TouchableOpacity>
                                     </View>
@@ -462,9 +463,9 @@ export default function AppointmentDetailsScreen() {
                         <View style={[styles.paidBadge, styles.authorizedBadge]}>
                             <MaterialIcons name="hourglass-top" size={20} color="#0369a1" />
                             <View style={{ flex: 1 }}>
-                                <Text style={[styles.paidBadgeText, { color: '#0369a1' }]}>Pago Reservado</Text>
+                                <Text style={[styles.paidBadgeText, { color: '#0369a1' }]}>{t('appointmentDetailsScreen.paymentReserved')}</Text>
                                 <Text style={styles.authorizedSubtext}>
-                                    Se cobrará cuando el profesional confirme la cita
+                                    {t('appointmentDetailsScreen.paymentReservedHint')}
                                 </Text>
                             </View>
                         </View>
@@ -476,7 +477,7 @@ export default function AppointmentDetailsScreen() {
                     <View style={styles.paidBadgeContainer}>
                         <View style={styles.paidBadge}>
                             <MaterialIcons name="check-circle" size={20} color={COLORS.green700} />
-                            <Text style={styles.paidBadgeText}>Pago Completado</Text>
+                            <Text style={styles.paidBadgeText}>{t('appointmentDetailsScreen.paymentCompleted')}</Text>
                         </View>
                     </View>
                 )}
@@ -486,7 +487,7 @@ export default function AppointmentDetailsScreen() {
                     <View style={styles.fiscalNotice}>
                         <MaterialIcons name="info-outline" size={14} color={COLORS.gray400} />
                         <Text style={styles.fiscalNoticeText}>
-                            El servicio es prestado por {displayName}. Para solicitar factura, contacta directamente con el profesional. TwinPro actúa como intermediario de pagos.
+                            {t('appointmentDetailsScreen.fiscalNotice', { name: displayName })}
                         </Text>
                     </View>
                 )}
@@ -498,9 +499,9 @@ export default function AppointmentDetailsScreen() {
                             <View style={styles.infoCardContent}>
                                 <MaterialIcons name="info" size={24} color={COLORS.primary} />
                                 <View style={styles.infoCardText}>
-                                    <Text style={styles.infoCardTitle}>Gestión de Citas</Text>
+                                    <Text style={styles.infoCardTitle}>{t('appointmentDetailsScreen.managementTitle')}</Text>
                                     <Text style={styles.infoCardSubtitle}>
-                                        Puedes gestionar, cancelar o reprogramar tus citas desde "Mis Citas" en tu perfil de usuario
+                                        {t('appointmentDetailsScreen.managementHint')}
                                     </Text>
                                 </View>
                             </View>
@@ -508,7 +509,7 @@ export default function AppointmentDetailsScreen() {
                                 style={styles.goToSettingsButton}
                                 onPress={() => router.push("/(settings)/my-appointments")}
                             >
-                                <Text style={styles.goToSettingsButtonText}>Ir a Mis Citas</Text>
+                                <Text style={styles.goToSettingsButtonText}>{t('appointmentDetailsScreen.goToMyAppointments')}</Text>
                                 <MaterialIcons name="arrow-forward" size={18} color={COLORS.primary} />
                             </TouchableOpacity>
                         </View>
@@ -523,19 +524,19 @@ export default function AppointmentDetailsScreen() {
             <View style={styles.bottomNav}>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)")}>
                     <MaterialIcons name="chat-bubble" size={24} color={COLORS.primary} />
-                    <Text style={[styles.navLabel, { color: COLORS.primary }]}>Chats</Text>
+                    <Text style={[styles.navLabel, { color: COLORS.primary }]}>{t('appointmentDetailsScreen.navChats')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/category-results?category=todos" as any)}>
                     <MaterialIcons name="diversity-2" size={24} color={COLORS.textMuted} />
-                    <Text style={styles.navLabel}>Directorio</Text>
+                    <Text style={styles.navLabel}>{t('appointmentDetailsScreen.navDirectory')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/favorites")}>
                     <MaterialIcons name="favorite" size={24} color={COLORS.textMuted} />
-                    <Text style={styles.navLabel}>Favoritos</Text>
+                    <Text style={styles.navLabel}>{t('appointmentDetailsScreen.navFavorites')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => router.push("/(tabs)/pro-dashboard")}>
                     <MaterialIcons name="person" size={24} color={COLORS.textMuted} />
-                    <Text style={styles.navLabel}>Perfil Pro</Text>
+                    <Text style={styles.navLabel}>{t('appointmentDetailsScreen.navProProfile')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

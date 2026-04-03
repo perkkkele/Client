@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAlert } from "../../components/TwinProAlert";
 import useSubscription from "../../hooks/useSubscription";
 import UpgradeModal from "../../components/UpgradeModal";
+import { useTranslation } from "react-i18next";
 
 // Colores del tema TwinPro
 const COLORS = {
@@ -49,6 +50,7 @@ export default function QRScannerScreen() {
     const { user } = useAuth();
     const { showAlert } = useAlert();
     const { canAccess, getRequiredPlan } = useSubscription();
+    const { t } = useTranslation("settings");
     const [hasCamera, setHasCamera] = useState(CameraView !== null);
     const [permission, setPermission] = useState<any>(null);
     const [scanned, setScanned] = useState(false);
@@ -116,16 +118,16 @@ export default function QRScannerScreen() {
             const professionalId = data.replace("twinpro://user/", "");
             showAlert({
                 type: 'warning',
-                title: 'Código Escaneado',
-                message: '¿Deseas iniciar un chat con este profesional?',
+                title: t("qrScannerScreen.scannedTitle"),
+                message: t("qrScannerScreen.scannedMessage"),
                 buttons: [
                     {
-                        text: "Cancelar",
+                        text: t("qrScannerScreen.cancel"),
                         onPress: () => setScanned(false),
                         style: "cancel",
                     },
                     {
-                        text: "Iniciar Chat",
+                        text: t("qrScannerScreen.startChat"),
                         onPress: () => {
                             router.replace(`/avatar-chat/${professionalId}`);
                         },
@@ -153,7 +155,7 @@ export default function QRScannerScreen() {
                 } else {
                     showAlert({
                         type: 'info',
-                        title: 'Profesional No Encontrado',
+                        title: t("qrScannerScreen.notFoundTitle"),
                         message: '',
                         buttons: [{ text: "OK", onPress: () => setScanned(false) }]
                     });
@@ -161,16 +163,16 @@ export default function QRScannerScreen() {
             } catch (error) {
                 showAlert({
                     type: 'error',
-                    title: 'Error de Conexión',
-                    message: 'No se pudo verificar el profesional. Comprueba tu conexión.',
+                    title: t("qrScannerScreen.connectionError"),
+                    message: t("qrScannerScreen.connectionErrorMsg"),
                     buttons: [{ text: "OK", onPress: () => setScanned(false) }]
                 });
             }
         } else {
             showAlert({
                 type: 'warning',
-                title: 'Código No Válido',
-                message: 'Este código QR no pertenece a un profesional de TwinPro.',
+                title: t("qrScannerScreen.invalidCodeTitle"),
+                message: t("qrScannerScreen.invalidCodeMsg"),
                 buttons: [{ text: "OK", onPress: () => setScanned(false) }]
             });
         }
@@ -186,8 +188,8 @@ export default function QRScannerScreen() {
     const pickImageFromGallery = async () => {
         showAlert({
             type: 'info',
-            title: 'Función Temporalmente Deshabilitada',
-            message: 'El escaneo de códigos QR desde la galería está temporalmente deshabilitado.\\n\\nPor favor, usa la cámara para escanear el código QR directamente.',
+            title: t("qrScannerScreen.galleryDisabledTitle"),
+            message: t("qrScannerScreen.galleryDisabledMsg"),
             buttons: [{ text: "OK" }]
         });
     };
@@ -227,7 +229,7 @@ export default function QRScannerScreen() {
                     >
                         <MaterialIcons name="close" size={24} color={COLORS.white} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Escanear Código QR</Text>
+                    <Text style={styles.headerTitle}>{t("qrScannerScreen.title")}</Text>
                     <View style={styles.headerSpacer} />
                 </SafeAreaView>
 
@@ -235,10 +237,9 @@ export default function QRScannerScreen() {
                 <View style={styles.devBuildContainer}>
                     <View style={styles.devBuildCard}>
                         <MaterialIcons name="build" size={32} color={COLORS.primary} />
-                        <Text style={styles.devBuildTitle}>Development Build Necesario</Text>
+                        <Text style={styles.devBuildTitle}>{t("qrScannerScreen.devBuildTitle")}</Text>
                         <Text style={styles.devBuildDescription}>
-                            El escáner QR requiere un development build para funcionar.
-                            Por favor ejecuta:
+                            {t("qrScannerScreen.devBuildDesc")}
                         </Text>
                         <View style={styles.codeBlock}>
                             <Text style={styles.codeText}>npx expo run:android</Text>
@@ -259,14 +260,14 @@ export default function QRScannerScreen() {
                                     color={flashOn ? COLORS.black : COLORS.white}
                                 />
                             </View>
-                            <Text style={styles.actionLabel}>Linterna</Text>
+                            <Text style={styles.actionLabel}>{t("qrScannerScreen.flashlight")}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.actionButton} onPress={pickImageFromGallery}>
                             <View style={styles.actionIconContainer}>
                                 <MaterialIcons name="image" size={24} color={COLORS.white} />
                             </View>
-                            <Text style={styles.actionLabel}>Galería</Text>
+                            <Text style={styles.actionLabel}>{t("qrScannerScreen.gallery")}</Text>
                         </TouchableOpacity>
 
                         {isProfessional && (
@@ -279,7 +280,7 @@ export default function QRScannerScreen() {
                                         </View>
                                     )}
                                 </View>
-                                <Text style={styles.actionLabel}>Mi Código</Text>
+                                <Text style={styles.actionLabel}>{t("qrScannerScreen.myCode")}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -288,7 +289,7 @@ export default function QRScannerScreen() {
                 <UpgradeModal
                     visible={showUpgradeModal}
                     onClose={() => setShowUpgradeModal(false)}
-                    featureName="Código QR Personalizado"
+                    featureName={t("qrScannerScreen.qrFeatureName")}
                     requiredPlan={getRequiredPlan('qrCode') || 'professional'}
                 />
             </View>
@@ -299,7 +300,7 @@ export default function QRScannerScreen() {
     if (!permission) {
         return (
             <View style={styles.permissionContainer}>
-                <Text style={styles.permissionText}>Cargando cámara...</Text>
+                <Text style={styles.permissionText}>{t("qrScannerScreen.loadingCamera")}</Text>
             </View>
         );
     }
@@ -312,15 +313,15 @@ export default function QRScannerScreen() {
                     <View style={styles.permissionIconContainer}>
                         <MaterialIcons name="camera-alt" size={48} color={COLORS.primary} />
                     </View>
-                    <Text style={styles.permissionTitle}>Acceso a la Cámara</Text>
+                    <Text style={styles.permissionTitle}>{t("qrScannerScreen.cameraAccess")}</Text>
                     <Text style={styles.permissionDescription}>
-                        Necesitamos acceso a tu cámara para escanear códigos QR de profesionales.
+                        {t("qrScannerScreen.cameraAccessDesc")}
                     </Text>
                     <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-                        <Text style={styles.permissionButtonText}>Permitir Acceso</Text>
+                        <Text style={styles.permissionButtonText}>{t("qrScannerScreen.allowAccess")}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                        <Text style={styles.cancelButtonText}>{t("qrScannerScreen.cancel")}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -371,15 +372,15 @@ export default function QRScannerScreen() {
                 >
                     <MaterialIcons name="close" size={24} color={COLORS.white} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Escanear Código QR</Text>
+                <Text style={styles.headerTitle}>{t("qrScannerScreen.title")}</Text>
                 <View style={styles.headerSpacer} />
             </SafeAreaView>
 
             {/* Texto informativo */}
             <View style={styles.infoContainer}>
-                <Text style={styles.infoTitle}>Escanear código</Text>
+                <Text style={styles.infoTitle}>{t("qrScannerScreen.scanCode")}</Text>
                 <Text style={styles.infoDescription}>
-                    Apunta tu cámara al código QR de un profesional para iniciar el chat automáticamente.
+                    {t("qrScannerScreen.scanCodeDesc")}
                 </Text>
             </View>
 
@@ -394,7 +395,7 @@ export default function QRScannerScreen() {
                                 color={flashOn ? COLORS.black : COLORS.white}
                             />
                         </View>
-                        <Text style={styles.actionLabel}>Linterna</Text>
+                        <Text style={styles.actionLabel}>{t("qrScannerScreen.flashlight")}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.actionButton} onPress={pickImageFromGallery}>
@@ -414,7 +415,7 @@ export default function QRScannerScreen() {
                                     </View>
                                 )}
                             </View>
-                            <Text style={styles.actionLabel}>Mi Código</Text>
+                            <Text style={styles.actionLabel}>{t("qrScannerScreen.myCode")}</Text>
                         </TouchableOpacity>
                     )}
                 </View>

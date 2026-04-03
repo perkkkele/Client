@@ -432,7 +432,7 @@ export default function MyAppointmentsScreen() {
                     {showUpcoming && upcomingAppointments.length === 0 && (
                         <View style={styles.emptySection}>
                             <MaterialIcons name="event-available" size={48} color={COLORS.gray400} />
-                            <Text style={styles.emptySectionText}>No tienes citas próximas</Text>
+                            <Text style={styles.emptySectionText}>{t("myAppointmentsScreen.noUpcoming")}</Text>
                         </View>
                     )}
 
@@ -447,7 +447,7 @@ export default function MyAppointmentsScreen() {
                     {showHistory && pastAppointments.length === 0 && (
                         <View style={styles.emptySection}>
                             <MaterialIcons name="history" size={48} color={COLORS.gray400} />
-                            <Text style={styles.emptySectionText}>No tienes historial de citas</Text>
+                            <Text style={styles.emptySectionText}>{t("myAppointmentsScreen.noHistory")}</Text>
                         </View>
                     )}
 

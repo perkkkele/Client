@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as placesApi from '../api/placesAutocomplete';
+import { useTranslation } from 'react-i18next';
 
 interface AddressAutocompleteProps {
     value: string;
@@ -52,6 +53,8 @@ export default function AddressAutocomplete({
     style,
     inputStyle,
 }: AddressAutocompleteProps) {
+    const { t } = useTranslation('settings');
+    const resolvedPlaceholder = placeholder === 'Escribe una dirección...' ? t('addressAutocomplete.placeholder') : placeholder;
     const [inputValue, setInputValue] = useState(value);
     const [predictions, setPredictions] = useState<placesApi.PlacePrediction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -173,7 +176,7 @@ export default function AddressAutocomplete({
                     value={inputValue}
                     onChangeText={handleTextChange}
                     onFocus={handleFocus}
-                    placeholder={placeholder}
+                    placeholder={resolvedPlaceholder}
                     placeholderTextColor={COLORS.gray400}
                 />
                 {isLoading ? (
@@ -200,7 +203,7 @@ export default function AddressAutocomplete({
             {selectedAddress && (
                 <View style={styles.validatedBadge}>
                     <MaterialIcons name="check-circle" size={14} color="#16a34a" />
-                    <Text style={styles.validatedText}>Dirección validada</Text>
+                    <Text style={styles.validatedText}>{t('addressAutocomplete.validated')}</Text>
                 </View>
             )}
 

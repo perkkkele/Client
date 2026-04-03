@@ -1,9 +1,11 @@
 import { Link, router } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -18,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { useAlert } from "../../components/TwinProAlert";
 import { useTranslation } from 'react-i18next';
+import { changeLanguage, getCurrentLanguage, type SupportedLanguage } from '../../services/i18n';
 
 // Native Google Sign-In
 let GoogleSignin: any = null;
@@ -50,6 +53,13 @@ const COLORS = {
   border: "#E5E7EB",
 };
 
+const LANGUAGES: { id: SupportedLanguage; name: string; flag: string }[] = [
+  { id: 'es', name: 'Español', flag: '🇪🇸' },
+  { id: 'en', name: 'English', flag: '🇺🇸' },
+  { id: 'fr', name: 'Français', flag: '🇫🇷' },
+  { id: 'de', name: 'Deutsch', flag: '🇩🇪' },
+];
+
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +69,16 @@ export default function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
   const { showAlert } = useAlert();
   const { t } = useTranslation('auth');
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [currentLang, setCurrentLang] = useState<SupportedLanguage>(getCurrentLanguage());
+
+  const currentFlag = LANGUAGES.find(l => l.id === currentLang)?.flag || '🇪🇸';
+
+  async function handleChangeLanguage(lang: SupportedLanguage) {
+    setCurrentLang(lang);
+    await changeLanguage(lang);
+    setShowLanguagePicker(false);
+  }
 
   // Handle native Google Sign-In
   async function handleGoogleSignIn() {
@@ -141,16 +161,26 @@ export default function LoginScreen() {
             <View style={styles.headerTop}>
               <View style={styles.logoContainer}>
                 <View style={styles.logoIcon}>
-                  <Ionicons name="people" size={20} color="#000000" />
+                  <MaterialIcons name="group" size={24} color={COLORS.primary} />
                 </View>
                 <View>
                   <Text style={styles.logoTitle}>TwinPro</Text>
                   <Text style={styles.logoSubtitle}>Professional Chat</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/(auth)/help")}>
-                <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
-              </TouchableOpacity>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  style={styles.langButton}
+                  onPress={() => setShowLanguagePicker(true)}
+                  testID="login-language-button"
+                >
+                  <Text style={styles.langButtonFlag}>{currentFlag}</Text>
+                  <Ionicons name="chevron-down" size={12} color={COLORS.gray400} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.helpButton} onPress={() => router.push("/(auth)/help")}>
+                  <Ionicons name="help-circle-outline" size={22} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.headerContent}>
               <Text style={styles.headerTitle}>{t('login.title')}</Text>
@@ -295,6 +325,43 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Language Picker Modal */}
+      <Modal
+        visible={showLanguagePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLanguagePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowLanguagePicker(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('login.selectLanguage', '🌐 Idioma')}</Text>
+            {LANGUAGES.map((lang) => (
+              <TouchableOpacity
+                key={lang.id}
+                style={[
+                  styles.langOption,
+                  currentLang === lang.id && styles.langOptionSelected,
+                ]}
+                onPress={() => handleChangeLanguage(lang.id)}
+              >
+                <Text style={styles.langOptionFlag}>{lang.flag}</Text>
+                <Text style={[
+                  styles.langOptionName,
+                  currentLang === lang.id && styles.langOptionNameSelected,
+                ]}>{lang.name}</Text>
+                {currentLang === lang.id && (
+                  <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -328,26 +395,47 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
   logoIcon: {
-    width: 36,
-    height: 36,
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    borderBottomLeftRadius: 4,
+    backgroundColor: COLORS.backgroundDark,
+    borderWidth: 3,
+    borderColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
   },
   logoTitle: {
     color: COLORS.textDark,
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "bold",
   },
   logoSubtitle: {
     color: COLORS.gray400,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
-    letterSpacing: 0.5,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  langButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.gray800,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  langButtonFlag: {
+    fontSize: 18,
   },
   helpButton: {
     width: 36,
@@ -514,5 +602,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.textLight,
+  },
+  // Language Picker Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
+  modalContent: {
+    backgroundColor: COLORS.cardLight,
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 340,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.textLight,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  langOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    gap: 12,
+  },
+  langOptionSelected: {
+    backgroundColor: "#DCFCE7",
+  },
+  langOptionFlag: {
+    fontSize: 24,
+  },
+  langOptionName: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: COLORS.textLight,
+    flex: 1,
+  },
+  langOptionNameSelected: {
+    fontWeight: "700",
+    color: "#16A34A",
   },
 });

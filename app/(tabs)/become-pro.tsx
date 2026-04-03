@@ -10,6 +10,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import BottomNavBar from "../../components/BottomNavBar";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#f9f506",
@@ -34,32 +35,33 @@ interface FeatureItem {
     description: string;
 }
 
-const FEATURES: FeatureItem[] = [
-    {
-        icon: "dashboard",
-        iconBg: "rgba(249, 245, 6, 0.2)",
-        iconColor: "#a16207",
-        title: "Dashboard de Gestión",
-        description: "Administra tus chats, citas y ganancias desde un panel de control intuitivo y completo.",
-    },
-    {
-        icon: "diversity-3",
-        iconBg: COLORS.blue100,
-        iconColor: COLORS.blue600,
-        title: "Conecta con Clientes",
-        description: "Accede a una base de usuarios que buscan activamente tus servicios profesionales.",
-    },
-    {
-        icon: "smart-toy",
-        iconBg: COLORS.purple100,
-        iconColor: COLORS.purple600,
-        title: "Gemelo Digital 24/7",
-        description: "Tu avatar entrenado responde consultas básicas y cualifica leads mientras duermes.",
-    },
-];
-
 export default function BecomeProScreen() {
     const insets = useSafeAreaInsets();
+    const { t } = useTranslation("settings");
+
+    const FEATURES: FeatureItem[] = [
+        {
+            icon: "dashboard",
+            iconBg: "rgba(249, 245, 6, 0.2)",
+            iconColor: "#a16207",
+            title: t("becomePro.featureDashboard"),
+            description: t("becomePro.featureDashboardDesc"),
+        },
+        {
+            icon: "diversity-3",
+            iconBg: COLORS.blue100,
+            iconColor: COLORS.blue600,
+            title: t("becomePro.featureConnect"),
+            description: t("becomePro.featureConnectDesc"),
+        },
+        {
+            icon: "smart-toy",
+            iconBg: COLORS.purple100,
+            iconColor: COLORS.purple600,
+            title: t("becomePro.featureTwin"),
+            description: t("becomePro.featureTwinDesc"),
+        },
+    ];
 
     function handleBecomePro() {
         // Navigate to the existing professional profile onboarding flow
@@ -105,9 +107,9 @@ export default function BecomeProScreen() {
                     <View style={styles.rocketIcon}>
                         <MaterialIcons name="rocket-launch" size={56} color={COLORS.primary} />
                     </View>
-                    <Text style={styles.heroTitle}>¡Desbloquea tu{"\n"}Perfil Pro!</Text>
+                    <Text style={styles.heroTitle}>{t("becomePro.title")}</Text>
                     <Text style={styles.heroSubtitle}>
-                        Únete a miles de expertos y lleva tus servicios al siguiente nivel.
+                        {t("becomePro.subtitle")}
                     </Text>
                 </View>
             </View>
@@ -135,11 +137,11 @@ export default function BecomeProScreen() {
                 {/* CTA Buttons */}
                 <View style={styles.ctaContainer}>
                     <TouchableOpacity style={styles.primaryButton} onPress={handleBecomePro}>
-                        <Text style={styles.primaryButtonText}>Crear mi Perfil Pro Ahora</Text>
+                        <Text style={styles.primaryButtonText}>{t("becomePro.ctaButton")}</Text>
                         <MaterialIcons name="arrow-forward" size={20} color={COLORS.black} />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.secondaryButton} onPress={handleMaybeLater}>
-                        <Text style={styles.secondaryButtonText}>No, gracias. Quizás más tarde.</Text>
+                        <Text style={styles.secondaryButtonText}>{t("becomePro.dismissButton")}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -152,7 +154,7 @@ export default function BecomeProScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.backgroundLight,
+        backgroundColor: COLORS.black,
     },
     // Hero - Compact
     heroContainer: {
@@ -233,6 +235,7 @@ const styles = StyleSheet.create({
     // Features - Compact
     scrollView: {
         flex: 1,
+        backgroundColor: COLORS.backgroundLight,
     },
     scrollContent: {
         padding: 24,

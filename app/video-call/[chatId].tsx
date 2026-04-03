@@ -20,6 +20,7 @@ import { getChat } from "../../api/chat";
 import { getMessages, sendTextMessage, ChatMessage } from "../../api/chatMessage";
 import ProCallVideo, { VideoCallControls } from "../../components/ProCallVideo";
 import { useAlert } from "../../components/TwinProAlert";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -42,13 +43,14 @@ export default function VideoCallScreen() {
     const { chatId } = useLocalSearchParams<{ chatId: string }>();
     const { user, token } = useAuth();
     const { showAlert } = useAlert();
+    const { t } = useTranslation("settings");
     const scrollViewRef = useRef<ScrollView>(null);
 
     // Video call state
     const [livekitUrl, setLivekitUrl] = useState<string | null>(null);
     const [livekitToken, setLivekitToken] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
-    const [participantName, setParticipantName] = useState("Participante");
+    const [participantName, setParticipantName] = useState("Participant");
     const [callDuration, setCallDuration] = useState(0);
     const [remoteParticipant, setRemoteParticipant] = useState<string | null>(null);
     const [videoControls, setVideoControls] = useState<VideoCallControls | null>(null);
@@ -81,7 +83,7 @@ export default function VideoCallScreen() {
             const otherParticipant = isP1 ? chat.participant_two : chat.participant_one;
             const name = (otherParticipant as any)?.firstname
                 ? `${(otherParticipant as any).firstname} ${(otherParticipant as any).lastname || ''}`
-                : 'Participante';
+                : 'Participant';
             setParticipantName(name.trim());
 
             // Get video call token
@@ -95,7 +97,7 @@ export default function VideoCallScreen() {
 
         } catch (err: any) {
             console.error("Error loading call:", err);
-            setError(err.message || "Error al cargar videollamada");
+            setError(err.message || t("videoCallScreen.loadError"));
         } finally {
             setLoading(false);
         }
@@ -130,12 +132,12 @@ export default function VideoCallScreen() {
     const handleEndCall = async () => {
         showAlert({
             type: 'warning',
-            title: 'Finalizar llamada',
-            message: '¿Estás seguro de que deseas terminar la videollamada?',
+            title: t("videoCallScreen.endCallTitle"),
+            message: t("videoCallScreen.endCallMessage"),
             buttons: [
-                { text: 'Cancelar', style: 'cancel' },
+                { text: t("videoCallScreen.cancel"), style: 'cancel' },
                 {
-                    text: 'Finalizar',
+                    text: t("videoCallScreen.endCall"),
                     style: 'destructive',
                     onPress: async () => {
                         if (token && chatId) {
@@ -179,7 +181,7 @@ export default function VideoCallScreen() {
             <SafeAreaView style={styles.container} edges={["top"]}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Conectando videollamada...</Text>
+                    <Text style={styles.loadingText}>{t("videoCallScreen.connectingCall")}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -190,10 +192,10 @@ export default function VideoCallScreen() {
             <SafeAreaView style={styles.container} edges={["top"]}>
                 <View style={styles.errorContainer}>
                     <MaterialIcons name="error-outline" size={64} color={COLORS.red400} />
-                    <Text style={styles.errorTitle}>Error de conexión</Text>
-                    <Text style={styles.errorText}>{error || "No se pudo obtener acceso a la videollamada"}</Text>
+                    <Text style={styles.errorTitle}>{t("videoCallScreen.connectionError")}</Text>
+                    <Text style={styles.errorText}>{error || t("videoCallScreen.connectionErrorFallback")}</Text>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Text style={styles.backButtonText}>Volver</Text>
+                        <Text style={styles.backButtonText}>{t("videoCallScreen.back")}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -234,7 +236,7 @@ export default function VideoCallScreen() {
                 {!remoteParticipant && isConnected && (
                     <View style={styles.waitingOverlay}>
                         <ActivityIndicator size="small" color={COLORS.textMain} />
-                        <Text style={styles.waitingText}>Esperando a {participantName}...</Text>
+                        <Text style={styles.waitingText}>{t("videoCallScreen.waitingFor", { name: participantName })}</Text>
                     </View>
                 )}
             </View>
@@ -267,7 +269,7 @@ export default function VideoCallScreen() {
                     <View style={styles.chatInput}>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Escribe un mensaje..."
+                            placeholder={t("videoCallScreen.writeMessage")}
                             placeholderTextColor={COLORS.gray500}
                             value={inputText}
                             onChangeText={setInputText}

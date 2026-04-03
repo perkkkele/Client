@@ -8,6 +8,8 @@ import {
     TouchableOpacity,
     View,
     ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
@@ -175,7 +177,17 @@ export default function ContactInfoScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            <KeyboardAvoidingView
+                style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            >
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+            >
                 {/* Contact Info Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('contactInfoScreen.contactInfoSection')}</Text>
@@ -373,6 +385,7 @@ export default function ContactInfoScreen() {
                     </Text>
                 </View>
             </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -414,12 +427,15 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.textMain,
     },
+    keyboardAvoid: {
+        flex: 1,
+    },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
         padding: 16,
-        paddingBottom: 40,
+        paddingBottom: 120,
     },
     section: {
         marginBottom: 24,

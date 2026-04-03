@@ -147,7 +147,7 @@ export default function RegisterProScreen() {
                         <View style={styles.headerTop}>
                             <View style={styles.logoContainer}>
                                 <View style={styles.logoIcon}>
-                                    <MaterialIcons name="people" size={20} color={COLORS.backgroundDark} />
+                                    <MaterialIcons name="group" size={24} color={COLORS.primary} />
                                 </View>
                                 <View>
                                     <Text style={styles.logoTitle}>TwinPro</Text>
@@ -429,24 +429,29 @@ const styles = StyleSheet.create({
     logoContainer: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: 12,
     },
     logoIcon: {
-        width: 36,
-        height: 36,
-        backgroundColor: COLORS.primary,
-        borderRadius: 12,
+        width: 40,
+        height: 40,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
+        borderBottomLeftRadius: 4,
+        backgroundColor: COLORS.backgroundDark,
+        borderWidth: 3,
+        borderColor: COLORS.primary,
         justifyContent: "center",
         alignItems: "center",
     },
     logoTitle: {
         color: COLORS.textDark,
-        fontSize: 18,
-        fontWeight: "700",
+        fontSize: 20,
+        fontWeight: "bold",
     },
     logoSubtitle: {
         color: COLORS.gray400,
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: "500",
     },
     helpButton: {

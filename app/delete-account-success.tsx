@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 const COLORS = {
     primary: "#FFEA00",
@@ -21,6 +22,8 @@ const COLORS = {
 };
 
 export default function DeleteAccountSuccessScreen() {
+    const { t } = useTranslation("settings");
+
     function handleCreateNewAccount() {
         router.replace("/onboarding/language");
     }
@@ -47,14 +50,13 @@ export default function DeleteAccountSuccessScreen() {
                 {/* Text content */}
                 <View style={styles.textContent}>
                     <Text style={styles.title}>
-                        ¡Cuenta eliminada{"\n"}con éxito!
+                        {t("deleteAccountSuccess.title")}
                     </Text>
                     <Text style={styles.description}>
-                        Todos tus datos han sido borrados permanentemente. Ya no podrás
-                        acceder a TwinPro con esta cuenta.
+                        {t("deleteAccountSuccess.description")}
                     </Text>
                     <Text style={styles.subDescription}>
-                        Gracias por haber sido parte de nuestra comunidad.
+                        {t("deleteAccountSuccess.thanks")}
                     </Text>
                 </View>
 
@@ -65,13 +67,13 @@ export default function DeleteAccountSuccessScreen() {
                         onPress={handleCreateNewAccount}
                         activeOpacity={0.9}
                     >
-                        <Text style={styles.primaryButtonText}>Crear una nueva cuenta</Text>
+                        <Text style={styles.primaryButtonText}>{t("deleteAccountSuccess.createNewAccount")}</Text>
                         <Ionicons name="arrow-forward" size={20} color={COLORS.textMain} />
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.7}>
                         <Text style={styles.secondaryButtonText}>
-                            Esperamos verte pronto de vuelta
+                            {t("deleteAccountSuccess.seeYouSoon")}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -84,6 +86,7 @@ export default function DeleteAccountSuccessScreen() {
         </SafeAreaView>
     );
 }
+
 
 const styles = StyleSheet.create({
     container: {
