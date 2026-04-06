@@ -2,7 +2,7 @@
 // Reusable service for LiveAvatar-enabled profiles (Santa POC, future professional profiles)
 
 const LIVEAVATAR_API_URL = "https://api.liveavatar.com/v1";
-const LIVEAVATAR_API_KEY = "c8ad5c55-cf3d-11f0-a99e-066a7fa2e369";
+const LIVEAVATAR_API_KEY = process.env.EXPO_PUBLIC_LIVEAVATAR_API_KEY || "";
 
 // Santa Claus configuration
 export const SANTA_CONFIG = {
