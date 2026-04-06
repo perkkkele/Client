@@ -45,6 +45,8 @@ yarn-error.*
 
 # Secrets
 firebase-service-account.json
+google-services.json
+GoogleService-Info.plist
 
 # Logs
 metro.log
