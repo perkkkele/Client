@@ -50,3 +50,6 @@ GoogleService-Info.plist
 
 # Logs
 metro.log
+
+# EAS build artifacts
+builds.json
