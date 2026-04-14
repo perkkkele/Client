@@ -899,8 +899,11 @@ export default function AvatarChatScreen() {
 
         let digitalTwin = professional.digitalTwin;
         const avatarId = digitalTwin.appearance?.liveAvatarId;
-        const voiceId = digitalTwin.appearance?.liveVoiceId;
+        // Prefer the LiveAvatar-bound voice ID (lazy binding result) over raw ElevenLabs ID
+        const voiceId = digitalTwin.appearance?.liveAvatarVoiceId
+            || digitalTwin.appearance?.liveVoiceId;
         let contextId = digitalTwin.liveAvatarContextId;
+        const llmConfigId = (digitalTwin as any).liveAvatarLlmConfigId as string | undefined;
 
         if (!avatarId) {
             console.log("No avatar ID configured, skipping session");
@@ -959,6 +962,7 @@ export default function AvatarChatScreen() {
                 voiceId: voiceId || undefined,
                 contextId: contextId || undefined,
                 language: configuredLanguage,
+                llmConfigurationId: llmConfigId || undefined,
             };
 
             console.log("Creating session token with config:", config);

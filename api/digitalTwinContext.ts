@@ -57,7 +57,17 @@ export function buildContextPrompt(user: any): string {
         parts.push(`Tus especialidades incluyen: ${user.specialties.join(', ')}.`);
     }
 
-    return parts.join(' ');
+    let prompt = parts.join(' ');
+
+    // Embed hidden professional ID marker for FULL Híbrido mode.
+    // When LiveAvatar calls our LLM endpoint, it passes this context as system messages.
+    // Our chatCompletionsRouter extracts this marker to resolve professional context for RAG.
+    const professionalId = user?._id?.toString?.() || user?._id;
+    if (professionalId) {
+        prompt += `\n<!-- twinpro:professionalId:${professionalId} -->`;
+    }
+
+    return prompt;
 }
 
 /**

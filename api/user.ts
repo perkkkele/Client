@@ -97,6 +97,7 @@ export interface DigitalTwinAppearance {
     liveVoiceName?: string | null;
     liveVoiceGender?: string | null;
     liveVoiceLanguage?: string | null;
+    liveAvatarVoiceId?: string | null;  // LiveAvatar-bound voice ID (auto-generated via lazy binding)
 }
 
 export interface DigitalTwinTtsConfig {

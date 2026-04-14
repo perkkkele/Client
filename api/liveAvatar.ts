@@ -57,6 +57,8 @@ export interface AvatarConfig {
     voiceId?: string;
     contextId?: string;
     language?: string;
+    /** LiveAvatar LLM Configuration ID — routes LLM calls to our RAG endpoint (FULL Híbrido) */
+    llmConfigurationId?: string;
 }
 
 export interface SessionTokenResponse {
@@ -735,6 +737,12 @@ export async function createSessionToken(config: AvatarConfig): Promise<SessionT
     // Only include voice_id if it's set
     if (config.voiceId) {
         requestBody.avatar_persona.voice_id = config.voiceId;
+    }
+
+    // FULL Híbrido: Route LLM calls to our RAG endpoint
+    if (config.llmConfigurationId) {
+        requestBody.llm_configuration_id = config.llmConfigurationId;
+        console.log("[LiveAvatar] FULL Híbrido — using custom LLM:", config.llmConfigurationId);
     }
 
     console.log("LiveAvatar request:", JSON.stringify(requestBody, null, 2));
