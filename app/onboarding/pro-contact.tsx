@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
     ActivityIndicator,    FlatList,
     KeyboardAvoidingView,
-    Linking,
+
     Modal,
     Platform,
     ScrollView,
@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../../context";
 import { userApi } from "../../api";
-import * as calendarApi from "../../api/calendar";
+
 import AddressAutocomplete from "../../components/AddressAutocomplete";
 import { useAlert } from "../../components/TwinProAlert";
 import { useTranslation } from "react-i18next";
@@ -87,7 +87,7 @@ export default function ProContactScreen() {
     const [youtube, setYoutube] = useState("");
     const [twitter, setTwitter] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [isConnectingCalendar, setIsConnectingCalendar] = useState(false);
+
 
     // Visibility toggles
     const [emailVisible, setEmailVisible] = useState(true);
@@ -105,8 +105,7 @@ export default function ProContactScreen() {
         }
     }, [user?.email]);
 
-    const calendarConnected = user?.connectedCalendar?.connected || false;
-    const calendarProvider = user?.connectedCalendar?.provider || null;
+
 
     function handleBack() {
         router.back();
@@ -138,31 +137,7 @@ export default function ProContactScreen() {
         setTimePickerVisible(false);
     }
 
-    async function handleConnectGoogle() {
-        if (!token) return;
-        setIsConnectingCalendar(true);
-        try {
-            const { url } = await calendarApi.getGoogleAuthUrl(token);
-            await Linking.openURL(url);
-        } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo conectar con Google Calendar" });
-        } finally {
-            setIsConnectingCalendar(false);
-        }
-    }
 
-    async function handleConnectOutlook() {
-        if (!token) return;
-        setIsConnectingCalendar(true);
-        try {
-            const { url } = await calendarApi.getOutlookAuthUrl(token);
-            await Linking.openURL(url);
-        } catch (error: any) {
-            showAlert({ type: 'error', title: 'Error', message: error.message || "No se pudo conectar con Outlook" });
-        } finally {
-            setIsConnectingCalendar(false);
-        }
-    }
 
     async function handleContinue() {
         setIsLoading(true);
@@ -422,48 +397,6 @@ export default function ProContactScreen() {
                         </View>
                     </View>
 
-                    {/* Integrar Calendario */}
-                    <View style={styles.calendarCard}>
-                        <View style={styles.calendarHeader}>
-                            <View style={styles.calendarIconContainer}>
-                                <MaterialIcons name="event" size={20} color={COLORS.blue600} />
-                            </View>
-                            <View style={styles.calendarTextContainer}>
-                                <Text style={styles.calendarTitle}>{t('proContact.calendarTitle')}</Text>
-                                <Text style={styles.calendarSubtitle}>{t('proContact.calendarSubtitle')}</Text>
-                            </View>
-                            <View style={styles.recommendedBadge}>
-                                <Text style={styles.recommendedText}>{t('proContact.recommended')}</Text>
-                            </View>
-                        </View>
-                        <View style={styles.calendarButtons}>
-                            {calendarConnected ? (
-                                <View style={styles.calendarConnectedBadge}>
-                                    <MaterialIcons name="check-circle" size={16} color="#059669" />
-                                    <Text style={styles.calendarConnectedText}>
-                                        {t('proContact.calendarConnected', { provider: calendarProvider === "google" ? "Google Calendar" : "Outlook" })}
-                                    </Text>
-                                </View>
-                            ) : isConnectingCalendar ? (
-                                <View style={styles.calendarConnectedBadge}>
-                                    <ActivityIndicator size="small" color={COLORS.textMain} />
-                                    <Text style={styles.calendarConnectedText}>{t('proContact.connecting')}</Text>
-                                </View>
-                            ) : (
-                                <>
-                                    <TouchableOpacity style={styles.calendarButton} onPress={handleConnectGoogle}>
-                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                        <Text style={styles.calendarButtonText}>Google</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.calendarButton} onPress={handleConnectOutlook}>
-                                        <MaterialIcons name="event" size={16} color={COLORS.textMain} />
-                                        <Text style={styles.calendarButtonText}>Outlook</Text>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
-                    </View>
-
                     {/* Redes Sociales */}
                     <Text style={styles.sectionTitle}>{t('proContact.socialSection')}</Text>
                     <View style={styles.socialCard}>
@@ -692,21 +625,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         color: COLORS.primary,
     },
-    calendarConnectedBadge: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 10,
-        borderRadius: 12,
-        backgroundColor: "rgba(16, 185, 129, 0.1)",
-        gap: 8,
-    },
-    calendarConnectedText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#059669",
-    },
+
     headerContent: {
         alignItems: "center",
         marginTop: 8,
@@ -858,80 +777,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
     },
-    calendarCard: {
-        backgroundColor: COLORS.surfaceLight,
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.5)",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    calendarHeader: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        marginBottom: 16,
-    },
-    calendarIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        alignItems: "center",
-        justifyContent: "center",
-        marginRight: 12,
-    },
-    calendarTextContainer: {
-        flex: 1,
-    },
-    calendarTitle: {
-        fontSize: 14,
-        fontWeight: "bold",
-        color: COLORS.textMain,
-    },
-    calendarSubtitle: {
-        fontSize: 10,
-        color: COLORS.gray500,
-        marginTop: 2,
-    },
-    recommendedBadge: {
-        backgroundColor: "rgba(16, 185, 129, 0.1)",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: "rgba(16, 185, 129, 0.2)",
-    },
-    recommendedText: {
-        fontSize: 9,
-        fontWeight: "bold",
-        color: "#059669",
-    },
-    calendarButtons: {
-        flexDirection: "row",
-        gap: 8,
-    },
-    calendarButton: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 10,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: COLORS.gray200,
-        backgroundColor: COLORS.surfaceLight,
-        gap: 6,
-    },
-    calendarButtonText: {
-        fontSize: 10,
-        fontWeight: "600",
-        color: COLORS.textMain,
-    },
+
     socialCard: {
         backgroundColor: COLORS.surfaceLight,
         borderRadius: 16,
