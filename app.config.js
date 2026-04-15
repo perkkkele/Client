@@ -46,6 +46,10 @@ module.exports = () => {
         android: {
             ...config.android,
             package: getPackage(),
+            // Use EAS secret file env var when available, else fall back to local file
+            ...(process.env.GOOGLE_SERVICES_JSON && {
+                googleServicesFile: process.env.GOOGLE_SERVICES_JSON,
+            }),
         },
         ios: {
             ...config.ios,
