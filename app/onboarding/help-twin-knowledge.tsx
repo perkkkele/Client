@@ -76,7 +76,7 @@ export default function HelpTwinKnowledgeScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20Base%20de%20Conocimiento");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20Base%20de%20Conocimiento");
     }
 
     function toggleFAQ(index: number) {
@@ -177,7 +177,7 @@ export default function HelpTwinKnowledgeScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                             <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
-                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                            <Text style={styles.contactHint}>hola@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
                     </TouchableOpacity>

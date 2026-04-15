@@ -22,7 +22,7 @@ const COLORS = {
     error: "#EF4444",
 };
 
-const SUPPORT_EMAIL = "soporte@twinpro.app";
+const SUPPORT_EMAIL = "hola@twinpro.app";
 
 export default function AccountSuspendedScreen() {
     const router = useRouter();

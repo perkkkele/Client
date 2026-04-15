@@ -76,7 +76,7 @@ export default function HelpRegisterUserScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro%20de%20usuario");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20registro%20de%20usuario");
     }
 
     function toggleFAQ(index: number) {
@@ -166,7 +166,7 @@ export default function HelpRegisterUserScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                             <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
-                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                            <Text style={styles.contactHint}>hola@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
                     </TouchableOpacity>

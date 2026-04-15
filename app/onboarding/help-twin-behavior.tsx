@@ -82,7 +82,7 @@ export default function HelpTwinBehaviorScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20comportamiento%20del%20Gemelo");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20comportamiento%20del%20Gemelo");
     }
 
     function toggleFAQ(index: number) {
@@ -183,7 +183,7 @@ export default function HelpTwinBehaviorScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                             <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
-                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                            <Text style={styles.contactHint}>hola@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
                     </TouchableOpacity>

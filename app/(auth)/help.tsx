@@ -98,7 +98,7 @@ export default function HelpScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20registro");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20registro");
     }
 
     function handleChatAgent() {

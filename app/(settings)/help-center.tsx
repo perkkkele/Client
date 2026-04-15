@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -72,15 +73,26 @@ export default function HelpCenterScreen() {
     }
 
     function handleContactLiveChat() {
-        // TODO: Implement live chat
-    }
-
-    function handleContactCall() {
-        Linking.openURL("tel:+34900000000");
+        Linking.openURL(
+            "mailto:hola@twinpro.app?subject=" +
+            encodeURIComponent("Consulta desde la app TwinPro")
+        );
     }
 
     function handleContactEmail() {
-        Linking.openURL("mailto:soporte@twinpro.com");
+        Linking.openURL("mailto:hola@twinpro.app");
+    }
+
+    function handleGuidePress() {
+        Alert.alert(
+            t('helpCenterScreen.comingSoonTitle', { defaultValue: 'Próximamente' }),
+            t('helpCenterScreen.comingSoonMessage', { defaultValue: 'Las guías detalladas estarán disponibles pronto.' }),
+            [{ text: 'OK' }]
+        );
+    }
+
+    function handleCommunityPress() {
+        Linking.openURL("https://www.twinpro.app");
     }
 
     return (
@@ -144,7 +156,7 @@ export default function HelpCenterScreen() {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('helpCenterScreen.guidesSectionTitle')}</Text>
                     <View style={styles.guidesCard}>
-                        <TouchableOpacity style={styles.guideItem}>
+                        <TouchableOpacity style={styles.guideItem} onPress={handleGuidePress}>
                             <View style={[styles.guideIcon, { backgroundColor: COLORS.indigo100 }]}>
                                 <MaterialIcons name="smartphone" size={18} color={COLORS.indigo600} />
                             </View>
@@ -152,7 +164,7 @@ export default function HelpCenterScreen() {
                             <MaterialIcons name="chevron-right" size={18} color={COLORS.gray400} />
                         </TouchableOpacity>
                         <View style={styles.divider} />
-                        <TouchableOpacity style={styles.guideItem}>
+                        <TouchableOpacity style={styles.guideItem} onPress={handleGuidePress}>
                             <View style={[styles.guideIcon, { backgroundColor: COLORS.purple100 }]}>
                                 <MaterialIcons name="smart-toy" size={18} color={COLORS.purple600} />
                             </View>
@@ -172,12 +184,6 @@ export default function HelpCenterScreen() {
                             </View>
                             <Text style={styles.contactLabel}>{t('helpCenterScreen.contactLiveChat')}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.contactButton} onPress={handleContactCall}>
-                            <View style={[styles.contactIcon, { backgroundColor: COLORS.green50 }]}>
-                                <MaterialIcons name="call" size={24} color={COLORS.green600} />
-                            </View>
-                            <Text style={styles.contactLabel}>{t('helpCenterScreen.contactCall')}</Text>
-                        </TouchableOpacity>
                         <TouchableOpacity style={styles.contactButton} onPress={handleContactEmail}>
                             <View style={[styles.contactIcon, { backgroundColor: COLORS.orange50 }]}>
                                 <MaterialIcons name="mail" size={24} color={COLORS.orange600} />
@@ -188,7 +194,7 @@ export default function HelpCenterScreen() {
                 </View>
 
                 {/* Community Banner */}
-                <TouchableOpacity style={styles.communityBanner}>
+                <TouchableOpacity style={styles.communityBanner} onPress={handleCommunityPress}>
                     <View style={styles.communityIcon}>
                         <MaterialIcons name="groups" size={24} color={COLORS.primary} />
                     </View>

@@ -1,7 +1,8 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    ActivityIndicator,
     ScrollView,
     StyleSheet,
     Text,
@@ -10,6 +11,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useAuth } from "../../context";
+import { analyticsApi } from "../../api";
+import type { AnalyticsSummary, AdvancedAnalytics } from "../../api/analytics";
 
 const COLORS = {
     primary: "#137fec",
@@ -25,26 +29,111 @@ const COLORS = {
     yellow500: "#eab308",
 };
 
-interface Topic {
-    name: string;
-    percentage: number;
-}
-
 export default function TwinPerformanceScreen() {
     const [activeFilter, setActiveFilter] = useState(0);
     const { t } = useTranslation('settings');
+    const { user, token } = useAuth();
 
-    const TOPICS: Topic[] = [
-        { name: t('twinPerformance.topicPricing'), percentage: 40 },
-        { name: t('twinPerformance.topicSchedule'), percentage: 25 },
-        { name: t('twinPerformance.topicSupport'), percentage: 15 },
-        { name: t('twinPerformance.topicOther'), percentage: 20 },
-    ];
+    const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+    const [advanced, setAdvanced] = useState<AdvancedAnalytics | null>(null);
+    const [loading, setLoading] = useState(true);
 
     const FILTERS = [t('twinPerformance.filterLast7'), t('twinPerformance.filterLastMonth'), t('twinPerformance.filterCustom')];
 
+    const loadAnalytics = useCallback(async () => {
+        if (!token || !user?._id) return;
+        setLoading(true);
+        try {
+            const [summaryData, advancedData] = await Promise.all([
+                analyticsApi.getSummary(token, user._id),
+                analyticsApi.getAdvancedAnalytics(token, user._id),
+            ]);
+            if (summaryData) setSummary(summaryData);
+            if (advancedData) setAdvanced(advancedData);
+        } catch (error) {
+            console.error("Error loading performance analytics:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [token, user?._id]);
+
+    useEffect(() => {
+        loadAnalytics();
+    }, [loadAnalytics]);
+
+    // ── Derived metrics ──
+    const totalInteractions = summary
+        ? summary.totalConversations + summary.phoneCalls + summary.escalations
+        : 0;
+
+    const avgDurationSeconds = useMemo(() => {
+        if (!summary || summary.totalConversations === 0) return 0;
+        return Math.round(summary.totalConversationSeconds / summary.totalConversations);
+    }, [summary]);
+
+    const avgDurationFormatted = useMemo(() => {
+        if (avgDurationSeconds <= 0) return "0m";
+        const mins = Math.floor(avgDurationSeconds / 60);
+        const secs = avgDurationSeconds % 60;
+        if (mins > 0 && secs > 0) return `${mins}m ${secs}s`;
+        if (mins > 0) return `${mins}m`;
+        return `${secs}s`;
+    }, [avgDurationSeconds]);
+
+    const escalationRate = useMemo(() => {
+        if (!summary || summary.totalConversations === 0) return 0;
+        return Math.round((summary.escalations / summary.totalConversations) * 100);
+    }, [summary]);
+
+    const resolutionRate = 100 - escalationRate;
+
+    // Rating from user profile
+    const userRating = (user as any)?.rating ?? 0;
+    const ratingCount = (user as any)?.ratingCount ?? 0;
+
+    // Weekly activity bars from advanced analytics
+    const weekdayBars = useMemo(() => {
+        if (!advanced?.weekdayDistribution) return [0, 0, 0, 0, 0, 0, 0];
+        // Reorder to Mon-Sun (API returns Sun=0 first)
+        const dist = advanced.weekdayDistribution;
+        return [dist[1], dist[2], dist[3], dist[4], dist[5], dist[6], dist[0]];
+    }, [advanced]);
+
+    const maxBar = Math.max(...weekdayBars, 1);
+
+    // Traffic sources
+    const trafficSources = useMemo(() => {
+        if (!advanced?.trafficBySource) return [];
+        const sources = advanced.trafficBySource;
+        const total = Object.values(sources).reduce((a, b) => a + b, 0);
+        if (total === 0) return [];
+        return [
+            { name: "App", count: sources.app, pct: Math.round((sources.app / total) * 100) },
+            { name: "Web Widget", count: sources["web-widget"], pct: Math.round((sources["web-widget"] / total) * 100) },
+            { name: "QR Code", count: sources["qr-code"], pct: Math.round((sources["qr-code"] / total) * 100) },
+            { name: "Direct Link", count: sources["direct-link"], pct: Math.round((sources["direct-link"] / total) * 100) },
+        ].filter(s => s.count > 0).sort((a, b) => b.count - a.count);
+    }, [advanced]);
+
     function handleBack() {
         router.back();
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container} edges={["top"]}>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.headerButton} onPress={handleBack}>
+                        <MaterialIcons name="arrow-back" size={24} color={COLORS.textMain} />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('twinPerformance.headerTitle')}</Text>
+                    <View style={styles.headerButton} />
+                </View>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+            </SafeAreaView>
+        );
     }
 
     return (
@@ -92,27 +181,24 @@ export default function TwinPerformanceScreen() {
                         <View>
                             <Text style={styles.chartLabel}>{t('twinPerformance.totalInteractions')}</Text>
                             <View style={styles.chartValueRow}>
-                                <Text style={styles.chartValue}>1,248</Text>
-                                <View style={styles.trendBadge}>
-                                    <MaterialIcons name="trending-up" size={14} color={COLORS.green500} />
-                                    <Text style={styles.trendText}>12%</Text>
-                                </View>
+                                <Text style={styles.chartValue}>
+                                    {totalInteractions.toLocaleString()}
+                                </Text>
                             </View>
                         </View>
-                        <TouchableOpacity>
-                            <MaterialIcons name="more-horiz" size={20} color={COLORS.primary} />
-                        </TouchableOpacity>
                     </View>
-                    {/* Chart placeholder */}
+                    {/* Weekly Activity Chart */}
                     <View style={styles.chartPlaceholder}>
                         <View style={styles.chartLine}>
-                            <View style={[styles.chartBar, { height: "40%" }]} />
-                            <View style={[styles.chartBar, { height: "60%" }]} />
-                            <View style={[styles.chartBar, { height: "50%" }]} />
-                            <View style={[styles.chartBar, { height: "80%" }]} />
-                            <View style={[styles.chartBar, { height: "70%" }]} />
-                            <View style={[styles.chartBar, { height: "90%" }]} />
-                            <View style={[styles.chartBar, { height: "85%" }]} />
+                            {weekdayBars.map((val, idx) => (
+                                <View
+                                    key={idx}
+                                    style={[
+                                        styles.chartBar,
+                                        { height: `${Math.max((val / maxBar) * 100, 4)}%` }
+                                    ]}
+                                />
+                            ))}
                         </View>
                         <View style={styles.chartLabels}>
                             <Text style={styles.chartAxisLabel}>{t('twinPerformance.mon')}</Text>
@@ -131,14 +217,19 @@ export default function TwinPerformanceScreen() {
                     <View style={styles.kpiCard}>
                         <MaterialIcons name="timer" size={24} color={COLORS.primary} />
                         <Text style={styles.kpiLabel}>{t('twinPerformance.avgDuration')}</Text>
-                        <Text style={styles.kpiValue}>4m 12s</Text>
-                        <Text style={styles.kpiTrend}>{t('twinPerformance.vsYesterday')}</Text>
+                        <Text style={styles.kpiValue}>{avgDurationFormatted}</Text>
                     </View>
                     <View style={styles.kpiCard}>
                         <MaterialIcons name="star" size={24} color={COLORS.yellow500} />
                         <Text style={styles.kpiLabel}>{t('twinPerformance.satisfaction')}</Text>
-                        <Text style={styles.kpiValue}>4.8/5</Text>
-                        <Text style={styles.kpiSubtitle}>{t('twinPerformance.ratings')}</Text>
+                        <Text style={styles.kpiValue}>
+                            {userRating > 0 ? `${userRating.toFixed(1)}/5` : "—"}
+                        </Text>
+                        {ratingCount > 0 && (
+                            <Text style={styles.kpiSubtitle}>
+                                {ratingCount} {ratingCount === 1 ? "valoración" : "valoraciones"}
+                            </Text>
+                        )}
                     </View>
                 </View>
 
@@ -151,11 +242,11 @@ export default function TwinPerformanceScreen() {
                             </View>
                             <View>
                                 <Text style={styles.rateLabel}>{t('twinPerformance.resolutionRate')}</Text>
-                                <Text style={styles.rateValue}>85%</Text>
+                                <Text style={styles.rateValue}>{resolutionRate}%</Text>
                             </View>
                         </View>
                         <View style={styles.progressCircle}>
-                            <View style={[styles.progressFill, { width: "85%" }]} />
+                            <View style={[styles.progressFill, { width: `${resolutionRate}%` }]} />
                         </View>
                     </View>
 
@@ -166,37 +257,39 @@ export default function TwinPerformanceScreen() {
                             </View>
                             <View>
                                 <Text style={styles.rateLabel}>{t('twinPerformance.escalationRate')}</Text>
-                                <Text style={styles.rateValue}>15%</Text>
+                                <Text style={styles.rateValue}>{escalationRate}%</Text>
                             </View>
                         </View>
                         <View style={styles.progressCircle}>
-                            <View style={[styles.progressFill, styles.progressOrange, { width: "15%" }]} />
+                            <View style={[styles.progressFill, styles.progressOrange, { width: `${escalationRate}%` }]} />
                         </View>
                     </View>
                 </View>
 
-                {/* Frequent Topics */}
-                <View style={styles.topicsSection}>
-                    <Text style={styles.sectionTitle}>{t('twinPerformance.frequentTopics')}</Text>
-                    <View style={styles.topicsCard}>
-                        {TOPICS.map((topic, index) => (
-                            <View key={index} style={styles.topicItem}>
-                                <View style={styles.topicHeader}>
-                                    <Text style={styles.topicName}>{topic.name}</Text>
-                                    <Text style={styles.topicPercent}>{topic.percentage}%</Text>
+                {/* Traffic Sources (replaces hardcoded topics) */}
+                {trafficSources.length > 0 && (
+                    <View style={styles.topicsSection}>
+                        <Text style={styles.sectionTitle}>{t('twinPerformance.frequentTopics')}</Text>
+                        <View style={styles.topicsCard}>
+                            {trafficSources.map((source, index) => (
+                                <View key={index} style={styles.topicItem}>
+                                    <View style={styles.topicHeader}>
+                                        <Text style={styles.topicName}>{source.name}</Text>
+                                        <Text style={styles.topicPercent}>{source.pct}%</Text>
+                                    </View>
+                                    <View style={styles.topicBar}>
+                                        <View
+                                            style={[
+                                                styles.topicProgress,
+                                                { width: `${source.pct}%`, opacity: 1 - (index * 0.15) }
+                                            ]}
+                                        />
+                                    </View>
                                 </View>
-                                <View style={styles.topicBar}>
-                                    <View
-                                        style={[
-                                            styles.topicProgress,
-                                            { width: `${topic.percentage}%`, opacity: 1 - (index * 0.2) }
-                                        ]}
-                                    />
-                                </View>
-                            </View>
-                        ))}
+                            ))}
+                        </View>
                     </View>
-                </View>
+                )}
 
                 {/* Optimization Insight */}
                 <View style={styles.insightCard}>
@@ -208,7 +301,10 @@ export default function TwinPerformanceScreen() {
                         <Text style={styles.insightText}>
                             {t('twinPerformance.optimizationText')}
                         </Text>
-                        <TouchableOpacity style={styles.insightButton}>
+                        <TouchableOpacity
+                            style={styles.insightButton}
+                            onPress={() => router.push("/onboarding/twin-knowledge")}
+                        >
                             <Text style={styles.insightButtonText}>{t('twinPerformance.reviewDocs')}</Text>
                         </TouchableOpacity>
                     </View>
@@ -222,6 +318,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.backgroundDark,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
     },
     header: {
         flexDirection: "row",
@@ -309,20 +410,6 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.textMain,
     },
-    trendBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 2,
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    trendText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: COLORS.green500,
-    },
     chartPlaceholder: {
         marginTop: 24,
         height: 140,
@@ -339,6 +426,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.primary,
         borderRadius: 4,
         opacity: 0.8,
+        minHeight: 4,
     },
     chartLabels: {
         flexDirection: "row",
@@ -373,11 +461,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "bold",
         color: COLORS.textMain,
-    },
-    kpiTrend: {
-        fontSize: 12,
-        fontWeight: "500",
-        color: COLORS.green500,
     },
     kpiSubtitle: {
         fontSize: 12,
@@ -507,10 +590,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.textSecondary,
         lineHeight: 20,
-    },
-    insightHighlight: {
-        fontWeight: "600",
-        color: COLORS.primary,
     },
     insightButton: {
         alignSelf: "flex-start",

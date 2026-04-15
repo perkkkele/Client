@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     ActivityIndicator,    KeyboardAvoidingView,
     Modal,
@@ -142,13 +142,42 @@ function buildContextLinks(categories: KnowledgeCategory[], otherUrl: string): {
     return result;
 }
 
+// Weights for each knowledge dimension (total = 100%)
+const TRAINING_WEIGHTS = {
+    profile: 10,        // Professional identity (name, profession, bio)
+    behavior: 10,       // Personality/behavior configuration
+    faq: 15,           // FAQ knowledge
+    services: 15,      // Services knowledge
+    pricing: 15,       // Pricing knowledge
+    policy: 10,        // Policies knowledge
+    troubleshooting: 10, // Troubleshooting knowledge
+    otherDocs: 10,     // Additional documents/URLs
+    vectorSync: 5,     // RAG vector sync confirmed
+};
+
+// Score multiplier based on number of source types in a category
+// (URL, document, manual text)
+function getCategorySourceScore(sourceCount: number): number {
+    if (sourceCount <= 0) return 0;
+    if (sourceCount === 1) return 0.6;
+    if (sourceCount === 2) return 0.85;
+    return 1.0; // 3+
+}
+
+function getTrainingLabel(progress: number): { label: string; color: string } {
+    if (progress <= 15) return { label: 'basicSetup', color: '#9CA3AF' };       // Gray
+    if (progress <= 35) return { label: 'initialTraining', color: '#F97316' };  // Orange
+    if (progress <= 65) return { label: 'inDevelopment', color: '#EAB308' };    // Yellow
+    if (progress <= 85) return { label: 'wellTrained', color: '#3B82F6' };      // Blue
+    return { label: 'fullyTrained', color: '#10B981' };                         // Green
+}
+
 export default function TwinKnowledgeScreen() {
     const { user, token, refreshUser } = useAuth();
     const { showAlert } = useAlert();
     const { t } = useTranslation('onboarding');
     const [categories, setCategories] = useState(INITIAL_CATEGORIES);
     const [otherUrl, setOtherUrl] = useState("");
-    const [trainingProgress] = useState(5); // 5% por defecto
     const [isLoading, setIsLoading] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
@@ -188,6 +217,63 @@ export default function TwinKnowledgeScreen() {
     // State for uploaded documents
     const [uploadedDocuments, setUploadedDocuments] = useState<KnowledgeDocument[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+
+    // Calculate training progress dynamically based on all knowledge sources
+    const trainingInfo = useMemo(() => {
+        let totalScore = 0;
+
+        // 1. Profile score (10%): name + profession + bio
+        const hasName = !!(user?.publicName || user?.firstname);
+        const hasProfession = !!user?.profession;
+        const hasBio = !!user?.bio;
+        const profileSources = [hasName, hasProfession, hasBio].filter(Boolean).length;
+        totalScore += TRAINING_WEIGHTS.profile * (profileSources / 3);
+
+        // 2. Behavior score (10%): objective + formality/tone/depth configured
+        const behavior = user?.digitalTwin?.behavior;
+        const hasObjective = !!behavior?.objective;
+        const hasBehaviorConfig = behavior?.formality !== undefined || behavior?.tone !== undefined;
+        const behaviorSources = [hasObjective, hasBehaviorConfig].filter(Boolean).length;
+        totalScore += TRAINING_WEIGHTS.behavior * (behaviorSources > 0 ? (behaviorSources === 2 ? 1 : 0.6) : 0);
+
+        // 3-7. Category scores
+        const categoryWeights: Record<string, number> = {
+            faq: TRAINING_WEIGHTS.faq,
+            services: TRAINING_WEIGHTS.services,
+            pricing: TRAINING_WEIGHTS.pricing,
+            policy: TRAINING_WEIGHTS.policy,
+            troubleshooting: TRAINING_WEIGHTS.troubleshooting,
+        };
+
+        for (const cat of categories) {
+            const weight = categoryWeights[cat.id];
+            if (!weight) continue;
+
+            let sourceCount = 0;
+            if (cat.url.trim()) sourceCount++;
+            if (cat.manualContent.trim()) sourceCount++;
+            if (uploadedDocuments.filter(d => d.category === cat.id).length > 0) sourceCount++;
+
+            totalScore += weight * getCategorySourceScore(sourceCount);
+        }
+
+        // 8. Additional docs score (10%)
+        const hasOtherUrl = otherUrl.trim() !== '';
+        const hasOtherDocs = uploadedDocuments.filter(d => d.category === 'other').length > 0;
+        const otherSources = [hasOtherUrl, hasOtherDocs].filter(Boolean).length;
+        totalScore += TRAINING_WEIGHTS.otherDocs * (otherSources > 0 ? (otherSources === 2 ? 1 : 0.6) : 0);
+
+        // 9. Vector sync score (5%)
+        const isVectorSynced = !!(user?.digitalTwin as any)?.knowledgeVectorSynced;
+        totalScore += TRAINING_WEIGHTS.vectorSync * (isVectorSynced ? 1 : 0);
+
+        const progress = Math.round(totalScore);
+        const { label, color } = getTrainingLabel(progress);
+
+        return { progress, label, color };
+    }, [user, categories, uploadedDocuments, otherUrl]);
+
+    const trainingProgress = trainingInfo.progress;
 
     // Load documents from user data on mount
     useEffect(() => {
@@ -529,16 +615,16 @@ export default function TwinKnowledgeScreen() {
                 <View style={styles.progressCard}>
                     <View style={styles.progressHeader}>
                         <View style={styles.progressIconContainer}>
-                            <MaterialIcons name="psychology" size={24} color={COLORS.primary} />
+                            <MaterialIcons name="psychology" size={24} color={trainingInfo.color} />
                         </View>
                         <View style={styles.progressTextContainer}>
                             <Text style={styles.progressTitle}>{t('twinKnowledge.trainingStatus')}</Text>
-                            <Text style={styles.progressSubtitle}>{t('twinKnowledge.trainingInitial')}</Text>
+                            <Text style={[styles.progressSubtitle, { color: trainingInfo.color }]}>{t(`twinKnowledge.trainingLevel.${trainingInfo.label}`)}</Text>
                         </View>
-                        <Text style={styles.progressPercent}>{trainingProgress}%</Text>
+                        <Text style={[styles.progressPercent, { color: trainingInfo.color }]}>{trainingProgress}%</Text>
                     </View>
                     <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${trainingProgress}%` }]} />
+                        <View style={[styles.progressFill, { width: `${trainingProgress}%`, backgroundColor: trainingInfo.color }]} />
                     </View>
                     <View style={styles.progressFooter}>
                         <Text style={styles.progressFooterText}>

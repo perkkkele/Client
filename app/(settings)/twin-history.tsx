@@ -113,7 +113,7 @@ export default function TwinHistoryScreen() {
         return date.toLocaleDateString(locale, { day: '2-digit', month: 'short' });
     };
 
-    const [activeFilter, setActiveFilter] = useState(3); // "All" by default
+    const [activeFilter, setActiveFilter] = useState(FILTERS.length - 1); // "All" = last filter
     const [searchQuery, setSearchQuery] = useState("");
     const [conversations, setConversations] = useState<AvatarConversation[]>([]);
     const [loading, setLoading] = useState(true);

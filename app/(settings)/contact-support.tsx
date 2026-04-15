@@ -55,7 +55,7 @@ export default function ContactSupportScreen() {
 
     function handleWriteSupport() {
         const subject = encodeURIComponent(`[${selectedTopic.label}] ${t('contactSupportScreen.emailSubject')}`);
-        Linking.openURL(`mailto:soporte@twinpro.com?subject=${subject}`);
+        Linking.openURL(`mailto:hola@twinpro.app?subject=${subject}`);
     }
 
     function handleLiveChat() {

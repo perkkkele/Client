@@ -76,7 +76,7 @@ export default function HelpProProfileScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20perfil%20profesional");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20perfil%20profesional");
     }
 
     function toggleFAQ(index: number) {
@@ -166,7 +166,7 @@ export default function HelpProProfileScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                             <Text style={styles.contactLabel}>{t('helpCommon.contactSupport')}</Text>
-                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                            <Text style={styles.contactHint}>hola@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
                     </TouchableOpacity>

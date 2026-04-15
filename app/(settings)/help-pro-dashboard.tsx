@@ -94,7 +94,7 @@ export default function HelpProDashboardScreen() {
     }
 
     function handleSendEmail() {
-        Linking.openURL("mailto:soporte@twinpro.app?subject=Ayuda%20con%20Panel%20Profesional");
+        Linking.openURL("mailto:hola@twinpro.app?subject=Ayuda%20con%20Panel%20Profesional");
     }
 
     function toggleFAQ(index: number) {
@@ -299,7 +299,7 @@ export default function HelpProDashboardScreen() {
                         </View>
                         <View style={styles.contactInfo}>
                             <Text style={styles.contactLabel}>{t('helpProDashboard.contactSupport')}</Text>
-                            <Text style={styles.contactHint}>soporte@twinpro.app</Text>
+                            <Text style={styles.contactHint}>hola@twinpro.app</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={22} color={COLORS.gray400} />
                     </TouchableOpacity>

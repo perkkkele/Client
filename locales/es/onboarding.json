@@ -372,6 +372,13 @@
         "manualDefault": "Añadir Manual",
         "trainingStatus": "Estado del Entrenamiento",
         "trainingInitial": "Aprendizaje Inicial",
+        "trainingLevel": {
+            "basicSetup": "Configuración básica",
+            "initialTraining": "Entrenamiento inicial",
+            "inDevelopment": "En desarrollo",
+            "wellTrained": "Bien entrenado",
+            "fullyTrained": "Entrenamiento completo"
+        },
         "categoriesCompleted": "{{count}} Categorías completadas",
         "categoriesNone": "0/5 Categorías completadas",
         "infoAdded": "Información añadida",

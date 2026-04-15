@@ -139,6 +139,12 @@ export default function TwinBehaviorScreen() {
     const [objective, setObjective] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    // Inline editing state
+    const [editingAllowedId, setEditingAllowedId] = useState<string | null>(null);
+    const [editingAllowedText, setEditingAllowedText] = useState("");
+    const [editingRestrictedId, setEditingRestrictedId] = useState<string | null>(null);
+    const [editingRestrictedText, setEditingRestrictedText] = useState("");
+
     // Load previous configuration from user data OR apply preset
     useEffect(() => {
         console.log('[TwinBehavior] useEffect triggered');
@@ -250,10 +256,42 @@ export default function TwinBehaviorScreen() {
 
     function removeAllowedAction(id: string) {
         setAllowedActions(allowedActions.filter(a => a.id !== id));
+        if (editingAllowedId === id) setEditingAllowedId(null);
     }
 
     function removeRestrictedAction(id: string) {
         setRestrictedActions(restrictedActions.filter(a => a.id !== id));
+        if (editingRestrictedId === id) setEditingRestrictedId(null);
+    }
+
+    function startEditAllowed(action: { id: string; text: string }) {
+        setEditingAllowedId(action.id);
+        setEditingAllowedText(action.text);
+    }
+
+    function commitEditAllowed() {
+        if (editingAllowedId && editingAllowedText.trim()) {
+            setAllowedActions(prev =>
+                prev.map(a => a.id === editingAllowedId ? { ...a, text: editingAllowedText.trim() } : a)
+            );
+        }
+        setEditingAllowedId(null);
+        setEditingAllowedText("");
+    }
+
+    function startEditRestricted(action: { id: string; text: string }) {
+        setEditingRestrictedId(action.id);
+        setEditingRestrictedText(action.text);
+    }
+
+    function commitEditRestricted() {
+        if (editingRestrictedId && editingRestrictedText.trim()) {
+            setRestrictedActions(prev =>
+                prev.map(a => a.id === editingRestrictedId ? { ...a, text: editingRestrictedText.trim() } : a)
+            );
+        }
+        setEditingRestrictedId(null);
+        setEditingRestrictedText("");
     }
 
     async function handleContinue() {
@@ -399,7 +437,27 @@ export default function TwinBehaviorScreen() {
                                 <View style={styles.ruleCheckbox}>
                                     <MaterialIcons name="check-box" size={20} color={COLORS.primary} />
                                 </View>
-                                <Text style={styles.ruleText}>{action.text}</Text>
+                                {editingAllowedId === action.id ? (
+                                    <TextInput
+                                        style={styles.ruleEditInput}
+                                        value={editingAllowedText}
+                                        onChangeText={setEditingAllowedText}
+                                        onSubmitEditing={commitEditAllowed}
+                                        onBlur={commitEditAllowed}
+                                        autoFocus
+                                        returnKeyType="done"
+                                        selectTextOnFocus
+                                    />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.ruleTextTouchable}
+                                        onPress={() => startEditAllowed(action)}
+                                        activeOpacity={0.6}
+                                    >
+                                        <Text style={styles.ruleText}>{action.text}</Text>
+                                        <MaterialIcons name="edit" size={14} color={COLORS.gray400} style={styles.editHintIcon} />
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity onPress={() => removeAllowedAction(action.id)}>
                                     <MaterialIcons name="close" size={18} color={COLORS.gray400} />
                                 </TouchableOpacity>
@@ -433,7 +491,27 @@ export default function TwinBehaviorScreen() {
                                 <View style={styles.ruleCheckbox}>
                                     <MaterialIcons name="check-box" size={20} color={COLORS.accentRed} />
                                 </View>
-                                <Text style={styles.ruleText}>{action.text}</Text>
+                                {editingRestrictedId === action.id ? (
+                                    <TextInput
+                                        style={styles.ruleEditInput}
+                                        value={editingRestrictedText}
+                                        onChangeText={setEditingRestrictedText}
+                                        onSubmitEditing={commitEditRestricted}
+                                        onBlur={commitEditRestricted}
+                                        autoFocus
+                                        returnKeyType="done"
+                                        selectTextOnFocus
+                                    />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.ruleTextTouchable}
+                                        onPress={() => startEditRestricted(action)}
+                                        activeOpacity={0.6}
+                                    >
+                                        <Text style={styles.ruleText}>{action.text}</Text>
+                                        <MaterialIcons name="edit" size={14} color={COLORS.gray400} style={styles.editHintIcon} />
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity onPress={() => removeRestrictedAction(action.id)}>
                                     <MaterialIcons name="close" size={18} color={COLORS.gray400} />
                                 </TouchableOpacity>
@@ -666,6 +744,26 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         color: COLORS.gray500,
+    },
+    ruleTextTouchable: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    editHintIcon: {
+        opacity: 0.5,
+    },
+    ruleEditInput: {
+        flex: 1,
+        fontSize: 14,
+        color: COLORS.textMain,
+        backgroundColor: COLORS.gray50,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
     },
     divider: {
         height: 1,

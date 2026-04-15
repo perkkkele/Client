@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "../../context";
+import { registerForPushNotifications, registerPushTokenWithServer } from "../../services/notifications";
 
 const COLORS = {
     primary: "#FFF200",
@@ -24,14 +26,25 @@ const COLORS = {
 
 export default function NotificationsScreen() {
     const { t } = useTranslation('onboarding');
+    const { token } = useAuth();
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
     function handleSkip() {
         router.push("/onboarding/complete-profile");
     }
 
-    function handleContinue() {
-        // TODO: Solicitar permisos de notificación
+    async function handleContinue() {
+        if (notificationsEnabled) {
+            try {
+                const pushToken = await registerForPushNotifications();
+                if (pushToken && token) {
+                    await registerPushTokenWithServer(token, pushToken);
+                }
+            } catch (error) {
+                console.error("[Onboarding] Error requesting notification permissions:", error);
+            }
+        }
+        // Always navigate forward regardless of permission result
         router.push("/onboarding/complete-profile");
     }
 

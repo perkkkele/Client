@@ -372,6 +372,13 @@
         "manualDefault": "Ajouter manuellement",
         "trainingStatus": "État de l'entraînement",
         "trainingInitial": "Apprentissage initial",
+        "trainingLevel": {
+            "basicSetup": "Configuration de base",
+            "initialTraining": "Entraînement initial",
+            "inDevelopment": "En développement",
+            "wellTrained": "Bien entraîné",
+            "fullyTrained": "Entraînement complet"
+        },
         "categoriesCompleted": "{{count}} Catégories complétées",
         "categoriesNone": "0/5 Catégories complétées",
         "infoAdded": "Informations ajoutées",

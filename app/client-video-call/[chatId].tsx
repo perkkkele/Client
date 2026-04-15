@@ -310,7 +310,7 @@ export default function ClientVideoCallScreen() {
 
     // Drawer footer handlers
     const handleReportProblem = useCallback(() => {
-        const email = "soporte@twinpro.app";
+        const email = "hola@twinpro.app";
         const subject = encodeURIComponent("Problema en videollamada");
         const body = encodeURIComponent(`Chat ID: ${chatId}\nDescribe el problema:\n\n`);
         Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`);
@@ -318,12 +318,12 @@ export default function ClientVideoCallScreen() {
 
     const handleToggleMute = useCallback(() => {
         setIsMuted(prev => !prev);
-        // TODO: Persist mute state to server if needed
+        // Session-local state: resets when call ends (no server persistence needed)
     }, []);
 
     const handleToggleHistory = useCallback(() => {
         setIsHistoryVisible(prev => !prev);
-        // TODO: Persist history visibility to server if needed
+        // Session-local state: resets when call ends (no server persistence needed)
     }, []);
 
     const handleClearAllHistory = useCallback(() => {
