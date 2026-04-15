@@ -22,6 +22,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { MaterialIcons, FontAwesome5, Ionicons } from "@expo/vector-icons";
 import { useAuth, useIncomingCall } from "../../context";
 import { userApi, liveAvatarApi, chatApi, chatMessageApi, appointmentApi, getAssetUrl, analyticsApi, digitalTwinContextApi, voiceSessionApi } from "../../api";
+import { API_URL } from "../../api/config";
 import * as customTwinApi from "../../api/customTwin";
 import { generateQuickReplies as fetchQuickReplies } from "../../api/quickReplies";
 import { useCustomTwinEngine, useEngineMode } from "../../hooks/useCustomTwinEngine";
@@ -900,16 +901,42 @@ export default function AvatarChatScreen() {
         let digitalTwin = professional.digitalTwin;
         const avatarId = digitalTwin.appearance?.liveAvatarId;
         // Prefer the LiveAvatar-bound voice ID (lazy binding result) over raw ElevenLabs ID
-        const voiceId = digitalTwin.appearance?.liveAvatarVoiceId
+        let voiceId = digitalTwin.appearance?.liveAvatarVoiceId
             || digitalTwin.appearance?.liveVoiceId;
         let contextId = digitalTwin.liveAvatarContextId;
         const llmConfigId = (digitalTwin as any).liveAvatarLlmConfigId as string | undefined;
+        const engineMode = (digitalTwin as any).engineMode as string | undefined;
 
         if (!avatarId) {
             console.log("No avatar ID configured, skipping session");
             setSessionError("El profesional no tiene un avatar configurado");
             setSessionStatus('error');
             return;
+        }
+
+        // For FULL mode: fetch server-side config with lazy voice binding
+        // This ensures the voiceId is a valid LiveAvatar UUID, not a raw ElevenLabs ID
+        if (engineMode === 'FULL' && professional._id) {
+            try {
+                console.log("[AvatarChat] FULL mode detected, fetching bound config...");
+                const fullConfigRes = await fetch(
+                    `${API_URL}/twin/full-config/${professional._id}`
+                );
+                if (fullConfigRes.ok) {
+                    const fullConfig = await fullConfigRes.json();
+                    console.log("[AvatarChat] FULL config received:", fullConfig);
+                    if (fullConfig.voiceId) {
+                        voiceId = fullConfig.voiceId;
+                    }
+                    if (fullConfig.contextId) {
+                        contextId = fullConfig.contextId;
+                    }
+                } else {
+                    console.warn("[AvatarChat] FULL config fetch failed:", fullConfigRes.status);
+                }
+            } catch (configErr: any) {
+                console.warn("[AvatarChat] FULL config fetch error:", configErr.message);
+            }
         }
 
         // Check if context needs regeneration (settings changed since last sync)
