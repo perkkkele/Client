@@ -366,14 +366,57 @@ export default function AvatarChatScreen() {
             console.log('[StreamingVoice] Partial:', transcript);
         },
         onPartialResponse: (text) => {
-            // Could stream response in UI word by word
-            console.log('[StreamingVoice] Response chunk:', text);
+            // Stream response text in real-time so user sees text while avatar speaks
+            if (!streamingMsgIdRef.current) {
+                // Create new streaming message on first chunk
+                const msgId = `voice-twin-${Date.now()}`;
+                streamingMsgIdRef.current = msgId;
+                const twinMsg: Message = {
+                    id: msgId,
+                    type: 'text',
+                    content: text,
+                    isUser: false,
+                    timestamp: new Date().toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }),
+                };
+                setMessages(prev => [...prev, twinMsg]);
+                // Scroll to bottom on new message
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 50);
+            } else {
+                // Update existing streaming message with accumulated text
+                const currentId = streamingMsgIdRef.current;
+                setMessages(prev => prev.map(msg =>
+                    msg.id === currentId
+                        ? { ...msg, content: (msg.content || '') + text }
+                        : msg
+                ));
+                // Scroll periodically as text grows
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 50);
+            }
         },
         onResponseComplete: (response) => {
-            console.log('[StreamingVoice] Response complete:', response);
+            console.log('[StreamingVoice] Response complete');
 
-            // Add twin response to chat
-            if (response && response.trim()) {
+            // Finalize the streaming message with the clean full response
+            if (streamingMsgIdRef.current) {
+                const currentId = streamingMsgIdRef.current;
+                if (response && response.trim()) {
+                    // Update with clean final text (strips any artifacts from streaming)
+                    setMessages(prev => prev.map(msg =>
+                        msg.id === currentId
+                            ? { ...msg, content: response }
+                            : msg
+                    ));
+                }
+                streamingMsgIdRef.current = null;
+            } else if (response && response.trim()) {
+                // Fallback: if no streaming message was created, add complete message
                 const twinMsg: Message = {
                     id: `voice-twin-${Date.now()}`,
                     type: 'text',
@@ -385,8 +428,6 @@ export default function AvatarChatScreen() {
                     }),
                 };
                 setMessages(prev => [...prev, twinMsg]);
-
-                // Scroll to bottom
                 setTimeout(() => {
                     scrollViewRef.current?.scrollToEnd({ animated: true });
                 }, 100);
@@ -441,6 +482,7 @@ export default function AvatarChatScreen() {
         onInterrupted: () => {
             // Server detected barge-in - interrupt the LiveAvatar!
             console.log('[AvatarChat] Server barge-in detected, interrupting LiveAvatar');
+            streamingMsgIdRef.current = null; // Reset streaming state
             interruptAvatarRef.current?.();
         },
     });
@@ -609,6 +651,9 @@ export default function AvatarChatScreen() {
 
     // Ref to track conversation start time for analytics
     const conversationStartTimeRef = useRef<number | null>(null);
+
+    // Ref to track streaming bot message ID for real-time text display
+    const streamingMsgIdRef = useRef<string | null>(null);
 
     // Toggle video size
     const toggleVideoSize = () => {
