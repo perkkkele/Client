@@ -559,9 +559,22 @@ export default function TwinKnowledgeScreen() {
             try {
                 const syncResult = await customTwinApi.syncKnowledge((freshUser as any)?._id);
                 console.log("RAG Sync result:", syncResult);
-            } catch (syncError) {
+                if (syncResult?.vectorsCreated > 0) {
+                    console.log(`RAG: ${syncResult.vectorsCreated} vectors created successfully`);
+                } else {
+                    showAlert({ 
+                        type: 'warning', 
+                        title: t('twinKnowledge.syncWarningTitle', { defaultValue: 'Aviso de Sincronización' }),
+                        message: t('twinKnowledge.syncWarningNoVectors', { defaultValue: 'No se generaron vectores de conocimiento. El gemelo podría no responder con información específica. Asegúrate de añadir contenido (URLs, documentos o texto manual) en las categorías.' })
+                    });
+                }
+            } catch (syncError: any) {
                 console.error("Error syncing knowledge vectors:", syncError);
-                // No bloqueamos el flujo principal si el RAG falla, pero informamos
+                showAlert({ 
+                    type: 'warning', 
+                    title: t('twinKnowledge.syncErrorTitle', { defaultValue: 'Error de Sincronización' }),
+                    message: t('twinKnowledge.syncErrorMessage', { defaultValue: 'El gemelo se ha activado pero la base de conocimiento no se ha sincronizado correctamente. Puedes volver a configurar el conocimiento más tarde.' })
+                });
             }
 
             if (refreshUser) {
