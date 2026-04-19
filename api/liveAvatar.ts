@@ -731,6 +731,13 @@ export async function createSessionToken(config: AvatarConfig): Promise<SessionT
         avatar_persona: {
             context_id: config.contextId,
             language: config.language || "es",
+            // Always use eleven_flash_v2_5 for lowest TTS latency
+            voice_settings: {
+                speed: 1.0,
+                stability: 0.75,
+                similarity_boost: 0.75,
+                model: "eleven_flash_v2_5",
+            },
         },
     };
 
