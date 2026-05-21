@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context";
 import { userApi, liveAvatarApi, getAssetUrl } from "../../api";
 import * as elevenlabsApi from "../../api/elevenlabsApi";
+import * as geminiVoiceApi from "../../api/geminiVoiceApi";
 import * as avatarPreviewApi from "../../api/avatarPreviewApi";
 import { PublicAvatar, PublicVoice, CreateAvatarResponse, UserAvatar, getAvatarGender } from "../../api/liveAvatar";
 import { useSubscription } from "../../hooks/useSubscription";
@@ -114,6 +115,12 @@ export default function TwinAppearanceScreen() {
     const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
     const soundRef = useRef<any>(null);
 
+    // Gemini voice catalog state (for CUSTOMS2S mode)
+    const [geminiVoices, setGeminiVoices] = useState<geminiVoiceApi.GeminiVoice[]>([]);
+    const [loadingGeminiVoices, setLoadingGeminiVoices] = useState(false);
+    const engineSubmode = user?.digitalTwin?.engineSubmode || 'CUSTOM_LEGACY';
+    const isCustoms2s = engineSubmode === 'CUSTOMS2S';
+
     // Live avatar preview state
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);
     const [isLivePreviewActive, setIsLivePreviewActive] = useState(false);
@@ -195,8 +202,12 @@ export default function TwinAppearanceScreen() {
 
     // Load public voices when modal opens
     useEffect(() => {
-        if (showVoiceModal && publicVoices.length === 0) {
-            loadPublicVoices();
+        if (showVoiceModal) {
+            if (isCustoms2s && geminiVoices.length === 0) {
+                loadGeminiVoices();
+            } else if (!isCustoms2s && publicVoices.length === 0) {
+                loadPublicVoices();
+            }
         }
     }, [showVoiceModal]);
 
@@ -305,6 +316,22 @@ export default function TwinAppearanceScreen() {
             showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadVoicesError') });
         } finally {
             setLoadingVoices(false);
+        }
+    }
+
+    async function loadGeminiVoices() {
+        setLoadingGeminiVoices(true);
+        try {
+            const userLanguage = user?.language || 'es';
+            const avatarGender = selectedAvatar?.gender || undefined;
+            const voices = await geminiVoiceApi.getGeminiVoices(userLanguage, avatarGender);
+            setGeminiVoices(voices);
+            console.log(`[Voices] Loaded ${voices.length} Gemini voices`);
+        } catch (error) {
+            console.error('Error loading Gemini voices:', error);
+            showAlert({ type: 'error', title: 'Error', message: t('twinAppearance.loadVoicesError') });
+        } finally {
+            setLoadingGeminiVoices(false);
         }
     }
 
@@ -816,6 +843,16 @@ export default function TwinAppearanceScreen() {
                     updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
                     updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
                     updateData.digitalTwin.appearance.liveVoiceLanguage = selectedVoice.language;
+                }
+
+                // If using CUSTOMS2S mode, save Gemini voice config
+                if (isCustoms2s && selectedVoice) {
+                    updateData.digitalTwin.geminiVoiceConfig = {
+                        voiceName: selectedVoice.id,
+                        language: user?.language || 'es',
+                    };
+                    updateData.digitalTwin.appearance.liveVoiceName = selectedVoice.name;
+                    updateData.digitalTwin.appearance.liveVoiceGender = selectedVoice.gender;
                 }
 
                 // Mark that context needs to be regenerated with new appearance
@@ -1364,22 +1401,31 @@ export default function TwinAppearanceScreen() {
                         </View>
 
                         {/* Voice List */}
-                        {loadingVoices ? (
+                        {(isCustoms2s ? loadingGeminiVoices : loadingVoices) ? (
                             <View style={styles.loadingContainer}>
                                 <ActivityIndicator size="large" color={COLORS.primary} />
                                 <Text style={styles.loadingText}>{t('twinAppearance.loadingVoices')}</Text>
                             </View>
-                        ) : publicVoices.length === 0 ? (
+                        ) : (isCustoms2s ? geminiVoices.length === 0 : publicVoices.length === 0) ? (
                             <View style={styles.emptyContainer}>
                                 <MaterialIcons name="mic-off" size={64} color={COLORS.gray400} />
                                 <Text style={styles.emptyText}>{t('twinAppearance.noVoicesAvailable')}</Text>
-                                <TouchableOpacity style={styles.retryButton} onPress={loadPublicVoices}>
+                                <TouchableOpacity style={styles.retryButton} onPress={isCustoms2s ? loadGeminiVoices : loadPublicVoices}>
                                     <Text style={styles.retryButtonText}>{t('twinAppearance.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
                             <FlatList
-                                data={publicVoices}
+                                data={isCustoms2s
+                                    ? geminiVoices.map(v => ({
+                                        id: v.id,
+                                        name: v.displayName || v.name,
+                                        gender: v.gender,
+                                        language: v.language,
+                                        description: v.description,
+                                    } as PublicVoice))
+                                    : publicVoices
+                                }
                                 renderItem={renderVoiceItem}
                                 keyExtractor={(item) => item.id}
                                 contentContainerStyle={styles.voiceList}
